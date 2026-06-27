@@ -8,6 +8,8 @@ import { createDb, closeDb } from "./db/index.js";
 import { createRedis, getRedis, checkRedisConnection } from "./redis.js";
 import { checkDbConnection } from "./db/index.js";
 import { healthRoutes } from "./routes/health.js";
+import { authRoutes } from "./routes/auth.js";
+import { apiKeyRoutes } from "./routes/api-keys.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -25,16 +27,6 @@ export async function buildApp() {
     credentials: true,
   });
 
-  // ── 请求体大小限制 ──
-  // 上传文件（证件图片等）可能需要较大 body
-  app.addContentTypeParser("application/json", { parseAs: "string" }, (req, body, done) => {
-    try {
-      done(null, JSON.parse(body as string));
-    } catch (err: any) {
-      done(new Error(`Invalid JSON: ${err.message}`), undefined);
-    }
-  });
-
   // ── 健康检查 ──
   await app.register(healthRoutes, { prefix: "" });
 
@@ -42,6 +34,12 @@ export async function buildApp() {
   app.addHook("onRequest", async (request) => {
     request.log.info({ url: request.url, method: request.method }, "incoming request");
   });
+
+  // ── Auth 路由 ──
+  await app.register(authRoutes, { prefix: "" });
+
+  // ── API Key 管理 ──
+  await app.register(apiKeyRoutes, { prefix: "" });
 
   return app;
 }

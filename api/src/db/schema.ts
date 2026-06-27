@@ -25,6 +25,7 @@ import {
   foreignKey,
   pgEnum,
 } from "drizzle-orm/pg-core";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 // ──────────────────────────────────────────────
 //  Enums
@@ -137,7 +138,7 @@ export const users = pgTable(
 
     // 禁用信息（status=disabled 时有效）
     disabledReason: text("disabled_reason"),
-    disabledBy: integer("disabled_by").references(() => users.id),
+    disabledBy: integer("disabled_by").references((): AnyPgColumn => users.id),
     disabledAt: timestamp("disabled_at", { withTimezone: true }),
     disabledUntil: timestamp("disabled_until", { withTimezone: true }), // NULL=永久
 
