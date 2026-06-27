@@ -13,6 +13,7 @@ import { apiKeyRoutes } from "./routes/api-keys.js";
 import { adminVendorRoutes } from "./routes/admin/vendors.js";
 import { adminModelRoutes } from "./routes/admin/models.js";
 import { adminVendorModelRoutes } from "./routes/admin/vendor-models.js";
+import { proxyRoutes } from "./routes/proxy.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -52,6 +53,9 @@ export async function buildApp() {
 
   // ── 厂商-模型关联管理 ──
   await app.register(adminVendorModelRoutes, { prefix: "" });
+
+  // ── Token 代理 ──
+  await app.register(proxyRoutes, { prefix: "" });
 
   return app;
 }
