@@ -1,0 +1,22 @@
+# 3cloud API — .gitignore
+
+node_modules/
+dist/
+.env
+*.log
+uploads/*
+!uploads/.gitkeep
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Drizzle
+drizzle/meta/
+drizzle/snapshots/

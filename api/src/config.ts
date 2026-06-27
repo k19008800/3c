@@ -1,0 +1,57 @@
+// ============================================================
+//  3cloud (3C) — 配置模块
+//  从环境变量读取，提供类型安全配置
+// ============================================================
+
+import "dotenv/config";
+
+export const config = {
+  nodeEnv: process.env.NODE_ENV || "development",
+  isDev: (process.env.NODE_ENV || "development") === "development",
+  isProd: process.env.NODE_ENV === "production",
+
+  server: {
+    port: parseInt(process.env.PORT || "3000", 10),
+    host: process.env.HOST || "0.0.0.0",
+  },
+
+  jwt: {
+    accessSecret: process.env.JWT_ACCESS_SECRET || "dev-access-secret",
+    refreshSecret: process.env.JWT_REFRESH_SECRET || "dev-refresh-secret",
+    accessExpires: process.env.JWT_ACCESS_EXPIRES || "2h",
+    refreshExpires: process.env.JWT_REFRESH_EXPIRES || "7d",
+  },
+
+  database: {
+    url: process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/threecloud",
+  },
+
+  redis: {
+    url: process.env.REDIS_URL || "redis://localhost:6379",
+  },
+
+  vendorKeyEncryption: {
+    key: process.env.VENDOR_KEY_ENCRYPTION_KEY || "",
+  },
+
+  cors: {
+    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+  },
+
+  upload: {
+    dir: process.env.UPLOAD_DIR || "./uploads",
+  },
+
+  smtp: {
+    host: process.env.SMTP_HOST || "localhost",
+    port: parseInt(process.env.SMTP_PORT || "1025", 10),
+    secure: process.env.SMTP_SECURE === "true",
+    user: process.env.SMTP_USER || "",
+    pass: process.env.SMTP_PASS || "",
+    from: process.env.MAIL_FROM || "noreply@unmisa.com",
+  },
+
+  log: {
+    level: process.env.LOG_LEVEL || "debug",
+  },
+} as const;

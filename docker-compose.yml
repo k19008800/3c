@@ -1,0 +1,53 @@
+version: "3.9"
+
+# ──────────────────────────────────────────────
+#  3cloud (3C) — 本地开发环境 Docker Compose
+#  用途：本地运行 PostgreSQL + Redis
+#  注意：后端 Fastify 应用在宿主机上以 tsx watch 运行
+# ──────────────────────────────────────────────
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: 3cloud-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: threecloud
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:6-alpine
+    container_name: 3cloud-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # MailDev — 开发时捕获邮件（预览用）
+  maildev:
+    image: maildev/maildev:latest
+    container_name: 3cloud-maildev
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP
+      - "1080:1080"   # Web 预览界面
+
+volumes:
+  pgdata:
+  redisdata:
