@@ -1,0 +1,40 @@
+# 3cloud (3C) — AI Token 聚合中转平台
+# Continue.dev 项目规则 — 和 OpenClaw Agent 保持上下文一致
+
+## 项目信息
+- 项目名: 3cloud / 3C
+- 技术栈: Fastify 5 + TypeScript 6 + Drizzle ORM + PostgreSQL 17 + Redis (Memurai)
+- 后端目录: api/
+- 前端目录: web/ (待搭建)
+- 文档目录: docs/
+
+## 关键约定
+- TypeScript: strict mode, NodeNext module resolution
+- 数据库: PostgreSQL 17 (本地: threecloud)
+- 缓存: Redis (本地: localhost:6379)
+- ORM: Drizzle (schema: src/db/schema.ts)
+- 验证: Zod schemas
+- 日志: pino
+- 鉴权: JWT 双 Token (access 2h + refresh 7d)
+- 代码风格: 2空格缩进, 100字符标尺, LF换行
+
+## 常用命令
+```
+npm run dev        — tsx watch 热重载
+npm run lint       — tsc --noEmit 类型检查
+npm run db:push    — drizzle-kit push 同步数据库
+npm run db:studio  — drizzle-kit studio 可视化
+npm run db:generate— drizzle-kit generate 迁移
+npm run seed       — 插种子数据
+```
+
+## 数据库连接
+- URL: postgres://postgres:postgres@localhost:5432/threecloud
+- ORM: Drizzle (不是 Prisma)
+- Money: 全部 DECIMAL(18,6)
+- 时间: TIMESTAMP WITH TIME ZONE, 全程 UTC
+
+## 回答风格
+- 中文优先
+- 技术问题给出具体代码示例
+- 多文件改动时用工作区视图展示

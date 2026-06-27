@@ -1,0 +1,28 @@
+{
+  "recommendations": [
+    // ─── 必须 ───
+    "continue.continue",                    // AI 编程助手
+    "ms-vscode.vscode-typescript-next",     // TypeScript 最新支持
+    "drizzle-team.drizzle-orm-snippets",    // Drizzle ORM 代码片段
+
+    // ─── 强烈推荐 ───
+    "humao.rest-client",                    // 在 VS Code 中直接调 API
+    "esbenp.prettier-vscode",               // 代码格式化
+    "dbaeumer.vscode-eslint",               // ESLint
+    "christian-kohler.path-intellisense",   // 路径补全
+    "streetsidesoftware.code-spell-checker",// 拼写检查
+    "mgmcdermott.vscode-language-babel",    // 语法高亮
+
+    // ─── 调试辅助 ───
+    "ms-vscode.js-debug-nightly",           // JS 调试器增强
+    "github.copilot-chat",                  // Copilot Chat（可选）
+
+    // ─── 可视化 ───
+    "hediet.vscode-drawio",                 // Draw.io 流程图
+    "bierner.markdown-mermaid",             // Mermaid 图表
+    "yzhang.markdown-all-in-one"            // Markdown 增强
+  ],
+  "unwantedRecommendations": [
+    "vscode.typescript-language-features"   // 使用 typescript-next 替代
+  ]
+}

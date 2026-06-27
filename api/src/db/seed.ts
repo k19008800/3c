@@ -48,6 +48,15 @@ const defaultConfigs: { key: string; value: string; description: string }[] = [
   { key: "email_smtp_port", value: "", description: "备用 SMTP 端口" },
   { key: "email_smtp_user", value: "", description: "备用 SMTP 用户名" },
   { key: "email_smtp_pass", value: "", description: "备用 SMTP 密码" },
+
+  // ── 管理员通知（V3.4） ──
+  { key: "admin_notify_email", value: "", description: "管理员通知邮箱（实名/对公转账/代理商提现事件）" },
+
+  // ── 充值风控（V3.4） ──
+  { key: "recharge_personal_max_single", value: "5000", description: "个人单次充值上限（元）" },
+  { key: "recharge_enterprise_max_single", value: "50000", description: "企业单次充值上限（元）" },
+  { key: "recharge_personal_daily_limit", value: "20000", description: "个人单日累计触发风控值（元）" },
+  { key: "recharge_enterprise_daily_limit", value: "200000", description: "企业单日累计触发风控值（元）" },
 ];
 
 async function seed() {

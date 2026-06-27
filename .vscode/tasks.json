@@ -1,0 +1,72 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dev: 启动 API 服务器",
+      "type": "npm",
+      "script": "dev",
+      "path": "api",
+      "detail": "tsx watch src/index.ts — 热重载开发",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": ["$tsc-watch"],
+      "isBackground": true
+    },
+    {
+      "label": "dev: Drizzle Studio (数据库可视化)",
+      "type": "npm",
+      "script": "db:studio",
+      "path": "api",
+      "detail": "drizzle-kit studio — 浏览器查看表数据"
+    },
+    {
+      "label": "db: 推送 Schema 到数据库",
+      "type": "npm",
+      "script": "db:push",
+      "path": "api",
+      "detail": "drizzle-kit push — 同步表结构到 PG"
+    },
+    {
+      "label": "db: 生成迁移文件",
+      "type": "npm",
+      "script": "db:generate",
+      "path": "api",
+      "detail": "drizzle-kit generate — 生成 SQL 迁移"
+    },
+    {
+      "label": "db: 执行迁移",
+      "type": "npm",
+      "script": "db:migrate",
+      "path": "api",
+      "detail": "drizzle-kit push — 执行迁移到数据库"
+    },
+    {
+      "label": "db: 运行种子数据",
+      "type": "npm",
+      "script": "seed",
+      "path": "api",
+      "detail": "tsx src/db/seed.ts — 插入初始测试数据"
+    },
+    {
+      "label": "lint: 类型检查",
+      "type": "npm",
+      "script": "lint",
+      "path": "api",
+      "detail": "tsc --noEmit — TypeScript 类型检查",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "build: 编译生产版本",
+      "type": "npm",
+      "script": "build",
+      "path": "api",
+      "detail": "tsc — 编译到 dist/"
+    }
+  ]
+}

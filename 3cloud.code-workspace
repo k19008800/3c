@@ -1,0 +1,30 @@
+{
+  "folders": [
+    {
+      "name": "3cloud-api",
+      "path": "api"
+    },
+    {
+      "name": "3cloud-web",
+      "path": "web"
+    },
+    {
+      "name": "3cloud-docs",
+      "path": "docs"
+    },
+    {
+      "name": "3cloud-project-root",
+      "path": "."
+    }
+  ],
+  "settings": {
+    // 继承 .vscode/settings.json 的所有配置
+  },
+  "extensions": {
+    "recommendations": [
+      "continue.continue",
+      "drizzle-team.drizzle-orm-snippets",
+      "ms-vscode.vscode-typescript-next"
+    ]
+  }
+}

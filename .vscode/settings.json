@@ -1,0 +1,76 @@
+{
+  // ─── 编辑器基础 ───
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "editor.rulers": [100, 120],
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.renderWhitespace": "boundary",
+  "editor.bracketPairColorization.enabled": true,
+  "files.eol": "\n",
+  "files.encoding": "utf8",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+
+  // ─── TypeScript ───
+  "typescript.tsdk": "api/node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "typescript.validate.enable": true,
+  "typescript.suggest.autoImports": true,
+  "typescript.suggest.paths": true,
+  "typescript.reportStyleChecksAsWarnings": false,
+  "[typescript]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features"
+  },
+
+  // ─── Drizzle ORM ───
+  "drizzle.enable": true,
+
+  // ─── 终端 ───
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "terminal.integrated.cursorBlinking": true,
+  "terminal.integrated.fontSize": 13,
+
+  // ─── 搜索 ───
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/drizzle/migrations": true
+  },
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/dist": true
+  },
+
+  // ─── 调试 ───
+  "debug.terminal.clearBeforeReusing": true,
+  "debug.javascript.autoAttachFilter": "smart",
+
+  // ─── 拼写检查 ───
+  "cSpell.words": [
+    "fastify",
+    "drizzleorm",
+    "drizzle",
+    "ioredis",
+    "nanoid",
+    "bcryptjs",
+    "pino",
+    "postgres",
+    "threecloud",
+    "unmisa",
+    "MEMURAI",
+    "sigterm",
+    "sigint"
+  ],
+
+  // ─── 文件关联 ───
+  "files.associations": {
+    ".env.*": "env",
+    "*.ts": "typescript"
+  }
+}

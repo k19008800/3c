@@ -1,7 +1,9 @@
 // ============================================================
 //  3cloud (3C) — Drizzle ORM Schema (PostgreSQL)
-//  Version: V3.3
-//  Generated from PRD-完整版.md — 2026-06-27
+//  Version: V3.4
+//  Aligned with PRD-完整版.md V3.4 — 2026-06-27
+//  Changes: status enum (drop pending_review, add deleted),
+//  disabled_reason/by/at/until fields, call_logs partition notes
 // ============================================================
 //  Numeric convention: DECIMAL(18,6) for all monetary fields
 //  Timestamp convention: TIMESTAMP WITH TIME ZONE (UTC)
@@ -32,8 +34,8 @@ export const userTypeEnum = pgEnum("user_type", ["personal", "enterprise"]);
 export const userStatusEnum = pgEnum("user_status", [
   "pending",        // 未验证邮箱
   "active",         // 已验证邮箱
-  "pending_review", // 实名待审
-  "disabled",       // 已禁用
+  "disabled",       // 已禁用（可登录看余额，不可请求）
+  "deleted",        // 已注销（软删除，不可登录不可重新注册）
 ]);
 export const realNameStatusEnum = pgEnum("real_name_status", [
   "unverified",
@@ -132,6 +134,12 @@ export const users = pgTable(
     userType: userTypeEnum("user_type").notNull().default("personal"),
     role: userRoleEnum("role").notNull().default("user"),
     status: userStatusEnum("status").notNull().default("pending"),
+
+    // 禁用信息（status=disabled 时有效）
+    disabledReason: text("disabled_reason"),
+    disabledBy: integer("disabled_by").references(() => users.id),
+    disabledAt: timestamp("disabled_at", { withTimezone: true }),
+    disabledUntil: timestamp("disabled_until", { withTimezone: true }), // NULL=永久
 
     // 实名
     realNameStatus: realNameStatusEnum("real_name_status").notNull().default("unverified"),
@@ -316,10 +324,24 @@ export const vendorModels = pgTable(
 //  5.3 计费 & 交易
 // ──────────────────────────────────────────────
 
+// ── call_logs: PG 原生表分区（PARTITION BY RANGE created_at），按月分区  ──
+// 每个分区内建以下索引：
+//   (user_id, created_at DESC)
+//   (api_key_id, created_at DESC)
+//   (vendor, created_at DESC)
+//   (status, created_at DESC)
+// 90 天后 DROP 旧分区。
+// Drizzle schema 仅定义父表结构；分区创建由 src/db/migrations/partition-call-logs.sql 执行。
+
+// ── call_logs — 父表（分区表 | 实际分区由 SQL 迁移创建）        ──
+// PG 分区要求：PRIMARY KEY 必须包含分区列。
+// 分区创建脚本：src/db/migrations/setup-call-logs-partitions.ts
+// 保留 90 天，之后 DROP 旧分区。
+
 export const callLogs = pgTable(
   "call_logs",
   {
-    id: serial("id").primaryKey(),
+    id: serial("id").notNull(),
     userId: integer("user_id")
       .notNull()
       .references(() => users.id),
@@ -329,15 +351,15 @@ export const callLogs = pgTable(
       .references(() => models.id),
     vendorModelId: integer("vendor_model_id")
       .references(() => vendorModels.id),
-    vendorName: varchar("vendor_name", { length: 100 }),            // 冗余，方便查
-    modelName: varchar("model_name", { length: 100 }),              // 冗余，方便查
+    vendorName: varchar("vendor_name", { length: 100 }),
+    modelName: varchar("model_name", { length: 100 }),
 
     promptTokens: integer("prompt_tokens").notNull().default(0),
     completionTokens: integer("completion_tokens").notNull().default(0),
     totalTokens: integer("total_tokens").notNull().default(0),
     cost: numeric("cost", { precision: 18, scale: 6 }).notNull().default("0.000000"),
 
-    durationMs: integer("duration_ms"),                             // 耗时（毫秒）
+    durationMs: integer("duration_ms"),
     status: callStatusEnum("status").notNull(),
     errorMessage: text("error_message"),
 
@@ -348,6 +370,10 @@ export const callLogs = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
+    // 复合 PK（分区列必须在 PK 中）
+    pk: primaryKey({ columns: [table.id, table.createdAt] }),
+
+    // 分区内索引
     userCreatedAtIdx: index("call_logs_user_created_at_idx").on(table.userId, table.createdAt),
     apiKeyCreatedAtIdx: index("call_logs_api_key_created_at_idx").on(table.apiKeyId, table.createdAt),
     vendorCreatedAtIdx: index("call_logs_vendor_created_at_idx").on(table.vendorName, table.createdAt),
@@ -478,8 +504,9 @@ export const commissionLogs = pgTable(
     agentId: integer("agent_id")
       .notNull()
       .references(() => agents.id, { onDelete: "cascade" }),
-    clientCallLogId: integer("client_call_log_id")
-      .references(() => callLogs.id),
+    clientCallLogId: integer("client_call_log_id"),
+    // 注：client_call_log_id 无 FK 约束，因为 call_logs 是分区表且 PK 为 (id, created_at)。
+    // 引用完整性由应用层确保。
     callCost: numeric("call_cost", { precision: 18, scale: 6 }).notNull(),
     commissionAmount: numeric("commission_amount", { precision: 18, scale: 6 }).notNull(),
     status: commissionStatusEnum("status").notNull().default("pending"),
