@@ -10,6 +10,9 @@ import { checkDbConnection } from "./db/index.js";
 import { healthRoutes } from "./routes/health.js";
 import { authRoutes } from "./routes/auth.js";
 import { apiKeyRoutes } from "./routes/api-keys.js";
+import { adminVendorRoutes } from "./routes/admin/vendors.js";
+import { adminModelRoutes } from "./routes/admin/models.js";
+import { adminVendorModelRoutes } from "./routes/admin/vendor-models.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -40,6 +43,15 @@ export async function buildApp() {
 
   // ── API Key 管理 ──
   await app.register(apiKeyRoutes, { prefix: "" });
+
+  // ── 厂商管理 ──
+  await app.register(adminVendorRoutes, { prefix: "" });
+
+  // ── 模型管理 ──
+  await app.register(adminModelRoutes, { prefix: "" });
+
+  // ── 厂商-模型关联管理 ──
+  await app.register(adminVendorModelRoutes, { prefix: "" });
 
   return app;
 }
