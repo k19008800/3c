@@ -10,7 +10,7 @@ import { nanoid } from "nanoid";
 import { getDb } from "../db/index.js";
 import { getRedis } from "../redis.js";
 import { config } from "../config.js";
-import { users, balanceLogs } from "../db/schema.js";
+import { users, agents, agentClients, balanceLogs, userLoginHistory } from "../db/schema.js";
 
 // ── 类型 ──
 
@@ -23,6 +23,7 @@ export interface TokenPair {
 export interface TokenPayload {
   userId: number;
   role: string;
+  impersonatorId?: number;
 }
 
 export interface AuthResult {
@@ -62,7 +63,11 @@ export function generateTokens(userId: number, role: string): TokenPair {
 
 export function verifyAccessToken(token: string): TokenPayload {
   const payload = jwt.verify(token, config.jwt.accessSecret) as TokenPayload;
-  return { userId: payload.userId, role: payload.role };
+  return {
+    userId: payload.userId,
+    role: payload.role,
+    impersonatorId: payload.impersonatorId,
+  };
 }
 
 export function verifyRefreshToken(token: string): TokenPayload {
@@ -90,7 +95,8 @@ export class AppError extends Error {
 
 export async function registerUser(
   email: string,
-  password: string
+  password: string,
+  refCode?: string
 ): Promise<AuthResult> {
   const db = getDb();
   const redis = getRedis();
@@ -147,7 +153,29 @@ export async function registerUser(
   // 更新返回中的 balance
   newUser.balance = trialQuota;
 
-  // 5. 生成验证码（6 位数字，存 Redis 5 分钟）
+  // 5. 处理静默推荐码（代理商邀请链接）
+  if (refCode) {
+    const agentIdStr = await redis.get(`ref:link:${refCode}`);
+    if (agentIdStr) {
+      const agentId = parseInt(agentIdStr, 10);
+      // 检查客户是否已被其他代理商绑定
+      const [existingBinding] = await db
+        .select({ id: agentClients.id })
+        .from(agentClients)
+        .where(eq(agentClients.clientUserId, newUser.id))
+        .limit(1);
+
+      if (!existingBinding) {
+        await db.insert(agentClients).values({
+          agentId,
+          clientUserId: newUser.id,
+        });
+      }
+      // 静默处理：失败不影响注册，不抛出错误
+    }
+  }
+
+  // 6. 生成验证码（6 位数字，存 Redis 5 分钟）
   const verifyCode = Math.random().toString().slice(2, 8);
   await redis.setex(
     `verify:email:${newUser.id}`,
@@ -202,27 +230,98 @@ export async function verifyUserEmail(
     .where(eq(users.id, userId));
 }
 
-// ── 登录 ──
+// ── 登录（含风控） ──
+
+export interface LoginResult {
+  user: AuthResult["user"] | null;
+  tokens: TokenPair | null;
+  captchaRequired?: boolean;
+  captchaSession?: string;
+}
 
 export async function loginUser(
   email: string,
-  password: string
-): Promise<AuthResult> {
+  password: string,
+  ip?: string,
+  userAgent?: string,
+  captcha?: string,
+  captchaSession?: string,
+): Promise<LoginResult> {
   const db = getDb();
+  const { preLoginCheck, handleLoginFailure, handleLoginSuccess, verifyCaptchaSession, isUserBanned } = await import("./login-security.js");
+  const { createSession, revokeAllUserSessions } = await import("./session-manager.js");
+  const { recordSecurityEvent } = await import("./security-event.js");
 
-  // 1. 查找用户
+  // 辅助：记录登录历史
+  async function recordLogin(userId: number | null, success: boolean, failReason?: string) {
+    if (!userId) return;
+    await db.insert(userLoginHistory).values({
+      userId,
+      ip: ip ?? "unknown",
+      userAgent: userAgent ?? undefined,
+      success,
+      failReason: failReason ?? undefined,
+    }).catch(() => {}); // 静默失败，不影响登录流程
+  }
+
+  // 1. 查找用户（先查用户以获取 userId，但还未验证密码）
   const [user] = await db
     .select()
     .from(users)
     .where(eq(users.email, email.toLowerCase()))
     .limit(1);
 
+  // 2. 登录前风控检查
+  const userId = user?.id ?? null;
+  const preCheck = await preLoginCheck(ip ?? "unknown", userId, email);
+
+  if (!preCheck.allowed) {
+    // 记录失败的登录历史
+    if (userId) {
+      await recordLogin(userId, false, preCheck.blockedReason === "IP 已被临时封禁" ? "ip_banned" : "user_banned");
+    }
+    throw new AppError(
+      "LOGIN_BLOCKED",
+      preCheck.blockedReason ?? "登录被拒绝，请稍后重试",
+      429,
+    );
+  }
+
+  if (preCheck.requireCaptcha && captchaSession) {
+    // 用户提交了验证码，需要验证
+    if (captcha) {
+      const captchaResult = await verifyCaptchaSession(captchaSession, captcha);
+      if (!captchaResult.valid || captchaResult.userId !== userId) {
+        if (userId) {
+          await recordLogin(userId, false, "wrong_captcha");
+        }
+        throw new AppError("INVALID_CAPTCHA", "验证码错误或已过期", 400);
+      }
+    } else {
+      // 请求验证码，但未提交验证码字段
+      if (userId) {
+        await recordLogin(userId, false, "captcha_required");
+      }
+      // 返回需要验证码
+      return {
+        user: null as any,
+        tokens: null as any,
+        captchaRequired: true,
+        captchaSession,
+      };
+    }
+  }
+
+  // 3. 如果没有用户，直接返回错误（在前置风控之后才暴露「用户不存在」）
   if (!user) {
+    // 即使邮箱不存在，也记录失败到 IP 级计数器
+    await handleLoginFailure(ip ?? "unknown", null, email);
     throw new AppError("INVALID_CREDENTIALS", "邮箱或密码错误", 401);
   }
 
-  // 2. 检查状态
+  // 4. 检查状态
   if (user.status === "disabled") {
+    await recordLogin(user.id, false, "user_disabled");
     const until = user.disabledUntil
       ? `，解封时间: ${user.disabledUntil.toISOString()}`
       : "（永久封禁）";
@@ -234,17 +333,99 @@ export async function loginUser(
   }
 
   if (user.status === "deleted") {
+    await recordLogin(user.id, false, "user_deleted");
     throw new AppError("USER_DELETED", "账号已注销", 403);
   }
 
-  // 3. 验证密码
+  // 5. 检查 DB 级 force_logout_at（管理端强制下线标记）
+  if (user.forceLogoutAt) {
+    await recordLogin(user.id, false, "force_logout");
+    throw new AppError("FORCE_LOGOUT", "账号已被管理员强制下线，请联系客服", 403);
+  }
+
+  // 6. 验证密码
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
+    await recordLogin(user.id, false, "wrong_password");
+    // 触发风控计数器
+    await handleLoginFailure(ip ?? "unknown", user.id, email);
     throw new AppError("INVALID_CREDENTIALS", "邮箱或密码错误", 401);
   }
 
-  // 4. 生成 token
+  // 7. 登录成功 → 清除风控计数器
+  await handleLoginSuccess(ip ?? "unknown", user.id);
+
+  // 8. 异步执行异地登录检测 & 会话管理（不阻塞登录返回）
+  const geoPromise = (async () => {
+    try {
+      const { detectUnusualLogin, lookupGeo } = await import("./geo-check.js");
+      const geo = await lookupGeo(ip ?? "unknown");
+      if (geo) {
+        const risk = await detectUnusualLogin(user.id, ip ?? "unknown", userAgent ?? "", geo);
+        if (risk.riskLevel !== "low") {
+          // 写安全事件 & 发邮件通知
+          await recordSecurityEvent({
+            userId: user.id,
+            eventType: risk.riskLevel === "critical" ? "unusual_location" : "new_device",
+            riskLevel: risk.riskLevel,
+            ip,
+            userAgent,
+            city: geo.city,
+            country: geo.countryName,
+            detail: { reason: risk.reason },
+          });
+
+          // 高风险/严重 → 发邮件提醒
+          if (risk.riskLevel === "high" || risk.riskLevel === "critical") {
+            const { sendLoginAlertEmail } = await import("./email-service.js");
+            sendLoginAlertEmail({
+              toEmail: user.email,
+              nickname: user.nickname,
+              city: geo.city,
+              country: geo.countryName,
+              ip: ip ?? "unknown",
+              device: userAgent ?? "未知设备",
+            }).catch(() => {});
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`[GeoCheck] 异地检测失败 (userId=${user.id}):`, err);
+    }
+  })();
+
+  const sessionPromise = (async () => {
+    try {
+      // 先检查 force_logout_at 是否过期
+      if (user.forceLogoutAt && new Date(user.forceLogoutAt) < new Date()) {
+        // 清除标记
+        await db.update(users).set({ forceLogoutAt: null }).where(eq(users.id, user.id));
+        // 清理旧会话
+        await revokeAllUserSessions(user.id);
+      }
+    } catch {}
+  })();
+
+  // 9. 记录成功登录 + 更新最后登录时间
+  await Promise.all([
+    recordLogin(user.id, true),
+    db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id)),
+  ]);
+
+  // 10. 生成 token（包含 jti 用于会话管理）
   const tokens = generateTokens(user.id, user.role);
+
+  // 11. 创建会话记录（异步，不阻塞返回）
+  createSession({
+    userId: user.id,
+    jti: tokens.accessToken, // 使用 accessToken 的签名作为 jti
+    ip: ip ?? "unknown",
+    userAgent: userAgent ?? undefined,
+  }).catch((err) => console.warn(`[Session] 创建会话失败 (userId=${user.id}):`, err));
+
+  // 12. 确保异地检测完成后再返回（保证登录历史已写入）
+  await geoPromise;
+  await sessionPromise;
 
   return {
     user: {
@@ -258,6 +439,7 @@ export async function loginUser(
       emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
     },
     tokens,
+    captchaRequired: false,
   };
 }
 
@@ -292,6 +474,15 @@ export async function getUserProfile(userId: number) {
       status: users.status,
       realNameStatus: users.realNameStatus,
       realName: users.realName,
+      idNumber: users.idNumber,
+      idFrontImage: users.idFrontImage,
+      idBackImage: users.idBackImage,
+      companyName: users.companyName,
+      companyRegNumber: users.companyRegNumber,
+      businessLicense: users.businessLicense,
+      bankName: users.bankName,
+      bankAccount: users.bankAccount,
+      rejectReason: users.rejectReason,
       balance: users.balance,
       discountRate: users.discountRate,
       rpmOverride: users.rpmOverride,

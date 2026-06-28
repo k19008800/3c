@@ -13,6 +13,7 @@ export const registerSchema = z.object({
   email: z.string().email("邮箱格式不正确"),
   password: z.string().min(6, "密码至少 6 位"),
   confirmPassword: z.string().min(6),
+  refCode: z.string().optional(),
 }).refine((d) => d.password === d.confirmPassword, {
   message: "两次密码不一致",
   path: ["confirmPassword"],
@@ -27,6 +28,14 @@ export const loginSchema = z.object({
   password: z.string().min(1),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
+
+export const loginWithCaptchaSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+  captcha: z.string().min(1, "验证码不能为空"),
+  captchaSession: z.string().min(1),
+});
+export type LoginWithCaptchaInput = z.infer<typeof loginWithCaptchaSchema>;
 export const loginResponse = z.object({
   accessToken: z.string(),
   refreshToken: z.string(),

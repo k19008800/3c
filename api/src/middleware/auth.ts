@@ -16,6 +16,7 @@ declare module "fastify" {
     user?: {
       userId: number;
       role: string;
+      impersonatorId?: number;
     };
     apiKey?: {
       id: number;
@@ -30,6 +31,9 @@ export async function authenticateJWT(
   request: FastifyRequest,
   reply: FastifyReply
 ) {
+  // 跳过 CORS 预检请求
+  if (request.method === "OPTIONS") return;
+
   const authHeader = request.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     reply.status(401).send({
@@ -94,6 +98,7 @@ export async function authenticateApiKey(
       status: apiKeys.status,
       expiresAt: apiKeys.expiresAt,
       userStatus: users.status,
+      userRealNameStatus: users.realNameStatus,
       userDisabledUntil: users.disabledUntil,
     })
     .from(apiKeys)
@@ -143,6 +148,19 @@ export async function authenticateApiKey(
     return;
   }
 
+  // 检查实名认证状态（个人/企业都需要实名通过才能调用 API）
+  const realNameStatus = (keyRecord as any).userRealNameStatus;
+  if (realNameStatus && realNameStatus !== "approved") {
+    const statusMsg =
+      realNameStatus === "pending_review" ? "实名认证审核中，请等待审核通过" :
+      realNameStatus === "rejected" ? "实名认证已被拒绝" :
+      "请先完成实名认证";
+    reply.status(403).send({
+      error: { message: statusMsg, type: "access_denied" },
+    });
+    return;
+  }
+
   // 更新 lastUsedAt
   await db
     .update(apiKeys)
@@ -175,4 +193,20 @@ export function requireRole(...roles: string[]) {
       return;
     }
   };
+}
+
+// ── 模拟态拦截：禁止敏感操作 ──
+
+export async function guardNotImpersonating(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  if (request.user?.impersonatorId) {
+    reply.status(403).send({
+      code: 403,
+      data: null,
+      message: "模拟模式下不允许执行此操作",
+    });
+    return;
+  }
 }
