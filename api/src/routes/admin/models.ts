@@ -51,13 +51,47 @@ export async function adminModelRoutes(app: FastifyInstance) {
   // ── 列表 ──
   app.get("/api/v1/admin/models", async (request, reply) => {
     const db = getDb();
-    const type = (request.query as any)?.type;
-    const q = db.select().from(models).orderBy(asc(models.id));
-    if (type && MODEL_TYPES.includes(type)) {
-      q.where(eq(models.type, type));
+    const query = request.query as Record<string, string | undefined>;
+    const page = Math.max(1, parseInt(query.page ?? "1", 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(query.pageSize ?? "20", 10) || 20));
+    const keyword = query.keyword?.trim();
+    const typeFilter = query.type?.trim();
+    const statusFilter = query.status?.trim();
+    const offset = (page - 1) * pageSize;
+
+    // Build conditions
+    const conditions = [];
+    if (keyword) {
+      conditions.push(sql`${models.name} ILIKE ${`%${keyword}%`}`);
     }
-    const all = await q;
-    reply.status(200).send({ code: 0, data: all, message: "ok" });
+    if (typeFilter && MODEL_TYPES.includes(typeFilter as any)) {
+      conditions.push(eq(models.type, typeFilter as any));
+    }
+    if (statusFilter) {
+      conditions.push(eq(models.status, statusFilter === "true"));
+    }
+
+    const whereClause = conditions.length > 0 ? sql`${conditions.reduce((a, b) => sql`${a} AND ${b}`)}` : undefined;
+
+    const [totalResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(models)
+      .where(whereClause);
+    const total = Number(totalResult?.count ?? 0);
+
+    const rows = await db
+      .select()
+      .from(models)
+      .where(whereClause)
+      .orderBy(asc(models.id))
+      .limit(pageSize)
+      .offset(offset);
+
+    reply.status(200).send({
+      code: 0,
+      data: { list: rows, total, page, pageSize },
+      message: "ok",
+    });
   });
 
   // ── 更新 ──

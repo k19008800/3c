@@ -48,13 +48,48 @@ export async function adminVendorRoutes(app: FastifyInstance) {
   });
 
   // ── 列表 ──
-  app.get("/api/v1/admin/vendors", async (_request, reply) => {
+  app.get("/api/v1/admin/vendors", async (request, reply) => {
     const db = getDb();
-    const all = await db.select().from(vendors).orderBy(asc(vendors.id));
-    reply.status(200).send({ code: 0, data: all, message: "ok" });
+    const query = request.query as Record<string, string | undefined>;
+    const page = Math.max(1, parseInt(query.page ?? "1", 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(query.pageSize ?? "20", 10) || 20));
+    const keyword = query.keyword?.trim();
+    const statusFilter = query.status?.trim();
+    const offset = (page - 1) * pageSize;
+
+    // Build conditions
+    const conditions = [];
+    if (keyword) {
+      conditions.push(sql`${vendors.name} ILIKE ${`%${keyword}%`}`);
+    }
+    if (statusFilter) {
+      conditions.push(eq(vendors.status, statusFilter as any));
+    }
+
+    const whereClause = conditions.length > 0 ? sql`${conditions.reduce((a, b) => sql`${a} AND ${b}`)}` : undefined;
+
+    const [totalResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(vendors)
+      .where(whereClause);
+    const total = Number(totalResult?.count ?? 0);
+
+    const rows = await db
+      .select()
+      .from(vendors)
+      .where(whereClause)
+      .orderBy(asc(vendors.id))
+      .limit(pageSize)
+      .offset(offset);
+
+    reply.status(200).send({
+      code: 0,
+      data: { list: rows, total, page, pageSize },
+      message: "ok",
+    });
   });
 
-  // ── 详情 ──
+  // ── 详情（含熔断状态） ──
   app.get("/api/v1/admin/vendors/:id", async (request, reply) => {
     const db = getDb();
     const id = parseInt((request.params as any).id);
@@ -63,7 +98,27 @@ export async function adminVendorRoutes(app: FastifyInstance) {
       reply.status(404).send({ code: 404, data: null, message: "厂商不存在" });
       return;
     }
-    reply.status(200).send({ code: 0, data: vendor, message: "ok" });
+
+    // 加载熔断状态
+    let circuitInfo: any = null;
+    try {
+      const { getAllCircuitStatuses } = await import("../../services/circuit-breaker.js");
+      const allCircuits = await getAllCircuitStatuses();
+      // 查找属于这个厂商的熔断记录
+      const vendorCircuits = allCircuits.filter((c) => c.vendorId === id);
+      if (vendorCircuits.length > 0) {
+        circuitInfo = vendorCircuits;
+      }
+    } catch {}
+
+    reply.status(200).send({
+      code: 0,
+      data: {
+        ...vendor,
+        circuit: circuitInfo,
+      },
+      message: "ok",
+    });
   });
 
   // ── 更新 ──

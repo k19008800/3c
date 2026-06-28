@@ -4,7 +4,7 @@
 //  GET    /api/v1/admin/vendor-models           — 列表
 //  GET    /api/v1/admin/vendor-models/:id       — 详情
 //  PATCH  /api/v1/admin/vendor-models/:id       — 更新
-//  DELETE /api/v1/admin/vendor-models/:id       — 删除
+//  DELETE /api/v1/admin/vendor-models/:id       — 下架（软删除，设 status=false）
 // ============================================================
 
 import { FastifyInstance } from "fastify";
@@ -82,41 +82,65 @@ export async function adminVendorModelRoutes(app: FastifyInstance) {
   // ── 列表 ──
   app.get("/api/v1/admin/vendor-models", async (request, reply) => {
     const db = getDb();
-    const { vendorId, modelId } = request.query as any;
+    const query = request.query as Record<string, string | undefined>;
+    const page = Math.max(1, parseInt(query.page ?? "1", 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(query.pageSize ?? "20", 10) || 20));
+    const vendorId = query.vendorId;
+    const modelId = query.modelId;
+    const statusFilter = query.status;
+    const offset = (page - 1) * pageSize;
 
     const conditions: any[] = [];
     if (vendorId) conditions.push(eq(vendorModels.vendorId, parseInt(vendorId)));
     if (modelId) conditions.push(eq(vendorModels.modelId, parseInt(modelId)));
+    // 默认只显示启用的映射，除非显式指定了 status 筛选
+    if (statusFilter) {
+      conditions.push(eq(vendorModels.status, statusFilter === "true"));
+    } else {
+      conditions.push(eq(vendorModels.status, true));
+    }
+
+    const selectFields = {
+      id: vendorModels.id,
+      vendorId: vendorModels.vendorId,
+      vendorName: vendors.name,
+      modelId: vendorModels.modelId,
+      modelName: models.name,
+      upstreamModelName: vendorModels.upstreamModelName,
+      apiEndpoint: vendorModels.apiEndpoint,
+      costPriceInput: vendorModels.costPriceInput,
+      costPriceOutput: vendorModels.costPriceOutput,
+      sellPriceInput: vendorModels.sellPriceInput,
+      sellPriceOutput: vendorModels.sellPriceOutput,
+      weight: vendorModels.weight,
+      rpmLimit: vendorModels.rpmLimit,
+      tpmLimit: vendorModels.tpmLimit,
+      status: vendorModels.status,
+      healthScore: vendorModels.healthScore,
+      isDown: vendorModels.isDown,
+      createdAt: vendorModels.createdAt,
+      updatedAt: vendorModels.updatedAt,
+    };
+
+    const [totalResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(vendorModels)
+      .innerJoin(vendors, eq(vendorModels.vendorId, vendors.id))
+      .innerJoin(models, eq(vendorModels.modelId, models.id))
+      .where(and(...conditions));
+    const total = Number(totalResult?.count ?? 0);
 
     const list = await db
-      .select({
-        id: vendorModels.id,
-        vendorId: vendorModels.vendorId,
-        vendorName: vendors.name,
-        modelId: vendorModels.modelId,
-        modelName: models.name,
-        upstreamModelName: vendorModels.upstreamModelName,
-        apiEndpoint: vendorModels.apiEndpoint,
-        costPriceInput: vendorModels.costPriceInput,
-        costPriceOutput: vendorModels.costPriceOutput,
-        sellPriceInput: vendorModels.sellPriceInput,
-        sellPriceOutput: vendorModels.sellPriceOutput,
-        weight: vendorModels.weight,
-        rpmLimit: vendorModels.rpmLimit,
-        tpmLimit: vendorModels.tpmLimit,
-        status: vendorModels.status,
-        healthScore: vendorModels.healthScore,
-        isDown: vendorModels.isDown,
-        createdAt: vendorModels.createdAt,
-        updatedAt: vendorModels.updatedAt,
-      })
+      .select(selectFields)
       .from(vendorModels)
       .innerJoin(vendors, eq(vendorModels.vendorId, vendors.id))
       .innerJoin(models, eq(vendorModels.modelId, models.id))
       .where(and(...conditions))
-      .orderBy(asc(vendorModels.id));
+      .orderBy(asc(vendorModels.id))
+      .limit(pageSize)
+      .offset(offset);
 
-    reply.status(200).send({ code: 0, data: list, message: "ok" });
+    reply.status(200).send({ code: 0, data: { list, total, page, pageSize }, message: "ok" });
   });
 
   // ── 详情 ──
@@ -203,13 +227,14 @@ export async function adminVendorModelRoutes(app: FastifyInstance) {
     reply.status(200).send({ code: 0, data: safe, message: "ok" });
   });
 
-  // ── 删除 ──
+  // ── 删除（软删除：下架，设 status = false）──
   app.delete("/api/v1/admin/vendor-models/:id", async (request, reply) => {
     const db = getDb();
     const id = parseInt((request.params as any).id);
 
     const [vm] = await db
-      .delete(vendorModels)
+      .update(vendorModels)
+      .set({ status: false })
       .where(eq(vendorModels.id, id))
       .returning({ id: vendorModels.id });
 
