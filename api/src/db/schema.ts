@@ -25,6 +25,7 @@ import {
   foreignKey,
   pgEnum,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 // ──────────────────────────────────────────────
@@ -32,6 +33,12 @@ import type { AnyPgColumn } from "drizzle-orm/pg-core";
 // ──────────────────────────────────────────────
 
 export const userTypeEnum = pgEnum("user_type", ["personal", "enterprise"]);
+export const oauthProviderEnum = pgEnum("oauth_provider", [
+  "wechat",
+  "google",
+  "apple",
+  "github",
+]);
 export const userStatusEnum = pgEnum("user_status", [
   "pending",        // 未验证邮箱
   "active",         // 已验证邮箱
@@ -83,7 +90,8 @@ export const payChannelEnum = pgEnum("pay_channel", [
   "bank_transfer",
 ]);
 export const withdrawStatusEnum = pgEnum("withdraw_status", [
-  "pending_review",
+  "pending_first_review",
+  "pending_second_review",
   "approved",
   "rejected",
   "paid",
@@ -91,6 +99,7 @@ export const withdrawStatusEnum = pgEnum("withdraw_status", [
 export const commissionStatusEnum = pgEnum("commission_status", [
   "pending",
   "settled",
+  "cancelled",
 ]);
 export const balanceLogTypeEnum = pgEnum("balance_log_type", [
   "recharge",
@@ -111,6 +120,9 @@ export const auditActionEnum = pgEnum("audit_action", [
   "real_name_reject",
   "withdraw_approve",
   "withdraw_reject",
+  "withdraw_first_approve",
+  "withdraw_second_approve",
+  "withdraw_paid",
   "agent_create",
   "agent_update",
   "config_update",
@@ -118,6 +130,12 @@ export const auditActionEnum = pgEnum("audit_action", [
   "vendor_update",
   "model_create",
   "model_update",
+  "user_update",
+  "user_impersonate",
+  "order_cancel",
+  "recharge_confirm",
+  "recharge_first_confirm",
+  "recharge_second_confirm",
   "system_maintenance",
 ]);
 
@@ -170,7 +188,17 @@ export const users = pgTable(
     teamId: integer("team_id"),
     teamRole: teamRoleEnum("team_role"),
 
+    // 安全控制
+    loginCaptchaUntil: timestamp("login_captcha_until", { withTimezone: true }),
+    maxConcurrentSessions: integer("max_concurrent_sessions"),  // NULL=使用系统默认
+    forceLogoutAt: timestamp("force_logout_at", { withTimezone: true }),
+
+    // 联系 & 头像
+    phone: varchar("phone", { length: 20 }),
+    avatarUrl: varchar("avatar_url", { length: 500 }),
+
     // 时间
+    lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -245,6 +273,164 @@ export const userRoleHistory = pgTable(
   })
 );
 
+export const userOauthBindings = pgTable(
+  "user_oauth_bindings",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: oauthProviderEnum("provider").notNull(),
+    providerUserId: varchar("provider_user_id", { length: 255 }).notNull(),
+    providerEmail: varchar("provider_email", { length: 255 }),
+    nickname: varchar("nickname", { length: 100 }),
+    avatarUrl: varchar("avatar_url", { length: 500 }),
+    rawProfile: jsonb("raw_profile"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userProviderIdx: uniqueIndex("user_oauth_user_provider_idx").on(table.userId, table.provider),
+    providerUserIdx: uniqueIndex("user_oauth_provider_user_idx").on(table.provider, table.providerUserId),
+  })
+);
+
+// ──────────────────────────────────────────────
+//  5.1.1 安全 & 运营
+// ──────────────────────────────────────────────
+
+export const userLoginHistory = pgTable(
+  "user_login_history",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ip: varchar("ip", { length: 45 }).notNull(),
+    userAgent: varchar("user_agent", { length: 500 }),
+    success: boolean("success").notNull(),
+    failReason: varchar("fail_reason", { length: 100 }),  // wrong_password / user_disabled / user_deleted
+    city: varchar("city", { length: 100 }),
+    country: varchar("country", { length: 100 }),
+    deviceFingerprint: varchar("device_fingerprint", { length: 255 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdCreatedAtIdx: index("user_login_history_user_created_at_idx").on(table.userId, table.createdAt),
+    createdAtIdx: index("user_login_history_created_at_idx").on(table.createdAt),
+    cityIdx: index("user_login_history_city_idx").on(table.city),
+  })
+);
+
+export const userNotes = pgTable(
+  "user_notes",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("user_notes_user_id_idx").on(table.userId),
+  })
+);
+
+export const userIpWhitelist = pgTable(
+  "user_ip_whitelist",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ip: varchar("ip", { length: 45 }).notNull(),
+    description: varchar("description", { length: 255 }),
+    enabled: boolean("enabled").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIpIdx: uniqueIndex("user_ip_whitelist_user_id_ip_idx").on(table.userId, table.ip),
+  })
+);
+
+// ──────────────────────────────────────────────
+//  5.1.11 用户通知（站内信）
+// ──────────────────────────────────────────────
+
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "real_name_approved",
+  "real_name_rejected",
+  "system",
+  "login_alert",
+  "account_banned",
+]);
+
+export const userNotifications = pgTable(
+  "user_notifications",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: notificationTypeEnum("type").notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    content: text("content").notNull(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    refType: varchar("ref_type", { length: 50 }),
+    refId: integer("ref_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdCreatedAtIdx: index("user_notifications_user_id_created_at_idx").on(table.userId, table.createdAt),
+    unreadIdx: index("user_notifications_unread_idx").on(table.userId, table.readAt),
+  })
+);
+
+// ──────────────────────────────────────────────
+//  5.1.2 实名审核历史
+// ──────────────────────────────────────────────
+
+export const userRealNameReviews = pgTable(
+  "user_real_name_reviews",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(), // 自增版本号（按用户）
+    // 提交的实名信息快照
+    realName: varchar("real_name", { length: 100 }),
+    idNumber: varchar("id_number", { length: 30 }),
+    idFrontImage: varchar("id_front_image", { length: 500 }),
+    idBackImage: varchar("id_back_image", { length: 500 }),
+    companyName: varchar("company_name", { length: 255 }),
+    companyRegNumber: varchar("company_reg_number", { length: 50 }),
+    businessLicense: varchar("business_license", { length: 500 }),
+    bankName: varchar("bank_name", { length: 255 }),
+    bankAccount: varchar("bank_account", { length: 100 }),
+    bankAddress: varchar("bank_address", { length: 500 }),
+    invoiceTitle: varchar("invoice_title", { length: 255 }),
+    invoiceTaxId: varchar("invoice_tax_id", { length: 50 }),
+    // 审核结果
+    status: realNameStatusEnum("status").notNull().default("pending_review"),
+    reviewerId: integer("reviewer_id").references(() => users.id),
+    rejectReason: text("reject_reason"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  },
+  (table) => ({
+    userIdVersionIdx: uniqueIndex("user_real_name_user_version_idx").on(table.userId, table.version),
+    userIdIdx: index("user_real_name_user_id_idx").on(table.userId),
+    statusIdx: index("user_real_name_status_idx").on(table.status),
+  })
+);
+
 // ──────────────────────────────────────────────
 //  5.2 模型 & 厂商
 // ──────────────────────────────────────────────
@@ -315,7 +501,7 @@ export const vendorModels = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
-    vendorModelIdx: uniqueIndex("vendor_models_vendor_model_idx").on(table.vendorId, table.modelId),
+    vendorModelIdx: uniqueIndex("vendor_models_vendor_model_idx").on(table.vendorId, table.modelId).where(sql`status = true`),
     modelIdIdx: index("vendor_models_model_id_idx").on(table.modelId),
     vendorDownIdx: index("vendor_models_vendor_down_idx").on(table.vendorId, table.isDown),
   })
@@ -399,12 +585,24 @@ export const rechargeOrders = pgTable(
     paidAt: timestamp("paid_at", { withTimezone: true }),
     // 对公转账
     voucherImage: varchar("voucher_image", { length: 500 }),        // 转账凭证图片
-    confirmedBy: integer("confirmed_by").references(() => users.id),// 后台审核人
+    confirmedBy: integer("confirmed_by").references(() => users.id),// 单次确认兼容
     confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    // 增强财务字段
+    voucherNo: varchar("voucher_no", { length: 32 }),
+    payerAccountName: varchar("payer_account_name", { length: 128 }),
+    payerAccountNo: varchar("payer_account_no", { length: 64 }),
+    transferRemark: varchar("transfer_remark", { length: 256 }),
+    bankTxId: varchar("bank_tx_id", { length: 64 }),
+    bankTxCheckedAt: timestamp("bank_tx_checked_at", { withTimezone: true }),
+    // 双审字段
+    firstConfirmedBy: integer("first_confirmed_by").references(() => users.id),
+    firstConfirmedAt: timestamp("first_confirmed_at", { withTimezone: true }),
+    secondConfirmedBy: integer("second_confirmed_by").references(() => users.id),
+    secondConfirmedAt: timestamp("second_confirmed_at", { withTimezone: true }),
     // 退款
     refundedAt: timestamp("refunded_at", { withTimezone: true }),
     // 过期
-    expiresAt: timestamp("expires_at", { withTimezone: true }),     // 30 分钟未支付自动过期
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
     remark: text("remark"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -467,9 +665,11 @@ export const agents = pgTable(
       .notNull()
       .unique()
       .references(() => users.id, { onDelete: "cascade" }),
-    commissionRate: numeric("commission_rate", { precision: 5, scale: 4 }).notNull().default("0.0000"), // 分佣比例（基于流水）
+    commissionRate: numeric("commission_rate", { precision: 5, scale: 4 }).notNull().default("0.0000"),
     totalCommission: numeric("total_commission", { precision: 18, scale: 6 }).notNull().default("0.000000"),
+    settledCommission: numeric("settled_commission", { precision: 18, scale: 6 }).notNull().default("0.000000"),
     pendingWithdraw: numeric("pending_withdraw", { precision: 18, scale: 6 }).notNull().default("0.000000"),
+    frozenAmount: numeric("frozen_amount", { precision: 18, scale: 6 }).notNull().default("0.000000"),
     status: boolean("status").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -511,6 +711,18 @@ export const commissionLogs = pgTable(
     callCost: numeric("call_cost", { precision: 18, scale: 6 }).notNull(),
     commissionAmount: numeric("commission_amount", { precision: 18, scale: 6 }).notNull(),
     status: commissionStatusEnum("status").notNull().default("pending"),
+    // 增强字段
+    voucherNo: varchar("voucher_no", { length: 32 }),
+    commissionType: varchar("commission_type", { length: 20 }), // 'sale'|'team'|'activity'|'renewal'
+    sourceOrderId: varchar("source_order_id", { length: 64 }),
+    sourceOrderAmount: numeric("source_order_amount", { precision: 18, scale: 6 }),
+    sourceCustomerId: integer("source_customer_id").references(() => users.id, { onDelete: "set null" }),
+    feeRate: numeric("fee_rate", { precision: 5, scale: 4 }).default("0.0000"),
+    feeAmount: numeric("fee_amount", { precision: 18, scale: 6 }).default("0.000000"),
+    netAmount: numeric("net_amount", { precision: 18, scale: 6 }),
+    ruleSnapshot: jsonb("rule_snapshot"),
+    calcDetail: jsonb("calc_detail"),
+    balanceSnapshot: numeric("balance_snapshot", { precision: 18, scale: 6 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     settledAt: timestamp("settled_at", { withTimezone: true }),
   },
@@ -518,6 +730,29 @@ export const commissionLogs = pgTable(
     agentIdIdx: index("commission_logs_agent_id_idx").on(table.agentId),
     statusIdx: index("commission_logs_status_idx").on(table.status),
     createdAtIdx: index("commission_logs_created_at_idx").on(table.createdAt),
+    voucherNoIdx: index("commission_logs_voucher_no_idx").on(table.voucherNo),
+  })
+);
+
+export const agentCustomerConsumption = pgTable(
+  "agent_customer_consumption",
+  {
+    id: serial("id").primaryKey(),
+    agentId: integer("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
+    customerUserId: integer("customer_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    customerName: varchar("customer_name", { length: 128 }),
+    bindAt: timestamp("bind_at", { withTimezone: true }),
+    totalAmount: numeric("total_amount", { precision: 18, scale: 6 }).default("0.000000"),
+    monthAmount: numeric("month_amount", { precision: 18, scale: 6 }).default("0.000000"),
+    commissionAmount: numeric("commission_amount", { precision: 18, scale: 6 }).default("0.000000"),
+    orderCount: integer("order_count").default(0),
+    lastOrderAt: timestamp("last_order_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    agentCustomerIdx: uniqueIndex("agent_consumption_agent_customer_idx").on(table.agentId, table.customerUserId),
+    agentIdIdx: index("agent_consumption_agent_id_idx").on(table.agentId),
   })
 );
 
@@ -530,8 +765,24 @@ export const withdrawOrders = pgTable(
       .references(() => agents.id, { onDelete: "cascade" }),
     amount: numeric("amount", { precision: 18, scale: 6 }).notNull(),
     wechatPayNo: varchar("wechat_pay_no", { length: 128 }),          // 微信企业付款单号
-    status: withdrawStatusEnum("status").notNull().default("pending_review"),
-    reviewedBy: integer("reviewed_by").references(() => users.id),  // 审核管理员
+    status: withdrawStatusEnum("status").notNull().default("pending_first_review"),
+    // 增强财务字段
+    voucherNo: varchar("voucher_no", { length: 32 }),
+    feeAmount: numeric("fee_amount", { precision: 18, scale: 6 }).default("0.000000"),
+    actualAmount: numeric("actual_amount", { precision: 18, scale: 6 }), // 实际到账 = amount - fee_amount
+    bankCardNo: varchar("bank_card_no", { length: 64 }),
+    bankName: varchar("bank_name", { length: 128 }),
+    bankVoucherUrl: varchar("bank_voucher_url", { length: 512 }),
+    riskCheckResult: jsonb("risk_check_result"),
+    auditLevel: integer("audit_level"),
+    // 双审字段
+    firstAuditorId: integer("first_auditor_id").references(() => users.id),
+    firstAuditedAt: timestamp("first_audited_at", { withTimezone: true }),
+    secondAuditorId: integer("second_auditor_id").references(() => users.id),
+    secondAuditedAt: timestamp("second_audited_at", { withTimezone: true }),
+    paidOperatorId: integer("paid_operator_id").references(() => users.id),
+    matchedBankTxId: integer("matched_bank_tx_id"),
+    reviewedBy: integer("reviewed_by").references(() => users.id),  // 兼容保留
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
     rejectReason: text("reject_reason"),
     paidAt: timestamp("paid_at", { withTimezone: true }),
@@ -541,6 +792,7 @@ export const withdrawOrders = pgTable(
   (table) => ({
     agentIdIdx: index("withdraw_orders_agent_id_idx").on(table.agentId),
     statusIdx: index("withdraw_orders_status_idx").on(table.status),
+    voucherNoIdx: index("withdraw_orders_voucher_no_idx").on(table.voucherNo),
   })
 );
 
@@ -620,6 +872,115 @@ export const pageContents = pgTable(
   },
   (table) => ({
     slugIdx: uniqueIndex("page_contents_slug_idx").on(table.slug),
+  })
+);
+
+// ──────────────────────────────────────────────
+//  5.5.1 用户偏好设置
+// ──────────────────────────────────────────────
+
+export const userPreferences = pgTable(
+  "user_preferences",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    pageKey: varchar("page_key", { length: 100 }).notNull(),
+    filters: jsonb("filters").notNull().default("{}"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userPageIdx: uniqueIndex("user_prefs_user_page_idx").on(table.userId, table.pageKey),
+  })
+);
+
+// ──────────────────────────────────────────────
+//  5.5 安全风控
+// ──────────────────────────────────────────────
+
+export const riskLevelEnum = pgEnum("risk_level", [
+  "low",
+  "medium",
+  "high",
+  "critical",
+]);
+
+export const securityEventTypeEnum = pgEnum("security_event_type", [
+  "brute_force",
+  "unusual_location",
+  "new_device",
+  "ip_banned",
+  "user_banned",
+  "user_captcha",
+  "circuit_trip",
+  "circuit_recovery",
+  "vendor_failure",
+]);
+
+export const loginSecurityConfigs = pgTable(
+  "login_security_configs",
+  {
+    id: serial("id").primaryKey(),
+    key: varchar("key", { length: 100 }).notNull().unique(),
+    value: jsonb("value").notNull(),
+    description: text("description"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    keyIdx: uniqueIndex("login_security_configs_key_idx").on(table.key),
+  })
+);
+
+export const securityEvents = pgTable(
+  "security_events",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+    eventType: securityEventTypeEnum("event_type").notNull(),
+    riskLevel: riskLevelEnum("risk_level").notNull(),
+    ip: varchar("ip", { length: 45 }),
+    userAgent: varchar("user_agent", { length: 500 }),
+    city: varchar("city", { length: 100 }),
+    country: varchar("country", { length: 100 }),
+    detail: jsonb("detail"),
+    acknowledged: boolean("acknowledged").notNull().default(false),
+    acknowledgedBy: integer("acknowledged_by").references(() => users.id),
+    acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("security_events_user_id_idx").on(table.userId),
+    typeIdx: index("security_events_type_idx").on(table.eventType),
+    createdAtIdx: index("security_events_created_at_idx").on(table.createdAt),
+    riskIdx: index("security_events_risk_idx").on(table.riskLevel),
+    unacknowledgedIdx: index("security_events_unack_idx").on(table.acknowledged),
+  })
+);
+
+export const userLoginSessions = pgTable(
+  "user_login_sessions",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    sessionToken: varchar("session_token", { length: 255 }).notNull().unique(),
+    ip: varchar("ip", { length: 45 }).notNull(),
+    userAgent: varchar("user_agent", { length: 500 }),
+    deviceFingerprint: varchar("device_fingerprint", { length: 255 }),
+    city: varchar("city", { length: 100 }),
+    country: varchar("country", { length: 100 }),
+    isActive: boolean("is_active").notNull().default(true),
+    lastActivity: timestamp("last_activity", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    expiredAt: timestamp("expired_at", { withTimezone: true }),
+  },
+  (table) => ({
+    tokenIdx: uniqueIndex("sessions_token_idx").on(table.sessionToken),
+    activeSessionIdx: index("sessions_active_idx").on(table.userId, table.isActive),
+    userIdIdx: index("sessions_user_id_idx").on(table.userId),
   })
 );
 
