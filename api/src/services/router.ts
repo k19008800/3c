@@ -164,13 +164,31 @@ function pickByStrategy(
   }
 }
 
-// ── 对外接口：选择最佳厂商-模型路由 ──
+// ── 对外接口：选择最佳厂商-模型路由（含熔断） ──
 
 export async function selectRoute(options: RoutingOptions): Promise<VendorModelRoute> {
   const modelId = await resolveModelId(options.modelName);
   const strategy = options.strategy ?? "lowest_price";
 
-  const candidates = await queryAvailableRoutes(modelId);
+  let candidates = await queryAvailableRoutes(modelId);
+
+  // 熔断检查：过滤掉熔断中的厂商
+  try {
+    const { shouldSkipVendor } = await import("./circuit-breaker.js");
+    const filtered: VendorModelRoute[] = [];
+    for (const c of candidates) {
+      const skip = await shouldSkipVendor(c.vendorModelId);
+      if (!skip) {
+        filtered.push(c);
+      }
+    }
+    // 如果全被熔断，放宽限制，允许最低价的熔断厂商通过（总比不可用强）
+    candidates = filtered.length > 0 ? filtered : candidates;
+  } catch (err) {
+    // 熔断服务异常时降级，不阻塞请求
+    console.warn("[Router] 熔断检查异常，跳过:", err);
+  }
+
   return pickByStrategy(candidates, strategy, options.preferredVendorId);
 }
 

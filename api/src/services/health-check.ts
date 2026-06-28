@@ -60,6 +60,18 @@ export async function updateHealthAfterCall(
     newIsDown = false;
   }
 
+  // 同步熔断计数
+  try {
+    const { recordVendorModelFailure, recordVendorModelSuccess } = await import("./circuit-breaker.js");
+    if (!success) {
+      await recordVendorModelFailure(vendorModelId);
+    } else {
+      await recordVendorModelSuccess(vendorModelId);
+    }
+  } catch (err) {
+    // 熔断服务异常，不影响主流程
+  }
+
   await db
     .update(vendorModels)
     .set({

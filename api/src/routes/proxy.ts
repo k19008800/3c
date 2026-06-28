@@ -124,6 +124,105 @@ export async function proxyRoutes(app: FastifyInstance) {
     return model;
   }
 
+  // ── Fallback: 主厂商 5xx 时尝试次优厂商 ──
+  async function tryFallback(
+    model: { id: number; name: string },
+    request: any,
+    failedRoute: any,
+    userId: number,
+    apiKeyId: number | null,
+    originalStartTime: number,
+  ): Promise<any> {
+    try {
+      const { eq, asc, and, sql } = await import("drizzle-orm");
+      const { getDb } = await import("../db/index.js");
+      const { vendorModels: vmTable, vendors: vTable, models: mTable } = await import("../db/schema.js");
+      const { decryptApiKey } = await import("../services/encryption.js");
+      const db = getDb();
+
+      const rows = await db
+        .select({
+          vendorModelId: vmTable.id, vendorId: vmTable.vendorId,
+          vendorName: vTable.name, modelId: vmTable.modelId,
+          upstreamModelName: vmTable.upstreamModelName,
+          apiEndpoint: vmTable.apiEndpoint,
+          apiKeyEncrypted: vmTable.apiKeyEncrypted,
+          sellPriceInput: vmTable.sellPriceInput,
+          sellPriceOutput: vmTable.sellPriceOutput,
+          weight: vmTable.weight,
+          rpmLimit: vmTable.rpmLimit, tpmLimit: vmTable.tpmLimit,
+          healthScore: vmTable.healthScore, isDown: vmTable.isDown,
+        })
+        .from(vmTable)
+        .innerJoin(vTable, eq(vmTable.vendorId, vTable.id))
+        .where(
+          and(
+            eq(vmTable.modelId, model.id),
+            eq(vmTable.status, true),
+            eq(vTable.status, "active"),
+            sql`${vmTable.id} != ${failedRoute.vendorModelId}`,
+          ),
+        )
+        .orderBy(asc(vmTable.sellPriceInput))
+        .limit(1);
+
+      if (rows.length === 0) return null;
+      const r = rows[0];
+
+      const fallbackRoute = {
+        vendorModelId: r.vendorModelId,
+        vendorId: r.vendorId,
+        vendorName: r.vendorName,
+        modelId: r.modelId,
+        upstreamModelName: r.upstreamModelName,
+        apiEndpoint: r.apiEndpoint,
+        apiKeyPlain: decryptApiKey(r.apiKeyEncrypted),
+        sellPriceInput: Number(r.sellPriceInput),
+        sellPriceOutput: Number(r.sellPriceOutput),
+        weight: r.weight,
+        rpmLimit: r.rpmLimit,
+        tpmLimit: r.tpmLimit,
+        healthScore: Number(r.healthScore ?? 1),
+        isDown: r.isDown,
+      };
+
+      request.log.info({
+        from: failedRoute.vendorModelId,
+        to: fallbackRoute.vendorModelId,
+        vendor: fallbackRoute.vendorName,
+      }, "代理 fallback");
+
+      const fallbackResult = await forwardRequest(fallbackRoute, request);
+      const durationMs = Date.now() - originalStartTime;
+
+      await updateHealthAfterCall(fallbackRoute.vendorModelId, fallbackResult.status < 400, durationMs);
+
+      if (fallbackResult.status >= 400) return null;
+
+      if (fallbackResult.usage) {
+        await charge({
+          userId, apiKeyId, modelId: model.id,
+          vendorModelId: fallbackRoute.vendorModelId,
+          vendorName: fallbackRoute.vendorName,
+          modelName: model.name,
+          promptTokens: fallbackResult.usage.promptTokens,
+          completionTokens: fallbackResult.usage.completionTokens,
+          totalTokens: fallbackResult.usage.totalTokens,
+          durationMs, isStreaming: false,
+          status: "success",
+          ip: request.ip,
+          userAgent: request.headers["user-agent"] as string,
+        }).catch(() => {});
+        await recordTokensForLimit(userId, fallbackResult.usage.totalTokens);
+      }
+
+      return fallbackResult.body;
+    } catch (err) {
+      console.warn("[Fallback] fallback 失败:", err);
+      return null;
+    }
+  }
+
   // ── 通用非流式转发 + 计费 ──
   async function handleNonStreaming(
     request: any,
@@ -156,8 +255,22 @@ export async function proxyRoutes(app: FastifyInstance) {
       durationMs,
     );
 
-    // 如果上游返回错误，不扣费
+    // 如果上游返回错误，触发熔断并尝试 fallback
     if (result.status >= 400) {
+      // 触发熔断计数
+      try {
+        const { recordVendorModelFailure } = await import("../services/circuit-breaker.js");
+        await recordVendorModelFailure(route.vendorModelId, result.body?.error?.message ?? `HTTP ${result.status}`);
+      } catch {}
+
+      // 5xx 错误尝试 fallback 厂商
+      if (result.status >= 500) {
+        const fallbackResult = await tryFallback(model, request, route, userId, apiKeyId, startTime);
+        if (fallbackResult) {
+          return fallbackResult;
+        }
+      }
+
       await charge({
         userId, apiKeyId, modelId: model.id,
         vendorModelId: route.vendorModelId, vendorName: route.vendorName,

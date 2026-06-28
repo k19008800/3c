@@ -322,8 +322,8 @@ export async function charge(input: BillingInput): Promise<BillingResult> {
       description: `${input.modelName} / ${input.vendorName} (輸入:${input.promptTokens} 輸出:${input.completionTokens} 耗時:${input.durationMs}ms${input.isStreaming ? " 流式" : ""})`,
     });
 
-    // 8. 如归属代理商，计算分佣
-    await processCommission(tx, input.userId, callLogId, rawCostStr);
+    // 8. 如归属代理商，计算分佣（基于实际扣费金额）
+    await processCommission(tx, input.userId, callLogId, costStr);
 
     // 9. 余额不足告警（Redis 去重，1 小时内同用户只发一次）
     const lowBalanceThreshold = parseFloat(
@@ -387,7 +387,7 @@ async function processCommission(
 
   const commissionAmount = (Number(callCost) * rate).toFixed(6);
 
-  // 写入佣金流水
+  // 写入佣金流水（状态为 pending，余额在结算时更新）
   await tx.insert(commissionLogs).values({
     agentId: client.agentId,
     clientCallLogId: callLogId,
@@ -395,15 +395,6 @@ async function processCommission(
     commissionAmount,
     status: "pending",
   });
-
-  // 更新代理商累计佣金
-  await tx
-    .update(agents)
-    .set({
-      totalCommission: sql`total_commission + ${commissionAmount}`,
-      pendingWithdraw: sql`pending_withdraw + ${commissionAmount}`,
-    })
-    .where(eq(agents.id, client.agentId));
 }
 
 // ── 简单日志输出（生产应替换为正式 logger） ──

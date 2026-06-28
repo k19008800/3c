@@ -11,7 +11,7 @@ import { eq, and, sql } from "drizzle-orm";
 import { createHash, randomBytes } from "node:crypto";
 import { getDb } from "../db/index.js";
 import { apiKeys } from "../db/schema.js";
-import { authenticateJWT } from "../middleware/auth.js";
+import { authenticateJWT, guardNotImpersonating } from "../middleware/auth.js";
 import {
   createApiKeySchema,
   updateApiKeySchema,
@@ -20,7 +20,7 @@ import {
 export async function apiKeyRoutes(app: FastifyInstance) {
   // 创建 API Key
   app.post("/api/v1/api-keys", {
-    preHandler: [authenticateJWT],
+    preHandler: [authenticateJWT, guardNotImpersonating],
     handler: async (request, reply) => {
       try {
         const parsed = createApiKeySchema.parse(request.body);
@@ -117,7 +117,7 @@ export async function apiKeyRoutes(app: FastifyInstance) {
 
   // 更新 API Key
   app.patch("/api/v1/api-keys/:id", {
-    preHandler: [authenticateJWT],
+    preHandler: [authenticateJWT, guardNotImpersonating],
     handler: async (request, reply) => {
       try {
         const parsed = updateApiKeySchema.parse(request.body);
@@ -158,7 +158,7 @@ export async function apiKeyRoutes(app: FastifyInstance) {
 
   // 删除 API Key
   app.delete("/api/v1/api-keys/:id", {
-    preHandler: [authenticateJWT],
+    preHandler: [authenticateJWT, guardNotImpersonating],
     handler: async (request, reply) => {
       const db = getDb();
       const id = parseInt((request.params as any).id);
