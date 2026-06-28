@@ -69,12 +69,19 @@ export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 export const realNamePersonalSchema = z.object({
   realName: z.string().min(1).max(100),
   idNumber: z.string().regex(/^\d{17}[\dXx]$/, "身份证号格式不正确"),
+  idFrontImage: z.string().max(500).optional(),
+  idBackImage: z.string().max(500).optional(),
 });
 export type RealNamePersonalInput = z.infer<typeof realNamePersonalSchema>;
 
 export const realNameEnterpriseSchema = z.object({
+  realName: z.string().min(1).max(100),
+  idNumber: z.string().regex(/^\d{17}[\dXx]$/, "身份证号格式不正确"),
   companyName: z.string().min(1).max(255),
   companyRegNumber: z.string().min(1).max(50),
+  idFrontImage: z.string().max(500).optional(),
+  idBackImage: z.string().max(500).optional(),
+  businessLicense: z.string().max(500).optional(),
   bankName: z.string().max(255).optional(),
   bankAccount: z.string().max(100).optional(),
   bankAddress: z.string().max(500).optional(),
@@ -82,6 +89,33 @@ export const realNameEnterpriseSchema = z.object({
   invoiceTaxId: z.string().max(50).optional(),
 });
 export type RealNameEnterpriseInput = z.infer<typeof realNameEnterpriseSchema>;
+
+// ── 实名上传图片 ──
+
+export const realNameUploadSchema = z.object({
+  fileType: z.enum(["id_front", "id_back", "business_license"]),
+});
+export type RealNameUploadInput = z.infer<typeof realNameUploadSchema>;
+
+export const realNameUploadResponse = z.object({
+  relativePath: z.string(),
+});
+
+// ── 实名状态详情 ──
+
+export const realNameStatusResponse = z.object({
+  status: z.enum(["unverified", "pending_review", "approved", "rejected"]),
+  userType: z.enum(["personal", "enterprise"]),
+  realName: z.string().nullable(),
+  idNumber: z.string().nullable(),
+  idFrontImage: z.string().nullable(),
+  idBackImage: z.string().nullable(),
+  companyName: z.string().nullable(),
+  companyRegNumber: z.string().nullable(),
+  businessLicense: z.string().nullable(),
+  rejectReason: z.string().nullable(),
+  reviewVersion: z.number().nullable(),
+});
 
 export const userProfileResponse = z.object({
   id: z.number(),
