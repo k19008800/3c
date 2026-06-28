@@ -1,0 +1,31 @@
+# 调试/临时文件
+api/_check*.ts
+api/_cleanup*.sql
+api/_find_delete.ts
+api/_login.json
+api/null
+api/test_env.mjs
+
+# 构建产物
+dist/
+build/
+
+# Vite 缓存
+.vite/
+
+# 环境变量
+.env
+.env.local
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# npm
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

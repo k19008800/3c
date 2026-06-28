@@ -54,4 +54,8 @@ export const config = {
   log: {
     level: process.env.LOG_LEVEL || "debug",
   },
+
+  geoip: {
+    dbPath: process.env.GEOIP_DB_PATH || "./data/GeoLite2-City.mmdb",
+  },
 } as const;
