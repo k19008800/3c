@@ -12,7 +12,7 @@
 // ============================================================
 
 import { FastifyInstance } from "fastify";
-import { eq, and, desc, like, sql, asc, or, gte } from "drizzle-orm";
+import { eq, and, desc, like, sql, asc, or, gte, lt } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import {
   users,
@@ -31,6 +31,7 @@ import {
 import { authenticateJWT, requireRole } from "../../middleware/auth.js";
 import { AppError } from "../../services/auth-service.js";
 import bcrypt from "bcryptjs";
+import { config } from "../../config.js";
 import {
   adminChangeRoleSchema,
   adminBatchDisableSchema,
@@ -63,7 +64,7 @@ import type {
   AdminImpersonateInput,
 } from "../../schemas.js";
 
-const SALT_ROUNDS = 12;
+const SALT_ROUNDS = config.bcrypt.saltRounds;
 
 export async function adminUserRoutes(app: FastifyInstance) {
   app.addHook("preHandler", authenticateJWT);
@@ -784,19 +785,27 @@ export async function adminUserRoutes(app: FastifyInstance) {
       return;
     }
 
-    const query = request.query as { page?: string; pageSize?: string };
+    const query = request.query as { page?: string; pageSize?: string; cursor?: string };
     const page = Math.max(1, parseInt(query.page ?? "1", 10) || 1);
     const pageSize = Math.min(100, Math.max(1, parseInt(query.pageSize ?? "20", 10) || 20));
-    const offset = (page - 1) * pageSize;
+    const useCursor = !!query.cursor;
+    const offset = useCursor ? 0 : (page - 1) * pageSize;
 
-    const [totalResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(auditLogs)
-      .where(eq(auditLogs.targetId, userId));
+    const conditions = [eq(auditLogs.targetType, "user"), eq(auditLogs.targetId, userId)];
+    if (useCursor && query.cursor) {
+      conditions.push(lt(auditLogs.createdAt, new Date(query.cursor)));
+    }
 
-    const total = Number(totalResult?.count ?? 0);
+    let total = 0;
+    if (!useCursor) {
+      const [totalResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(auditLogs)
+        .where(eq(auditLogs.targetId, userId));
+      total = Number(totalResult?.count ?? 0);
+    }
 
-    const rows = await db
+    const queryBuilder = db
       .select({
         id: auditLogs.id,
         action: auditLogs.action,
@@ -808,10 +817,14 @@ export async function adminUserRoutes(app: FastifyInstance) {
         createdAt: auditLogs.createdAt,
       })
       .from(auditLogs)
-      .where(and(eq(auditLogs.targetType, "user"), eq(auditLogs.targetId, userId)))
+      .where(and(...conditions))
       .orderBy(desc(auditLogs.createdAt))
-      .limit(pageSize)
-      .offset(offset);
+      .limit(pageSize);
+
+    const rows = useCursor ? await queryBuilder : await queryBuilder.offset(offset);
+    const nextCursor = useCursor && rows.length === pageSize
+      ? rows[rows.length - 1].createdAt.toISOString()
+      : undefined;
 
     reply.status(200).send({
       code: 0,
@@ -820,6 +833,7 @@ export async function adminUserRoutes(app: FastifyInstance) {
         total,
         page,
         pageSize,
+        nextCursor,
       },
       message: "ok",
     });
@@ -839,30 +853,40 @@ export async function adminUserRoutes(app: FastifyInstance) {
       return;
     }
 
-    const query = request.query as { page?: string; pageSize?: string; type?: string };
+    const query = request.query as { page?: string; pageSize?: string; cursor?: string; type?: string };
     const page = Math.max(1, parseInt(query.page ?? "1", 10) || 1);
     const pageSize = Math.min(100, Math.max(1, parseInt(query.pageSize ?? "20", 10) || 20));
-    const offset = (page - 1) * pageSize;
+    const useCursor = !!query.cursor;
+    const offset = useCursor ? 0 : (page - 1) * pageSize;
 
     const conditions = [eq(balanceLogs.userId, userId)];
+    if (useCursor && query.cursor) {
+      conditions.push(lt(balanceLogs.createdAt, new Date(query.cursor)));
+    }
     if (query.type) {
       conditions.push(eq(balanceLogs.type, query.type as any));
     }
 
-    const [totalResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(balanceLogs)
-      .where(and(...conditions));
+    let total = 0;
+    if (!useCursor) {
+      const [totalResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(balanceLogs)
+        .where(and(...conditions));
+      total = Number(totalResult?.count ?? 0);
+    }
 
-    const total = Number(totalResult?.count ?? 0);
-
-    const rows = await db
+    const queryBuilder = db
       .select()
       .from(balanceLogs)
       .where(and(...conditions))
       .orderBy(desc(balanceLogs.createdAt))
-      .limit(pageSize)
-      .offset(offset);
+      .limit(pageSize);
+
+    const rows = useCursor ? await queryBuilder : await queryBuilder.offset(offset);
+    const nextCursor = useCursor && rows.length === pageSize
+      ? rows[rows.length - 1].createdAt.toISOString()
+      : undefined;
 
     reply.status(200).send({
       code: 0,
@@ -874,6 +898,7 @@ export async function adminUserRoutes(app: FastifyInstance) {
         total,
         page,
         pageSize,
+        nextCursor,
       },
       message: "ok",
     });
@@ -1427,25 +1452,37 @@ export async function adminUserRoutes(app: FastifyInstance) {
       return;
     }
 
-    const query = request.query as { page?: string; pageSize?: string };
+    const query = request.query as { page?: string; pageSize?: string; cursor?: string };
     const page = Math.max(1, parseInt(query.page ?? "1", 10) || 1);
     const pageSize = Math.min(100, Math.max(1, parseInt(query.pageSize ?? "20", 10) || 20));
-    const offset = (page - 1) * pageSize;
+    const useCursor = !!query.cursor;
+    const offset = useCursor ? 0 : (page - 1) * pageSize;
 
-    const [totalResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(userLoginHistory)
-      .where(eq(userLoginHistory.userId, userId));
+    const conditions = [eq(userLoginHistory.userId, userId)];
+    if (useCursor && query.cursor) {
+      conditions.push(lt(userLoginHistory.createdAt, new Date(query.cursor)));
+    }
 
-    const total = Number(totalResult?.count ?? 0);
+    let total = 0;
+    if (!useCursor) {
+      const [totalResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(userLoginHistory)
+        .where(eq(userLoginHistory.userId, userId));
+      total = Number(totalResult?.count ?? 0);
+    }
 
-    const rows = await db
+    const queryBuilder = db
       .select()
       .from(userLoginHistory)
-      .where(eq(userLoginHistory.userId, userId))
+      .where(and(...conditions))
       .orderBy(desc(userLoginHistory.createdAt))
-      .limit(pageSize)
-      .offset(offset);
+      .limit(pageSize);
+
+    const rows = useCursor ? await queryBuilder : await queryBuilder.offset(offset);
+    const nextCursor = useCursor && rows.length === pageSize
+      ? rows[rows.length - 1].createdAt.toISOString()
+      : undefined;
 
     reply.status(200).send({
       code: 0,
@@ -1454,6 +1491,7 @@ export async function adminUserRoutes(app: FastifyInstance) {
         total,
         page,
         pageSize,
+        nextCursor,
       },
       message: "ok",
     });

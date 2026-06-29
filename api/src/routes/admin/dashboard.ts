@@ -21,6 +21,18 @@ export async function adminDashboardRoutes(app: FastifyInstance) {
   // ──────────────────────────────────────────────
 
   app.get("/api/v1/admin/dashboard/stats", async (request, reply) => {
+    const redis = getRedis();
+
+    // 缓存命中直接返回（30秒 TTL）
+    try {
+      const cached = await redis.get("dashboard:stats");
+      if (cached) {
+        return reply.send(JSON.parse(cached));
+      }
+    } catch {
+      // Redis 不可用时降级
+    }
+
     const db = getDb();
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -144,7 +156,7 @@ export async function adminDashboardRoutes(app: FastifyInstance) {
       // 安全统计失败不阻塞主流程
     }
 
-    reply.send({
+    const statsResult = {
       code: 0,
       data: {
         users: {
@@ -182,7 +194,12 @@ export async function adminDashboardRoutes(app: FastifyInstance) {
         security,
       },
       message: "ok",
-    });
+    };
+
+    // 写缓存（非阻塞）
+    redis.setex("dashboard:stats", 30, JSON.stringify(statsResult)).catch(() => {});
+
+    reply.send(statsResult);
   });
 
   // ──────────────────────────────────────────────
@@ -457,12 +474,25 @@ export async function adminDashboardRoutes(app: FastifyInstance) {
   // ──────────────────────────────────────────────
 
   app.get("/api/v1/admin/dashboard/trends/hourly", async (request, reply) => {
-    const db = getDb();
+    const redis = getRedis();
     const query = request.query as { date?: string };
     const dateStr = query.date;
     if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       return reply.status(400).send({ code: 1, message: "请提供有效的日期参数 (YYYY-MM-DD)" });
     }
+
+    // 缓存命中直接返回（300秒 TTL）
+    const hourlyCacheKey = `dashboard:hourly:${dateStr}`;
+    try {
+      const cached = await redis.get(hourlyCacheKey);
+      if (cached) {
+        return reply.send(JSON.parse(cached));
+      }
+    } catch {
+      // Redis 不可用时降级
+    }
+
+    const db = getDb();
     const dayStart = new Date(dateStr + "T00:00:00+08:00");
     const dayEnd = new Date(dayStart.getTime() + 86400000);
 
@@ -544,7 +574,7 @@ export async function adminDashboardRoutes(app: FastifyInstance) {
       .orderBy(sql`count(*) desc`)
       .limit(3);
 
-    reply.send({
+    const hourlyResult = {
       code: 0,
       data: {
         date: dateStr,
@@ -558,7 +588,10 @@ export async function adminDashboardRoutes(app: FastifyInstance) {
         },
       },
       message: "ok",
-    });
+    };
+
+    redis.setex(hourlyCacheKey, 300, JSON.stringify(hourlyResult)).catch(() => {});
+    reply.send(hourlyResult);
   });
 
   // ──────────────────────────────────────────────
@@ -567,9 +600,22 @@ export async function adminDashboardRoutes(app: FastifyInstance) {
   // ──────────────────────────────────────────────
 
   app.get("/api/v1/admin/dashboard/trends", async (request, reply) => {
-    const db = getDb();
+    const redis = getRedis();
     const query = request.query as { days?: string };
     const days = Math.min(30, Math.max(1, parseInt(query.days ?? "7", 10) || 7));
+
+    // 缓存命中直接返回（300秒 TTL）
+    const trendsCacheKey = `dashboard:trends:${days}`;
+    try {
+      const cached = await redis.get(trendsCacheKey);
+      if (cached) {
+        return reply.send(JSON.parse(cached));
+      }
+    } catch {
+      // Redis 不可用时降级
+    }
+
+    const db = getDb();
 
     const now = new Date();
     // 生成 N 个日范围，从今天往前
@@ -673,13 +719,16 @@ export async function adminDashboardRoutes(app: FastifyInstance) {
       };
     });
 
-    reply.send({
+    const trendsResult = {
       code: 0,
       data: {
         days,
         series,
       },
       message: "ok",
-    });
+    };
+
+    redis.setex(trendsCacheKey, 300, JSON.stringify(trendsResult)).catch(() => {});
+    reply.send(trendsResult);
   });
 }

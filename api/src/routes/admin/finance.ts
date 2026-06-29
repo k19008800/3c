@@ -15,6 +15,7 @@ import {
   settleCommissions,
   batchSettleCommissions,
   batchCancelCommissions,
+  settleCommissionsByFilters,
 } from "../../services/agent-service.js";
 
 export async function adminFinanceRoutes(app: FastifyInstance) {
@@ -52,7 +53,9 @@ export async function adminFinanceRoutes(app: FastifyInstance) {
       const query = request.query as {
         page?: string;
         pageSize?: string;
+        cursor?: string;
         agentId?: string;
+        agentSearch?: string;
         status?: string;
         commissionType?: string;
         startDate?: string;
@@ -61,13 +64,16 @@ export async function adminFinanceRoutes(app: FastifyInstance) {
 
       const page = Math.max(1, parseInt(query.page ?? "1", 10) || 1);
       const pageSize = Math.min(100, Math.max(1, parseInt(query.pageSize ?? "20", 10) || 20));
+      const cursor = query.cursor;
 
       const result = await listAllCommissions(page, pageSize, {
         agentId: query.agentId ? parseInt(query.agentId, 10) : undefined,
+        agentSearch: query.agentSearch || undefined,
         status: query.status,
         commissionType: query.commissionType,
         startDate: query.startDate,
         endDate: query.endDate,
+        cursor,
       });
 
       reply.status(200).send({
@@ -118,6 +124,33 @@ export async function adminFinanceRoutes(app: FastifyInstance) {
         ? await batchSettleCommissions(body.ids)
         : await settleCommissions();
       reply.status(200).send({ code: 0, data: { settledCount: count }, message: `成功结算 ${count} 笔佣金` });
+    } catch (err: any) {
+      if (err instanceof AppError) {
+        reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // ══════════════════════════════════════════════
+  //  POST /api/v1/admin/finance/commissions/settle-by-filters — 按筛选条件批量结算
+  // ══════════════════════════════════════════════
+
+  app.post("/api/v1/admin/finance/commissions/settle-by-filters", async (request, reply) => {
+    try {
+      const body = request.body as {
+        agentId?: number;
+        startDate?: string;
+        endDate?: string;
+        commissionType?: string;
+      } || {};
+      const count = await settleCommissionsByFilters(body);
+      reply.status(200).send({
+        code: 0,
+        data: { settledCount: count },
+        message: `成功结算 ${count} 笔佣金`,
+      });
     } catch (err: any) {
       if (err instanceof AppError) {
         reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });

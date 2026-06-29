@@ -4,7 +4,7 @@
 //  Version: V3.5 — 增强双审财务体系
 // ============================================================
 
-import { eq, and, sql, desc, asc, count, inArray, gte, lte } from "drizzle-orm";
+import { eq, and, sql, desc, asc, count, inArray, gte, lte, lt, like } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import {
   users,
@@ -41,100 +41,199 @@ async function getSystemConfig(key: string): Promise<string | null> {
 // ══════════════════════════════════════════════
 
 /**
- * 结算指定代理商的待结算佣金
+ * 批量生成凭证号（一次查询最大序号，避免逐条 SELECT）
+ */
+/**
+ * 结算指定代理商的待结算佣金（分批处理，每批 1000 条）
  * @param agentId 可选，不传则结算所有 pending 佣金
  * @returns 结算记录数
  */
 export async function settleCommissions(agentId?: number): Promise<number> {
   const db = getDb();
-  const conditions: any[] = [eq(commissionLogs.status, "pending")];
-  if (agentId) conditions.push(eq(commissionLogs.agentId, agentId));
+  const BATCH_SIZE = 1000;
+  let totalSettled = 0;
+  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
 
-  // 查出所有待结算记录
+  // 先获取当前最大凭证序号
+  const [seqResult] = await db.execute(sql`
+    SELECT COALESCE(
+      MAX(CAST(SUBSTRING(voucher_no FROM '([0-9]+)$') AS INTEGER)), 0
+    ) + 1 AS next_seq
+    FROM commission_logs
+    WHERE voucher_no LIKE 'VCH-' || ${dateStr} || '-A-%'
+  `);
+  const seqRows = seqResult.rows ?? [];
+  let nextSeq = Number(seqRows[0]?.next_seq ?? 1);
+
+  const baseConditions: any[] = [eq(commissionLogs.status, "pending")];
+  if (agentId) baseConditions.push(eq(commissionLogs.agentId, agentId));
+
+  while (true) {
+    // 每次只取一批，不全部加载到内存
+    const batch = await db
+      .select({
+        id: commissionLogs.id,
+        agentId: commissionLogs.agentId,
+        commissionAmount: commissionLogs.commissionAmount,
+      })
+      .from(commissionLogs)
+      .where(and(...baseConditions))
+      .limit(BATCH_SIZE);
+
+    if (batch.length === 0) break;
+
+    // 按代理商分组汇总 + 预分配凭证号
+    const agentSumMap = new Map<number, number>();
+    const batchIds: number[] = [];
+    const voucherMap = new Map<number, string>();
+    for (const c of batch) {
+      batchIds.push(c.id);
+      voucherMap.set(c.id, `VCH-${dateStr}-A-${String(nextSeq++).padStart(4, '0')}`);
+      const cur = agentSumMap.get(c.agentId) ?? 0;
+      agentSumMap.set(c.agentId, cur + num(c.commissionAmount));
+    }
+
+    // 事务处理：更新状态 + 累加余额
+    await db.transaction(async (tx) => {
+      await tx
+        .update(commissionLogs)
+        .set({ status: "settled", settledAt: new Date() })
+        .where(inArray(commissionLogs.id, batchIds));
+
+      for (const [aid, amount] of agentSumMap) {
+        await tx
+          .update(agents)
+          .set({ settledCommission: sql`settled_commission + ${amount}` })
+          .where(eq(agents.id, aid));
+      }
+    });
+
+    // 批量更新凭证号（非事务，可容忍部分失败）
+    for (const [id, no] of voucherMap) {
+      try {
+        await db.update(commissionLogs).set({ voucherNo: no }).where(eq(commissionLogs.id, id));
+      } catch (err) {
+        console.error(`[Voucher] 凭证号更新失败 (id=${id}, no=${no}):`, err);
+      }
+    }
+
+    totalSettled += batch.length;
+    console.log(`[Settle] Batch completed: ${batch.length} records (total ${totalSettled})`);
+  }
+
+  return totalSettled;
+}
+
+/**
+ * 手动批量结算指定 ID 的佣金记录（分批处理）
+ */
+export async function batchSettleCommissions(ids: number[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  const db = getDb();
+  const BATCH_SIZE = 1000;
+  let totalSettled = 0;
+  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+
+  // 先获取当前最大序号
+  const [seqResult] = await db.execute(sql`
+    SELECT COALESCE(
+      MAX(CAST(SUBSTRING(voucher_no FROM '([0-9]+)$') AS INTEGER)), 0
+    ) + 1 AS next_seq
+    FROM commission_logs
+    WHERE voucher_no LIKE 'VCH-' || ${dateStr} || '-A-%'
+  `);
+  const rows = seqResult.rows ?? [];
+  let nextSeq = Number(rows[0]?.next_seq ?? 1);
+
+  for (let offset = 0; offset < ids.length; offset += BATCH_SIZE) {
+    const batchIds = ids.slice(offset, offset + BATCH_SIZE);
+
+    const pendingList = await db
+      .select({
+        id: commissionLogs.id,
+        agentId: commissionLogs.agentId,
+        commissionAmount: commissionLogs.commissionAmount,
+      })
+      .from(commissionLogs)
+      .where(and(eq(commissionLogs.status, "pending"), inArray(commissionLogs.id, batchIds)));
+
+    if (pendingList.length === 0) continue;
+
+    // 按代理商分组
+    const agentSumMap = new Map<number, number>();
+    const settleIds: number[] = [];
+    for (const c of pendingList) {
+      settleIds.push(c.id);
+      const cur = agentSumMap.get(c.agentId) ?? 0;
+      agentSumMap.set(c.agentId, cur + num(c.commissionAmount));
+    }
+
+    // 准备批量凭证号
+    const voucherMap = new Map<number, string>();
+    for (const id of settleIds) {
+      voucherMap.set(id, `VCH-${dateStr}-A-${String(nextSeq++).padStart(4, '0')}`);
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(commissionLogs)
+        .set({ status: "settled", settledAt: new Date() })
+        .where(inArray(commissionLogs.id, settleIds));
+
+      for (const [aid, amount] of agentSumMap) {
+        await tx
+          .update(agents)
+          .set({ settledCommission: sql`settled_commission + ${amount}` })
+          .where(eq(agents.id, aid));
+      }
+    });
+
+    // 批量更新凭证号
+    for (const [id, no] of voucherMap) {
+      await db.update(commissionLogs).set({ voucherNo: no }).where(eq(commissionLogs.id, id));
+    }
+
+    totalSettled += pendingList.length;
+    console.log(`[BatchSettle] Batch ${offset / BATCH_SIZE + 1}: ${pendingList.length} records`);
+  }
+
+  return totalSettled;
+}
+
+/**
+ * 按筛选条件批量结算佣金
+ * 复用 listAllCommissions 的筛选逻辑，找出匹配的 pending 记录后交由 batchSettleCommissions 执行
+ */
+export async function settleCommissionsByFilters(filters?: {
+  agentId?: number;
+  startDate?: string;
+  endDate?: string;
+  commissionType?: string;
+}): Promise<number> {
+  const db = getDb();
+  const conditions: any[] = [eq(commissionLogs.status, "pending")];
+
+  if (filters?.agentId) {
+    conditions.push(eq(commissionLogs.agentId, filters.agentId));
+  }
+  if (filters?.startDate) {
+    conditions.push(gte(commissionLogs.createdAt, new Date(filters.startDate)));
+  }
+  if (filters?.endDate) {
+    conditions.push(lte(commissionLogs.createdAt, new Date(filters.endDate)));
+  }
+  if (filters?.commissionType) {
+    conditions.push(eq(commissionLogs.commissionType, filters.commissionType));
+  }
+
   const pendingList = await db
-    .select({
-      id: commissionLogs.id,
-      agentId: commissionLogs.agentId,
-      commissionAmount: commissionLogs.commissionAmount,
-      voucherNo: commissionLogs.voucherNo,
-    })
+    .select({ id: commissionLogs.id })
     .from(commissionLogs)
     .where(and(...conditions));
 
   if (pendingList.length === 0) return 0;
 
-  // 按代理商分组汇总
-  const agentSumMap = new Map<number, number>();
-  for (const c of pendingList) {
-    const cur = agentSumMap.get(c.agentId) ?? 0;
-    agentSumMap.set(c.agentId, cur + num(c.commissionAmount));
-  }
-
-  // 事务：更新状态 + 更新余额
-  await db.transaction(async (tx) => {
-    // 更新佣金状态为 settled
-    await tx
-      .update(commissionLogs)
-      .set({ status: "settled", settledAt: new Date() })
-      .where(and(...conditions));
-
-    // 累加代理商已结算余额
-    for (const [aid, amount] of agentSumMap) {
-      await tx
-        .update(agents)
-        .set({
-          settledCommission: sql`settled_commission + ${amount}`,
-        })
-        .where(eq(agents.id, aid));
-    }
-  });
-
-  return pendingList.length;
-}
-
-/**
- * 手动批量结算指定 ID 的佣金记录
- */
-export async function batchSettleCommissions(ids: number[]): Promise<number> {
-  if (ids.length === 0) return 0;
-  const db = getDb();
-
-  // 查出待结算记录
-  const pendingList = await db
-    .select({
-      id: commissionLogs.id,
-      agentId: commissionLogs.agentId,
-      commissionAmount: commissionLogs.commissionAmount,
-    })
-    .from(commissionLogs)
-    .where(and(eq(commissionLogs.status, "pending"), inArray(commissionLogs.id, ids)));
-
-  if (pendingList.length === 0) return 0;
-
-  // 按代理商分组
-  const agentSumMap = new Map<number, number>();
-  const settleIds: number[] = [];
-  for (const c of pendingList) {
-    settleIds.push(c.id);
-    const cur = agentSumMap.get(c.agentId) ?? 0;
-    agentSumMap.set(c.agentId, cur + num(c.commissionAmount));
-  }
-
-  await db.transaction(async (tx) => {
-    await tx
-      .update(commissionLogs)
-      .set({ status: "settled", settledAt: new Date() })
-      .where(inArray(commissionLogs.id, settleIds));
-
-    for (const [aid, amount] of agentSumMap) {
-      await tx
-        .update(agents)
-        .set({ settledCommission: sql`settled_commission + ${amount}` })
-        .where(eq(agents.id, aid));
-    }
-  });
-
-  return pendingList.length;
+  return batchSettleCommissions(pendingList.map((c) => c.id));
 }
 
 /**
@@ -1370,6 +1469,9 @@ export async function firstReviewWithdraw(
 
   await db.transaction(async (tx) => {
     if (action === "approve") {
+      // 初审通过时生成凭证号
+      const firstVoucherNo = await generateVoucherNo('B');
+
       await tx
         .update(withdrawOrders)
         .set({
@@ -1377,6 +1479,7 @@ export async function firstReviewWithdraw(
           auditLevel: 2,
           firstAuditorId: operatorId,
           firstAuditedAt: new Date(),
+          voucherNo: firstVoucherNo,
         })
         .where(eq(withdrawOrders.id, withdrawId));
 
@@ -1386,9 +1489,9 @@ export async function firstReviewWithdraw(
         targetType: "withdraw_orders",
         targetId: withdrawId,
         before: { status: "pending_first_review" },
-        after: { status: "pending_second_review" },
+        after: { status: "pending_second_review", voucherNo: firstVoucherNo },
         ip: null,
-        description: `初审通过提现 #${withdrawId}，金额 ${order.amount}`,
+        description: `初审通过提现 #${withdrawId}，金额 ${order.amount}，凭证号 ${firstVoucherNo}`,
       });
     } else {
       // 拒绝时退还冻结金额
@@ -1458,6 +1561,9 @@ export async function secondReviewWithdraw(
 
   await db.transaction(async (tx) => {
     if (action === "approve") {
+      // 复审通过时生成凭证号（若初审未生成则补充）
+      const secondVoucherNo = order.voucherNo || await generateVoucherNo('B');
+
       await tx
         .update(withdrawOrders)
         .set({
@@ -1466,6 +1572,7 @@ export async function secondReviewWithdraw(
           secondAuditorId: operatorId,
           secondAuditedAt: new Date(),
           bankVoucherUrl: bankVoucherUrl ?? null,
+          voucherNo: secondVoucherNo,
         })
         .where(eq(withdrawOrders.id, withdrawId));
 
@@ -1475,9 +1582,9 @@ export async function secondReviewWithdraw(
         targetType: "withdraw_orders",
         targetId: withdrawId,
         before: { status: "pending_second_review" },
-        after: { status: "approved" },
+        after: { status: "approved", voucherNo: secondVoucherNo },
         ip: null,
-        description: `复审通过提现 #${withdrawId}，金额 ${order.amount}`,
+        description: `复审通过提现 #${withdrawId}，金额 ${order.amount}，凭证号 ${secondVoucherNo}`,
       });
     } else {
       // 拒绝时退还冻结金额
@@ -1606,12 +1713,20 @@ export async function reviewWithdraw(
 
   await db.transaction(async (tx) => {
     if (action === "approve") {
+      // 审核通过时生成凭证号并计算实际金额
+      const voucherNo = await generateVoucherNo('B');
+      const orderAmount = num(order.amount);
+      const orderFee = num(order.feeAmount);
+      const actualAmount = (orderAmount - orderFee).toFixed(6);
+
       await tx
         .update(withdrawOrders)
         .set({
           status: "approved",
           reviewedBy: operatorId,
           reviewedAt: new Date(),
+          voucherNo,
+          actualAmount,
         })
         .where(eq(withdrawOrders.id, withdrawId));
 
@@ -1621,9 +1736,9 @@ export async function reviewWithdraw(
         targetType: "withdraw_orders",
         targetId: withdrawId,
         before: { status: order.status },
-        after: { status: "approved" },
+        after: { status: "approved", voucherNo, actualAmount },
         ip: null,
-        description: `审核通过提现 #${withdrawId}，金额 ${order.amount}`,
+        description: `审核通过提现 #${withdrawId}，金额 ${order.amount}，凭证号 ${voucherNo}`,
       });
     } else {
       await tx
@@ -1668,6 +1783,18 @@ export async function reviewWithdraw(
 
 export async function getFinanceDashboard() {
   const db = getDb();
+  const redis = getRedis();
+
+  // 缓存命中直接返回（60秒 TTL）
+  const cacheKey = "finance:dashboard";
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch {
+    // Redis 不可用时降级到 DB 查询
+  }
 
   // 待初审提现
   const [firstReviewResult] = await db
@@ -1723,7 +1850,7 @@ export async function getFinanceDashboard() {
     .from(commissionLogs)
     .where(eq(commissionLogs.status, "pending"));
 
-  return {
+  const result = {
     pendingFirstReview: {
       count: Number(firstReviewResult?.count ?? 0),
       totalAmount: firstReviewResult?.sum ?? "0.000000",
@@ -1745,6 +1872,11 @@ export async function getFinanceDashboard() {
       totalAmount: todayWithdrawPaidResult?.sum ?? "0.000000",
     },
   };
+
+  // 写缓存（非阻塞）
+  redis.setex(cacheKey, 60, JSON.stringify(result)).catch(() => {});
+
+  return result;
 }
 
 // ══════════════════════════════════════════════
@@ -1756,19 +1888,33 @@ export async function listAllCommissions(
   pageSize: number,
   filters?: {
     agentId?: number;
+    agentSearch?: string;
     status?: string;
     startDate?: string;
     endDate?: string;
     commissionType?: string;
+    cursor?: string;  // ISO datetime cursor for keyset pagination
   },
 ) {
   const db = getDb();
-  const offset = (page - 1) * pageSize;
+  const useCursor = !!filters?.cursor;
+  const offset = useCursor ? 0 : (page - 1) * pageSize;
 
   const conditions: any[] = [sql`1=1`];
 
+  // 游标分页条件：取 createdAt < cursor 的下一批
+  if (useCursor && filters?.cursor) {
+    conditions.push(lt(commissionLogs.createdAt, new Date(filters.cursor)));
+  }
+
   if (filters?.agentId) {
     conditions.push(eq(commissionLogs.agentId, filters.agentId));
+  }
+  if (filters?.agentSearch) {
+    const keyword = `%${filters.agentSearch}%`;
+    conditions.push(
+      sql`(${users.email} ILIKE ${keyword} OR ${users.nickname} ILIKE ${keyword})`
+    );
   }
   if (filters?.status) {
     conditions.push(eq(commissionLogs.status, filters.status as any));
@@ -1783,14 +1929,17 @@ export async function listAllCommissions(
     conditions.push(lte(commissionLogs.createdAt, new Date(filters.endDate)));
   }
 
-  const [totalResult] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(commissionLogs)
-    .innerJoin(agents, eq(commissionLogs.agentId, agents.id))
-    .where(and(...conditions));
-  const total = Number(totalResult?.count ?? 0);
+  let total = 0;
+  if (!useCursor) {
+    const [totalResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(commissionLogs)
+      .innerJoin(agents, eq(commissionLogs.agentId, agents.id))
+      .where(and(...conditions));
+    total = Number(totalResult?.count ?? 0);
+  }
 
-  const rows = await db
+  const query = db
     .select({
       id: commissionLogs.id,
       agentId: commissionLogs.agentId,
@@ -1814,8 +1963,12 @@ export async function listAllCommissions(
     .innerJoin(users, eq(agents.userId, users.id))
     .where(and(...conditions))
     .orderBy(desc(commissionLogs.createdAt))
-    .limit(pageSize)
-    .offset(offset);
+    .limit(pageSize);
+
+  const rows = useCursor ? await query : await query.offset(offset);
+  const nextCursor = useCursor && rows.length === pageSize
+    ? rows[rows.length - 1].createdAt.toISOString()
+    : undefined;
 
   return {
     list: rows.map((r) => ({
@@ -1829,6 +1982,7 @@ export async function listAllCommissions(
     total,
     page,
     pageSize,
+    nextCursor,
   };
 }
 

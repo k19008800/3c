@@ -565,6 +565,7 @@ export const callLogs = pgTable(
     apiKeyCreatedAtIdx: index("call_logs_api_key_created_at_idx").on(table.apiKeyId, table.createdAt),
     vendorCreatedAtIdx: index("call_logs_vendor_created_at_idx").on(table.vendorName, table.createdAt),
     statusCreatedAtIdx: index("call_logs_status_created_at_idx").on(table.status, table.createdAt),
+    modelNameCreatedAtIdx: index("call_logs_model_name_created_at_idx").on(table.modelName, table.createdAt.desc()),
     createdAtIdx: index("call_logs_created_at_idx").on(table.createdAt),
   })
 );
@@ -610,6 +611,7 @@ export const rechargeOrders = pgTable(
   (table) => ({
     orderNoIdx: uniqueIndex("recharge_orders_order_no_idx").on(table.orderNo),
     userIdIdx: index("recharge_orders_user_id_idx").on(table.userId),
+    userIdCreatedAtIdx: index("recharge_orders_user_created_at_idx").on(table.userId, table.createdAt.desc()),
     statusIdx: index("recharge_orders_status_idx").on(table.status),
   })
 );
@@ -728,7 +730,9 @@ export const commissionLogs = pgTable(
   },
   (table) => ({
     agentIdIdx: index("commission_logs_agent_id_idx").on(table.agentId),
+    agentIdCreatedAtIdx: index("commission_logs_agent_id_created_at_idx").on(table.agentId, table.createdAt.desc()),
     statusIdx: index("commission_logs_status_idx").on(table.status),
+    statusCreatedAtIdx: index("commission_logs_status_created_at_idx").on(table.status, table.createdAt.desc()),
     createdAtIdx: index("commission_logs_created_at_idx").on(table.createdAt),
     voucherNoIdx: index("commission_logs_voucher_no_idx").on(table.voucherNo),
   })
@@ -820,6 +824,7 @@ export const auditLogs = pgTable(
     operatorIdx: index("audit_logs_operator_idx").on(table.operatorId),
     actionIdx: index("audit_logs_action_idx").on(table.action),
     targetIdx: index("audit_logs_target_idx").on(table.targetType, table.targetId),
+    targetCreatedAtIdx: index("audit_logs_target_created_at_idx").on(table.targetType, table.targetId, table.createdAt.desc()),
     createdAtIdx: index("audit_logs_created_at_idx").on(table.createdAt),
   })
 );

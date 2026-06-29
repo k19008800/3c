@@ -5,7 +5,7 @@
 // ============================================================
 
 import { FastifyInstance } from "fastify";
-import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
+import { eq, and, desc, gte, lte, lt, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { callLogs } from "../db/schema.js";
 import { authenticateJWT } from "../middleware/auth.js";
@@ -48,12 +48,19 @@ export async function logRoutes(app: FastifyInstance) {
       const query = request.query as Record<string, string>;
       const parsed = logFilterSchema.parse(query);
       const userId = request.user!.userId;
+      const cursor = query.cursor;
 
       const db = getDb();
-      const offset = (parsed.page - 1) * parsed.pageSize;
+      const useCursor = !!cursor;
+      const offset = useCursor ? 0 : (parsed.page - 1) * parsed.pageSize;
 
       // 构建过滤条件
       const conditions = [eq(callLogs.userId, userId)];
+
+      // 游标分页条件
+      if (useCursor && cursor) {
+        conditions.push(lt(callLogs.createdAt, new Date(cursor)));
+      }
 
       if (parsed.modelId) {
         conditions.push(eq(callLogs.modelId, parsed.modelId));
@@ -71,16 +78,17 @@ export async function logRoutes(app: FastifyInstance) {
         conditions.push(lte(callLogs.createdAt, new Date(parsed.endDate)));
       }
 
-      // 查总数
-      const [totalResult] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(callLogs)
-        .where(and(...conditions));
-
-      const total = Number(totalResult?.count ?? 0);
+      let total = 0;
+      if (!useCursor) {
+        const [totalResult] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(callLogs)
+          .where(and(...conditions));
+        total = Number(totalResult?.count ?? 0);
+      }
 
       // 查分页数据
-      const rows = await db
+      const queryBuilder = db
         .select({
           id: callLogs.id,
           modelName: callLogs.modelName,
@@ -99,8 +107,12 @@ export async function logRoutes(app: FastifyInstance) {
         .from(callLogs)
         .where(and(...conditions))
         .orderBy(desc(callLogs.createdAt))
-        .limit(parsed.pageSize)
-        .offset(offset);
+        .limit(parsed.pageSize);
+
+      const rows = useCursor ? await queryBuilder : await queryBuilder.offset(offset);
+      const nextCursor = useCursor && rows.length === parsed.pageSize
+        ? rows[rows.length - 1].createdAt.toISOString()
+        : undefined;
 
       const list: CallLogItem[] = rows.map((r) => ({
         id: r.id,
@@ -120,7 +132,7 @@ export async function logRoutes(app: FastifyInstance) {
 
       reply.status(200).send({
         code: 0,
-        data: { list, total, page: parsed.page, pageSize: parsed.pageSize },
+        data: { list, total, page: parsed.page, pageSize: parsed.pageSize, nextCursor },
         message: "ok",
       });
     } catch (err: any) {
