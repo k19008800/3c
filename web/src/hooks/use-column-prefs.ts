@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 
 export function useColumnPrefs(tableKey: string) {
   const [visible, setVisible] = useState<Record<string, boolean>>(() => {
@@ -10,27 +10,30 @@ export function useColumnPrefs(tableKey: string) {
     }
   })
 
-  const toggleColumn = useCallback((col: string) => {
-    setVisible(prev => {
-      const next = { ...prev, [col]: !(prev[col] ?? true) }
-      try {
-        localStorage.setItem(`cols_${tableKey}`, JSON.stringify(next))
-      } catch { /* ok */ }
-      return next
-    })
+  const visibleRef = useRef(visible)
+  visibleRef.current = visible
+
+  const persist = useCallback((v: Record<string, boolean>) => {
+    try {
+      localStorage.setItem(`cols_${tableKey}`, JSON.stringify(v))
+    } catch { /* ok */ }
   }, [tableKey])
+
+  const toggleColumn = useCallback((col: string) => {
+    const prev = visibleRef.current
+    const next = { ...prev, [col]: !(prev[col] ?? true) }
+    setVisible(next)
+    persist(next)
+  }, [persist])
 
   const isVisible = useCallback((col: string) => visible[col] ?? true, [visible])
 
   const showColumn = useCallback((col: string, show: boolean) => {
-    setVisible(prev => {
-      const next = { ...prev, [col]: show }
-      try {
-        localStorage.setItem(`cols_${tableKey}`, JSON.stringify(next))
-      } catch { /* ok */ }
-      return next
-    })
-  }, [tableKey])
+    const prev = visibleRef.current
+    const next = { ...prev, [col]: show }
+    setVisible(next)
+    persist(next)
+  }, [persist])
 
   const resetColumns = useCallback(() => {
     try {

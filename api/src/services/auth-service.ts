@@ -114,7 +114,7 @@ export async function registerUser(
   }
 
   // 2. 密码哈希
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await bcrypt.hash(password, config.bcrypt.saltRounds);
 
   // 3. 创建用户
   const [newUser] = await db
@@ -172,6 +172,16 @@ export async function registerUser(
         });
       }
       // 静默处理：失败不影响注册，不抛出错误
+
+      // 注册奖励：查活动规则配置
+      try {
+        const { processActivityCommission } = await import("./billing.js");
+        await processActivityCommission(
+          db, agentId, newUser.id, "register_bonus", undefined, undefined
+        );
+      } catch {
+        // 活动奖励失败不影响注册
+      }
     }
   }
 
@@ -531,11 +541,116 @@ export async function changeUserPassword(
     throw new AppError("WRONG_PASSWORD", "原密码错误", 400);
   }
 
-  const passwordHash = await bcrypt.hash(newPassword, 10);
+  const passwordHash = await bcrypt.hash(newPassword, config.bcrypt.saltRounds);
   await db
     .update(users)
     .set({ passwordHash })
     .where(eq(users.id, userId));
+}
+
+// ── 忘记密码 ──
+
+export async function forgotPassword(email: string): Promise<void> {
+  const db = getDb();
+  const redis = getRedis();
+
+  // 1. 检查邮箱是否存在
+  const [user] = await db
+    .select({ id: users.id, email: users.email, nickname: users.nickname })
+    .from(users)
+    .where(eq(users.email, email.toLowerCase()))
+    .limit(1);
+
+  // 无论邮箱是否存在，都回复相同的信息，防止枚举
+  if (!user) {
+    return;
+  }
+
+  // 2. 生成随机 token
+  const { randomBytes } = await import("node:crypto");
+  const token = randomBytes(32).toString("hex");
+
+  // 3. 存储到 Redis，TTL 30 分钟
+  await redis.setex(
+    `reset:token:${token}`,
+    1800,
+    String(user.id)
+  );
+
+  // 4. 发送重置密码邮件
+  const { sendEmail, loadTemplate, renderTemplate } = await import("./email-service.js");
+
+  const template = await loadTemplate("password_reset");
+  if (!template) {
+    console.warn(`[PasswordReset] 未找到邮件模板 "password_reset"`);
+    return;
+  }
+
+  const resetLink = `${config.appUrl}/reset-password?token=${token}`;
+  const vars: Record<string, string> = {
+    nickname: user.nickname || "用户",
+    resetLink,
+    expireMinutes: "30",
+  };
+
+  const lang = "zh";
+  const subject = lang === "zh"
+    ? renderTemplate(template.subjectZh, vars)
+    : renderTemplate(template.subjectEn, vars);
+  const bodyHtml = lang === "zh"
+    ? renderTemplate(template.bodyHtmlZh, vars)
+    : renderTemplate(template.bodyHtmlEn, vars);
+
+  await sendEmail({
+    to: user.email,
+    subject,
+    html: bodyHtml,
+  });
+}
+
+// ── 重置密码 ──
+
+export async function resetPasswordWithToken(
+  token: string,
+  newPassword: string
+): Promise<void> {
+  const db = getDb();
+  const redis = getRedis();
+
+  // 1. 从 Redis 获取 token 对应的 userId
+  const userIdStr = await redis.get(`reset:token:${token}`);
+  if (!userIdStr) {
+    throw new AppError("INVALID_RESET_TOKEN", "重置链接无效或已过期", 400);
+  }
+
+  const userId = parseInt(userIdStr, 10);
+
+  // 2. 确认用户存在
+  const [user] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!user) {
+    throw new AppError("USER_NOT_FOUND", "用户不存在", 404);
+  }
+
+  // 3. bcrypt hash 新密码
+  const passwordHash = await bcrypt.hash(newPassword, config.bcrypt.saltRounds);
+
+  // 4. 更新 users 表 passwordHash
+  await db
+    .update(users)
+    .set({ passwordHash })
+    .where(eq(users.id, userId));
+
+  // 5. 删除 Redis token
+  await redis.del(`reset:token:${token}`);
+
+  // 6. 撤销用户所有活跃会话
+  const { revokeAllUserSessions } = await import("./session-manager.js");
+  await revokeAllUserSessions(userId);
 }
 
 // ── 重发验证码 ──

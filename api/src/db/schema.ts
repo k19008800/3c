@@ -54,6 +54,10 @@ export const realNameStatusEnum = pgEnum("real_name_status", [
 export const userRoleEnum = pgEnum("user_role", [
   "super_admin",
   "admin",
+  "finance_ops",
+  "ops",
+  "support",
+  "auditor",
   "agent",
   "user",
 ]);
@@ -209,6 +213,26 @@ export const users = pgTable(
     statusIdx: index("users_status_idx").on(table.status),
     teamIdIdx: index("users_team_id_idx").on(table.teamId),
     realNameStatusIdx: index("users_real_name_status_idx").on(table.realNameStatus),
+  })
+);
+
+export const adminAccounts = pgTable(
+  "admin_accounts",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: userRoleEnum("role").notNull().default("admin"),
+    isActive: boolean("is_active").notNull().default(true),
+    lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+    loginCount: integer("login_count").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: uniqueIndex("admin_accounts_user_id_idx").on(table.userId),
+    roleIdx: index("admin_accounts_role_idx").on(table.role),
   })
 );
 
@@ -667,17 +691,20 @@ export const agents = pgTable(
       .notNull()
       .unique()
       .references(() => users.id, { onDelete: "cascade" }),
-    commissionRate: numeric("commission_rate", { precision: 5, scale: 4 }).notNull().default("0.0000"),
     totalCommission: numeric("total_commission", { precision: 18, scale: 6 }).notNull().default("0.000000"),
     settledCommission: numeric("settled_commission", { precision: 18, scale: 6 }).notNull().default("0.000000"),
     pendingWithdraw: numeric("pending_withdraw", { precision: 18, scale: 6 }).notNull().default("0.000000"),
     frozenAmount: numeric("frozen_amount", { precision: 18, scale: 6 }).notNull().default("0.000000"),
     status: boolean("status").notNull().default(true),
+    // 团队层级
+    parentAgentId: integer("parent_agent_id").references((): AnyPgColumn => agents.id),
+    teamDepth: integer("team_depth").default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
     userIdIdx: uniqueIndex("agents_user_id_idx").on(table.userId),
+    parentIdx: index("agents_parent_idx").on(table.parentAgentId),
   })
 );
 
@@ -703,7 +730,7 @@ export const agentClients = pgTable(
 export const commissionLogs = pgTable(
   "commission_logs",
   {
-    id: serial("id").primaryKey(),
+    id: serial("id").notNull(),
     agentId: integer("agent_id")
       .notNull()
       .references(() => agents.id, { onDelete: "cascade" }),
@@ -729,11 +756,10 @@ export const commissionLogs = pgTable(
     settledAt: timestamp("settled_at", { withTimezone: true }),
   },
   (table) => ({
-    agentIdIdx: index("commission_logs_agent_id_idx").on(table.agentId),
+    pk: primaryKey({ columns: [table.id, table.createdAt] }),
     agentIdCreatedAtIdx: index("commission_logs_agent_id_created_at_idx").on(table.agentId, table.createdAt.desc()),
-    statusIdx: index("commission_logs_status_idx").on(table.status),
     statusCreatedAtIdx: index("commission_logs_status_created_at_idx").on(table.status, table.createdAt.desc()),
-    createdAtIdx: index("commission_logs_created_at_idx").on(table.createdAt),
+    agentIdStatusCreatedAtIdx: index("commission_logs_agent_status_date_idx").on(table.agentId, table.status, table.createdAt.desc()),
     voucherNoIdx: index("commission_logs_voucher_no_idx").on(table.voucherNo),
   })
 );
@@ -757,6 +783,95 @@ export const agentCustomerConsumption = pgTable(
   (table) => ({
     agentCustomerIdx: uniqueIndex("agent_consumption_agent_customer_idx").on(table.agentId, table.customerUserId),
     agentIdIdx: index("agent_consumption_agent_id_idx").on(table.agentId),
+  })
+);
+
+// ──────────────────────────────────────────────
+//  5.4.1 佣金规则配置表（每种佣金类型独立配置比例/条件/封顶）
+// ──────────────────────────────────────────────
+
+export const commissionRules = pgTable(
+  "commission_rules",
+  {
+    id: serial("id").primaryKey(),
+    agentId: integer("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    ruleType: varchar("rule_type", { length: 20 }).notNull(),
+    // 'sale' | 'renewal' | 'team' | 'activity'
+
+    rate: numeric("rate", { precision: 5, scale: 4 }).notNull().default("0.0000"),
+    isEnabled: boolean("is_enabled").notNull().default(true),
+
+    // 条件约束
+    minTriggerAmount: numeric("min_trigger_amount", { precision: 18, scale: 6 }),
+    maxCap: numeric("max_cap", { precision: 18, scale: 6 }),
+    validFrom: timestamp("valid_from", { withTimezone: true }),
+    validUntil: timestamp("valid_until", { withTimezone: true }),
+
+    // 活动专有
+    activityName: varchar("activity_name", { length: 255 }),
+    activityType: varchar("activity_type", { length: 50 }),
+    fixedAmount: numeric("fixed_amount", { precision: 18, scale: 6 }),
+
+    // 团队专有
+    teamLevelLimit: integer("team_level_limit").default(1),
+
+    createdBy: integer("created_by").references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    agentTypeIdx: uniqueIndex("commission_rules_agent_type_idx").on(table.agentId, table.ruleType),
+  })
+);
+
+// ──────────────────────────────────────────────
+//  5.4.2 佣金日汇总（预聚合，用于分佣记录列表页，避免扫描分区表）
+// ──────────────────────────────────────────────
+
+export const commissionDailyRollup = pgTable(
+  "commission_daily_rollup",
+  {
+    id: serial("id").primaryKey(),
+    agentId: integer("agent_id")
+      .notNull()
+      .references(() => agents.id, { onDelete: "cascade" }),
+    reportDate: varchar("report_date", { length: 10 }).notNull(),
+
+    // 汇总
+    totalRecords: integer("total_records").notNull().default(0),
+    totalCallCost: numeric("total_call_cost", { precision: 18, scale: 6 }).default("0.000000"),
+    totalCommissionAmount: numeric("total_commission_amount", { precision: 18, scale: 6 }).default("0.000000"),
+    totalFeeAmount: numeric("total_fee_amount", { precision: 18, scale: 6 }).default("0.000000"),
+    totalNetAmount: numeric("total_net_amount", { precision: 18, scale: 6 }).default("0.000000"),
+
+    // 按状态拆分
+    pendingCount: integer("pending_count").default(0),
+    settledCount: integer("settled_count").default(0),
+    cancelledCount: integer("cancelled_count").default(0),
+    pendingAmount: numeric("pending_amount", { precision: 18, scale: 6 }).default("0.000000"),
+    settledAmount: numeric("settled_amount", { precision: 18, scale: 6 }).default("0.000000"),
+    cancelledAmount: numeric("cancelled_amount", { precision: 18, scale: 6 }).default("0.000000"),
+
+    // 按类型拆分
+    saleCount: integer("sale_count").default(0),
+    renewalCount: integer("renewal_count").default(0),
+    activityCount: integer("activity_count").default(0),
+    saleAmount: numeric("sale_amount", { precision: 18, scale: 6 }).default("0.000000"),
+    renewalAmount: numeric("renewal_amount", { precision: 18, scale: 6 }).default("0.000000"),
+    activityAmount: numeric("activity_amount", { precision: 18, scale: 6 }).default("0.000000"),
+
+    // 代理商业绩快照
+    agentTotalCommission: numeric("agent_total_commission", { precision: 18, scale: 6 }).default("0.000000"),
+    agentSettledCommission: numeric("agent_settled_commission", { precision: 18, scale: 6 }).default("0.000000"),
+
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    agentDateIdx: uniqueIndex("comm_rollup_agent_date_idx").on(table.agentId, table.reportDate),
+    dateIdx: index("comm_rollup_date_idx").on(table.reportDate),
   })
 );
 
@@ -986,6 +1101,43 @@ export const userLoginSessions = pgTable(
     tokenIdx: uniqueIndex("sessions_token_idx").on(table.sessionToken),
     activeSessionIdx: index("sessions_active_idx").on(table.userId, table.isActive),
     userIdIdx: index("sessions_user_id_idx").on(table.userId),
+  })
+);
+
+// ══════════════════════════════════════════════════════════════
+//  日对账汇总表（预计算 + 缓存）
+// ══════════════════════════════════════════════════════════════
+
+export const dailyReconSummary = pgTable(
+  "daily_recon_summary",
+  {
+    id: serial("id").primaryKey(),
+    reportDate: varchar("report_date", { length: 10 }).notNull().unique(),
+    // 佣金
+    commissionCount: integer("commission_count").notNull().default(0),
+    commissionTotal: numeric("commission_total", { precision: 18, scale: 6 }).default("0.000000"),
+    commissionFee: numeric("commission_fee", { precision: 18, scale: 6 }).default("0.000000"),
+    commissionNet: numeric("commission_net", { precision: 18, scale: 6 }).default("0.000000"),
+    // 提现
+    withdrawCount: integer("withdraw_count").notNull().default(0),
+    withdrawTotal: numeric("withdraw_total", { precision: 18, scale: 6 }).default("0.000000"),
+    withdrawFee: numeric("withdraw_fee", { precision: 18, scale: 6 }).default("0.000000"),
+    withdrawActual: numeric("withdraw_actual", { precision: 18, scale: 6 }).default("0.000000"),
+    // 充值
+    rechargeCount: integer("recharge_count").notNull().default(0),
+    rechargeTotal: numeric("recharge_total", { precision: 18, scale: 6 }).default("0.000000"),
+    // 抵扣消耗
+    consumptionTotal: numeric("consumption_total", { precision: 18, scale: 6 }).default("0.000000"),
+    // 资金平衡校验
+    balanceDiff: numeric("balance_diff", { precision: 18, scale: 6 }).default("0.000000"),
+    isBalanced: boolean("is_balanced").notNull().default(true),
+    // 元数据
+    version: integer("version").notNull().default(1),
+    computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    reportDateIdx: uniqueIndex("daily_recon_summary_date_idx").on(table.reportDate),
+    balancedIdx: index("daily_recon_summary_balanced_idx").on(table.isBalanced),
   })
 );
 

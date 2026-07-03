@@ -19,6 +19,7 @@ import {
   agentClients,
   callLogs,
   commissionLogs,
+  commissionRules,
   balanceLogs,
   apiKeys,
   models,
@@ -188,9 +189,16 @@ async function main() {
     // 创建代理商
     const [agent] = await db.insert(agents).values({
       userId: userId,
-      commissionRate: cfg.rate,
       status: true,
     }).returning();
+
+    // 插入销售佣金规则
+    await db.insert(commissionRules).values({
+      agentId: agent.id,
+      ruleType: "sale",
+      rate: cfg.rate,
+      isEnabled: true,
+    }).onConflictDoNothing();
 
     // 升级用户角色
     await db.update(users).set({ role: "agent" }).where(eq(users.id, userId));
@@ -301,17 +309,19 @@ async function main() {
       // ── 计提分佣 ──
       const agentId = clientAgentMap[c]?.agentId;
       if (agentId) {
-        const [agent] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
-        if (agent) {
-          const rate = parseFloat(agent.commissionRate);
+        const [rule] = await db.select({ rate: commissionRules.rate }).from(commissionRules).where(and(eq(commissionRules.agentId, agentId), eq(commissionRules.ruleType, "sale"))).limit(1);
+        if (rule) {
+          const rate = parseFloat(rule.rate);
           const commission = totalConsumption * rate;
           const commissionStr = commission.toFixed(6);
 
           await db.insert(commissionLogs).values({
             agentId: agentId,
             clientCallLogId: null,
+            sourceCustomerId: clientUserId,
             callCost: totalCostDisplay,
             commissionAmount: commissionStr,
+            commissionType: "sale",
             status: "pending",
           });
 
@@ -348,22 +358,24 @@ async function showSummary(db: ReturnType<typeof createDb>) {
   console.log(`  调用记录: ${Number(callCount.count)}`);
   console.log(`  佣金记录: ${Number(commCount.count)}`);
 
-  // 显示代理商详情
+  // 显示代理商详情（从 commission_rules 读取分佣比例）
   const allAgents = await db.select({
     agentId: agents.id,
     userId: agents.userId,
     email: users.email,
     nickname: users.nickname,
-    rate: agents.commissionRate,
+    rate: commissionRules.rate,
     totalComm: agents.totalCommission,
     pending: agents.pendingWithdraw,
     clientCount: sql<number>`(SELECT count(*) FROM agent_clients WHERE agent_id = agents.id)`,
   }).from(agents)
-    .innerJoin(users, eq(agents.userId, users.id));
+    .innerJoin(users, eq(agents.userId, users.id))
+    .leftJoin(commissionRules, and(eq(commissionRules.agentId, agents.id), eq(commissionRules.ruleType, "sale")));
 
   console.log("");
   for (const a of allAgents) {
-    console.log(`  🏢 ${a.nickname} (${a.email}) | 分佣 ${(parseFloat(a.rate) * 100).toFixed(1)}% | 客户 ${a.clientCount} | 累计分佣 ¥${parseFloat(a.totalComm).toFixed(2)} | 可提现 ¥${parseFloat(a.pending).toFixed(2)}`);
+    const ratePct = a.rate ? (parseFloat(a.rate) * 100).toFixed(1) : "0.0";
+    console.log(`  🏢 ${a.nickname} (${a.email}) | 分佣 ${ratePct}% | 客户 ${a.clientCount} | 累计分佣 ¥${parseFloat(a.totalComm).toFixed(2)} | 可提现 ¥${parseFloat(a.pending).toFixed(2)}`);
   }
 
   // 显示所有客户的消费情况

@@ -14,7 +14,10 @@
     "db:studio": "drizzle-kit studio",
     "db:drop": "drizzle-kit drop",
     "lint": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "geo:migrate": "npx tsx src/db/migrations/2026-06-29-ip-geo-blocks.ts",
+    "geo:import": "npx tsx src/scripts/import-geo-csv.ts",
+    "geo:setup": "npm run geo:migrate && npm run geo:import"
   },
   "keywords": [],
   "author": "",

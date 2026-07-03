@@ -4,20 +4,21 @@
 // ============================================================
 
 import { FastifyInstance } from "fastify";
-import { eq, and, gte, lt, like, desc, lte, sql } from "drizzle-orm";
+import { eq, and, gte, lt, like, desc, sql } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { callLogs, users } from "../../db/schema.js";
-import { authenticateJWT, requireRole } from "../../middleware/auth.js";
+import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
 
 export async function adminLogRoutes(app: FastifyInstance) {
   app.addHook("preHandler", authenticateJWT);
-  app.addHook("preHandler", requireRole("super_admin", "admin"));
 
   // ──────────────────────────────────────────────
   //  GET /api/v1/admin/logs — 调用日志列表
   // ──────────────────────────────────────────────
 
-  app.get("/api/v1/admin/logs", async (request, reply) => {
+  app.get("/api/v1/admin/logs", {
+    preHandler: [requirePerm(Perm.LOG_VIEW)],
+  }, async (request, reply) => {
     const db = getDb();
     const query = request.query as {
       page?: string;

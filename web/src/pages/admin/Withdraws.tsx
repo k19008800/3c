@@ -1,8 +1,8 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { get, post } from '@/lib/api'
 import type { WithdrawRecord, PaginatedData } from '@/types'
 import { usePagePreferences } from '@/hooks/use-page-preferences'
-import { Loader2, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Loader2, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Download, CheckSquare } from 'lucide-react'
 
 const REJECT_REASONS = [
   '银行信息有误，请核对后重新提交',
@@ -22,6 +22,11 @@ export default function AdminWithdraws() {
   const [error, setError] = useState('')
   const [msg, setMsg] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+
+  // 批量选择
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [batchMode, setBatchMode] = useState(false)
+  const selectAllRef = useRef<HTMLInputElement>(null)
 
   const { filters, loaded: prefsLoaded, updateFilter } = usePagePreferences('admin_withdraws')
 
@@ -52,14 +57,96 @@ export default function AdminWithdraws() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  // 翻页时清空选择
+  useEffect(() => { setSelectedIds(new Set()) }, [page, statusFilter])
+
   const handleStatusFilterChange = (v: string) => {
     setStatusFilter(v)
     updateFilter('status', v || '')
     setPage(1)
   }
 
+  // ── 勾选逻辑 ──
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === rows.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(rows.map(r => r.id)))
+    }
+  }
+
+  // ── 导出 CSV ──
+
+  const doExport = async () => {
+    try {
+      const params = new URLSearchParams()
+      if (statusFilter) params.set('status', statusFilter)
+      const url = `/api/v1/admin/withdraws/export?${params.toString()}`
+      const res = await fetch(url, { credentials: 'include' })
+      if (!res.ok) throw new Error('导出失败')
+      const blob = await res.blob()
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      const filename = statusFilter
+        ? `withdraws_${statusFilter}_${new Date().toISOString().slice(0, 10)}.csv`
+        : `withdraws_all_${new Date().toISOString().slice(0, 10)}.csv`
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(a.href)
+      setMsg(`已导出 ${rows.length} 条提现记录`)
+    } catch (err: any) {
+      setError(err.message || '导出失败')
+    }
+  }
+
+  // ── 批量审核 ──
+
+  const doBatchReview = async (action: 'approve' | 'reject') => {
+    const ids = Array.from(selectedIds)
+    if (!ids.length) {
+      setError('请先选择要审核的提现订单')
+      return
+    }
+
+    let reason: string | undefined
+    if (action === 'reject') {
+      const options = REJECT_REASONS.map((r, i) => `${i + 1}. ${r}`).join('\n')
+      const input = prompt(
+        `请选择拒绝原因（输入编号或手动输入）：\n${options}`,
+        REJECT_REASONS[0]
+      )
+      if (!input) return
+      const num = parseInt(input, 10)
+      reason = num >= 1 && num <= REJECT_REASONS.length ? REJECT_REASONS[num - 1] : input.trim()
+    }
+
+    try {
+      const res = await post('/api/v1/admin/withdraws/batch-review', { ids, action, rejectReason: reason })
+      const data = res.data
+      setMsg(
+        `批量${action === 'approve' ? '通过' : '拒绝'}：成功 ${action === 'approve' ? data.approved : data.rejected} 笔` +
+        (data.errors?.length ? `，${data.errors.length} 笔失败` : '')
+      )
+      setSelectedIds(new Set())
+      fetchData()
+    } catch (err: any) {
+      setError(err.message || '批量操作失败')
+    }
+  }
+
+  // ── 拒绝原因提示框 ──
+
   const promptRejectReason = (): string | null => {
-    // 使用预设拒绝理由的选择提示
     const options = REJECT_REASONS.map((r, i) => `${i + 1}. ${r}`).join('\n')
     const input = prompt(
       `请选择拒绝原因（输入编号或手动输入）：\n${options}`,
@@ -72,6 +159,8 @@ export default function AdminWithdraws() {
     }
     return input.trim()
   }
+
+  // ── 单个操作 ──
 
   const doFirstReview = async (id: number, action: 'approve' | 'reject') => {
     let reason: string | undefined
@@ -137,9 +226,33 @@ export default function AdminWithdraws() {
     )
   }
 
+  // ── 渲染 ──
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">提现管理</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-900">提现管理</h1>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setBatchMode(!batchMode); setSelectedIds(new Set()) }}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition ${
+              batchMode
+                ? 'bg-blue-50 border-blue-300 text-blue-700'
+                : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <CheckSquare size={16} />
+            {batchMode ? '退出批量' : '批量审核'}
+          </button>
+          <button
+            onClick={doExport}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition"
+          >
+            <Download size={16} />
+            导出 CSV
+          </button>
+        </div>
+      </div>
 
       {msg && (
         <div className="flex items-center gap-2 text-green-700 bg-green-50 p-3 rounded-lg text-sm">
@@ -152,8 +265,9 @@ export default function AdminWithdraws() {
         </div>
       )}
 
+      {/* 筛选行 */}
       <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div className="flex gap-4">
+        <div className="flex items-center gap-4">
           <div>
             <label className="block text-xs text-slate-500 mb-1">状态</label>
             <select value={statusFilter} onChange={(e) => { handleStatusFilterChange(e.target.value) }}
@@ -166,14 +280,45 @@ export default function AdminWithdraws() {
               <option value="rejected">已拒绝</option>
             </select>
           </div>
+
+          {/* 批量操作按钮 */}
+          {batchMode && selectedIds.size > 0 && (
+            <div className="flex items-center gap-2 ml-auto">
+              <span className="text-sm text-slate-500">已选 {selectedIds.size} 笔</span>
+              <button
+                onClick={() => doBatchReview('approve')}
+                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition"
+              >
+                批量通过
+              </button>
+              <button
+                onClick={() => doBatchReview('reject')}
+                className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition"
+              >
+                批量拒绝
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* 表格 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 text-left">
+                {batchMode && (
+                  <th className="px-4 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      ref={selectAllRef}
+                      checked={rows.length > 0 && selectedIds.size === rows.length}
+                      onChange={toggleSelectAll}
+                      className="rounded border-slate-300"
+                    />
+                  </th>
+                )}
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">ID</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">代理商</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">金额</th>
@@ -187,12 +332,22 @@ export default function AdminWithdraws() {
             </thead>
             <tbody className="divide-y divide-slate-200">
               {loading ? (
-                <tr><td colSpan={9} className="text-center py-12"><Loader2 className="animate-spin inline-block" size={24} /></td></tr>
+                <tr><td colSpan={batchMode ? 10 : 9} className="text-center py-12"><Loader2 className="animate-spin inline-block" size={24} /></td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={9} className="text-center py-12 text-slate-400">暂无提现订单</td></tr>
+                <tr><td colSpan={batchMode ? 10 : 9} className="text-center py-12 text-slate-400">暂无提现订单</td></tr>
               ) : (
                 rows.map((r) => (
-                  <tr key={r.id} className="hover:bg-slate-50 transition">
+                  <tr key={r.id} className={`hover:bg-slate-50 transition ${selectedIds.has(r.id) ? 'bg-blue-50' : ''}`}>
+                    {batchMode && (
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(r.id)}
+                          onChange={() => toggleSelect(r.id)}
+                          className="rounded border-slate-300"
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-sm text-slate-600">{r.id}</td>
                     <td className="px-4 py-3 text-sm text-slate-900">{r.nickname || r.email || `#${r.userId}`}</td>
                     <td className="px-4 py-3 text-sm font-medium">¥{Number(r.amount).toFixed(2)}</td>

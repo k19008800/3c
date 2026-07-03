@@ -44,7 +44,16 @@ export async function modelListRoutes(app: FastifyInstance) {
   //  GET /api/v1/models — 公开模型列表
   // ──────────────────────────────────────────────
 
+  // 兼容 OpenAI SDK 默认地址
+  app.get("/v1/models", async (_request, reply) => {
+    return handleModelList(_request, reply);
+  });
+
   app.get("/api/v1/models", async (_request, reply) => {
+    return handleModelList(_request, reply);
+  });
+
+  async function handleModelList(_request: any, reply: any) {
     const db = getDb();
 
     // 查询所有活跃模型及其绑定的厂商
@@ -114,5 +123,5 @@ export async function modelListRoutes(app: FastifyInstance) {
       },
       message: "ok",
     });
-  });
+  }
 }

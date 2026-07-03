@@ -9,17 +9,18 @@
 import { FastifyInstance } from "fastify";
 import { eq, asc, sql } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
-import { models, vendorModels } from "../../db/schema.js";
-import { authenticateJWT, requireRole } from "../../middleware/auth.js";
+import { models, vendorModels, auditLogs } from "../../db/schema.js";
+import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
 
 const MODEL_TYPES = ["chat", "embedding", "image", "audio"] as const;
 
 export async function adminModelRoutes(app: FastifyInstance) {
   app.addHook("preHandler", authenticateJWT);
-  app.addHook("preHandler", requireRole("super_admin", "admin"));
 
   // ── 创建模型 ──
-  app.post("/api/v1/admin/models", async (request, reply) => {
+  app.post("/api/v1/admin/models", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
     const db = getDb();
     const { name, displayName, type } = request.body as {
       name: string;
@@ -33,11 +34,24 @@ export async function adminModelRoutes(app: FastifyInstance) {
     }
     const modelType = type && MODEL_TYPES.includes(type as any) ? type : "chat";
 
+    const operatorId = request.user!.userId;
+
     try {
       const [model] = await db
         .insert(models)
         .values({ name, displayName, type: modelType as any })
         .returning();
+
+      await db.insert(auditLogs).values({
+        operatorId,
+        action: "model_create",
+        targetType: "model",
+        targetId: model.id,
+        after: { name, displayName, type: modelType },
+        ip: request.ip,
+        description: `创建模型: ${name}`,
+      });
+
       reply.status(200).send({ code: 0, data: model, message: "ok" });
     } catch (err: any) {
       if (err?.code === "23505") {
@@ -49,7 +63,9 @@ export async function adminModelRoutes(app: FastifyInstance) {
   });
 
   // ── 列表 ──
-  app.get("/api/v1/admin/models", async (request, reply) => {
+  app.get("/api/v1/admin/models", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
     const db = getDb();
     const query = request.query as Record<string, string | undefined>;
     const page = Math.max(1, parseInt(query.page ?? "1", 10) || 1);
@@ -95,7 +111,9 @@ export async function adminModelRoutes(app: FastifyInstance) {
   });
 
   // ── 更新 ──
-  app.patch("/api/v1/admin/models/:id", async (request, reply) => {
+  app.patch("/api/v1/admin/models/:id", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
     const db = getDb();
     const id = parseInt((request.params as any).id);
     const body = request.body as Record<string, any>;
@@ -110,6 +128,15 @@ export async function adminModelRoutes(app: FastifyInstance) {
       return;
     }
 
+    const operatorId = request.user!.userId;
+
+    // 获取变更前快照
+    const [before] = await db
+      .select({ name: models.name, status: models.status, type: models.type, displayName: models.displayName })
+      .from(models)
+      .where(eq(models.id, id))
+      .limit(1);
+
     const [model] = await db
       .update(models)
       .set(updates)
@@ -119,11 +146,25 @@ export async function adminModelRoutes(app: FastifyInstance) {
       reply.status(404).send({ code: 404, data: null, message: "模型不存在" });
       return;
     }
+
+    await db.insert(auditLogs).values({
+      operatorId,
+      action: "model_update",
+      targetType: "model",
+      targetId: id,
+      before: before ?? null,
+      after: updates,
+      ip: request.ip,
+      description: `编辑模型: ${before?.name ?? `#${id}`}`,
+    });
+
     reply.status(200).send({ code: 0, data: model, message: "ok" });
   });
 
   // ── 删除 ──
-  app.delete("/api/v1/admin/models/:id", async (request, reply) => {
+  app.delete("/api/v1/admin/models/:id", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
     const db = getDb();
     const id = parseInt((request.params as any).id);
 
@@ -141,6 +182,15 @@ export async function adminModelRoutes(app: FastifyInstance) {
       return;
     }
 
+    const operatorId = request.user!.userId;
+
+    // 获取变更前快照
+    const [before] = await db
+      .select({ name: models.name })
+      .from(models)
+      .where(eq(models.id, id))
+      .limit(1);
+
     const [model] = await db
       .delete(models)
       .where(eq(models.id, id))
@@ -149,6 +199,17 @@ export async function adminModelRoutes(app: FastifyInstance) {
       reply.status(404).send({ code: 404, data: null, message: "模型不存在" });
       return;
     }
+
+    await db.insert(auditLogs).values({
+      operatorId,
+      action: "model_update",
+      targetType: "model",
+      targetId: id,
+      before: before ?? null,
+      ip: request.ip,
+      description: `删除模型: ${before?.name ?? `#${id}`}`,
+    });
+
     reply.status(200).send({ code: 0, data: null, message: "ok" });
   });
 }

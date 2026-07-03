@@ -26,6 +26,7 @@ import {
   models,
   vendors,
   vendorModels,
+  commissionRules,
   systemConfigs,
   userRealNameReviews,
   userRoleHistory,
@@ -471,7 +472,11 @@ async function main() {
     await closeDb();
     process.exit(1);
   }
-  console.log(`🏢 代理商: ${AGENT_EMAIL}, 分佣比例: ${(parseFloat(agentRecord.commissionRate) * 100).toFixed(1)}%\n`);
+  const [saleRule] = await db.select({ rate: commissionRules.rate }).from(commissionRules)
+    .where(and(eq(commissionRules.agentId, AGENT_ID), eq(commissionRules.ruleType, "sale")))
+    .limit(1);
+  const ratePct = saleRule ? (parseFloat(saleRule.rate) * 100).toFixed(1) : "0.0";
+  console.log(`🏢 代理商: ${AGENT_EMAIL}, 分佣比例: ${ratePct}%\n`);
 
   // ── 创建 10 个客户 ──
   console.log("👤 创建客户用户...\n");

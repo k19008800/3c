@@ -4,15 +4,20 @@
 //  GET    /api/v1/admin/users/:id          — 用户详情
 //  PATCH  /api/v1/admin/users/:id          — 更新用户
 //  DELETE /api/v1/admin/users/:id          — 删除用户
+//  POST   /api/v1/admin/users             — 创建用户
 //  POST   /api/v1/admin/users/:id/recharge — 手动调余额
 //  POST   /api/v1/admin/users/:id/reset-pwd — 重置密码
-//  GET    /api/v1/admin/real-name-review    — 实名审核列表
-//  POST   /api/v1/admin/real-name-review/:id — 审核实名
-//  POST   /api/v1/admin/users/:id/manual-real-name — 手动确认实名
+//  POST   /api/v1/admin/users/:id/change-role — 变更角色
+//  POST   /api/v1/admin/users/batch/*      — 批量禁用/启用
+//  POST   /api/v1/admin/users/impersonate  — 模拟登录
+//  POST   /api/v1/admin/users/export       — 导出用户
+//  GET    /api/v1/admin/users/:id/*        — 审计/余额/登录/备注/白名单/调用等
+//
+//  实名审核 → reviews.ts | API Key 管理 → api-keys.ts
 // ============================================================
 
 import { FastifyInstance } from "fastify";
-import { eq, and, desc, like, sql, asc, or, gte, lt } from "drizzle-orm";
+import { eq, and, desc, sql, gte, lt } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import {
   users,
@@ -25,11 +30,11 @@ import {
   userLoginHistory,
   userNotes,
   userIpWhitelist,
-  userRealNameReviews,
   callLogs,
 } from "../../db/schema.js";
-import { authenticateJWT, requireRole } from "../../middleware/auth.js";
-import { AppError } from "../../services/auth-service.js";
+import { getRedis } from "../../redis.js";
+import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
+
 import bcrypt from "bcryptjs";
 import { config } from "../../config.js";
 import {
@@ -37,30 +42,21 @@ import {
   adminBatchDisableSchema,
   adminBatchEnableSchema,
   adminUnbindOAuthSchema,
-  adminUpdateApiKeySchema,
   adminExportUsersQuerySchema,
   adminCreateUserSchema,
   adminAddUserNoteSchema,
-  adminUpdateUserNoteSchema,
   adminIpWhitelistSchema,
-  adminUserDataExportSchema,
   adminImpersonateSchema,
-  adminRealNameReviewListQuerySchema,
-  adminRealNameReviewActionSchema,
-  adminManualRealNameSchema,
 } from "../../schemas.js";
 import type {
   AdminChangeRoleInput,
   AdminBatchDisableInput,
   AdminBatchEnableInput,
   AdminUnbindOAuthInput,
-  AdminUpdateApiKeyInput,
   AdminExportUsersQuery,
   AdminCreateUserInput,
   AdminAddUserNoteInput,
-  AdminUpdateUserNoteInput,
   AdminIpWhitelistInput,
-  AdminUserDataExportInput,
   AdminImpersonateInput,
 } from "../../schemas.js";
 
@@ -68,13 +64,14 @@ const SALT_ROUNDS = config.bcrypt.saltRounds;
 
 export async function adminUserRoutes(app: FastifyInstance) {
   app.addHook("preHandler", authenticateJWT);
-  app.addHook("preHandler", requireRole("super_admin", "admin"));
 
   // ──────────────────────────────────────────────
   //  GET /api/v1/admin/users — 用户列表
   // ──────────────────────────────────────────────
 
-  app.get("/api/v1/admin/users", async (request, reply) => {
+  app.get("/api/v1/admin/users", {
+    preHandler: [requirePerm(Perm.USER_LIST)],
+  }, async (request, reply) => {
     const db = getDb();
     const query = request.query as {
       page?: string;
@@ -147,11 +144,22 @@ export async function adminUserRoutes(app: FastifyInstance) {
       .limit(pageSize)
       .offset(offset);
 
+    // 批量查询 Redis 封禁状态
+    const redis = getRedis();
+    const userBans = await Promise.all(
+      rows.map(async (r) => ({
+        id: r.id,
+        banned: (await redis.exists(`risk:ban:user:${r.id}`)) === 1,
+      }))
+    );
+    const banMap = new Map(userBans.map((b) => [b.id, b.banned]));
+
     reply.status(200).send({
       code: 0,
       data: {
         list: rows.map((r) => ({
           ...r,
+          isBanned: banMap.get(r.id) ?? false,
           disabledUntil: r.disabledUntil?.toISOString() ?? null,
           createdAt: r.createdAt.toISOString(),
         })),
@@ -167,7 +175,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  GET /api/v1/admin/users/:id — 用户详情
   // ──────────────────────────────────────────────
 
-  app.get("/api/v1/admin/users/:id", async (request, reply) => {
+  app.get("/api/v1/admin/users/:id", {
+    preHandler: [requirePerm(Perm.USER_VIEW)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -177,8 +187,43 @@ export async function adminUserRoutes(app: FastifyInstance) {
       return;
     }
 
+    // 安全查询：不返回 passwordHash 等敏感字段
     const [user] = await db
-      .select()
+      .select({
+        id: users.id,
+        email: users.email,
+        nickname: users.nickname,
+        phone: users.phone,
+        avatarUrl: users.avatarUrl,
+        userType: users.userType,
+        role: users.role,
+        status: users.status,
+        balance: users.balance,
+        realNameStatus: users.realNameStatus,
+        realName: users.realName,
+        idNumber: users.idNumber,
+        companyName: users.companyName,
+        companyRegNumber: users.companyRegNumber,
+        idFrontImage: users.idFrontImage,
+        idBackImage: users.idBackImage,
+        businessLicense: users.businessLicense,
+        bankName: users.bankName,
+        bankAccount: users.bankAccount,
+        bankAddress: users.bankAddress,
+        invoiceTitle: users.invoiceTitle,
+        invoiceTaxId: users.invoiceTaxId,
+        emailVerifiedAt: users.emailVerifiedAt,
+        lastLoginAt: users.lastLoginAt,
+        discountRate: users.discountRate,
+        rpmOverride: users.rpmOverride,
+        tpmOverride: users.tpmOverride,
+        disabledUntil: users.disabledUntil,
+        disabledReason: users.disabledReason,
+        rejectReason: users.rejectReason,
+        teamId: users.teamId,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+      })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
@@ -203,10 +248,15 @@ export async function adminUserRoutes(app: FastifyInstance) {
       .from(rechargeOrders)
       .where(eq(rechargeOrders.userId, userId));
 
+    // 查询 Redis 封禁状态
+    const redis = getRedis();
+    const isBanned = (await redis.exists(`risk:ban:user:${userId}`)) === 1;
+
     reply.status(200).send({
       code: 0,
       data: {
         ...user,
+        isBanned,
         emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
         disabledUntil: user.disabledUntil?.toISOString() ?? null,
         lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
@@ -226,7 +276,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  PATCH /api/v1/admin/users/:id — 更新用户
   // ──────────────────────────────────────────────
 
-  app.patch("/api/v1/admin/users/:id", async (request, reply) => {
+  app.patch("/api/v1/admin/users/:id", {
+    preHandler: [requirePerm(Perm.USER_EDIT)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -273,6 +325,16 @@ export async function adminUserRoutes(app: FastifyInstance) {
       return;
     }
 
+    // 智能联动：status 变更时自动处理 emailVerifiedAt
+    //   pending → active : 手动验证邮箱，自动补齐验证时间
+    //   active → pending : 撤销验证，清除验证时间
+    if (updateData.status === "active" && user.status === "pending") {
+      updateData.emailVerifiedAt = new Date();
+    }
+    if (updateData.status === "pending" && user.status === "active") {
+      updateData.emailVerifiedAt = null;
+    }
+
     // 记录变更快照
     const beforeSnapshot = {
       nickname: user.nickname,
@@ -282,6 +344,7 @@ export async function adminUserRoutes(app: FastifyInstance) {
       rpmOverride: user.rpmOverride,
       tpmOverride: user.tpmOverride,
       userType: user.userType,
+      emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
     };
 
     await db.transaction(async (tx) => {
@@ -314,7 +377,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  DELETE /api/v1/admin/users/:id — 删除/禁用用户
   // ──────────────────────────────────────────────
 
-  app.delete("/api/v1/admin/users/:id", async (request, reply) => {
+  app.delete("/api/v1/admin/users/:id", {
+    preHandler: [requirePerm(Perm.USER_DELETE)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -366,7 +431,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  POST /api/v1/admin/users/:id/recharge — 手动调余额
   // ──────────────────────────────────────────────
 
-  app.post("/api/v1/admin/users/:id/recharge", async (request, reply) => {
+  app.post("/api/v1/admin/users/:id/recharge", {
+    preHandler: [requirePerm(Perm.USER_BALANCE)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -449,7 +516,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  POST /api/v1/admin/users/:id/reset-pwd — 重置密码
   // ──────────────────────────────────────────────
 
-  app.post("/api/v1/admin/users/:id/reset-pwd", async (request, reply) => {
+  app.post("/api/v1/admin/users/:id/reset-pwd", {
+    preHandler: [requirePerm(Perm.USER_RESET_PWD)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -504,278 +573,12 @@ export async function adminUserRoutes(app: FastifyInstance) {
   });
 
   // ──────────────────────────────────────────────
-  //  GET /api/v1/admin/real-name-review — 实名审核列表
-  //  status=pending_review|approved|rejected | 不传=全部
-  // ──────────────────────────────────────────────
-
-  app.get("/api/v1/admin/real-name-review", async (request, reply) => {
-    const db = getDb();
-    const query = request.query as {
-      page?: string;
-      pageSize?: string;
-      status?: string;   // pending_review | approved | rejected
-    };
-
-    const page = Math.max(1, parseInt(query.page ?? "1", 10) || 1);
-    const pageSize = Math.min(100, Math.max(1, parseInt(query.pageSize ?? "20", 10) || 20));
-    const offset = (page - 1) * pageSize;
-
-    const conditions = [
-      sql`${userRealNameReviews.id} IS NOT NULL`,
-    ];
-
-    if (query.status) {
-      conditions.push(eq(userRealNameReviews.status, query.status as any));
-    }
-
-    const [totalResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(userRealNameReviews)
-      .innerJoin(users, eq(userRealNameReviews.userId, users.id))
-      .where(and(...conditions));
-
-    const total = Number(totalResult?.count ?? 0);
-
-    const rows = await db
-      .select({
-        id: userRealNameReviews.id,
-        userId: userRealNameReviews.userId,
-        email: users.email,
-        nickname: users.nickname,
-        userType: users.userType,
-        version: userRealNameReviews.version,
-        realNameStatus: userRealNameReviews.status,
-        realName: userRealNameReviews.realName,
-        idNumber: userRealNameReviews.idNumber,
-        companyName: userRealNameReviews.companyName,
-        rejectReason: userRealNameReviews.rejectReason,
-        createdAt: userRealNameReviews.createdAt,
-        reviewedAt: userRealNameReviews.reviewedAt,
-      })
-      .from(userRealNameReviews)
-      .innerJoin(users, eq(userRealNameReviews.userId, users.id))
-      .where(and(...conditions))
-      .orderBy(desc(userRealNameReviews.createdAt))
-      .limit(pageSize)
-      .offset(offset);
-
-    reply.status(200).send({
-      code: 0,
-      data: {
-        list: rows.map((r) => ({
-          ...r,
-          createdAt: r.createdAt.toISOString(),
-          reviewedAt: r.reviewedAt?.toISOString() ?? null,
-        })),
-        total,
-        page,
-        pageSize,
-      },
-      message: "ok",
-    });
-  });
-
-  // ──────────────────────────────────────────────
-  //  POST /api/v1/admin/real-name-review/:id — 审核实名
-  //  同时写入 user_real_name_reviews 历史表
-  // ──────────────────────────────────────────────
-
-  app.post("/api/v1/admin/real-name-review/:id", async (request, reply) => {
-    const db = getDb();
-    const { id } = request.params as { id: string };
-    const userId = parseInt(id, 10);
-    const operatorId = request.user!.userId;
-
-    if (isNaN(userId)) {
-      reply.status(400).send({ code: 400, data: null, message: "无效的用户 ID" });
-      return;
-    }
-
-    const body = request.body as {
-      action: "approve" | "reject";
-      rejectReason?: string;
-    };
-
-    if (!["approve", "reject"].includes(body.action)) {
-      reply.status(400).send({ code: 400, data: null, message: "action 必须为 approve 或 reject" });
-      return;
-    }
-
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-
-    if (!user) {
-      reply.status(404).send({ code: 404, data: null, message: "用户不存在" });
-      return;
-    }
-
-    if (user.realNameStatus !== "pending_review") {
-      reply.status(400).send({ code: 400, data: null, message: `当前实名状态为 ${user.realNameStatus}，无法审核` });
-      return;
-    }
-
-    const updateData: Record<string, any> = {};
-
-    if (body.action === "approve") {
-      updateData.realNameStatus = "approved";
-    } else {
-      updateData.realNameStatus = "rejected";
-      updateData.rejectReason = body.rejectReason ?? null;
-    }
-
-    await db.transaction(async (tx) => {
-      // 1. 更新 users 表状态
-      await tx
-        .update(users)
-        .set(updateData)
-        .where(eq(users.id, userId));
-
-      // 2. 将当前最新待审核记录更新为已审核
-      const newStatus = body.action === "approve" ? "approved" : "rejected";
-      await tx
-        .update(userRealNameReviews)
-        .set({
-          status: newStatus,
-          reviewerId: operatorId,
-          rejectReason: body.rejectReason ?? null,
-          reviewedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(userRealNameReviews.userId, userId),
-            eq(userRealNameReviews.status, "pending_review"),
-          )
-        );
-
-      // 3. 审计日志
-      await tx.insert(auditLogs).values({
-        operatorId,
-        action: body.action === "approve" ? "real_name_approve" : "real_name_reject",
-        targetType: "user",
-        targetId: userId,
-        before: { realNameStatus: user.realNameStatus },
-        after: updateData,
-        ip: request.ip,
-        description: `实名审核: ${body.action === "approve" ? "通过" : "拒绝"}${body.rejectReason ? ` (${body.rejectReason})` : ""}`,
-      });
-    });
-
-    // 发送审核结果通知（不阻塞响应）
-    const { notifyRealNameReviewResult } = await import("../../services/notification-service.js");
-    notifyRealNameReviewResult({
-      userId,
-      email: user.email,
-      nickname: user.nickname,
-      realName: user.realName || "用户",
-      status: body.action === "approve" ? "approved" : "rejected",
-      rejectReason: body.rejectReason,
-    }).catch((err: any) => {
-      console.error(`审核通知发送失败 (userId=${userId}):`, err);
-    });
-
-    reply.status(200).send({
-      code: 0,
-      data: null,
-      message: body.action === "approve" ? "实名认证已通过" : "实名认证已拒绝",
-    });
-  });
-
-  // ──────────────────────────────────────────────
-  //  GET /api/v1/admin/real-name-review/detail/:id — 审核详情
-  //  查看用户完整实名信息 + 所有历史版本 + 证件路径
-  // ──────────────────────────────────────────────
-
-  app.get("/api/v1/admin/real-name-review/detail/:userId", async (request, reply) => {
-    const db = getDb();
-    const { userId: paramUserId } = request.params as { userId: string };
-    const userId = parseInt(paramUserId, 10);
-
-    if (isNaN(userId)) {
-      reply.status(400).send({ code: 400, data: null, message: "无效的用户 ID" });
-      return;
-    }
-
-    const [user] = await db
-      .select({
-        id: users.id,
-        email: users.email,
-        nickname: users.nickname,
-        userType: users.userType,
-        realNameStatus: users.realNameStatus,
-        realName: users.realName,
-        idNumber: users.idNumber,
-        idFrontImage: users.idFrontImage,
-        idBackImage: users.idBackImage,
-        companyName: users.companyName,
-        companyRegNumber: users.companyRegNumber,
-        businessLicense: users.businessLicense,
-        bankName: users.bankName,
-        bankAccount: users.bankAccount,
-        bankAddress: users.bankAddress,
-        invoiceTitle: users.invoiceTitle,
-        invoiceTaxId: users.invoiceTaxId,
-        rejectReason: users.rejectReason,
-      })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-
-    if (!user) {
-      reply.status(404).send({ code: 404, data: null, message: "用户不存在" });
-      return;
-    }
-
-    // 获取所有历史审核版本
-    const reviewHistory = await db
-      .select()
-      .from(userRealNameReviews)
-      .where(eq(userRealNameReviews.userId, userId))
-      .orderBy(desc(userRealNameReviews.version));
-
-    reply.status(200).send({
-      code: 0,
-      data: {
-        user: {
-          ...user,
-          // 生成文件查看 URL
-          idFrontImageUrl: user.idFrontImage
-            ? `/api/v1/admin/real-name/file/${userId}/${user.idFrontImage.split("/").pop()}`
-            : null,
-          idBackImageUrl: user.idBackImage
-            ? `/api/v1/admin/real-name/file/${userId}/${user.idBackImage.split("/").pop()}`
-            : null,
-          businessLicenseUrl: user.businessLicense
-            ? `/api/v1/admin/real-name/file/${userId}/${user.businessLicense.split("/").pop()}`
-            : null,
-        },
-        history: reviewHistory.map((h) => ({
-          ...h,
-          createdAt: h.createdAt.toISOString(),
-          reviewedAt: h.reviewedAt?.toISOString() ?? null,
-          // 历史版本的证件文件 URL（审核后仍可查看）
-          idFrontImageUrl: h.idFrontImage
-            ? `/api/v1/admin/real-name/file/${userId}/${h.idFrontImage.split("/").pop()}`
-            : null,
-          idBackImageUrl: h.idBackImage
-            ? `/api/v1/admin/real-name/file/${userId}/${h.idBackImage.split("/").pop()}`
-            : null,
-          businessLicenseUrl: h.businessLicense
-            ? `/api/v1/admin/real-name/file/${userId}/${h.businessLicense.split("/").pop()}`
-            : null,
-        })),
-      },
-      message: "ok",
-    });
-  });
-
-  // ──────────────────────────────────────────────
   //  GET /api/v1/admin/users/:id/audit-logs — 用户审计日志
   // ──────────────────────────────────────────────
 
-  app.get("/api/v1/admin/users/:id/audit-logs", async (request, reply) => {
+  app.get("/api/v1/admin/users/:id/audit-logs", {
+    preHandler: [requirePerm(Perm.USER_VIEW)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -843,7 +646,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  GET /api/v1/admin/users/:id/balance-logs — 用户余额流水
   // ──────────────────────────────────────────────
 
-  app.get("/api/v1/admin/users/:id/balance-logs", async (request, reply) => {
+  app.get("/api/v1/admin/users/:id/balance-logs", {
+    preHandler: [requirePerm(Perm.USER_VIEW)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -908,7 +713,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  POST /api/v1/admin/users/:id/change-role — 变更角色
   // ──────────────────────────────────────────────
 
-  app.post("/api/v1/admin/users/:id/change-role", async (request, reply) => {
+  app.post("/api/v1/admin/users/:id/change-role", {
+    preHandler: [requirePerm(Perm.USER_CHANGE_ROLE)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -974,7 +781,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  GET /api/v1/admin/users/:id/role-history — 角色变更历史
   // ──────────────────────────────────────────────
 
-  app.get("/api/v1/admin/users/:id/role-history", async (request, reply) => {
+  app.get("/api/v1/admin/users/:id/role-history", {
+    preHandler: [requirePerm(Perm.USER_VIEW)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -1001,121 +810,12 @@ export async function adminUserRoutes(app: FastifyInstance) {
   });
 
   // ──────────────────────────────────────────────
-  //  GET /api/v1/admin/users/:id/api-keys — 用户 API Key 列表
-  // ──────────────────────────────────────────────
-
-  app.get("/api/v1/admin/users/:id/api-keys", async (request, reply) => {
-    const db = getDb();
-    const { id } = request.params as { id: string };
-    const userId = parseInt(id, 10);
-
-    if (isNaN(userId)) {
-      reply.status(400).send({ code: 400, data: null, message: "无效的用户 ID" });
-      return;
-    }
-
-    const keys = await db
-      .select({
-        id: apiKeys.id,
-        name: apiKeys.name,
-        keyPrefix: apiKeys.keyPrefix,
-        status: apiKeys.status,
-        expiresAt: apiKeys.expiresAt,
-        lastUsedAt: apiKeys.lastUsedAt,
-        createdAt: apiKeys.createdAt,
-      })
-      .from(apiKeys)
-      .where(eq(apiKeys.userId, userId))
-      .orderBy(desc(apiKeys.createdAt));
-
-    reply.status(200).send({
-      code: 0,
-      data: {
-        list: keys.map((k) => ({
-          ...k,
-          expiresAt: k.expiresAt?.toISOString() ?? null,
-          lastUsedAt: k.lastUsedAt?.toISOString() ?? null,
-          createdAt: k.createdAt.toISOString(),
-        })),
-      },
-      message: "ok",
-    });
-  });
-
-  // ──────────────────────────────────────────────
-  //  PATCH /api/v1/admin/users/:id/api-keys/:keyId — 管理用户 API Key
-  // ──────────────────────────────────────────────
-
-  app.patch("/api/v1/admin/users/:id/api-keys/:keyId", async (request, reply) => {
-    const db = getDb();
-    const { id, keyId } = request.params as { id: string; keyId: string };
-    const userId = parseInt(id, 10);
-    const parsedKeyId = parseInt(keyId, 10);
-
-    if (isNaN(userId) || isNaN(parsedKeyId)) {
-      reply.status(400).send({ code: 400, data: null, message: "无效的参数" });
-      return;
-    }
-
-    const parsed = adminUpdateApiKeySchema.parse(request.body);
-
-    const [key] = await db
-      .select({ id: apiKeys.id })
-      .from(apiKeys)
-      .where(and(eq(apiKeys.id, parsedKeyId), eq(apiKeys.userId, userId)))
-      .limit(1);
-
-    if (!key) {
-      reply.status(404).send({ code: 404, data: null, message: "API Key 不存在" });
-      return;
-    }
-
-    const updateData: Record<string, any> = {};
-    if (parsed.name !== undefined) updateData.name = parsed.name;
-    if (parsed.status !== undefined) updateData.status = parsed.status;
-
-    if (Object.keys(updateData).length > 0) {
-      await db.update(apiKeys).set(updateData).where(eq(apiKeys.id, parsedKeyId));
-    }
-
-    reply.status(200).send({ code: 0, data: null, message: "API Key 已更新" });
-  });
-
-  // ──────────────────────────────────────────────
-  //  DELETE /api/v1/admin/users/:id/api-keys/:keyId — 删除用户 API Key
-  // ──────────────────────────────────────────────
-
-  app.delete("/api/v1/admin/users/:id/api-keys/:keyId", async (request, reply) => {
-    const db = getDb();
-    const { id, keyId } = request.params as { id: string; keyId: string };
-    const userId = parseInt(id, 10);
-    const parsedKeyId = parseInt(keyId, 10);
-
-    if (isNaN(userId) || isNaN(parsedKeyId)) {
-      reply.status(400).send({ code: 400, data: null, message: "无效的参数" });
-      return;
-    }
-
-    const [key] = await db
-      .select({ id: apiKeys.id })
-      .from(apiKeys)
-      .where(and(eq(apiKeys.id, parsedKeyId), eq(apiKeys.userId, userId)))
-      .limit(1);
-
-    if (!key) {
-      reply.status(404).send({ code: 404, data: null, message: "API Key 不存在" });
-      return;
-    }
-
-    await db.delete(apiKeys).where(eq(apiKeys.id, parsedKeyId));
-    reply.status(200).send({ code: 0, data: null, message: "API Key 已删除" });
-  });
-
-  // ──────────────────────────────────────────────
   //  GET /api/v1/admin/users/:id/oauth-bindings — OAuth 绑定列表
   // ──────────────────────────────────────────────
 
-  app.get("/api/v1/admin/users/:id/oauth-bindings", async (request, reply) => {
+  app.get("/api/v1/admin/users/:id/oauth-bindings", {
+    preHandler: [requirePerm(Perm.USER_VIEW)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -1152,7 +852,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  POST /api/v1/admin/users/:id/unbind-oauth — 解绑 OAuth
   // ──────────────────────────────────────────────
 
-  app.post("/api/v1/admin/users/:id/unbind-oauth", async (request, reply) => {
+  app.post("/api/v1/admin/users/:id/unbind-oauth", {
+    preHandler: [requirePerm(Perm.USER_EDIT)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -1196,7 +898,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  POST /api/v1/admin/users/batch/disable — 批量禁用
   // ──────────────────────────────────────────────
 
-  app.post("/api/v1/admin/users/batch/disable", async (request, reply) => {
+  app.post("/api/v1/admin/users/batch/disable", {
+    preHandler: [requirePerm(Perm.USER_EDIT)],
+  }, async (request, reply) => {
     const db = getDb();
     const operatorId = request.user!.userId;
 
@@ -1249,7 +953,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  POST /api/v1/admin/users/batch/enable — 批量启用
   // ──────────────────────────────────────────────
 
-  app.post("/api/v1/admin/users/batch/enable", async (request, reply) => {
+  app.post("/api/v1/admin/users/batch/enable", {
+    preHandler: [requirePerm(Perm.USER_EDIT)],
+  }, async (request, reply) => {
     const db = getDb();
     const operatorId = request.user!.userId;
 
@@ -1302,7 +1008,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  GET /api/v1/admin/users/export — 导出用户列表 (CSV)
   // ──────────────────────────────────────────────
 
-  app.get("/api/v1/admin/users/export", async (request, reply) => {
+  app.get("/api/v1/admin/users/export", {
+    preHandler: [requirePerm(Perm.USER_LIST)],
+  }, async (request, reply) => {
     const db = getDb();
 
     const query = request.query as Record<string, string | undefined>;
@@ -1383,7 +1091,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  POST /api/v1/admin/users — 管理员创建用户
   // ──────────────────────────────────────────────
 
-  app.post("/api/v1/admin/users", async (request, reply) => {
+  app.post("/api/v1/admin/users", {
+    preHandler: [requirePerm(Perm.USER_CREATE)],
+  }, async (request, reply) => {
     const db = getDb();
     const operatorId = request.user!.userId;
 
@@ -1442,7 +1152,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  GET /api/v1/admin/users/:id/login-history — 登录历史
   // ──────────────────────────────────────────────
 
-  app.get("/api/v1/admin/users/:id/login-history", async (request, reply) => {
+  app.get("/api/v1/admin/users/:id/login-history", {
+    preHandler: [requirePerm(Perm.USER_VIEW)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -1501,7 +1213,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  GET /api/v1/admin/users/:id/call-stats — 调用统计
   // ──────────────────────────────────────────────
 
-  app.get("/api/v1/admin/users/:id/call-stats", async (request, reply) => {
+  app.get("/api/v1/admin/users/:id/call-stats", {
+    preHandler: [requirePerm(Perm.USER_VIEW)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -1577,7 +1291,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
 
   //  GET /api/v1/admin/users/:id/notes — 备注列表
 
-  app.get("/api/v1/admin/users/:id/notes", async (request, reply) => {
+  app.get("/api/v1/admin/users/:id/notes", {
+    preHandler: [requirePerm(Perm.USER_VIEW)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -1614,7 +1330,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
 
   //  POST /api/v1/admin/users/:id/notes — 添加备注
 
-  app.post("/api/v1/admin/users/:id/notes", async (request, reply) => {
+  app.post("/api/v1/admin/users/:id/notes", {
+    preHandler: [requirePerm(Perm.USER_EDIT)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -1644,7 +1362,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
 
   //  DELETE /api/v1/admin/users/:id/notes/:noteId — 删除备注
 
-  app.delete("/api/v1/admin/users/:id/notes/:noteId", async (request, reply) => {
+  app.delete("/api/v1/admin/users/:id/notes/:noteId", {
+    preHandler: [requirePerm(Perm.USER_EDIT)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id, noteId } = request.params as { id: string; noteId: string };
     const userId = parseInt(id, 10);
@@ -1676,7 +1396,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
 
   //  GET /api/v1/admin/users/:id/ip-whitelist — 列表
 
-  app.get("/api/v1/admin/users/:id/ip-whitelist", async (request, reply) => {
+  app.get("/api/v1/admin/users/:id/ip-whitelist", {
+    preHandler: [requirePerm(Perm.USER_VIEW)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -1707,7 +1429,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
 
   //  POST /api/v1/admin/users/:id/ip-whitelist — 添加
 
-  app.post("/api/v1/admin/users/:id/ip-whitelist", async (request, reply) => {
+  app.post("/api/v1/admin/users/:id/ip-whitelist", {
+    preHandler: [requirePerm(Perm.USER_EDIT)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -1748,7 +1472,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
 
   //  DELETE /api/v1/admin/users/:id/ip-whitelist/:whitelistId — 删除
 
-  app.delete("/api/v1/admin/users/:id/ip-whitelist/:whitelistId", async (request, reply) => {
+  app.delete("/api/v1/admin/users/:id/ip-whitelist/:whitelistId", {
+    preHandler: [requirePerm(Perm.USER_EDIT)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id, whitelistId } = request.params as { id: string; whitelistId: string };
     const userId = parseInt(id, 10);
@@ -1783,7 +1509,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  GET /api/v1/admin/users/:id/export-data — 用户数据导出
   // ──────────────────────────────────────────────
 
-  app.get("/api/v1/admin/users/:id/export-data", async (request, reply) => {
+  app.get("/api/v1/admin/users/:id/export-data", {
+    preHandler: [requirePerm(Perm.USER_VIEW)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -1857,7 +1585,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  POST /api/v1/admin/users/impersonate — 模拟登录
   // ──────────────────────────────────────────────
 
-  app.post("/api/v1/admin/users/impersonate", async (request, reply) => {
+  app.post("/api/v1/admin/users/impersonate", {
+    preHandler: [requirePerm(Perm.USER_IMPERSONATE)],
+  }, async (request, reply) => {
     const db = getDb();
     const operatorId = request.user!.userId;
     const parsed = adminImpersonateSchema.parse(request.body);
@@ -1916,151 +1646,6 @@ export async function adminUserRoutes(app: FastifyInstance) {
     });
   });
 
-  // ──────────────────────────────────────────────
-  //  GET /api/v1/admin/users/:id/real-name-history — 用户实名审核历史
-  // ──────────────────────────────────────────────
-
-  app.get("/api/v1/admin/users/:id/real-name-history", async (request, reply) => {
-    const db = getDb();
-    const { id } = request.params as { id: string };
-    const userId = parseInt(id, 10);
-
-    if (isNaN(userId)) {
-      reply.status(400).send({ code: 400, data: null, message: "无效的用户 ID" });
-      return;
-    }
-
-    const rows = await db
-      .select({
-        id: userRealNameReviews.id,
-        userId: userRealNameReviews.userId,
-        version: userRealNameReviews.version,
-        realName: userRealNameReviews.realName,
-        idNumber: userRealNameReviews.idNumber,
-        idFrontImage: userRealNameReviews.idFrontImage,
-        idBackImage: userRealNameReviews.idBackImage,
-        companyName: userRealNameReviews.companyName,
-        companyRegNumber: userRealNameReviews.companyRegNumber,
-        businessLicense: userRealNameReviews.businessLicense,
-        bankName: userRealNameReviews.bankName,
-        bankAccount: userRealNameReviews.bankAccount,
-        bankAddress: userRealNameReviews.bankAddress,
-        invoiceTitle: userRealNameReviews.invoiceTitle,
-        invoiceTaxId: userRealNameReviews.invoiceTaxId,
-        status: userRealNameReviews.status,
-        reviewerId: userRealNameReviews.reviewerId,
-        rejectReason: userRealNameReviews.rejectReason,
-        createdAt: userRealNameReviews.createdAt,
-        reviewedAt: userRealNameReviews.reviewedAt,
-      })
-      .from(userRealNameReviews)
-      .where(eq(userRealNameReviews.userId, userId))
-      .orderBy(desc(userRealNameReviews.version));
-
-    reply.status(200).send({
-      code: 0,
-      data: {
-        list: rows.map((r) => ({
-          ...r,
-          createdAt: r.createdAt.toISOString(),
-          reviewedAt: r.reviewedAt?.toISOString() ?? null,
-        })),
-      },
-      message: "ok",
-    });
-  });
-
-  // ──────────────────────────────────────────────
-  //  GET /api/v1/admin/real-name-reviews — 实名审核历史列表（全状态）
-  // ──────────────────────────────────────────────
-
-  app.get("/api/v1/admin/real-name-reviews", async (request, reply) => {
-    const db = getDb();
-    const parsed = adminRealNameReviewListQuerySchema.parse(request.query);
-    const offset = (parsed.page - 1) * parsed.pageSize;
-
-    const conditions = [sql`1=1`];
-    if (parsed.status) {
-      conditions.push(eq(userRealNameReviews.status, parsed.status as any));
-    }
-    if (parsed.keyword) {
-      conditions.push(
-        sql`(${users.email}::text ILIKE ${`%${parsed.keyword}%`} OR ${users.nickname}::text ILIKE ${`%${parsed.keyword}%`})`
-      );
-    }
-
-    const [totalResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(userRealNameReviews)
-      .innerJoin(users, eq(userRealNameReviews.userId, users.id))
-      .where(and(...conditions));
-
-    const total = Number(totalResult?.count ?? 0);
-
-    const rows = await db
-      .select({
-        id: userRealNameReviews.id,
-        userId: userRealNameReviews.userId,
-        email: users.email,
-        nickname: users.nickname,
-        userType: users.userType,
-        version: userRealNameReviews.version,
-        realName: userRealNameReviews.realName,
-        idNumber: userRealNameReviews.idNumber,
-        idFrontImage: userRealNameReviews.idFrontImage,
-        idBackImage: userRealNameReviews.idBackImage,
-        companyName: userRealNameReviews.companyName,
-        companyRegNumber: userRealNameReviews.companyRegNumber,
-        businessLicense: userRealNameReviews.businessLicense,
-        bankName: userRealNameReviews.bankName,
-        bankAccount: userRealNameReviews.bankAccount,
-        bankAddress: userRealNameReviews.bankAddress,
-        invoiceTitle: userRealNameReviews.invoiceTitle,
-        invoiceTaxId: userRealNameReviews.invoiceTaxId,
-        status: userRealNameReviews.status,
-        reviewerId: userRealNameReviews.reviewerId,
-        rejectReason: userRealNameReviews.rejectReason,
-        createdAt: userRealNameReviews.createdAt,
-        reviewedAt: userRealNameReviews.reviewedAt,
-      })
-      .from(userRealNameReviews)
-      .innerJoin(users, eq(userRealNameReviews.userId, users.id))
-      .where(and(...conditions))
-      .orderBy(desc(userRealNameReviews.createdAt))
-      .limit(parsed.pageSize)
-      .offset(offset);
-
-    reply.status(200).send({
-      code: 0,
-      data: {
-        list: rows.map((r) => {
-          // 将数据库文件路径转为 API 可访问的 URL
-          const idFrontImageUrl = r.idFrontImage
-            ? `/api/v1/admin/real-name/file/${r.userId}/${r.idFrontImage.split("/").pop()}`
-            : null;
-          const idBackImageUrl = r.idBackImage
-            ? `/api/v1/admin/real-name/file/${r.userId}/${r.idBackImage.split("/").pop()}`
-            : null;
-          const businessLicenseUrl = r.businessLicense
-            ? `/api/v1/admin/real-name/file/${r.userId}/${r.businessLicense.split("/").pop()}`
-            : null;
-          return {
-            ...r,
-            idFrontImage: idFrontImageUrl,
-            idBackImage: idBackImageUrl,
-            businessLicense: businessLicenseUrl,
-            createdAt: r.createdAt.toISOString(),
-            reviewedAt: r.reviewedAt?.toISOString() ?? null,
-          };
-        }),
-        total,
-        page: parsed.page,
-        pageSize: parsed.pageSize,
-      },
-      message: "ok",
-    });
-  });
-
   // ══════════════════════════════════════════════════════════
   //  调用明细 & 趋势 (用户级 + API Key 级)
   // ══════════════════════════════════════════════════════════
@@ -2069,7 +1654,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  GET /api/v1/admin/users/:id/call-logs — 用户调用明细列表
   // ──────────────────────────────────────────────
 
-  app.get("/api/v1/admin/users/:id/call-logs", async (request, reply) => {
+  app.get("/api/v1/admin/users/:id/call-logs", {
+    preHandler: [requirePerm(Perm.USER_VIEW)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -2153,7 +1740,9 @@ export async function adminUserRoutes(app: FastifyInstance) {
   //  GET /api/v1/admin/users/:id/call-trends — 用户调用趋势
   // ──────────────────────────────────────────────
 
-  app.get("/api/v1/admin/users/:id/call-trends", async (request, reply) => {
+  app.get("/api/v1/admin/users/:id/call-trends", {
+    preHandler: [requirePerm(Perm.USER_VIEW)],
+  }, async (request, reply) => {
     const db = getDb();
     const { id } = request.params as { id: string };
     const userId = parseInt(id, 10);
@@ -2222,337 +1811,4 @@ export async function adminUserRoutes(app: FastifyInstance) {
     });
   });
 
-  // ──────────────────────────────────────────────
-  //  GET /api/v1/admin/users/:id/api-keys/:keyId/call-stats — Key 级调用统计
-  // ──────────────────────────────────────────────
-
-  app.get("/api/v1/admin/users/:id/api-keys/:keyId/call-stats", async (request, reply) => {
-    const db = getDb();
-    const { id, keyId } = request.params as { id: string; keyId: string };
-    const userId = parseInt(id, 10);
-    const apiKeyId = parseInt(keyId, 10);
-
-    if (isNaN(userId) || isNaN(apiKeyId)) {
-      reply.status(400).send({ code: 400, data: null, message: "无效的参数" });
-      return;
-    }
-
-    const query = request.query as { startDate?: string; endDate?: string };
-    const conditions = [
-      eq(callLogs.userId, userId),
-      eq(callLogs.apiKeyId, apiKeyId),
-    ];
-    if (query.startDate) conditions.push(sql`${callLogs.createdAt} >= ${new Date(query.startDate)}`);
-    if (query.endDate) {
-      const end = new Date(query.endDate);
-      end.setDate(end.getDate() + 1);
-      conditions.push(sql`${callLogs.createdAt} < ${end}`);
-    }
-
-    const [summary] = await db
-      .select({
-        totalCalls: sql<number>`count(*)::int`,
-        totalTokens: sql<number>`coalesce(sum(${callLogs.totalTokens}), 0)::int`,
-        totalCost: sql<string>`coalesce(sum(${callLogs.cost})::text, '0.000000')`,
-        successCalls: sql<number>`count(*) filter (where ${callLogs.status} = 'success')::int`,
-        failedCalls: sql<number>`count(*) filter (where ${callLogs.status} = 'failed')::int`,
-        avgDuration: sql<number>`coalesce(avg(${callLogs.durationMs}), 0)::int`,
-      })
-      .from(callLogs)
-      .where(and(...conditions));
-
-    // lastUsedAt 从 apiKeys 表取
-    const [key] = await db
-      .select({ lastUsedAt: apiKeys.lastUsedAt })
-      .from(apiKeys)
-      .where(and(eq(apiKeys.id, apiKeyId), eq(apiKeys.userId, userId)))
-      .limit(1);
-
-    // 按模型分组
-    const byModel = await db
-      .select({
-        modelName: callLogs.modelName,
-        calls: sql<number>`count(*)::int`,
-        tokens: sql<number>`coalesce(sum(${callLogs.totalTokens}), 0)::int`,
-        cost: sql<string>`coalesce(sum(${callLogs.cost})::text, '0.000000')`,
-      })
-      .from(callLogs)
-      .where(and(...conditions))
-      .groupBy(callLogs.modelName)
-      .orderBy(sql`count(*) desc`)
-      .limit(10);
-
-    reply.status(200).send({
-      code: 0,
-      data: {
-        summary: {
-          totalCalls: summary?.totalCalls ?? 0,
-          totalTokens: summary?.totalTokens ?? 0,
-          totalCost: summary?.totalCost ?? "0.000000",
-          successCalls: summary?.successCalls ?? 0,
-          failedCalls: summary?.failedCalls ?? 0,
-          avgDuration: summary?.avgDuration ?? 0,
-          lastUsedAt: key?.lastUsedAt?.toISOString() ?? null,
-        },
-        byModel: byModel.map((m) => ({
-          modelName: m.modelName,
-          calls: m.calls,
-          tokens: m.tokens,
-          cost: m.cost,
-        })),
-      },
-      message: "ok",
-    });
-  });
-
-  // ──────────────────────────────────────────────
-  //  GET /api/v1/admin/users/:id/api-keys/:keyId/call-trends — Key 级调用趋势
-  // ──────────────────────────────────────────────
-
-  app.get("/api/v1/admin/users/:id/api-keys/:keyId/call-trends", async (request, reply) => {
-    const db = getDb();
-    const { id, keyId } = request.params as { id: string; keyId: string };
-    const userId = parseInt(id, 10);
-    const apiKeyId = parseInt(keyId, 10);
-
-    if (isNaN(userId) || isNaN(apiKeyId)) {
-      reply.status(400).send({ code: 400, data: null, message: "无效的参数" });
-      return;
-    }
-
-    const query = request.query as { days?: string; granularity?: string };
-    const days = Math.min(90, Math.max(1, parseInt(query.days ?? "7", 10) || 7));
-    const granularity = query.granularity === "hour" ? "hour" : "day";
-
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - days);
-
-    const trunc = granularity === "hour"
-      ? sql`date_trunc('hour', ${callLogs.createdAt})`
-      : sql`date_trunc('day', ${callLogs.createdAt})`;
-
-    const rows = await db
-      .select({
-        date: sql<string>`${trunc}::text`,
-        totalCalls: sql<number>`count(*)::int`,
-        totalTokens: sql<number>`coalesce(sum(${callLogs.totalTokens}), 0)::int`,
-        promptTokens: sql<number>`coalesce(sum(${callLogs.promptTokens}), 0)::int`,
-        completionTokens: sql<number>`coalesce(sum(${callLogs.completionTokens}), 0)::int`,
-        totalCost: sql<string>`coalesce(sum(${callLogs.cost})::text, '0.000000')`,
-        avgDuration: sql<number>`coalesce(avg(${callLogs.durationMs}), 0)::int`,
-      })
-      .from(callLogs)
-      .where(and(
-        eq(callLogs.userId, userId),
-        eq(callLogs.apiKeyId, apiKeyId),
-        sql`${callLogs.createdAt} >= ${start}`,
-        sql`${callLogs.createdAt} < ${end}`,
-      ))
-      .groupBy(trunc)
-      .orderBy(sql`1`);
-
-    const series = rows.map((r) => ({
-      date: r.date,
-      calls: r.totalCalls,
-      tokens: r.totalTokens,
-      cost: r.totalCost,
-      avgDuration: r.avgDuration,
-    }));
-
-    reply.status(200).send({
-      code: 0,
-      data: { days, series },
-      message: "ok",
-    });
-  });
-
-  // ──────────────────────────────────────────────
-  //  GET /api/v1/admin/users/:id/api-keys/:keyId/call-logs — Key 级调用明细
-  // ──────────────────────────────────────────────
-
-  app.get("/api/v1/admin/users/:id/api-keys/:keyId/call-logs", async (request, reply) => {
-    const db = getDb();
-    const { id, keyId } = request.params as { id: string; keyId: string };
-    const userId = parseInt(id, 10);
-    const apiKeyId = parseInt(keyId, 10);
-
-    if (isNaN(userId) || isNaN(apiKeyId)) {
-      reply.status(400).send({ code: 400, data: null, message: "无效的参数" });
-      return;
-    }
-
-    const query = request.query as {
-      page?: string;
-      pageSize?: string;
-      startDate?: string;
-      endDate?: string;
-      status?: string;
-    };
-
-    const page = Math.max(1, parseInt(query.page ?? "1", 10) || 1);
-    const pageSize = Math.min(100, Math.max(1, parseInt(query.pageSize ?? "20", 10) || 20));
-    const offset = (page - 1) * pageSize;
-
-    const conditions = [
-      eq(callLogs.userId, userId),
-      eq(callLogs.apiKeyId, apiKeyId),
-    ];
-    if (query.startDate) conditions.push(sql`${callLogs.createdAt} >= ${new Date(query.startDate)}`);
-    if (query.endDate) {
-      const end = new Date(query.endDate);
-      end.setDate(end.getDate() + 1);
-      conditions.push(sql`${callLogs.createdAt} < ${end}`);
-    }
-    if (query.status) conditions.push(eq(callLogs.status, query.status as any));
-
-    const [totalResult] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(callLogs)
-      .where(and(...conditions));
-
-    const total = Number(totalResult?.count ?? 0);
-
-    const rows = await db
-      .select({
-        id: callLogs.id,
-        modelName: callLogs.modelName,
-        vendorName: callLogs.vendorName,
-        promptTokens: callLogs.promptTokens,
-        completionTokens: callLogs.completionTokens,
-        totalTokens: callLogs.totalTokens,
-        cost: callLogs.cost,
-        durationMs: callLogs.durationMs,
-        status: callLogs.status,
-        isStreaming: callLogs.isStreaming,
-        errorMessage: callLogs.errorMessage,
-        ip: callLogs.ip,
-        userAgent: callLogs.userAgent,
-        createdAt: callLogs.createdAt,
-      })
-      .from(callLogs)
-      .where(and(...conditions))
-      .orderBy(desc(callLogs.createdAt))
-      .limit(pageSize)
-      .offset(offset);
-
-    reply.status(200).send({
-      code: 0,
-      data: {
-        list: rows.map((r) => ({
-          ...r,
-          createdAt: r.createdAt.toISOString(),
-        })),
-        total,
-        page,
-        pageSize,
-      },
-      message: "ok",
-    });
-  });
-
-  // ──────────────────────────────────────────────
-  //  POST /api/v1/admin/users/:id/manual-real-name — 手动确认实名
-  //  管理员可不经用户提交直接通过/拒绝实名
-  // ──────────────────────────────────────────────
-
-  app.post("/api/v1/admin/users/:id/manual-real-name", async (request, reply) => {
-    const db = getDb();
-    const { id } = request.params as { id: string };
-    const userId = parseInt(id, 10);
-    const operatorId = request.user!.userId;
-
-    if (isNaN(userId)) {
-      reply.status(400).send({ code: 400, data: null, message: "无效的用户 ID" });
-      return;
-    }
-
-    const parsed = adminManualRealNameSchema.parse(request.body);
-
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-
-    if (!user) {
-      reply.status(404).send({ code: 404, data: null, message: "用户不存在" });
-      return;
-    }
-
-    await db.transaction(async (tx) => {
-      const updateData: Record<string, any> = {};
-      const newStatus = parsed.action === "approve" ? "approved" : "rejected";
-      updateData.realNameStatus = newStatus;
-
-      // 手动 approve 时允许填充实名信息
-      if (parsed.action === "approve") {
-        if (parsed.realName !== undefined) updateData.realName = parsed.realName;
-        if (parsed.idNumber !== undefined) updateData.idNumber = parsed.idNumber;
-        if (parsed.companyName !== undefined) updateData.companyName = parsed.companyName;
-        updateData.rejectReason = null;
-      } else {
-        updateData.rejectReason = parsed.rejectReason ?? null;
-      }
-
-      // 1. 更新 users 表
-      await tx
-        .update(users)
-        .set(updateData)
-        .where(eq(users.id, userId));
-
-      // 2. 查询当前最大版本号
-      const [maxVer] = await tx
-        .select({ maxVersion: sql<number>`coalesce(max(${userRealNameReviews.version}), 0)` })
-        .from(userRealNameReviews)
-        .where(eq(userRealNameReviews.userId, userId));
-
-      const nextVersion = (maxVer?.maxVersion ?? 0) + 1;
-
-      // 3. 写入审核历史（管理员手动录入，模拟一条完整的审核记录）
-      await tx.insert(userRealNameReviews).values({
-        userId,
-        version: nextVersion,
-        status: newStatus,
-        realName: parsed.realName ?? user.realName,
-        idNumber: parsed.idNumber ?? user.idNumber,
-        idFrontImage: user.idFrontImage,
-        idBackImage: user.idBackImage,
-        companyName: parsed.companyName ?? user.companyName,
-        companyRegNumber: user.companyRegNumber,
-        businessLicense: user.businessLicense,
-        bankName: user.bankName,
-        bankAccount: user.bankAccount,
-        bankAddress: user.bankAddress,
-        invoiceTitle: user.invoiceTitle,
-        invoiceTaxId: user.invoiceTaxId,
-        reviewerId: operatorId,
-        rejectReason: parsed.rejectReason ?? null,
-        reviewedAt: new Date(),
-      });
-
-      // 4. 审计日志
-      await tx.insert(auditLogs).values({
-        operatorId,
-        action: parsed.action === "approve" ? "real_name_approve" : "real_name_reject",
-        targetType: "user",
-        targetId: userId,
-        before: {
-          realNameStatus: user.realNameStatus,
-          realName: user.realName,
-        },
-        after: updateData,
-        ip: request.ip,
-        description: parsed.action === "approve"
-          ? `管理员手动通过实名 #${userId}`
-          : `管理员手动拒绝实名 #${userId}${parsed.rejectReason ? ` (${parsed.rejectReason})` : ""}`,
-      });
-    });
-
-    reply.status(200).send({
-      code: 0,
-      data: null,
-      message: parsed.action === "approve" ? "实名认证已手动通过" : "实名认证已手动拒绝",
-    });
-  });
 }

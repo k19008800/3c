@@ -110,3 +110,19 @@ export async function del<T = any>(url: string): Promise<T> {
   const res = await api.delete<ApiResponse<T>>(url)
   return res.data.data as T
 }
+
+// Helper: Download file from server (e.g. CSV)
+export function downloadUrl(url: string, filename: string) {
+  const token = localStorage.getItem('accessToken')
+  const headers: Record<string, string> = {}
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return api.get(url, { responseType: 'blob', headers })
+    .then((res) => {
+      const blob = new Blob([res.data], { type: res.headers['content-type'] || 'text/csv' })
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = filename
+      link.click()
+      URL.revokeObjectURL(link.href)
+    })
+}

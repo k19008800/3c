@@ -6,6 +6,9 @@
 
 import type { IdVerifyProvider, PersonalVerifyParams, EnterpriseVerifyParams, VerifyResult } from "./provider.js";
 import { registerProvider } from "./provider.js";
+import { getDb } from "../../db/index.js";
+import { systemConfigs } from "../../db/schema.js";
+import { eq } from "drizzle-orm";
 
 export class AliyunIdVerifyProvider implements IdVerifyProvider {
   readonly name = "aliyun";
@@ -14,33 +17,67 @@ export class AliyunIdVerifyProvider implements IdVerifyProvider {
   /**
    * 阿里云身份核验 API 接口
    *
-   * 阿里云市场有多个供应商提供实名 API，常见接口地址：
-   * - 官方身份证二要素: https://yhk.market.alicloudapi.com/communicate/identity
-   * - 企业四要素: https://yhk.market.alicloudapi.com/ai_company/companyVerify
+   * API 地址通过 system_configs 动态配置，无需硬编码或环境变量。
+   * 配置 keys:
+   *   aliyun_id_verify_api_url   → 身份证二要素接口地址
+   *   aliyun_enterprise_api_url  → 企业四要素接口地址
+   *   aliyun_id_verify_app_code  → 阿里云市场 AppCode
    *
-   * 实际部署时请在阿里云市场购买后替换为真实 URL 和参数格式。
-   * 配置方式:
-   *   system_configs:
-   *     aliyun_identity_api_url   → 身份证二要素接口地址
-   *     aliyun_enterprise_api_url → 企业四要素接口地址
-   *     aliyun_id_verify_app_code → 阿里云市场 AppCode
+   * 默认回退地址（阿里云市场通用格式）：
    */
 
-  private readonly IDENTITY_API = "https://yhk.market.alicloudapi.com/communicate/identity";
-  private readonly ENTERPRISE_API = "https://yhk.market.alicloudapi.com/ai_company/companyVerify";
+  private readonly DEFAULT_IDENTITY_API = "https://yhk.market.alicloudapi.com/communicate/identity";
+  private readonly DEFAULT_ENTERPRISE_API = "https://yhk.market.alicloudapi.com/ai_company/companyVerify";
 
   constructor(appCode: string) {
     this.appCode = appCode;
   }
 
+  /**
+   * 从 system_configs 表加载配置，支持动态更新
+   */
+  private async loadConfigs(): Promise<Record<string, string>> {
+    const db = getDb();
+    const keys = [
+      "aliyun_id_verify_api_url",
+      "aliyun_enterprise_api_url",
+      "aliyun_id_verify_app_code",
+    ];
+    const { inArray } = await import("drizzle-orm");
+    const rows = await db
+      .select({ key: systemConfigs.key, value: systemConfigs.value })
+      .from(systemConfigs)
+      .where(inArray(systemConfigs.key, keys));
+
+    const map: Record<string, string> = {
+      aliyun_id_verify_api_url: this.DEFAULT_IDENTITY_API,
+      aliyun_enterprise_api_url: this.DEFAULT_ENTERPRISE_API,
+    };
+
+    for (const row of rows) {
+      map[row.key] = row.value;
+    }
+
+    return map;
+  }
+
   async verifyPersonal({ realName, idNumber }: PersonalVerifyParams): Promise<VerifyResult> {
-    const url = process.env.ALIYUN_IDENTITY_API_URL || this.IDENTITY_API;
+    const configs = await this.loadConfigs();
+    const url = configs["aliyun_id_verify_api_url"] || this.DEFAULT_IDENTITY_API;
+    const appCode = configs["aliyun_id_verify_app_code"] || this.appCode;
+
+    if (!appCode) {
+      return {
+        passed: false,
+        rawResponse: { error: "未配置 aliyun_id_verify_app_code", provider: "aliyun" },
+      };
+    }
 
     try {
       const response = await fetch(url, {
         method: "POST",
         headers: {
-          Authorization: `APPCODE ${this.appCode}`,
+          Authorization: `APPCODE ${appCode}`,
           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         },
         body: new URLSearchParams({ name: realName, idCard: idNumber }),
@@ -67,13 +104,22 @@ export class AliyunIdVerifyProvider implements IdVerifyProvider {
   }
 
   async verifyEnterprise({ realName, idNumber, companyName, companyRegNumber }: EnterpriseVerifyParams): Promise<VerifyResult> {
-    const url = process.env.ALIYUN_ENTERPRISE_API_URL || this.ENTERPRISE_API;
+    const configs = await this.loadConfigs();
+    const url = configs["aliyun_enterprise_api_url"] || this.DEFAULT_ENTERPRISE_API;
+    const appCode = configs["aliyun_id_verify_app_code"] || this.appCode;
+
+    if (!appCode) {
+      return {
+        passed: false,
+        rawResponse: { error: "未配置 aliyun_id_verify_app_code", provider: "aliyun" },
+      };
+    }
 
     try {
       const response = await fetch(url, {
         method: "POST",
         headers: {
-          Authorization: `APPCODE ${this.appCode}`,
+          Authorization: `APPCODE ${appCode}`,
           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         },
         body: new URLSearchParams({

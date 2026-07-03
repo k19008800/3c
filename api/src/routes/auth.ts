@@ -22,6 +22,8 @@ import {
   getUserProfile,
   changeUserPassword,
   resendVerifyCode,
+  forgotPassword,
+  resetPasswordWithToken,
   AppError,
 } from "../services/auth-service.js";
 import { authenticateJWT, guardNotImpersonating } from "../middleware/auth.js";
@@ -37,8 +39,10 @@ import {
   realNamePersonalSchema,
   realNameEnterpriseSchema,
   realNameUploadSchema,
+  resetPasswordSchema,
+  resetPasswordConfirmSchema,
 } from "../schemas.js";
-import type { RegisterInput, LoginInput, RefreshInput, ChangePasswordInput, RealNamePersonalInput, RealNameEnterpriseInput, RealNameUploadInput } from "../schemas.js";
+import type { RegisterInput, LoginInput, RefreshInput, ChangePasswordInput, RealNamePersonalInput, RealNameEnterpriseInput, RealNameUploadInput, ResetPasswordInput, ResetPasswordConfirmInput } from "../schemas.js";
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -640,6 +644,52 @@ export async function authRoutes(app: FastifyInstance) {
         throw err;
       }
     },
+  });
+
+  // ── 忘记密码 ──
+  app.post("/api/v1/auth/forgot-password", async (request, reply) => {
+    try {
+      const parsed = resetPasswordSchema.parse(request.body);
+      await forgotPassword(parsed.email);
+      reply.status(200).send({
+        code: 0,
+        data: null,
+        message: "如果该邮箱已注册，重置密码链接已发送到您的邮箱",
+      });
+    } catch (err: any) {
+      if (err instanceof AppError) {
+        reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });
+        return;
+      }
+      if (err?.name === "ZodError") {
+        reply.status(400).send({ code: 400, data: null, message: err.errors?.[0]?.message || "参数校验失败" });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // ── 重置密码 ──
+  app.post("/api/v1/auth/reset-password", async (request, reply) => {
+    try {
+      const parsed = resetPasswordConfirmSchema.parse(request.body);
+      await resetPasswordWithToken(parsed.token, parsed.newPassword);
+      reply.status(200).send({
+        code: 0,
+        data: null,
+        message: "密码重置成功，请重新登录",
+      });
+    } catch (err: any) {
+      if (err instanceof AppError) {
+        reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });
+        return;
+      }
+      if (err?.name === "ZodError") {
+        reply.status(400).send({ code: 400, data: null, message: err.errors?.[0]?.message || "参数校验失败" });
+        return;
+      }
+      throw err;
+    }
   });
 
   // ── 获取最近一次被拒提交通稿（用于自动回填）──

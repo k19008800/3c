@@ -34,6 +34,8 @@ export const config = {
     key: process.env.VENDOR_KEY_ENCRYPTION_KEY || "",
   },
 
+  appUrl: process.env.APP_URL || process.env.CORS_ORIGIN || "http://localhost:5173",
+
   cors: {
     origin: process.env.CORS_ORIGIN || "http://localhost:5173",
   },
@@ -57,5 +59,9 @@ export const config = {
 
   geoip: {
     dbPath: process.env.GEOIP_DB_PATH || "./data/GeoLite2-City.mmdb",
+  },
+
+  bcrypt: {
+    saltRounds: 12,
   },
 } as const;

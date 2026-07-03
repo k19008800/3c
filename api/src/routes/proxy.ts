@@ -9,7 +9,7 @@
 
 import { FastifyInstance } from "fastify";
 import { Readable } from "node:stream";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { models, users } from "../db/schema.js";
 import { authenticateApiKey } from "../middleware/auth.js";
@@ -19,6 +19,7 @@ import {
   recordTokensForLimit,
 } from "../middleware/rate-limit.js";
 import { AppError } from "../services/auth-service.js";
+import { enrichCallGeo } from "../services/geo-check.js";
 import { selectRoute, forwardRequest, forwardStreamRequest } from "../services/router.js";
 import { charge, calculateCost } from "../services/billing.js";
 import { updateHealthAfterCall } from "../services/health-check.js";
@@ -110,13 +111,13 @@ export async function proxyRoutes(app: FastifyInstance) {
     const [model] = await db
       .select({ id: models.id, name: models.name })
       .from(models)
-      .where(eq(models.name, name))
+      .where(and(eq(models.name, name), eq(models.status, true)))
       .limit(1);
 
     if (!model) {
       throw new AppError(
         "MODEL_NOT_FOUND",
-        `模型 "${name}" 不存在。可用模型请调用 GET /api/v1/models`,
+        `模型 "${name}" 不存在或已下架。可用模型请调用 GET /api/v1/models`,
         404,
       );
     }
@@ -243,9 +244,36 @@ export async function proxyRoutes(app: FastifyInstance) {
       userId,
     });
 
-    // 转发
+    // 转发（含网络错误保护，网络不可达时也记录失败调用日志）
     const startTime = Date.now();
-    const result = await forwardRequest(route, request);
+    let result: Awaited<ReturnType<typeof forwardRequest>>;
+    try {
+      result = await forwardRequest(route, request);
+    } catch (err: any) {
+      const durationMs = Date.now() - startTime;
+      await updateHealthAfterCall(route.vendorModelId, false, durationMs);
+
+      // 触发熔断计数
+      try {
+        const { recordVendorModelFailure } = await import("../services/circuit-breaker.js");
+        await recordVendorModelFailure(route.vendorModelId, `网络错误: ${err.message}`);
+      } catch {}
+
+      // 网络异常也记录失败调用日志
+      await charge({
+        userId, apiKeyId, modelId: model.id,
+        vendorModelId: route.vendorModelId, vendorName: route.vendorName,
+        modelName: model.name,
+        promptTokens: 0, completionTokens: 0, totalTokens: 0,
+        durationMs, isStreaming: false,
+        status: "failed",
+        errorMessage: `网络错误: ${err.message}`,
+        ip: request.ip, userAgent: request.headers["user-agent"] as string,
+      }).catch((e) => request.log.error({ err: e }, "计费记录失败"));
+
+      reply.status(502);
+      return openaiError(502, `上游厂商连接失败: ${err.message}`, "upstream_error", "upstream_unreachable");
+    }
     const durationMs = Date.now() - startTime;
 
     // 健康检测（被动）
@@ -317,10 +345,17 @@ export async function proxyRoutes(app: FastifyInstance) {
   //  POST /api/v1/chat/completions
   // ──────────────────────────────────────────────
 
-  app.post("/api/v1/chat/completions", async (request, reply) => {
+  // ── 同时注册 /v1/*（兼容 OpenAI SDK 默认地址）和 /api/v1/* 路径 ──
+  for (const prefix of ["/v1", "/api/v1"]) {
+
+  //  POST <prefix>/chat/completions
+  app.post(prefix + "/chat/completions", async (request, reply) => {
     try {
       const body = chatCompletionSchema.parse((request as any).body) as any;
       const modelName = body.model;
+
+      // 非阻塞 Geo 富化（背景执行，不阻塞代理响应）
+      enrichCallGeo(request.ip, request.user!.userId).catch(() => {});
 
       if (body.stream) {
         return await handleStreamingChat(request, reply, modelName);
@@ -332,18 +367,21 @@ export async function proxyRoutes(app: FastifyInstance) {
     }
   });
 
-  // ──────────────────────────────────────────────
-  //  POST /api/v1/embeddings
-  // ──────────────────────────────────────────────
-
-  app.post("/api/v1/embeddings", async (request, reply) => {
+  //  POST <prefix>/embeddings
+  app.post(prefix + "/embeddings", async (request, reply) => {
     try {
       const body = embeddingsSchema.parse((request as any).body) as any;
+
+      // 非阻塞 Geo 富化
+      enrichCallGeo(request.ip, request.user!.userId).catch(() => {});
+
       return await handleNonStreaming(request, reply, body, body.model);
     } catch (err: any) {
       return handleProxyError(reply, err);
     }
   });
+
+  } // end for prefix loop
 
   // ── 流式处理核心 ──
 
@@ -419,6 +457,28 @@ export async function proxyRoutes(app: FastifyInstance) {
     const success = !disconnected;
 
     await updateHealthAfterCall(route.vendorModelId, success, durationMs).catch(() => {});
+
+    // 上游 HTTP 错误（如 4xx/5xx）也要记录失败调用
+    if (streamResult.status >= 400) {
+      await charge({
+        userId, apiKeyId, modelId: model.id,
+        vendorModelId: route.vendorModelId, vendorName: route.vendorName,
+        modelName: model.name,
+        promptTokens: usage?.promptTokens ?? 0,
+        completionTokens: usage?.completionTokens ?? 0,
+        totalTokens: usage?.totalTokens ?? 0,
+        durationMs, isStreaming: true, status: "failed",
+        errorMessage: `上游返回 HTTP ${streamResult.status}`,
+        ip: request.ip, userAgent: request.headers["user-agent"] as string,
+      }).catch((err) => request.log.error({ err }, "流式计费失败"));
+
+      if (usage?.totalTokens) {
+        await recordTokensForLimit(userId, usage.totalTokens).catch(() => {});
+      }
+
+      reply.hijacked = true;
+      return; // reply.raw 已写 head，不再额外响应
+    }
 
     if (usage && success) {
       await charge({

@@ -67,18 +67,22 @@ export interface ApiKey {
 
 export interface LogItem {
   id: number
-  traceId: string
-  modelId: number
-  modelName: string
-  vendorName: string
+  modelName: string | null
+  vendorName: string | null
   promptTokens: number
   completionTokens: number
   totalTokens: number
-  cost: number
+  cost: string
+  durationMs: number | null
   status: string
-  durationMs: number
+  isStreaming: boolean
+  errorMessage: string | null
+  requestIp: string | null
   createdAt: string
-  errorMessage?: string
+  // 以下为扩展字段（GeoIP 富化�?
+  geoCity?: string
+  geoCountry?: string
+  isProxy?: boolean
 }
 
 export interface LogSummary {
@@ -87,6 +91,31 @@ export interface LogSummary {
   failedCalls: number
   totalTokens: number
   totalCost: number
+  avgDuration: number
+  successRate: number
+}
+
+export interface LogTrendPoint {
+  date: string
+  calls: number
+  successCalls: number
+  failedCalls: number
+  totalTokens: number
+  totalCost: string
+  avgDuration: number
+}
+
+export interface LogTrends {
+  days: number
+  series: LogTrendPoint[]
+}
+
+export interface ModelStatsItem {
+  modelName: string | null
+  calls: number
+  totalTokens: number
+  totalCost: string
+  avgDuration: number
 }
 
 export interface RechargeOrder {
@@ -102,6 +131,19 @@ export interface RechargeOrder {
   bankName?: string
   accountNumber?: string
   transferDate?: string
+  /** 双审字段 */
+  firstConfirmedBy?: number | null
+  firstConfirmedAt?: string | null
+  secondConfirmedBy?: number | null
+  secondConfirmedAt?: string | null
+  voucherNo?: string | null
+  confirmedBy?: number | null
+  confirmedAt?: string | null
+  channelOrderNo?: string | null
+  voucherImage?: string | null
+  expiresAt?: string | null
+  userEmail?: string
+  userNickname?: string | null
 }
 
 export interface AdminUser {
@@ -127,6 +169,7 @@ export interface AdminUser {
   teamId: number | null
   createdAt: string
   updatedAt?: string
+  isBanned?: boolean
   stats?: {
     totalRecharge: string
     orderCount: number
@@ -154,38 +197,6 @@ export interface RealNameRecord {
   createdAt: string
 }
 
-export interface AdminDashboardStats {
-  users: {
-    total: number
-    todayNew: number
-    yesterdayNew: number
-  }
-  calls: {
-    today: {
-      total: number
-      success: number
-      failed: number
-      timeout: number
-      totalTokens: number
-      totalCost: string
-      avgDuration: number
-    }
-    yesterday: {
-      total: number
-      success: number
-      totalTokens: number
-      totalCost: string
-    }
-  }
-  revenue: {
-    todayRecharge: string
-    todayRechargeCount: number
-    pendingRecharge: string
-    pendingRechargeCount: number
-  }
-  pendingRealName: number
-  topModels: Array<{ modelName: string; total: number; totalTokens: number }>
-}
 
 export interface Vendor {
   id: number
@@ -234,11 +245,34 @@ export interface Agent {
   userId: number
   email?: string
   nickname?: string
-  commissionRate: string
   totalCommission: string
+  settledCommission?: string
   pendingWithdraw: string
+  frozenAmount?: string
+  availableBalance?: string
+  parentAgentId?: number | null
   status: boolean
   createdAt: string
+  updatedAt?: string
+}
+
+export interface CommissionRule {
+  id: number
+  agentId: number
+  ruleType: 'sale' | 'renewal' | 'team' | 'activity'
+  rate: string
+  isEnabled: boolean
+  minTriggerAmount: string | null
+  maxCap: string | null
+  validFrom: string | null
+  validUntil: string | null
+  activityName: string | null
+  activityType: string | null
+  fixedAmount: string | null
+  teamLevelLimit: number | null
+  createdBy: number
+  createdAt: string
+  updatedAt: string
 }
 
 export interface WithdrawOrder {
@@ -256,14 +290,23 @@ export interface WithdrawOrder {
 
 export interface AuditLog {
   id: number
-  userId?: number
-  email?: string
+  operatorId: number
+  operatorEmail: string | null
+  operatorNickname: string | null
   action: string
-  target: string
-  targetId?: number
-  detail?: string
-  ip?: string
+  actionLabel: string
+  targetType: string
+  targetTypeLabel: string
+  targetId: number | null
+  targetName: string | null
+  description: string | null
+  ip: string | null
   createdAt: string
+}
+
+export interface AuditLogDetail extends AuditLog {
+  before: any
+  after: any
 }
 
 // ── Agent Console ──
@@ -287,7 +330,6 @@ export interface AgentClientDetail {
     userId: number
     email: string | null
     nickname: string | null
-    commissionRate: string
     totalCommission: string
     pendingWithdraw: string
     status: boolean
@@ -306,8 +348,8 @@ export interface AgentDashboard {
   pendingWithdrawTotal: string
   frozenAmount: string
   availableBalance: string
-  commissionRate: string
   status: boolean
+  commissionRate: string
   recentCommissions: Array<{
     id: number
     callCost: string
@@ -321,9 +363,32 @@ export interface AgentCommission {
   id: number
   callCost: string
   commissionAmount: string
+  commissionType: string | null
+  commissionTypeLabel: string
+  voucherNo: string | null
+  sourceOrderId: string | null
+  sourceOrderAmount: string | null
+  feeRate: string | null
+  feeAmount: string
+  netAmount: string
+  calcDetail: any
+  ruleSnapshot: any
   status: string
+  customerName: string | null
+  customerEmail: string | null
+  sourceCustomerId?: number | null
   createdAt: string
   settledAt: string | null
+}
+
+export interface AgentCommissionSummary {
+  totalCommission: string
+  monthCommission: string
+  monthCount: number
+  pendingAmount: string
+  pendingCount: number
+  settledAmount: string
+  settledCount: number
 }
 
 export interface AgentWithdrawOrder {
@@ -344,9 +409,37 @@ export interface AgentWithdrawOrder {
   paidAt: string | null
 }
 
+export interface NotificationItem {
+  id: number
+  title: string
+  content: string
+  type: string
+  readAt: string | null
+  createdAt: string
+}
+
 export interface ReferralLink {
   referralCode: string
   referralLink: string
+}
+
+// ── Team ──
+
+export interface TeamMemberInfo {
+  id: number
+  userId: number
+  email: string
+  nickname: string | null
+  role: string
+  quotaBalance: string | null
+  invitedAt: string | null
+  joinedAt: string
+}
+
+export interface TeamInfo {
+  teamId: number
+  members: TeamMemberInfo[]
+  memberCount: number
 }
 
 // ── Dashboard Health ──
@@ -523,6 +616,30 @@ export interface FinanceDashboard {
   pendingCommissions?: { count: number; totalAmount: string }
 }
 
+export interface CommissionRollupRow {
+  id: number
+  agentId: number
+  agentEmail: string | null
+  agentNickname: string | null
+  reportDate: string
+  totalRecords: number
+  totalCallCost: string
+  totalCommissionAmount: string
+  totalFeeAmount: string
+  totalNetAmount: string
+  pendingCount: number
+  settledCount: number
+  cancelledCount: number
+  pendingAmount: string
+  settledAmount: string
+  saleCount: number
+  renewalCount: number
+  activityCount: number
+  saleAmount: string
+  renewalAmount: string
+  activityAmount: string
+}
+
 export interface CommissionRecord {
   id: number
   agentId: number
@@ -544,9 +661,71 @@ export interface CommissionRecord {
 
 export interface ReconciliationReport {
   date: string
-  commission: { count: number; totalCommission: string; totalFee: string; totalNet: string }
-  withdraw: { count: number; totalAmount: string; totalFee: string; totalActual: string }
-  recharge: { count: number; totalAmount: string }
+  startDate: string
+  endDate: string
+  granularity: 'day' | 'week' | 'month'
+  // 汇总卡�?
+  summary: {
+    commission: { count: number; totalCommission: string; totalFee: string; totalNet: string }
+    withdraw: { count: number; totalAmount: string; totalFee: string; totalActual: string }
+    recharge: { count: number; totalAmount: string }
+  }
+  // 维度拆分
+  dimensions: {
+    byAgent: ReconDimensionItem[]
+    byStatus: Record<string, ReconDimensionItem>
+    byCommissionType: ReconDimensionItem[]
+  }
+  // 资金平衡校验
+  balanceCheck: ReconBalanceCheck
+  // 可疑记录
+  anomalies: ReconAnomalyItem[]
+  // 趋势数据
+  trends: ReconTrendPoint[]
+}
+
+export interface ReconDimensionItem {
+  label: string
+  count: number
+  totalAmount: string
+  feeAmount?: string
+  netAmount?: string
+}
+
+export interface ReconBalanceCheck {
+  totalIncome: string      // 总收入（充值确认）
+  totalExpense: string     // 总支出（扣费�?
+  totalCommission: string  // 总佣金支�?
+  totalWithdraw: string    // 总提现支�?
+  platformProfit: string   // 平台利润
+  diff: string             // 差额（应�?0�?
+  isBalanced: boolean      // 是否平账
+}
+
+export interface ReconAnomalyItem {
+  id: number
+  type: 'orphan_commission' | 'amount_anomaly' | 'frequent_withdraw' | 'unmatched_recharge'
+  severity: 'low' | 'medium' | 'high'
+  description: string
+  relatedId: number | null
+  amount: string | null
+  createdAt: string
+}
+
+export interface ReconTrendPoint {
+  date: string
+  commissionAmount: string
+  commissionCount: number
+  withdrawAmount: string
+  withdrawCount: number
+  rechargeAmount: string
+  rechargeCount: number
+}
+
+export interface ReconQueryParams {
+  startDate?: string
+  endDate?: string
+  granularity?: 'day' | 'week' | 'month'
 }
 
 export interface WithdrawRecord {
@@ -656,6 +835,130 @@ export interface ImpersonateResult {
   warning: string
 }
 
+// ── Enhanced Admin Dashboard Stats (include new fields from enhanced /stats) ──
+
+export interface AdminDashboardStats {
+  users: {
+    total: number
+    todayNew: number
+    yesterdayNew: number
+  }
+  calls: {
+    today: {
+      total: number
+      success: number
+      failed: number
+      timeout: number
+      totalTokens: number
+      totalCost: string
+      avgDuration: number
+    }
+    yesterday: {
+      total: number
+      success: number
+      totalTokens: number
+      totalCost: string
+    }
+  }
+  revenue: {
+    todayRecharge: string
+    todayRechargeCount: number
+    pendingRecharge: string
+    pendingRechargeCount: number
+  }
+  pendingRealName: number
+  topModels: Array<{ modelName: string; total: number; totalTokens: number }>
+  security: {
+    unacknowledgedHighRisk: number
+    activeCircuits: number
+    bannedIps: number
+    bannedUsers: number
+  }
+  // 新增增强字段
+  realNameFunnel: Record<string, number>
+  agents: {
+    total: number
+    active: number
+    totalCommission: string
+    pendingWithdraw: string
+  }
+  system: {
+    activeVendors: number
+    downVendors: number
+  }
+  yesterdayDau: number
+  lowBalanceUsers: number
+  todayAvgDuration: number
+  todayErrorRate: number
+  platformBalance: string
+}
+
+export interface RevenueAnalysis {
+  today: {
+    byType: Array<{
+      type: string
+      cost: string
+      tokens: number
+      count: number
+      models: string[]
+    }>
+    byChannel: Array<{
+      channel: string
+      total: string
+      count: number
+    }>
+  }
+  month: {
+    startDate: string
+    revenue: string
+    cost: string
+    profitRate: number
+    revenueTrend: Array<{
+      date: string
+      total: string
+      count: number
+    }>
+  }
+}
+
+export interface TopConsumer {
+  userId: number
+  email: string
+  nickname: string | null
+  userType: string
+  companyName: string | null
+  totalConsumption: string
+  totalCalls: number
+  monthConsumption: string
+  balance: string
+}
+
+export interface TopConsumersData {
+  topConsumers: TopConsumer[]
+  lowBalanceUsers: Array<{
+    id: number
+    email: string
+    nickname: string | null
+    balance: string
+    userType: string
+  }>
+  lowBalanceCount: number
+}
+
+export interface TodoQueue {
+  realNamePending: number
+  bankTransfer: {
+    pending: { count: number; totalAmount: string }
+    needFirstReview: { count: number; totalAmount: string }
+    needSecondReview: { count: number; totalAmount: string }
+  }
+  withdraws: {
+    needFirstReview: { count: number; totalAmount: string }
+    needSecondReview: { count: number; totalAmount: string }
+  }
+  unacknowledgedSecurityEvents: number
+}
+
 export interface DashboardHealth {
   system: {
     uptime: number
@@ -705,7 +1008,7 @@ export interface DashboardHealth {
   }
 }
 
-// ── 安全风控（V4.0） ──
+// ── 安全风控（V4.0�?──
 
 export interface SecurityConfig {
   key: string
@@ -765,6 +1068,39 @@ export interface AdminSecurityStats {
   activeCircuits: number
   bannedIps: number
   bannedUsers: number
+  todayEventCount: number
+  weekEventCount: number
+}
+
+export interface SecurityDashboardData {
+  stats: AdminSecurityStats
+  riskDistribution: Array<{ riskLevel: string; count: number }>
+  typeDistribution: Array<{ eventType: string; count: number }>
+  trend: Array<{
+    date: string
+    critical: number
+    high: number
+    medium: number
+    low: number
+    total: number
+  }>
+  recentEvents: SecurityEvent[]
+}
+
+export interface BanList {
+  ipBans: Array<{
+    ip: string
+    banStart: number
+    remainingMs: number
+  }>
+  userBans: Array<{
+    userId: number
+    email: string | null
+    nickname: string | null
+    banStart: number
+    banDurationMs: number
+    remainingMs: number
+  }>
 }
 
 export interface UserSecurityInfo {
@@ -782,4 +1118,33 @@ export interface LoginHistoryItem {
   success: boolean
   failReason: string | null
   createdAt: string
+}
+
+// ── Log Anomalies (Phase 3) ──
+
+export interface DailyAnomaly {
+  date: string
+  totalCost: string
+  totalCalls: number
+  maxSingleCost: string
+  reason: string
+}
+
+export interface ExpensiveCall {
+  id: number
+  modelName: string | null
+  cost: string
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  durationMs: number | null
+  createdAt: string
+}
+
+export interface LogAnomalies {
+  avgDailyCost: string
+  avgCostPerCall: string
+  costThreshold: string
+  anomalies: DailyAnomaly[]
+  expensiveCalls: ExpensiveCall[]
 }

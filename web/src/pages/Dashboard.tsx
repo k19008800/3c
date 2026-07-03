@@ -2,8 +2,25 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { get } from '@/lib/api'
-import type { LogSummary } from '@/types'
+import type { LogSummary, LoginHistoryItem } from '@/types'
 import { Loader2, DollarSign, Activity, Cpu, Wallet, Key, FileText, AlertCircle, Shield, Clock, CheckCircle2, XCircle } from 'lucide-react'
+
+function StatCard({ icon: Icon, label, value, sub, color }: { icon: any; label: string; value: string; sub?: string; color: string }) {
+  return (
+    <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm text-slate-500">{label}</p>
+          <p className="text-2xl font-bold mt-1">{value}</p>
+          {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
+        </div>
+        <div className={`p-3 rounded-lg ${color}`}>
+          <Icon size={24} className="text-white" />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -22,21 +39,6 @@ export default function Dashboard() {
       .then((d) => setLoginHistory(d.list))
       .catch(() => {})
   }, [])
-
-  const StatCard = ({ icon: Icon, label, value, sub, color }: any) => (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm text-slate-500">{label}</p>
-          <p className="text-2xl font-bold mt-1">{value}</p>
-          {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
-        </div>
-        <div className={`p-3 rounded-lg ${color}`}>
-          <Icon size={24} className="text-white" />
-        </div>
-      </div>
-    </div>
-  )
 
   return (
     <div className="space-y-6">

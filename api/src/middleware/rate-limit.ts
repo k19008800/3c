@@ -35,19 +35,6 @@ async function loadConfig(): Promise<RateLimitConfig> {
   }
 
   const db = getDb();
-  const rows = await db
-    .select({ key: systemConfigs.key, value: systemConfigs.value })
-    .from(systemConfigs)
-    .where(
-      eq(systemConfigs.key, "rate_limit_personal_rpm") ||
-      eq(systemConfigs.key, "rate_limit_personal_tpm") ||
-      eq(systemConfigs.key, "rate_limit_enterprise_rpm") ||
-      eq(systemConfigs.key, "rate_limit_enterprise_tpm") ||
-      eq(systemConfigs.key, "rate_limit_global_rpm") ||
-      eq(systemConfigs.key, "rate_limit_global_tpm")
-    );
-
-  // 手动过滤 — Drizzle 的 or 条件有问题，改用多条查询
   const cfgMap = new Map<string, string>();
   for (const key of [
     "rate_limit_personal_rpm", "rate_limit_personal_tpm",
@@ -183,7 +170,11 @@ export async function checkRateLimit(
   if (apiKeyId !== null) {
     const key = rpmKey("key", String(apiKeyId));
     const count = await getCount(key);
-    const limit = 999999; // API Key 级暂不设硬阈值，用用户级兜底
+    // API Key 级使用用户类型默认值（比用户级宽松，因为用户级会兜底）
+    const keyLevelLimit = rpmOverride ?? (
+      userType === "enterprise" ? cfg.enterpriseRpm * 2 : cfg.personalRpm * 2
+    );
+    const limit = Math.max(keyLevelLimit, 60);
     if (count >= limit) {
       return { allowed: false, retryAfterMs: WINDOW_SECONDS * 1000, level: "API Key", limit, current: count, dimension: "rpm" };
     }

@@ -5,50 +5,34 @@
 //  GET    /api/v1/admin/vendor-models/:id       — 详情
 //  PATCH  /api/v1/admin/vendor-models/:id       — 更新
 //  DELETE /api/v1/admin/vendor-models/:id       — 下架（软删除，设 status=false）
+//  POST   /api/v1/admin/vendor-models/test      — 连通性测试
 // ============================================================
 
 import { FastifyInstance } from "fastify";
 import { eq, and, asc, sql } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
-import { vendorModels, vendors, models } from "../../db/schema.js";
-import { authenticateJWT, requireRole } from "../../middleware/auth.js";
+import { vendorModels, vendors, models, auditLogs } from "../../db/schema.js";
+import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
 import { encryptApiKey, decryptApiKey } from "../../services/encryption.js";
+import {
+  createVendorModelSchema,
+  updateVendorModelSchema,
+} from "../../schemas.js";
 
 export async function adminVendorModelRoutes(app: FastifyInstance) {
   app.addHook("preHandler", authenticateJWT);
-  app.addHook("preHandler", requireRole("super_admin", "admin"));
 
   // ── 创建关联 ──
-  app.post("/api/v1/admin/vendor-models", async (request, reply) => {
+  app.post("/api/v1/admin/vendor-models", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
     const db = getDb();
-    const body = request.body as {
-      vendorId: number;
-      modelId: number;
-      upstreamModelName: string;
-      apiEndpoint: string;
-      apiKey: string;
-      costPriceInput?: string;
-      costPriceOutput?: string;
-      sellPriceInput?: string;
-      sellPriceOutput?: string;
-      weight?: number;
-      rpmLimit?: number;
-      tpmLimit?: number;
-    };
-
-    if (!body.vendorId || !body.modelId || !body.upstreamModelName || !body.apiEndpoint || !body.apiKey) {
-      reply.status(400).send({
-        code: 400,
-        data: null,
-        message: "vendorId, modelId, upstreamModelName, apiEndpoint, apiKey 必填",
-      });
-      return;
-    }
-
-    // 加密 API Key
-    const apiKeyEncrypted = encryptApiKey(body.apiKey);
-
     try {
+      const body = createVendorModelSchema.parse(request.body);
+
+      // 加密 API Key
+      const apiKeyEncrypted = encryptApiKey(body.apiKey);
+
       const [vm] = await db
         .insert(vendorModels)
         .values({
@@ -69,8 +53,23 @@ export async function adminVendorModelRoutes(app: FastifyInstance) {
 
       // 返回时不包含加密的 API Key
       const { apiKeyEncrypted: _, ...safe } = vm;
+
+      await db.insert(auditLogs).values({
+        operatorId: request.user!.userId,
+        action: "model_update",
+        targetType: "vendor_model",
+        targetId: vm.id,
+        after: { vendorId: body.vendorId, modelId: body.modelId, upstreamModelName: body.upstreamModelName },
+        ip: request.ip,
+        description: `创建厂商-模型关联: vendor#${body.vendorId} → model#${body.modelId}`,
+      });
+
       reply.status(200).send({ code: 0, data: safe, message: "ok" });
     } catch (err: any) {
+      if (err?.name === "ZodError") {
+        reply.status(400).send({ code: 400, data: null, message: err.errors?.[0]?.message || "参数校验失败" });
+        return;
+      }
       if (err?.code === "23505") {
         reply.status(409).send({ code: 409, data: null, message: "该厂商-模型关联已存在" });
         return;
@@ -80,7 +79,9 @@ export async function adminVendorModelRoutes(app: FastifyInstance) {
   });
 
   // ── 列表 ──
-  app.get("/api/v1/admin/vendor-models", async (request, reply) => {
+  app.get("/api/v1/admin/vendor-models", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
     const db = getDb();
     const query = request.query as Record<string, string | undefined>;
     const page = Math.max(1, parseInt(query.page ?? "1", 10) || 1);
@@ -146,7 +147,9 @@ export async function adminVendorModelRoutes(app: FastifyInstance) {
   // ── 详情 ──
 
   // ── 详情 ──
-  app.get("/api/v1/admin/vendor-models/:id", async (request, reply) => {
+  app.get("/api/v1/admin/vendor-models/:id", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
     const db = getDb();
     const id = parseInt((request.params as any).id);
 
@@ -186,49 +189,158 @@ export async function adminVendorModelRoutes(app: FastifyInstance) {
   });
 
   // ── 更新 ──
-  app.patch("/api/v1/admin/vendor-models/:id", async (request, reply) => {
+  app.patch("/api/v1/admin/vendor-models/:id", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
+    try {
+      const db = getDb();
+      const id = parseInt((request.params as any).id);
+      const parsed = updateVendorModelSchema.parse(request.body);
+
+      const updates: Record<string, any> = {};
+      const fieldMap: Record<string, string> = {
+        upstreamModelName: "upstreamModelName",
+        apiEndpoint: "apiEndpoint",
+        costPriceInput: "costPriceInput",
+        costPriceOutput: "costPriceOutput",
+        sellPriceInput: "sellPriceInput",
+        sellPriceOutput: "sellPriceOutput",
+        weight: "weight",
+        rpmLimit: "rpmLimit",
+        tpmLimit: "tpmLimit",
+        status: "status",
+      };
+
+      for (const [key, dbField] of Object.entries(fieldMap)) {
+        if ((parsed as any)[key] !== undefined) updates[dbField] = (parsed as any)[key];
+      }
+
+      // 如果传了 apiKey，则加密存储
+      if (parsed.apiKey) {
+        updates.apiKeyEncrypted = encryptApiKey(parsed.apiKey);
+      }
+
+      if (Object.keys(updates).length === 0) {
+        reply.status(400).send({ code: 400, data: null, message: "没有可更新的字段" });
+        return;
+      }
+
+      const [vm] = await db
+        .update(vendorModels)
+        .set(updates)
+        .where(eq(vendorModels.id, id))
+        .returning();
+
+      if (!vm) {
+        reply.status(404).send({ code: 404, data: null, message: "关联不存在" });
+        return;
+      }
+
+      const { apiKeyEncrypted: _, ...safe } = vm;
+
+      await db.insert(auditLogs).values({
+        operatorId: request.user!.userId,
+        action: "model_update",
+        targetType: "vendor_model",
+        targetId: id,
+        after: updates,
+        ip: request.ip,
+        description: `编辑厂商-模型关联 #${id}`,
+      });
+
+      reply.status(200).send({ code: 0, data: safe, message: "ok" });
+    } catch (err: any) {
+      if (err?.name === "ZodError") {
+        reply.status(400).send({ code: 400, data: null, message: err.errors?.[0]?.message || "参数校验失败" });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // ── 连通性测试 ──
+  app.post("/api/v1/admin/vendor-models/test", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
     const db = getDb();
-    const id = parseInt((request.params as any).id);
-    const body = request.body as Record<string, any>;
+    const { vendorModelId } = (request.body || {}) as { vendorModelId?: number };
 
-    const allowedFields = [
-      "upstreamModelName", "apiEndpoint", "costPriceInput", "costPriceOutput",
-      "sellPriceInput", "sellPriceOutput", "weight", "rpmLimit", "tpmLimit",
-      "status",
-    ] as const;
-
-    const updates: Record<string, any> = {};
-    for (const field of allowedFields) {
-      if (body[field] !== undefined) updates[field] = body[field];
-    }
-
-    // 如果传了 apiKey，则加密存储
-    if (body.apiKey) {
-      updates.apiKeyEncrypted = encryptApiKey(body.apiKey);
-    }
-
-    if (Object.keys(updates).length === 0) {
-      reply.status(400).send({ code: 400, data: null, message: "没有可更新的字段" });
+    if (!vendorModelId || typeof vendorModelId !== "number") {
+      reply.status(400).send({ code: 400, data: null, message: "vendorModelId 必填" });
       return;
     }
 
     const [vm] = await db
-      .update(vendorModels)
-      .set(updates)
-      .where(eq(vendorModels.id, id))
-      .returning();
+      .select({
+        id: vendorModels.id,
+        apiEndpoint: vendorModels.apiEndpoint,
+        apiKeyEncrypted: vendorModels.apiKeyEncrypted,
+        upstreamModelName: vendorModels.upstreamModelName,
+        vendorName: vendors.name,
+      })
+      .from(vendorModels)
+      .innerJoin(vendors, eq(vendorModels.vendorId, vendors.id))
+      .where(eq(vendorModels.id, vendorModelId))
+      .limit(1);
 
     if (!vm) {
-      reply.status(404).send({ code: 404, data: null, message: "关联不存在" });
+      reply.status(404).send({ code: 404, data: null, message: "映射不存在" });
       return;
     }
 
-    const { apiKeyEncrypted: _, ...safe } = vm;
-    reply.status(200).send({ code: 0, data: safe, message: "ok" });
+    const apiKey = decryptApiKey(vm.apiKeyEncrypted);
+    const testBody = JSON.stringify({
+      model: vm.upstreamModelName,
+      messages: [{ role: "user", content: "hi" }],
+      max_tokens: 1,
+    });
+
+    const start = Date.now();
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+
+      const res = await fetch(vm.apiEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: testBody,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+      const latency = Date.now() - start;
+
+      if (res.ok) {
+        reply.status(200).send({
+          code: 0,
+          data: { ok: true, latency, statusCode: res.status },
+          message: `连通正常 (${latency}ms)`,
+        });
+      } else {
+        const errText = await res.text().catch(() => "");
+        reply.status(200).send({
+          code: 0,
+          data: { ok: false, latency, statusCode: res.status, error: errText.slice(0, 200) },
+          message: `上游返回 ${res.status}`,
+        });
+      }
+    } catch (err: any) {
+      const latency = Date.now() - start;
+      reply.status(200).send({
+        code: 0,
+        data: { ok: false, latency, error: err.message || "连接失败" },
+        message: `连接失败 (${latency}ms)`,
+      });
+    }
   });
 
   // ── 删除（软删除：下架，设 status = false）──
-  app.delete("/api/v1/admin/vendor-models/:id", async (request, reply) => {
+  app.delete("/api/v1/admin/vendor-models/:id", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
     const db = getDb();
     const id = parseInt((request.params as any).id);
 

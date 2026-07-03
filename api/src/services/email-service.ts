@@ -6,28 +6,82 @@
 import nodemailer from "nodemailer";
 import { config } from "../config.js";
 import { getDb } from "../db/index.js";
-import { emailTemplates } from "../db/schema.js";
+import { emailTemplates, systemConfigs } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 
-// ── 传输器（延迟初始化） ──
+// ── 传输器（延迟初始化，支持 system_configs 后备） ──
 
 let transporter: nodemailer.Transporter | null = null;
+let transporterInitAttempted = false;
 
-function getTransporter(): nodemailer.Transporter | null {
+async function getTransporter(): Promise<nodemailer.Transporter | null> {
   if (transporter) return transporter;
+  if (transporterInitAttempted) return null; // 只尝试一次
+
+  transporterInitAttempted = true;
 
   const { smtp } = config;
-  if (!smtp.host || smtp.host === "localhost") {
-    // 开发环境：跳过真实发送
+
+  // 组装 SMTP 配置：优先环境变量，其次 system_configs
+  let smtpHost = smtp.host && smtp.host !== "localhost" ? smtp.host : "";
+  let smtpPort = smtp.port;
+  let smtpSecure = smtp.secure;
+  let smtpUser = smtp.user;
+  let smtpPass = smtp.pass;
+
+  // 环境变量未配置时，尝试从 system_configs 表读取
+  if (!smtpHost) {
+    try {
+      const db = getDb();
+
+      const [hostRow] = await db
+        .select({ value: systemConfigs.value })
+        .from(systemConfigs)
+        .where(eq(systemConfigs.key, "smtp_host"))
+        .limit(1);
+      const [portRow] = await db
+        .select({ value: systemConfigs.value })
+        .from(systemConfigs)
+        .where(eq(systemConfigs.key, "smtp_port"))
+        .limit(1);
+      const [userRow] = await db
+        .select({ value: systemConfigs.value })
+        .from(systemConfigs)
+        .where(eq(systemConfigs.key, "smtp_user"))
+        .limit(1);
+      const [passRow] = await db
+        .select({ value: systemConfigs.value })
+        .from(systemConfigs)
+        .where(eq(systemConfigs.key, "smtp_pass"))
+        .limit(1);
+
+      if (hostRow?.value) {
+        smtpHost = hostRow.value;
+      }
+      if (portRow?.value) {
+        smtpPort = parseInt(portRow.value, 10) || 587;
+      }
+      if (userRow?.value) {
+        smtpUser = userRow.value;
+      }
+      if (passRow?.value) {
+        smtpPass = passRow.value;
+      }
+    } catch {
+      // system_configs 表可能尚不存在（首次部署），静默忽略
+    }
+  }
+
+  if (!smtpHost) {
     return null;
   }
 
   transporter = nodemailer.createTransport({
-    host: smtp.host,
-    port: smtp.port,
-    secure: smtp.secure,
-    auth: smtp.user
-      ? { user: smtp.user, pass: smtp.pass }
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpSecure || smtpPort === 465,
+    auth: smtpUser
+      ? { user: smtpUser, pass: smtpPass }
       : undefined,
   });
 
@@ -47,7 +101,7 @@ const templateCache = new Map<string, EmailTemplate>();
 let templateCacheTime = 0;
 const CACHE_TTL = 60_000; // 1 分钟
 
-async function loadTemplate(name: string): Promise<EmailTemplate | null> {
+export async function loadTemplate(name: string): Promise<EmailTemplate | null> {
   const now = Date.now();
   if (now - templateCacheTime > CACHE_TTL) {
     templateCache.clear();
@@ -83,7 +137,7 @@ async function loadTemplate(name: string): Promise<EmailTemplate | null> {
 
 // ── 模板渲染（简单变量替换） ──
 
-function renderTemplate(
+export function renderTemplate(
   template: string,
   vars: Record<string, string>,
 ): string {
@@ -99,7 +153,7 @@ export interface SendEmailParams {
 }
 
 export async function sendEmail(params: SendEmailParams): Promise<boolean> {
-  const t = getTransporter();
+  const t = await getTransporter();
   if (!t) {
     // 开发环境：打印日志
     console.log(`[Email] (dev) 邮件已记录:\n  To: ${params.to}\n  Subject: ${params.subject}\n  Body length: ${params.html.length}`);

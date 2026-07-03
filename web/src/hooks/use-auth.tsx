@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import axios from 'axios'
 import api from '@/lib/api'
 import type { UserProfile, LoginResponse } from '@/types'
 
@@ -54,7 +55,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // 使用原始 axios 发登录请求（不经过 api.ts 的 401 拦截）
-    const axios = (await import('axios')).default
     const res = await axios.post('/api/v1/auth/login', body)
     const responseData = res.data
 

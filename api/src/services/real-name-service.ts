@@ -162,18 +162,52 @@ export async function saveUploadedFile(
     throw new AppError("FILE_TYPE_NOT_ALLOWED", `不支持的文件格式，允许: ${allowedExts.join(", ")}`, 400);
   }
 
-  // 3. 校验文件大小
+  // 3. 校验文件内容（magic bytes）
+  const signatureCheck = (buffer: Buffer, signatures: number[][]): boolean => {
+    return signatures.some((sig) => {
+      if (sig.length > buffer.length) return false;
+      return sig.every((byte, i) => buffer[i] === byte);
+    });
+  };
+
+  const JPEG_SIGNATURES = [
+    [0xFF, 0xD8, 0xFF],
+  ];
+  const PNG_SIGNATURE = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+  const PDF_SIGNATURE = [0x25, 0x50, 0x44, 0x46];
+
+  const signMap: Record<string, number[][]> = {
+    jpg: JPEG_SIGNATURES,
+    jpeg: JPEG_SIGNATURES,
+    png: [PNG_SIGNATURE],
+    pdf: [PDF_SIGNATURE],
+  };
+
+  const requiredExt = ext.replace(".", "");
+  const expectedSigs = signMap[requiredExt];
+  if (expectedSigs) {
+    const validFile = signatureCheck(fileBuffer, expectedSigs);
+    if (!validFile) {
+      throw new AppError(
+        "INVALID_FILE_CONTENT",
+        `文件内容与扩展名不匹配（期望 ${requiredExt.toUpperCase()} 格式）`,
+        400,
+      );
+    }
+  }
+
+  // 4. 校验文件大小
   if (fileBuffer.length > maxSize) {
     throw new AppError("FILE_TOO_LARGE", `文件大小不能超过 ${Math.round(maxSize / 1024 / 1024 * 100) / 100}MB`, 400);
   }
 
-  // 4. 确保用户目录存在
+  // 5. 确保用户目录存在
   const userDir = getUserDir(userId);
   if (!fs.existsSync(userDir)) {
     fs.mkdirSync(userDir, { recursive: true });
   }
 
-  // 5. 写入文件
+  // 6. 写入文件
   const absolutePath = getFilePath(userId, version, fileType, ext);
   fs.writeFileSync(absolutePath, fileBuffer);
 
@@ -239,6 +273,10 @@ export interface AutoVerifyResult {
 
 /**
  * 用户提交实名信息后执行自动核验
+ *
+ * 从 user_real_name_reviews 表读取提交的实名信息快照，
+ * 调用 VerifyProviderFactory 执行第三方核验。
+ * 核验通过后自动更新用户表及审核记录。
  */
 export async function autoVerifyRealName(userId: number, version: number): Promise<AutoVerifyResult> {
   const configs = await loadSystemConfigs();
@@ -251,43 +289,65 @@ export async function autoVerifyRealName(userId: number, version: number): Promi
   const providerName = configs["real_name_verify_provider"] || "aliyun";
   const appCode = configs["aliyun_id_verify_app_code"] || "";
 
+  // provider 为 "none" 时走人工审核
+  if (providerName === "none") {
+    return { autoVerified: false, passed: false };
+  }
+
   if (!appCode) {
     console.warn(`[RealName] 自动核验已启用但未配置 AppCode，跳过`);
     return { autoVerified: false, passed: false };
   }
 
-  // 加载用户信息
+  // 从审核记录表读取提交的实名信息快照
   const db = getDb();
-  const { users } = await import("../db/schema.js");
+  const { users, userRealNameReviews } = await import("../db/schema.js");
+  const [review] = await db
+    .select()
+    .from(userRealNameReviews)
+    .where(
+      and(
+        eq(userRealNameReviews.userId, userId),
+        eq(userRealNameReviews.version, version),
+      ),
+    )
+    .limit(1);
+
+  if (!review) {
+    return { autoVerified: false, passed: false };
+  }
+
+  if (!review.realName || !review.idNumber) {
+    return { autoVerified: false, passed: false };
+  }
+
+  // 获取用户类型（个人/企业）
   const [user] = await db
-    .select({
-      realName: users.realName,
-      idNumber: users.idNumber,
-      companyName: users.companyName,
-      companyRegNumber: users.companyRegNumber,
-      userType: users.userType,
-    })
+    .select({ userType: users.userType })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
-
-  if (!user || !user.realName || !user.idNumber) {
-    return { autoVerified: false, passed: false };
-  }
 
   const provider = VerifyProviderFactory.create(providerName, appCode);
   let result: { passed: boolean; rawResponse: Record<string, any> };
 
   try {
-    if (user.userType === "enterprise" && user.companyName && user.companyRegNumber) {
+    if (
+      user?.userType === "enterprise" &&
+      review.companyName &&
+      review.companyRegNumber
+    ) {
       result = await provider.verifyEnterprise({
-        realName: user.realName,
-        idNumber: user.idNumber,
-        companyName: user.companyName,
-        companyRegNumber: user.companyRegNumber,
+        realName: review.realName,
+        idNumber: review.idNumber,
+        companyName: review.companyName,
+        companyRegNumber: review.companyRegNumber,
       });
     } else {
-      result = await provider.verifyPersonal({ realName: user.realName, idNumber: user.idNumber });
+      result = await provider.verifyPersonal({
+        realName: review.realName,
+        idNumber: review.idNumber,
+      });
     }
   } catch (err) {
     console.error(`[RealName] 自动核验失败 (userId=${userId}):`, err);
@@ -296,10 +356,55 @@ export async function autoVerifyRealName(userId: number, version: number): Promi
   }
 
   if (result.passed) {
-    // 自动通过
-    await autoApproveRealName(userId, version, result.rawResponse);
+    // 核验通过 → 更新 users 表 + 审核记录
+    await db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({
+          realNameStatus: "approved",
+          realName: review.realName,
+          idNumber: review.idNumber,
+        })
+        .where(eq(users.id, userId));
+
+      await tx
+        .update(userRealNameReviews)
+        .set({ status: "approved" })
+        .where(eq(userRealNameReviews.id, review.id));
+    });
+
+    // 发送通知（不阻塞）
+    const { notifyRealNameReviewResult } = await import("./notification-service.js");
+    const [userInfo] = await db
+      .select({
+        email: users.email,
+        nickname: users.nickname,
+        realName: users.realName,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (userInfo) {
+      notifyRealNameReviewResult({
+        userId,
+        email: userInfo.email,
+        nickname: userInfo.nickname,
+        realName: userInfo.realName || "用户",
+        status: "approved",
+      }).catch((err: any) => {
+        console.error(`自动审核通知发送失败 (userId=${userId}):`, err);
+      });
+    }
+
     return { autoVerified: true, passed: true, rawResult: result.rawResponse };
   }
+
+  // 核验不通过 → 标记为 rejected
+  await db
+    .update(userRealNameReviews)
+    .set({ status: "rejected", rejectReason: "自动核验失败：信息不一致" })
+    .where(eq(userRealNameReviews.id, review.id));
 
   return { autoVerified: true, passed: false, rawResult: result.rawResponse };
 }

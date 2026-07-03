@@ -32,10 +32,18 @@ export function usePagePreferences(pageKey: string | undefined) {
     if (!pageKey) return
     setFilters(prev => {
       const next = { ...prev, [key]: value }
-      put(`${PREF_API}/${pageKey}`, { filters: next }).catch(() => {})
       return next
     })
+    // 持久化放在外面，避免 updater 内执行副作用
   }, [pageKey])
+
+  // 在 filters 变化后持久化（使用 ref 避免循环）
+  const prevFiltersRef = useRef(filters)
+  useEffect(() => {
+    if (!pageKey || prevFiltersRef.current === filters) return
+    prevFiltersRef.current = filters
+    put(`${PREF_API}/${pageKey}`, { filters }).catch(() => {})
+  }, [filters, pageKey])
 
   const saveAll = useCallback((f: Record<string, any>) => {
     if (!pageKey) return

@@ -10,16 +10,17 @@
 import { FastifyInstance } from "fastify";
 import { eq, asc, sql } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
-import { vendors, vendorModels } from "../../db/schema.js";
-import { authenticateJWT, requireRole } from "../../middleware/auth.js";
+import { vendors, vendorModels, auditLogs } from "../../db/schema.js";
+import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
 
 export async function adminVendorRoutes(app: FastifyInstance) {
   // 所有路由需要 admin/super_admin 权限
   app.addHook("preHandler", authenticateJWT);
-  app.addHook("preHandler", requireRole("super_admin", "admin"));
 
   // ── 创建厂商 ──
-  app.post("/api/v1/admin/vendors", async (request, reply) => {
+  app.post("/api/v1/admin/vendors", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
     const db = getDb();
     const { name, baseUrl, description } = request.body as {
       name: string;
@@ -32,11 +33,24 @@ export async function adminVendorRoutes(app: FastifyInstance) {
       return;
     }
 
+    const operatorId = request.user!.userId;
+
     try {
       const [vendor] = await db
         .insert(vendors)
         .values({ name, baseUrl, description })
         .returning();
+
+      await db.insert(auditLogs).values({
+        operatorId,
+        action: "vendor_create",
+        targetType: "vendor",
+        targetId: vendor.id,
+        after: { name, baseUrl, description },
+        ip: request.ip,
+        description: `创建厂商: ${name}`,
+      });
+
       reply.status(200).send({ code: 0, data: vendor, message: "ok" });
     } catch (err: any) {
       if (err?.code === "23505") {
@@ -48,7 +62,9 @@ export async function adminVendorRoutes(app: FastifyInstance) {
   });
 
   // ── 列表 ──
-  app.get("/api/v1/admin/vendors", async (request, reply) => {
+  app.get("/api/v1/admin/vendors", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
     const db = getDb();
     const query = request.query as Record<string, string | undefined>;
     const page = Math.max(1, parseInt(query.page ?? "1", 10) || 1);
@@ -90,9 +106,15 @@ export async function adminVendorRoutes(app: FastifyInstance) {
   });
 
   // ── 详情（含熔断状态） ──
-  app.get("/api/v1/admin/vendors/:id", async (request, reply) => {
+  app.get("/api/v1/admin/vendors/:id", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
     const db = getDb();
-    const id = parseInt((request.params as any).id);
+    const id = parseInt((request.params as any).id, 10);
+    if (isNaN(id)) {
+      reply.status(400).send({ code: 400, data: null, message: "无效的厂商 ID" });
+      return;
+    }
     const [vendor] = await db.select().from(vendors).where(eq(vendors.id, id)).limit(1);
     if (!vendor) {
       reply.status(404).send({ code: 404, data: null, message: "厂商不存在" });
@@ -122,7 +144,9 @@ export async function adminVendorRoutes(app: FastifyInstance) {
   });
 
   // ── 更新 ──
-  app.patch("/api/v1/admin/vendors/:id", async (request, reply) => {
+  app.patch("/api/v1/admin/vendors/:id", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
     const db = getDb();
     const id = parseInt((request.params as any).id);
     const body = request.body as Record<string, any>;
@@ -137,6 +161,15 @@ export async function adminVendorRoutes(app: FastifyInstance) {
       return;
     }
 
+    const operatorId = request.user!.userId;
+
+    // 获取变更前快照
+    const [before] = await db
+      .select({ name: vendors.name, status: vendors.status })
+      .from(vendors)
+      .where(eq(vendors.id, id))
+      .limit(1);
+
     const [vendor] = await db
       .update(vendors)
       .set(updates)
@@ -146,11 +179,25 @@ export async function adminVendorRoutes(app: FastifyInstance) {
       reply.status(404).send({ code: 404, data: null, message: "厂商不存在" });
       return;
     }
+
+    await db.insert(auditLogs).values({
+      operatorId,
+      action: "vendor_update",
+      targetType: "vendor",
+      targetId: id,
+      before: before ?? null,
+      after: updates,
+      ip: request.ip,
+      description: `编辑厂商: ${before?.name ?? `#${id}`}`,
+    });
+
     reply.status(200).send({ code: 0, data: vendor, message: "ok" });
   });
 
   // ── 删除 ──
-  app.delete("/api/v1/admin/vendors/:id", async (request, reply) => {
+  app.delete("/api/v1/admin/vendors/:id", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
     const db = getDb();
     const id = parseInt((request.params as any).id);
 
@@ -169,6 +216,15 @@ export async function adminVendorRoutes(app: FastifyInstance) {
       return;
     }
 
+    const operatorId = request.user!.userId;
+
+    // 获取变更前快照
+    const [before] = await db
+      .select({ name: vendors.name })
+      .from(vendors)
+      .where(eq(vendors.id, id))
+      .limit(1);
+
     const [vendor] = await db
       .delete(vendors)
       .where(eq(vendors.id, id))
@@ -177,6 +233,17 @@ export async function adminVendorRoutes(app: FastifyInstance) {
       reply.status(404).send({ code: 404, data: null, message: "厂商不存在" });
       return;
     }
+
+    await db.insert(auditLogs).values({
+      operatorId,
+      action: "vendor_update",
+      targetType: "vendor",
+      targetId: id,
+      before: before ?? null,
+      ip: request.ip,
+      description: `删除厂商: ${before?.name ?? `#${id}`}`,
+    });
+
     reply.status(200).send({ code: 0, data: null, message: "ok" });
   });
 }

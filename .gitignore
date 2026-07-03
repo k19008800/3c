@@ -29,3 +29,16 @@ node_modules/
 .vscode/
 *.swp
 *.swo
+
+# 临时/调试文件
+api/__*
+api/_reset_pw.mjs
+api/_test_db.mjs
+api/_test_query.mjs
+api/_todo.md
+api/check-fk.ts
+api/test-drop-fk.mjs
+api/test-roles.ps1
+api/test-sim/
+tools/
+tests/

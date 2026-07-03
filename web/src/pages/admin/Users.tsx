@@ -14,6 +14,7 @@ import {
   CheckCircle2, XCircle, Plus, Trash2, RefreshCw,
   Ban, User, Key, History, Shield, FileText,
   Wallet, Activity, Globe, MessageSquare, BarChart3,
+  Lock,
 } from 'lucide-react'
 
 // ──────────────────────────────────────────────
@@ -21,15 +22,22 @@ import {
 // ──────────────────────────────────────────────
 
 const roleLabel: Record<string, string> = {
-  super_admin: '超级管理员', admin: '管理员', user: '用户',
+  super_admin: '超级管理员', admin: '管理员', user: '用户', agent: '代理商',
 }
 const roleColor: Record<string, string> = {
   super_admin: 'bg-purple-100 text-purple-700',
   admin: 'bg-blue-100 text-blue-700',
   user: 'bg-slate-100 text-slate-700',
+  agent: 'bg-emerald-100 text-emerald-700',
 }
 const statusLabel: Record<string, string> = { active: '正常', disabled: '禁用', pending: '待验证', deleted: '已注销' }
 const statusColor: Record<string, string> = { active: 'bg-green-100 text-green-700', disabled: 'bg-red-100 text-red-700', pending: 'bg-yellow-100 text-yellow-700', deleted: 'bg-slate-200 text-slate-500' }
+const statusHelp: Record<string, string> = {
+  active: '账户正常，已通过邮箱验证，可正常使用 API',
+  pending: '邮箱未验证 — 用户注册后未点击验证邮件中的链接，无法使用 API 调度',
+  disabled: '已被管理员禁用，可登录查看余额但无法请求 API',
+  deleted: '用户已注销（软删除），不可登录不可重新注册',
+}
 const realNameLabel: Record<string, string> = { approved: '已认证', pending_review: '审核中', rejected: '已拒绝', unverified: '未认证' }
 
 function fmt(v: string | null | undefined): string { return v ?? '-' }
@@ -198,6 +206,7 @@ export default function AdminUsers() {
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">类型</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">角色</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">状态</th>
+                <th className="px-4 py-3 text-sm font-medium text-slate-500">风控</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">实名</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">注册时间</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">操作</th>
@@ -205,9 +214,9 @@ export default function AdminUsers() {
             </thead>
             <tbody className="divide-y divide-slate-200">
               {loading ? (
-                <tr><td colSpan={11} className="text-center py-12"><Loader2 className="animate-spin inline-block" size={24} /></td></tr>
+                <tr><td colSpan={12} className="text-center py-12"><Loader2 className="animate-spin inline-block" size={24} /></td></tr>
               ) : users.length === 0 ? (
-                <tr><td colSpan={11} className="text-center py-12 text-slate-400">暂无用户数据</td></tr>
+                <tr><td colSpan={12} className="text-center py-12 text-slate-400">暂无用户数据</td></tr>
               ) : (
                 users.map(u => (
                   <tr key={u.id} className="hover:bg-slate-50 transition">
@@ -221,12 +230,24 @@ export default function AdminUsers() {
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${roleColor[u.role] || 'bg-slate-100 text-slate-700'}`}>{roleLabel[u.role] || u.role}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusColor[u.status] || ''}`}>{statusLabel[u.status] || u.status}</span>
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusColor[u.status] || ''}`} title={statusHelp[u.status] || ''}>{statusLabel[u.status] || u.status}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {u.isBanned ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                          <Lock size={10} /> 封禁中
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">-</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-600">{realNameLabel[u.realNameStatus || 'unverified']}</td>
                     <td className="px-4 py-3 text-sm text-slate-500 whitespace-nowrap">{new Date(u.createdAt).toLocaleDateString('zh-CN')}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 flex gap-1">
                       <button onClick={() => setSelectedUser(u)} className="text-sm text-blue-600 hover:text-blue-800">详情</button>
+                      {u.isBanned && (
+                        <button onClick={async () => { try { await post('/api/v1/admin/security/unban/user', { userId: u.id }); fetchUsers() } catch(e: any) { alert('解封失败: ' + (e.message || '')) } }} className="text-sm text-green-600 hover:text-green-800 ml-2">解封</button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -341,6 +362,7 @@ const TABS = [
 function UserDetailModal({ user, onClose }: { user: AdminUser; onClose: () => void }) {
   const [tab, setTab] = useState('info')
   const [msg, setMsg] = useState('')
+  const [showChangeRole, setShowChangeRole] = useState(false)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -350,7 +372,12 @@ function UserDetailModal({ user, onClose }: { user: AdminUser; onClose: () => vo
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-semibold">用户详情 #{user.id}</h2>
             <span className="text-sm text-slate-500">{user.email}</span>
-            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusColor[user.status] || ''}`}>{statusLabel[user.status] || user.status}</span>
+            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusColor[user.status] || ''}`} title={statusHelp[user.status] || ''}>{statusLabel[user.status] || user.status}</span>
+            {user.isBanned && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                <Lock size={10} /> 风控封禁中
+              </span>
+            )}
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
         </div>
@@ -387,12 +414,25 @@ function UserDetailModal({ user, onClose }: { user: AdminUser; onClose: () => vo
         {/* Actions bar */}
         <div className="flex items-center gap-2 px-6 py-3 border-t border-slate-200 bg-slate-50 shrink-0">
           <ExportDataButton userId={user.id} onMsg={setMsg} />
+          <button onClick={() => setShowChangeRole(true)} className="flex items-center gap-1 px-3 py-1 text-sm border border-amber-300 text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition"><RefreshCw size={14} /> 变更角色</button>
           <ImpersonateButton userId={user.id} email={user.email} onMsg={setMsg} />
+          {user.isBanned && (
+            <button onClick={async () => {
+              try {
+                await post('/api/v1/admin/security/unban/user', { userId: user.id })
+                setMsg('✅ 用户已解封')
+                setTimeout(() => window.location.reload(), 1500)
+              } catch(e: any) { setMsg('❌ 解封失败: ' + (e.message || '')) }
+            }} className="flex items-center gap-1 px-3 py-1 text-sm text-green-600 bg-green-50 rounded-md hover:bg-green-100 transition"><Lock size={14} /> 解封此用户</button>
+          )}
           <span className="text-xs text-slate-400 ml-auto">
             {user.lastLoginAt ? `最后登录: ${fmtDate(user.lastLoginAt)}` : '从未登录'}
           </span>
         </div>
       </div>
+      {showChangeRole && (
+        <ChangeRoleDialog userId={user.id} currentRole={user.role} currentLabel={roleLabel[user.role] || user.role} onClose={() => setShowChangeRole(false)} onMsg={setMsg} />
+      )}
     </div>
   )
 }
@@ -405,7 +445,7 @@ function InfoTab({ user, onMsg }: { user: AdminUser; onMsg: (s: string) => void 
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({
     nickname: user.nickname || '', phone: user.phone || '', avatarUrl: user.avatarUrl || '',
-    status: user.status, role: user.role, userType: user.userType,
+    status: user.status, userType: user.userType,
     discountRate: user.discountRate?.toString() || '', rpmOverride: user.rpmOverride?.toString() || '', tpmOverride: user.tpmOverride?.toString() || '',
     disabledReason: user.disabledReason || '', disabledUntil: user.disabledUntil || '',
   })
@@ -420,7 +460,6 @@ function InfoTab({ user, onMsg }: { user: AdminUser; onMsg: (s: string) => void 
       if (form.phone !== (user.phone || '')) body.phone = form.phone
       if (form.avatarUrl !== (user.avatarUrl || '')) body.avatarUrl = form.avatarUrl
       if (form.status !== user.status) body.status = form.status
-      if (form.role !== user.role) body.role = form.role
       if (form.userType !== user.userType) body.userType = form.userType
       if (form.discountRate) body.discountRate = parseFloat(form.discountRate)
       if (form.rpmOverride) body.rpmOverride = parseInt(form.rpmOverride)
@@ -466,7 +505,7 @@ function InfoTab({ user, onMsg }: { user: AdminUser; onMsg: (s: string) => void 
         <div><span className="text-slate-500">折扣率：</span>{user.discountRate ? `${(Number(user.discountRate) * 100).toFixed(2)}%` : '无'}</div>
         <div><span className="text-slate-500">实名：</span>{realNameLabel[user.realNameStatus || 'unverified']}{user.realName ? ` (${user.realName})` : ''}</div>
         <div><span className="text-slate-500">企业：</span>{fmt(user.companyName)}</div>
-        <div><span className="text-slate-500">邮箱验证：</span>{user.emailVerifiedAt ? fmtDate(user.emailVerifiedAt) : '未验证'}</div>
+        <div><span className="text-slate-500">邮箱验证：</span>{user.emailVerifiedAt ? fmtDate(user.emailVerifiedAt) : <span className="text-amber-600 cursor-help" title="如确认用户身份可点击下方「手动验证邮箱」按钮跳过邮件验证">未验证 ⚠️</span>}</div>
         <div><span className="text-slate-500">最后登录：</span>{fmtDate(user.lastLoginAt)}</div>
         {user.stats && (
           <>
@@ -485,7 +524,7 @@ function InfoTab({ user, onMsg }: { user: AdminUser; onMsg: (s: string) => void 
             <div><label className="block text-xs text-slate-500 mb-1">昵称</label><input type="text" value={form.nickname} onChange={e => setForm(f => ({ ...f, nickname: e.target.value }))} className="w-full px-3 py-1.5 border border-slate-300 rounded text-sm" /></div>
             <div><label className="block text-xs text-slate-500 mb-1">手机</label><input type="text" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className="w-full px-3 py-1.5 border border-slate-300 rounded text-sm" /></div>
             <div><label className="block text-xs text-slate-500 mb-1">头像URL</label><input type="text" value={form.avatarUrl} onChange={e => setForm(f => ({ ...f, avatarUrl: e.target.value }))} className="w-full px-3 py-1.5 border border-slate-300 rounded text-sm" /></div>
-            <div><label className="block text-xs text-slate-500 mb-1">角色</label><select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} className="w-full px-3 py-1.5 border border-slate-300 rounded text-sm"><option value="user">用户</option><option value="admin">管理员</option><option value="super_admin">超级管理员</option><option value="agent">代理商</option></select></div>
+            <div><label className="block text-xs text-slate-500 mb-1">角色</label><div className="flex items-center gap-2"><span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${roleColor[user.role] || 'bg-slate-100 text-slate-700'}`}>{roleLabel[user.role] || user.role}</span><span className="text-xs text-amber-600">如需变更请用底部「变更角色」</span></div></div>
             <div><label className="block text-xs text-slate-500 mb-1">状态</label><select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className="w-full px-3 py-1.5 border border-slate-300 rounded text-sm"><option value="active">正常</option><option value="disabled">禁用</option><option value="pending">待验证</option></select></div>
             <div><label className="block text-xs text-slate-500 mb-1">类型</label><select value={form.userType} onChange={e => setForm(f => ({ ...f, userType: e.target.value }))} className="w-full px-3 py-1.5 border border-slate-300 rounded text-sm"><option value="personal">个人</option><option value="enterprise">企业</option></select></div>
             <div><label className="block text-xs text-slate-500 mb-1">折扣率 (0-1)</label><input type="number" step="0.01" min="0" max="1" value={form.discountRate} onChange={e => setForm(f => ({ ...f, discountRate: e.target.value }))} className="w-full px-3 py-1.5 border border-slate-300 rounded text-sm" /></div>
@@ -525,8 +564,77 @@ function InfoTab({ user, onMsg }: { user: AdminUser; onMsg: (s: string) => void 
         </div>
       </div>
 
+      {/* Email Verification */}
+      <EmailVerificationSection user={user} onMsg={onMsg} />
+
       {/* Manual Real-name Verification */}
       <RealNameAdminSection user={user} onMsg={onMsg} />
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────
+//  Email Verification Section (in InfoTab)
+// ──────────────────────────────────────────────
+
+function EmailVerificationSection({ user, onMsg }: { user: AdminUser; onMsg: (s: string) => void }) {
+  const [submitting, setSubmitting] = useState(false)
+
+  if (user.emailVerifiedAt) {
+    return (
+      <div className="border-t pt-4 space-y-3">
+        <h3 className="text-sm font-medium text-slate-700">邮箱验证</h3>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+            ✅ 已验证
+          </span>
+          <span className="text-sm text-slate-500">验证时间: {fmtDate(user.emailVerifiedAt)}</span>
+        </div>
+        <button
+          onClick={async () => {
+            setSubmitting(true)
+            try {
+              await patch(`/api/v1/admin/users/${user.id}`, { status: 'pending' })
+              onMsg('✅ 邮箱验证已撤销，用户状态变更为待验证')
+              setTimeout(() => window.location.reload(), 1200)
+            } catch (e: any) { onMsg('❌ ' + (e.message || '')) }
+            finally { setSubmitting(false) }
+          }}
+          disabled={submitting}
+          className="px-3 py-1.5 text-sm border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
+        >
+          {submitting ? '处理中...' : '撤销验证（变更为待验证）'}
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="border-t pt-4 space-y-3">
+      <h3 className="text-sm font-medium text-slate-700">邮箱验证</h3>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+          ⚠️ 未验证
+        </span>
+        <span className="text-xs text-amber-600">
+          用户注册后未点击验证邮件中的链接，当前账户状态为「待验证」
+        </span>
+      </div>
+      <button
+        onClick={async () => {
+          setSubmitting(true)
+          try {
+            await patch(`/api/v1/admin/users/${user.id}`, { status: 'active' })
+            onMsg('✅ 邮箱已手动验证，用户状态变更为正常')
+            setTimeout(() => window.location.reload(), 1200)
+          } catch (e: any) { onMsg('❌ ' + (e.message || '')) }
+          finally { setSubmitting(false) }
+        }}
+        disabled={submitting}
+        className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+      >
+        {submitting ? '处理中...' : '✅ 手动验证邮箱（变更为正常）'}
+      </button>
     </div>
   )
 }
@@ -1576,5 +1684,117 @@ function ImpersonateButton({ userId, email, onMsg }: { userId: number; email: st
         </div>
       )}
     </>
+  )
+}
+
+// ──────────────────────────────────────────────
+//  Action: Change Role
+// ──────────────────────────────────────────────
+
+const ROLE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'user', label: '用户' },
+  { value: 'admin', label: '管理员' },
+  { value: 'agent', label: '代理商' },
+  { value: 'super_admin', label: '超级管理员' },
+]
+
+function ChangeRoleDialog({ userId, currentRole, currentLabel, onClose, onMsg }: {
+  userId: number
+  currentRole: string
+  currentLabel: string
+  onClose: () => void
+  onMsg: (s: string) => void
+}) {
+  const [newRole, setNewRole] = useState('')
+  const [reason, setReason] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async () => {
+    if (!newRole) { setError('请选择新角色'); return }
+    if (newRole === currentRole) { setError('新角色与当前角色相同'); return }
+    setLoading(true)
+    setError('')
+    try {
+      await post(`/api/v1/admin/users/${userId}/change-role`, {
+        role: newRole,
+        reason: reason.trim() || undefined,
+      })
+      onMsg(`✅ 角色已变更: ${currentLabel} → ${ROLE_OPTIONS.find(r => r.value === newRole)?.label || newRole}`)
+      onClose()
+    } catch (err: any) {
+      setError(err.message || '变更失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-xl" onClick={e => e.stopPropagation()}>
+        <h3 className="text-base font-semibold mb-4 flex items-center gap-2">
+          <RefreshCw size={18} /> 变更用户角色
+        </h3>
+
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-4 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-slate-500">当前角色：</span>
+            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${roleColor[currentRole] || 'bg-slate-100 text-slate-700'}`}>{currentLabel}</span>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">新角色 *</label>
+            <select
+              value={newRole}
+              onChange={e => { setNewRole(e.target.value); setError('') }}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">请选择新角色</option>
+              {ROLE_OPTIONS.filter(r => r.value !== currentRole).map(r => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">变更原因（可选）</label>
+            <textarea
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="例如: 调整为普通用户，不再承担管理职责"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">影响说明</label>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 space-y-1">
+              <p>• 变更后用户刷新页面即可生效</p>
+              <p>• 降级后会失去后台管理菜单的访问权限</p>
+              <p>• 操作记录将写入角色变更历史</p>
+            </div>
+          </div>
+        </div>
+
+        {error && (
+          <div className="mt-3 p-3 text-sm rounded-lg bg-red-50 text-red-600 flex items-center gap-2">
+            <AlertCircle size={16} /> {error}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 mt-5">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">取消</button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading || !newRole}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50"
+          >
+            {loading && <Loader2 size={14} className="animate-spin" />}
+            确认变更
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }

@@ -80,13 +80,13 @@ export default function AdminFinanceDashboard() {
       icon: DollarSign,
       color: 'text-orange-600 bg-orange-50',
     },
-    d.pendingCommissions && {
+    ...(d.pendingCommissions ? [{
       label: '待结算佣金',
       value: `${d.pendingCommissions.count} 笔`,
       sub: fmt(d.pendingCommissions.totalAmount),
       icon: DollarSign,
       color: 'text-orange-600 bg-orange-50',
-    },
+    }] : []),
     {
       label: '今日已打款',
       value: `${d.todayPaidWithdraws.count} 笔`,
@@ -115,7 +115,7 @@ export default function AdminFinanceDashboard() {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {cards.filter(Boolean).map((card) => (
+        {cards.map((card) => (
           <div key={card.label} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
             <div className="flex items-start justify-between">
               <div>

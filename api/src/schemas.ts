@@ -205,9 +205,9 @@ export const rechargeResponse = z.object({
 
 export const bankTransferSchema = z.object({
   amount: z.string().min(1),
-  bankName: z.string().max(255),
-  accountNumber: z.string().max(100),
-  transferDate: z.string(),        // YYYY-MM-DD
+  bankName: z.string().min(1, "开户银行不能为空").max(255),
+  accountNumber: z.string().min(1, "银行账号不能为空").max(100),
+  transferDate: z.string().min(1, "转账日期不能为空"),  // YYYY-MM-DD
   remark: z.string().max(500).optional(),
 });
 export type BankTransferInput = z.infer<typeof bankTransferSchema>;
@@ -428,12 +428,12 @@ export const updateVendorModelSchema = z.object({
   upstreamModelName: z.string().max(200).optional(),
   apiEndpoint: z.string().url().optional(),
   apiKey: z.string().optional(),
-  costPriceInput: z.string().optional(),
-  costPriceOutput: z.string().optional(),
-  sellPriceInput: z.string().optional(),
-  sellPriceOutput: z.string().optional(),
+  costPriceInput: z.union([z.string(), z.number()]).transform(v => String(v)).optional(),
+  costPriceOutput: z.union([z.string(), z.number()]).transform(v => String(v)).optional(),
+  sellPriceInput: z.union([z.string(), z.number()]).transform(v => String(v)).optional(),
+  sellPriceOutput: z.union([z.string(), z.number()]).transform(v => String(v)).optional(),
   weight: z.number().int().positive().optional(),
-  status: z.boolean().optional(),
+  status: z.union([z.boolean(), z.number()]).transform(v => Boolean(v)).optional(),
 });
 export type UpdateVendorModelInput = z.infer<typeof updateVendorModelSchema>;
 
@@ -443,12 +443,11 @@ export type UpdateVendorModelInput = z.infer<typeof updateVendorModelSchema>;
 
 export const createAgentSchema = z.object({
   userId: z.number(),
-  commissionRate: z.union([z.string(), z.number()]).transform((v) => String(v)),
+  initialSaleRate: z.number().min(0).max(100).optional(),
 });
 export type CreateAgentInput = z.infer<typeof createAgentSchema>;
 
 export const updateAgentSchema = z.object({
-  commissionRate: z.union([z.string(), z.number()]).transform((v) => String(v)).optional(),
   status: z.boolean().optional(),
 });
 
@@ -500,6 +499,19 @@ export const customerConsumptionQuerySchema = z.object({
 });
 export type CustomerConsumptionQuery = z.infer<typeof customerConsumptionQuerySchema>;
 
+// ── 代理商佣金查询扩展参数 ──
+
+export const agentCommissionQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  status: z.string().optional(),
+  commissionType: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  customerSearch: z.string().max(100).optional(),
+});
+export type AgentCommissionQuery = z.infer<typeof agentCommissionQuerySchema>;
+
 // ──────────────────────────────────────────────
 //  Admin — System Config
 // ──────────────────────────────────────────────
@@ -527,6 +539,40 @@ export const bindAgentClientSchema = z.object({
 export type BindAgentClientInput = z.infer<typeof bindAgentClientSchema>;
 
 // ──────────────────────────────────────────────
+//  Commission Rules (Admin)
+// ──────────────────────────────────────────────
+
+export const commissionRuleTypeEnum = z.enum(["sale", "renewal", "team", "activity"]);
+export const commissionActivityTypeEnum = z.enum([
+  "register_bonus",
+  "first_recharge",
+  "invite_bonus",
+  "consumption_milestone",
+]).optional();
+
+export const upsertCommissionRuleSchema = z.object({
+  ruleType: commissionRuleTypeEnum,
+  rate: z.union([z.string(), z.number()]).transform((v) => String(v)).optional(),
+  isEnabled: z.boolean().optional(),
+  minTriggerAmount: z.union([z.string(), z.number()]).transform((v) => String(v)).optional(),
+  maxCap: z.union([z.string(), z.number()]).transform((v) => String(v)).optional(),
+  validFrom: z.string().optional(),
+  validUntil: z.string().optional(),
+  // 活动专有
+  activityName: z.string().max(255).optional(),
+  activityType: commissionActivityTypeEnum,
+  fixedAmount: z.union([z.string(), z.number()]).transform((v) => String(v)).optional(),
+  // 团队专有
+  teamLevelLimit: z.coerce.number().int().min(1).max(10).optional(),
+});
+export type UpsertCommissionRuleInput = z.infer<typeof upsertCommissionRuleSchema>;
+
+export const setAgentParentSchema = z.object({
+  parentAgentId: z.number().int().positive().nullable(),
+});
+export type SetAgentParentInput = z.infer<typeof setAgentParentSchema>;
+
+// ──────────────────────────────────────────────
 //  Pagination (common)
 // ──────────────────────────────────────────────
 
@@ -541,6 +587,16 @@ export const logFilterSchema = paginationSchema.extend({
   status: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  // NEW FIELDS:
+  apiKeyId: z.coerce.number().optional(),
+  modelName: z.string().optional(),
+  minDuration: z.coerce.number().optional(),
+  maxDuration: z.coerce.number().optional(),
+  minTokens: z.coerce.number().optional(),
+  maxTokens: z.coerce.number().optional(),
+  isStreaming: z.coerce.boolean().optional(),
+  sortBy: z.enum(['createdAt', 'durationMs', 'totalTokens', 'cost']).optional().default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 });
 
 // ──────────────────────────────────────────────

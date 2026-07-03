@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 
 export function useSearchHistory(storageKey: string) {
   const [history, setHistory] = useState<string[]>(() => {
@@ -10,26 +10,29 @@ export function useSearchHistory(storageKey: string) {
     }
   })
 
-  const addSearch = useCallback((term: string) => {
-    if (!term.trim()) return
-    setHistory(prev => {
-      const next = [term, ...prev.filter(h => h !== term)].slice(0, 5)
-      try {
-        localStorage.setItem(`search_${storageKey}`, JSON.stringify(next))
-      } catch { /* ok */ }
-      return next
-    })
+  const historyRef = useRef(history)
+  historyRef.current = history
+
+  const persist = useCallback((h: string[]) => {
+    try {
+      localStorage.setItem(`search_${storageKey}`, JSON.stringify(h))
+    } catch { /* ok */ }
   }, [storageKey])
 
+  const addSearch = useCallback((term: string) => {
+    if (!term.trim()) return
+    const prev = historyRef.current
+    const next = [term, ...prev.filter(h => h !== term)].slice(0, 5)
+    setHistory(next)
+    persist(next)
+  }, [persist])
+
   const removeSearch = useCallback((term: string) => {
-    setHistory(prev => {
-      const next = prev.filter(h => h !== term)
-      try {
-        localStorage.setItem(`search_${storageKey}`, JSON.stringify(next))
-      } catch { /* ok */ }
-      return next
-    })
-  }, [storageKey])
+    const prev = historyRef.current
+    const next = prev.filter(h => h !== term)
+    setHistory(next)
+    persist(next)
+  }, [persist])
 
   const clearHistory = useCallback(() => {
     try {

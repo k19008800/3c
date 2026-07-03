@@ -10,6 +10,7 @@ import {
   balanceLogs,
   users,
   systemConfigs,
+  agentClients,
 } from "../db/schema.js";
 import { AppError } from "./auth-service.js";
 import crypto from "node:crypto";
@@ -24,50 +25,42 @@ function generateOrderNo(prefix: string): string {
   return `${prefix}_${ts}_${rand}`;
 }
 
-// ── 在线支付通道配置 ──
+// ── 支付通道适配器 ──
 
-interface PayChannelConfig {
-  name: string;
-  mockPayUrl: string;        // 扫码支付链接（mock）
-  mockJsapiParams: object;   // JSAPI 调起参数（mock）
-}
-
-const PAY_CHANNELS: Record<string, PayChannelConfig> = {
-  wechat_scan: {
-    name: "微信扫码",
-    mockPayUrl: "https://pay.weixin.qq.com/qr/3cloud_mock",
-    mockJsapiParams: {},
-  },
-  wechat_jsapi: {
-    name: "微信 JSAPI",
-    mockPayUrl: "",
-    mockJsapiParams: {
-      appId: "wx_mock",
-      timeStamp: String(Math.floor(Date.now() / 1000)),
-      nonceStr: crypto.randomBytes(8).toString("hex"),
-      package: "prepay_id=mock",
-      signType: "MD5",
-      paySign: "mock_sign",
-    },
-  },
-  alipay_scan: {
-    name: "支付宝扫码",
-    mockPayUrl: "https://qr.alipay.com/3cloud_mock",
-    mockJsapiParams: {},
-  },
-  alipay_jsapi: {
-    name: "支付宝 JSAPI",
-    mockPayUrl: "",
-    mockJsapiParams: {
-      tradeNo: "mock_trade_no",
-      qrCode: "https://qr.alipay.com/3cloud_mock",
-    },
-  },
-};
+import { createPaymentProvider, type PaymentProvider } from "./payment-adapter.js";
 
 // ── 获取价格倍率（30 分钟过期的充电订单时限） ──
 
 const ORDER_EXPIRE_MINUTES = 30;
+
+// ── 对公转账 remark 解析（向前兼容旧格式） ──
+
+export function parseBankTransferRemark(remark: string | null): {
+  bankName: string | null;
+  accountNumber: string | null;
+  transferDate: string | null;
+  userRemark: string | null;
+} {
+  if (!remark) return { bankName: null, accountNumber: null, transferDate: null, userRemark: null };
+
+  // 格式: 银行:xxx 账号:xxx 转账日期:YYYY-MM-DD [用户备注]
+  const bankMatch = remark.match(/^银行:(.+?)\s+账号:/);
+  const accountMatch = remark.match(/\s+账号:(.+?)\s+转账日期:/);
+  const dateMatch = remark.match(/\s+转账日期:(\d{4}-\d{2}-\d{2})/);
+
+  let bankName = bankMatch?.[1] ?? null;
+  let accountNumber = accountMatch?.[1] ?? null;
+  let transferDate = dateMatch?.[1] ?? null;
+
+  // 提取用户备注（去掉前缀后剩余部分）
+  let userRemark: string | null = null;
+  if (dateMatch) {
+    const afterDate = remark.slice(remark.indexOf(dateMatch[0]) + dateMatch[0].length);
+    userRemark = afterDate.trim() || null;
+  }
+
+  return { bankName, accountNumber, transferDate, userRemark };
+}
 
 // ──────────────────────────────────────────────
 //  创建在线支付充值订单
@@ -93,9 +86,12 @@ export interface CreateOrderResult {
 export async function createRechargeOrder(input: CreateOrderInput): Promise<CreateOrderResult> {
   const db = getDb();
   const { userId, amount, channel } = input;
-  const channelConfig = PAY_CHANNELS[channel];
 
-  if (!channelConfig) {
+  // 通过适配器获取支付通道 Provider
+  let provider: PaymentProvider;
+  try {
+    provider = createPaymentProvider(channel);
+  } catch {
     throw new AppError("INVALID_CHANNEL", `不支持的支付通道: ${channel}`, 400);
   }
 
@@ -147,24 +143,25 @@ export async function createRechargeOrder(input: CreateOrderInput): Promise<Crea
     })
     .returning();
 
+  // 通过适配器获取支付参数
+  let payResult: { payUrl?: string; payParams?: Record<string, any> } = {};
+  try {
+    payResult = await provider.createOrder(order.orderNo, order.amount, `充值 ${order.amount} 元`);
+  } catch (err) {
+    // Provider 抛错不阻断订单创建，仅不返回支付参数
+    console.error(`[Payment] Provider.createOrder 失败 (channel=${channel}):`, err);
+  }
+
   const result: CreateOrderResult = {
     orderNo: order.orderNo,
     amount: order.amount,
     channel: order.channel,
     status: order.status,
+    payUrl: payResult.payUrl,
+    payParams: payResult.payParams as object | undefined,
     expiresAt: order.expiresAt!.toISOString(),
     createdAt: order.createdAt.toISOString(),
   };
-
-  // 扫码支付返回 payUrl
-  if (channelConfig.mockPayUrl) {
-    result.payUrl = channelConfig.mockPayUrl;
-  }
-
-  // JSAPI 支付返回调起参数
-  if (Object.keys(channelConfig.mockJsapiParams).length > 0) {
-    result.payParams = channelConfig.mockJsapiParams;
-  }
 
   return result;
 }
@@ -227,6 +224,10 @@ export async function submitBankTransfer(input: BankTransferInput): Promise<Bank
       status: "pending",
       voucherImage,
       remark: `银行:${bankName} 账号:${accountNumber} 转账日期:${transferDate}${remark ? ` ${remark}` : ""}`,
+      // 独立字段，便于审核展示和对账
+      payerAccountName: bankName,
+      payerAccountNo: accountNumber,
+      transferRemark: remark ?? null,
     })
     .returning();
 
@@ -250,6 +251,8 @@ export async function getSavedPayerInfo(userId: number): Promise<{ bankName: str
   // 先查已确认的，再查已支付的
   const [lastRecord] = await db
     .select({
+      payerAccountName: rechargeOrders.payerAccountName,
+      payerAccountNo: rechargeOrders.payerAccountNo,
       remark: rechargeOrders.remark,
     })
     .from(rechargeOrders)
@@ -263,14 +266,23 @@ export async function getSavedPayerInfo(userId: number): Promise<{ bankName: str
     .orderBy(desc(rechargeOrders.createdAt))
     .limit(1);
 
-  if (!lastRecord || !lastRecord.remark) {
+  if (!lastRecord) {
     return null;
   }
 
-  // 从 remark 解析：银行:${bankName} 账号:${accountNumber} 转账日期:${transferDate}
+  // 优先从独立字段读取，兼容旧记录回退解析 remark
+  if (lastRecord.payerAccountName && lastRecord.payerAccountNo) {
+    return {
+      bankName: lastRecord.payerAccountName,
+      accountNumber: lastRecord.payerAccountNo,
+    };
+  }
+
+  if (!lastRecord.remark) return null;
+
+  // 旧格式回退解析
   const bankMatch = lastRecord.remark.match(/^银行:(.+?)\s+账号:/);
   const accountMatch = lastRecord.remark.match(/\s+账号:(.+?)\s+转账日期:/);
-
   return {
     bankName: bankMatch?.[1] ?? null,
     accountNumber: accountMatch?.[1] ?? null,
@@ -347,6 +359,90 @@ export async function getUserRechargeOrders(
 }
 
 // ──────────────────────────────────────────────
+//  充值入账辅助函数（含负余额回补逻辑）
+//  如果用户存在负余额，先回补到 0，剩余部分记入充值
+// ──────────────────────────────────────────────
+
+async function applyRechargeBalance(
+  tx: any,
+  userId: number,
+  amount: string,
+  orderId: number,
+  channel: string,
+  orderNo: string,
+): Promise<void> {
+  // 读取当前余额
+  const [currentUser] = await tx
+    .select({ balance: users.balance })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  const currentBalance = Number(currentUser?.balance ?? 0);
+  const rechargeAmount = parseFloat(amount);
+
+  if (currentBalance < 0) {
+    // 有负余额 → 先回补到 0，剩余部分计为充值
+    const negativeAmount = Math.abs(currentBalance);
+    const repayAmount = Math.min(negativeAmount, rechargeAmount);
+    const remainingAmount = rechargeAmount - repayAmount;
+
+    // Step 1: 回补负余额到 0
+    await tx
+      .update(users)
+      .set({ balance: "0.000000" })
+      .where(eq(users.id, userId));
+
+    await tx.insert(balanceLogs).values({
+      userId,
+      amount: repayAmount.toFixed(6),
+      balanceAfter: "0.000000",
+      type: "negative_repay",
+      refType: "recharge",
+      refId: orderId,
+      description: `回补负余额 ${repayAmount.toFixed(6)} 元 / ${channel} / ${orderNo}`,
+    });
+
+    // Step 2: 剩余部分进入可用余额
+    if (remainingAmount > 0) {
+      await tx
+        .update(users)
+        .set({ balance: remainingAmount.toFixed(6) })
+        .where(eq(users.id, userId));
+
+      await tx.insert(balanceLogs).values({
+        userId,
+        amount: remainingAmount.toFixed(6),
+        balanceAfter: remainingAmount.toFixed(6),
+        type: "recharge",
+        refType: "recharge",
+        refId: orderId,
+        description: `${channel} / ${orderNo}（扣除回补后剩余）`,
+      });
+    }
+    // 充值金额刚好等于负余额 → 余额置 0，只有 repay 记录
+  } else {
+    // 余额非负，直接增加
+    await tx
+      .update(users)
+      .set({
+        balance: sql`${users.balance} + ${amount}`,
+      })
+      .where(eq(users.id, userId));
+
+    await tx.insert(balanceLogs).values({
+      userId,
+      amount,
+      balanceAfter: sql`(SELECT balance FROM ${users} WHERE id = ${userId})`,
+      type: "recharge",
+      refType: "recharge",
+      refId: orderId,
+      description: `${channel} / ${orderNo}`,
+    });
+  }
+}
+
+// ──────────────────────────────────────────────
 //  支付回调处理（上游通知）
 // ──────────────────────────────────────────────
 
@@ -368,11 +464,21 @@ export async function handlePaymentNotify(
   }
 
   if (order.status !== "pending") {
-    // 已处理过的通知直接忽略
-    return;
+    // 非待支付状态的订单不应处理 — 已取消/已完结等状态返回明确错误
+    if (order.status === "cancelled") {
+      throw new AppError("ORDER_CANCELLED", `订单 ${orderNo} 已取消，无法处理支付通知`, 400);
+    }
+    if (["paid", "confirmed"].includes(order.status)) {
+      // 已成功支付的订单，重复通知视为幂等，不报错但也不返回 SUCCESS
+      throw new AppError("ORDER_ALREADY_PAID", `订单 ${orderNo} 已完成，无需重复处理`, 400);
+    }
+    // 其他状态（expired 等），拒绝处理
+    throw new AppError("INVALID_ORDER_STATUS", `订单 ${orderNo} 状态为 ${order.status}，无法处理`, 400);
   }
 
-  if (order.amount !== amount) {
+  const orderAmount = parseFloat(order.amount);
+  const notifyAmount = parseFloat(amount);
+  if (isNaN(orderAmount) || isNaN(notifyAmount) || Math.abs(orderAmount - notifyAmount) > 0.000001) {
     throw new AppError("AMOUNT_MISMATCH", `金额不匹配: 订单 ${order.amount}, 通知 ${amount}`, 400);
   }
 
@@ -397,16 +503,41 @@ export async function handlePaymentNotify(
       })
       .where(eq(users.id, order.userId));
 
-    // 记录余额变动
-    await tx.insert(balanceLogs).values({
-      userId: order.userId,
-      amount: amount,
-      balanceAfter: sql`(SELECT balance FROM ${users} WHERE id = ${order.userId})`,
-      type: "recharge",
-      refType: "recharge",
-      refId: order.id,
-      description: `在线充值 / ${order.channel} / ${orderNo}`,
-    });
+    // 记录余额变动（含负余额回补逻辑）
+    await applyRechargeBalance(tx, order.userId, amount, order.id, `在线充值 / ${order.channel}`, orderNo);
+
+    // 判断是否首充（用于首充活动奖励）
+    const [prevRecharges] = await tx
+      .select({ count: sql<number>`count(*)` })
+      .from(rechargeOrders)
+      .where(and(
+        eq(rechargeOrders.userId, order.userId),
+        sql`${rechargeOrders.status} IN ('paid', 'confirmed')`,
+        sql`${rechargeOrders.id} != ${order.id}`,
+      ));
+    const isFirstRecharge = Number(prevRecharges?.count ?? 0) === 0;
+
+    // 首充活动奖励
+    if (isFirstRecharge) {
+      // 查客户是否有代理商归属
+      const [firstRechargeClient] = await tx
+        .select({ agentId: agentClients.agentId })
+        .from(agentClients)
+        .where(eq(agentClients.clientUserId, order.userId))
+        .limit(1);
+
+      if (firstRechargeClient) {
+        const { processActivityCommission } = await import("./billing.js");
+        await processActivityCommission(
+          tx, firstRechargeClient.agentId, order.userId,
+          "first_recharge", amount, orderNo,
+        );
+      }
+    }
+
+    // 处理续费佣金（复用当前事务）
+    const { processRenewalCommission } = await import("./billing.js");
+    await processRenewalCommission(tx, order.userId, order.id, amount, orderNo);
   });
 }
 
@@ -460,16 +591,15 @@ export async function confirmBankTransfer(
       })
       .where(eq(users.id, order.userId));
 
-    // 记录余额变动
-    await tx.insert(balanceLogs).values({
-      userId: order.userId,
-      amount: amount,
-      balanceAfter: sql`(SELECT balance FROM ${users} WHERE id = ${order.userId})`,
-      type: "recharge",
-      refType: "recharge",
-      refId: order.id,
-      description: `对公转账到账 / ${order.remark ?? ""} / ${order.orderNo}`,
-    });
+    // 记录余额变动（含负余额回补逻辑）
+    const bankInfo = order.payerAccountName
+      ? `${order.payerAccountName}/${order.payerAccountNo ?? ""}`
+      : order.remark ?? "";
+    await applyRechargeBalance(tx, order.userId, amount, order.id, `对公转账到账 / ${bankInfo}`, order.orderNo);
+
+    // 处理续费佣金（复用当前事务）
+    const { processRenewalCommission } = await import("./billing.js");
+    await processRenewalCommission(tx, order.userId, order.id, amount, order.orderNo);
   });
 }
 

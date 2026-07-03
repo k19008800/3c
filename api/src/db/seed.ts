@@ -64,6 +64,9 @@ const defaultConfigs: { key: string; value: string; description: string }[] = [
   { key: "recharge_enterprise_max_single", value: "50000", description: "企业单次充值上限（元）" },
   { key: "recharge_personal_daily_limit", value: "20000", description: "个人单日累计触发风控值（元）" },
   { key: "recharge_enterprise_daily_limit", value: "200000", description: "企业单日累计触发风控值（元）" },
+
+  // ── 佣金结算 ──
+  { key: "commission_settle_mode", value: "manual", description: "佣金结算模式（auto=定时自动结算，manual=财务手动结算）" },
 ];
 
 const defaultSecurityConfigs: { key: string; value: any; description: string }[] = [
@@ -86,9 +89,124 @@ const defaultSecurityConfigs: { key: string; value: any; description: string }[]
   // ── 会话管理 ──
   { key: "max_concurrent_sessions_default", value: 5, description: "默认最大并发会话数" },
   { key: "session_expire_hours", value: 168, description: "会话过期时间（小时），默认7天" },
+  // ── 告警通知 ──
+  { key: "alert_admin_email", value: "", description: "安全告警接收邮箱（留空则不发）" },
+  { key: "alert_high_risk_enabled", value: true, description: "高危事件即时通知开关" },
+  { key: "alert_medium_risk_enabled", value: false, description: "中危事件即时通知开关" },
+  { key: "alert_low_risk_enabled", value: false, description: "低危事件即时通知开关" },
+  { key: "alert_webhook_url", value: "", description: "安全告警 Webhook URL（预留）" },
+  { key: "alert_daily_summary_enabled", value: true, description: "每日安全摘要邮件开关" },
 ];
 
 const defaultEmailTemplates: { name: string; subjectZh: string; subjectEn: string; bodyHtmlZh: string; bodyHtmlEn: string }[] = [
+  // ── 注册验证 ──
+  {
+    name: "register_verify",
+    subjectZh: "请验证您的 3cloud 邮箱",
+    subjectEn: "Verify your 3cloud email address",
+    bodyHtmlZh: `<div style="max-width:600px;margin:0 auto;padding:20px;font-family:'Microsoft YaHei',sans-serif">
+  <h2 style="color:#2563eb">📧 邮箱验证</h2>
+  <p>尊敬的 {{nickname}}：</p>
+  <p>感谢您注册 3cloud！请点击下方按钮验证您的邮箱：</p>
+  <div style="text-align:center;margin:30px 0">
+    <a href="{{verifyUrl}}" style="display:inline-block;padding:12px 32px;background:#2563eb;color:white;text-decoration:none;border-radius:6px;font-size:16px">验证邮箱</a>
+  </div>
+  <p>或复制以下链接到浏览器：</p>
+  <p style="color:#666;word-break:break-all;font-size:13px">{{verifyUrl}}</p>
+  <p style="color:#999;font-size:12px;margin-top:20px">链接有效期 {{expireMinutes}} 分钟，过期后请重新发送验证邮件。</p>
+  <hr style="border:none;border-top:1px solid #eee;margin:20px 0" />
+  <p style="color:#999;font-size:12px">此邮件由系统自动发出，请勿回复。</p>
+  <p style="color:#999;font-size:12px">3cloud 团队</p>
+</div>`,
+    bodyHtmlEn: `<div style="max-width:600px;margin:0 auto;padding:20px;font-family:Arial,sans-serif">
+  <h2 style="color:#2563eb">📧 Email Verification</h2>
+  <p>Dear {{nickname}},</p>
+  <p>Thank you for registering with 3cloud! Please click the button below to verify your email address:</p>
+  <div style="text-align:center;margin:30px 0">
+    <a href="{{verifyUrl}}" style="display:inline-block;padding:12px 32px;background:#2563eb;color:white;text-decoration:none;border-radius:6px;font-size:16px">Verify Email</a>
+  </div>
+  <p>Or copy this link to your browser:</p>
+  <p style="color:#666;word-break:break-all;font-size:13px">{{verifyUrl}}</p>
+  <p style="color:#999;font-size:12px;margin-top:20px">This link expires in {{expireMinutes}} minutes.</p>
+  <hr style="border:none;border-top:1px solid #eee;margin:20px 0" />
+  <p style="color:#999;font-size:12px">This is an automated email, please do not reply.</p>
+  <p style="color:#999;font-size:12px">3cloud Team</p>
+</div>`,
+  },
+
+  // ── 密码重置 ──
+  {
+    name: "password_reset",
+    subjectZh: "重置您的 3cloud 登录密码",
+    subjectEn: "Reset your 3cloud password",
+    bodyHtmlZh: `<div style="max-width:600px;margin:0 auto;padding:20px;font-family:'Microsoft YaHei',sans-serif">
+  <h2 style="color:#2563eb">🔑 密码重置</h2>
+  <p>尊敬的 {{nickname}}：</p>
+  <p>您发起了密码重置请求。请点击下方按钮重置密码：</p>
+  <div style="text-align:center;margin:30px 0">
+    <a href="{{resetUrl}}" style="display:inline-block;padding:12px 32px;background:#2563eb;color:white;text-decoration:none;border-radius:6px;font-size:16px">重置密码</a>
+  </div>
+  <p>或复制以下链接到浏览器：</p>
+  <p style="color:#666;word-break:break-all;font-size:13px">{{resetUrl}}</p>
+  <p style="color:#999;font-size:12px;margin-top:20px">链接有效期 {{expireMinutes}} 分钟。如非本人操作，请忽略此邮件。</p>
+  <hr style="border:none;border-top:1px solid #eee;margin:20px 0" />
+  <p style="color:#999;font-size:12px">此邮件由系统自动发出，请勿回复。</p>
+  <p style="color:#999;font-size:12px">3cloud 团队</p>
+</div>`,
+    bodyHtmlEn: `<div style="max-width:600px;margin:0 auto;padding:20px;font-family:Arial,sans-serif">
+  <h2 style="color:#2563eb">🔑 Password Reset</h2>
+  <p>Dear {{nickname}},</p>
+  <p>You have requested to reset your password. Click the button below to proceed:</p>
+  <div style="text-align:center;margin:30px 0">
+    <a href="{{resetUrl}}" style="display:inline-block;padding:12px 32px;background:#2563eb;color:white;text-decoration:none;border-radius:6px;font-size:16px">Reset Password</a>
+  </div>
+  <p>Or copy this link to your browser:</p>
+  <p style="color:#666;word-break:break-all;font-size:13px">{{resetUrl}}</p>
+  <p style="color:#999;font-size:12px;margin-top:20px">This link expires in {{expireMinutes}} minutes. If you did not request this, please ignore this email.</p>
+  <hr style="border:none;border-top:1px solid #eee;margin:20px 0" />
+  <p style="color:#999;font-size:12px">This is an automated email, please do not reply.</p>
+  <p style="color:#999;font-size:12px">3cloud Team</p>
+</div>`,
+  },
+
+  // ── 充值确认 ──
+  {
+    name: "recharge_confirm",
+    subjectZh: "3cloud 充值到账通知",
+    subjectEn: "3cloud Recharge Confirmation",
+    bodyHtmlZh: `<div style="max-width:600px;margin:0 auto;padding:20px;font-family:'Microsoft YaHei',sans-serif">
+  <h2 style="color:#16a34a">💰 充值到账</h2>
+  <p>尊敬的 {{nickname}}：</p>
+  <p>您的 3cloud 账户已成功充值：</p>
+  <table style="width:100%;border-collapse:collapse;margin:15px 0">
+    <tr><td style="padding:8px;color:#666">充值金额</td><td style="padding:8px"><strong style="color:#16a34a;font-size:18px">{{amount}} 元</strong></td></tr>
+    <tr><td style="padding:8px;color:#666">充值方式</td><td style="padding:8px"><strong>{{channel}}</strong></td></tr>
+    <tr><td style="padding:8px;color:#666">订单编号</td><td style="padding:8px"><strong>{{orderNo}}</strong></td></tr>
+    <tr><td style="padding:8px;color:#666">当前余额</td><td style="padding:8px"><strong>{{balance}} 元</strong></td></tr>
+    <tr><td style="padding:8px;color:#666">到账时间</td><td style="padding:8px"><strong>{{time}}</strong></td></tr>
+  </table>
+  <hr style="border:none;border-top:1px solid #eee;margin:20px 0" />
+  <p style="color:#999;font-size:12px">此邮件由系统自动发出，请勿回复。</p>
+  <p style="color:#999;font-size:12px">3cloud 团队</p>
+</div>`,
+    bodyHtmlEn: `<div style="max-width:600px;margin:0 auto;padding:20px;font-family:Arial,sans-serif">
+  <h2 style="color:#16a34a">💰 Recharge Confirmed</h2>
+  <p>Dear {{nickname}},</p>
+  <p>Your 3cloud account has been successfully recharged:</p>
+  <table style="width:100%;border-collapse:collapse;margin:15px 0">
+    <tr><td style="padding:8px;color:#666">Amount</td><td style="padding:8px"><strong style="color:#16a34a;font-size:18px">{{amount}} CNY</strong></td></tr>
+    <tr><td style="padding:8px;color:#666">Channel</td><td style="padding:8px"><strong>{{channel}}</strong></td></tr>
+    <tr><td style="padding:8px;color:#666">Order No.</td><td style="padding:8px"><strong>{{orderNo}}</strong></td></tr>
+    <tr><td style="padding:8px;color:#666">Balance</td><td style="padding:8px"><strong>{{balance}} CNY</strong></td></tr>
+    <tr><td style="padding:8px;color:#666">Time</td><td style="padding:8px"><strong>{{time}}</strong></td></tr>
+  </table>
+  <hr style="border:none;border-top:1px solid #eee;margin:20px 0" />
+  <p style="color:#999;font-size:12px">This is an automated email, please do not reply.</p>
+  <p style="color:#999;font-size:12px">3cloud Team</p>
+</div>`,
+  },
+
+  // ── 异地登录提醒 ──
   {
     name: "login_alert",
     subjectZh: "【3cloud安全提醒】您的账号在{{city}}有新登录",

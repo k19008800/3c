@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { get } from '@/lib/api'
 import type { LogItem, PaginatedData } from '@/types'
-import { usePagePreferences } from '@/hooks/use-page-preferences'
 import {
   Loader2,
   AlertCircle,

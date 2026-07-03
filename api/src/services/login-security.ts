@@ -308,12 +308,33 @@ export async function verifyCaptchaSession(
 }
 
 // ═══════════════════════════════════════════════
-//  5. 辅助：检查用户是否被封禁（供其他场景使用）
+//  5. 辅助：检查用户/IP 是否被封禁
 // ═══════════════════════════════════════════════
 
 export async function isUserBanned(userId: number): Promise<boolean> {
   const redis = getRedis();
   return (await redis.exists(KEY.banUser(userId))) === 1;
+}
+
+export async function isIpBanned(ip: string): Promise<boolean> {
+  const redis = getRedis();
+  return (await redis.exists(KEY.banIp(ip))) === 1;
+}
+
+// ═══════════════════════════════════════════════
+//  5b. 手动解封（管理后台调用）
+// ═══════════════════════════════════════════════
+
+export async function clearIpBan(ip: string): Promise<void> {
+  const redis = getRedis();
+  await redis.del(KEY.banIp(ip));
+  await redis.del(KEY.failIp(ip));
+}
+
+export async function clearUserBan(userId: number): Promise<void> {
+  const redis = getRedis();
+  await redis.del(KEY.banUser(userId));
+  await redis.del(KEY.failUser(userId));
 }
 
 // ═══════════════════════════════════════════════

@@ -1,146 +1,159 @@
 # 前端路由 & 组件树
 
 > 路径：`3cloud/web/src/`
-> 框架：React 18 + Vite + Ant Design 5 + react-router-dom 6
+> 框架：React 19 + Vite + Tailwind CSS v4 + lucide-react + react-router-dom 6
+> API 客户端：axios (`@/lib/api`)
 
 ## 路由结构
 
 ```
-/                          → Layout (用户控制台布局)
-├── dashboard              → 控制台首页
-├── api-keys               → API Key 管理
-├── logs                   → 调用日志
-├── recharge               → 充值
-│   └── bank-transfer      → 对公转账
-├── team                   → 团队管理（企业用户）
-├── docs                   → API 文档
-└── settings               → 个人资料
-
-/admin                     → AdminLayout (管理后台布局)
-├── dashboard              → 管理首页
-├── users                  → 用户管理
-│   └── :id                → 用户详情弹窗（路由级）
-├── models                 → 模型管理
-├── vendors                → 厂商管理
-├── agents                 → 代理商管理
-├── finance                → 财务管理
-│   └── withdraw-review    → 提现审核
-└── settings               → 系统配置
-
-/agent                     → AgentLayout (代理商布局)
-├── dashboard              → 代理商首页
-├── clients                → 名下客户
-├── commissions            → 分佣记录
-└── withdraw               → 提现
-
-/auth                      → AuthLayout (无需登录)
-├── login                  → 登录
-├── register               → 注册
-├── forgot-password        → 忘记密码
-├── reset-password         → 重置密码（token）
-└── verify-email           → 邮箱验证
+/login                   → Login            (登录页)
+/register                → Register         (注册页)
+/forgot-password         → ForgotPassword   (忘记密码)
+/reset-password          → ResetPassword    (重置密码)
+/                        → AppLayout        (主控制台布局)
+├── (index)              → Dashboard        (控制台首页)
+├── models               → Models           (模型列表)
+├── api-keys             → ApiKeys          (API Key 管理)
+├── logs                 → Logs             (调用日志)
+├── recharge             → Recharge         (充值)
+├── real-name            → RealName         (实名认证)
+├── team                 → Team             (团队管理)
+├── security             → Security         (账号安全)
+├── notifications        → Notifications    (通知中心)
+├── settings             → Settings         (个人设置)
+├── docs                 → Docs             (API 文档)
+├── admin                → AdminDashboard   (管理后台首页)
+├── admin/users          → AdminUsers       (用户管理)
+├── admin/models         → AdminModels      (模型管理)
+├── admin/vendors        → AdminVendors     (厂商管理)
+├── admin/vendor-models  → AdminVendorModels (厂商-模型映射)
+├── admin/agents         → AdminAgents      (代理商管理)
+├── admin/agents/:agentId/clients → AdminAgentClients (代理商客户)
+├── admin/logs           → AdminLogs        (调用日志管理)
+├── admin/recharge-orders → AdminRechargeOrders (充值订单)
+├── admin/real-name-review → AdminRealNameReview (实名审核)
+├── admin/configs        → AdminConfigs     (系统配置)
+├── admin/email-templates → AdminEmailTemplates (邮件模板管理)
+├── admin/audit-logs     → AdminAuditLogs   (审计日志)
+├── admin/finance/dashboard → AdminFinanceDashboard (财务工作台)
+├── admin/finance/commissions  → AdminFinanceCommissions (佣金流水)
+├── admin/finance/reconciliation → AdminFinanceReconciliation (对账报表)
+├── admin/security       → AdminSecurityConfig (安全策略配置)
+├── admin/security/events → AdminSecurityEvents (安全事件)
+├── agent/dashboard      → AgentDashboard   (代理商首页)
+├── agent/clients        → AgentClients     (名下客户)
+├── agent/commissions    → AgentCommissions  (分佣记录)
+└── agent/withdraw       → AgentWithdraw    (提现)
 ```
 
 ## 组件树
 
-### 用户控制台（7 页）
+### 通用页面（4 页）
 
 ```
 pages/
-├── user/
-│   ├── Dashboard.tsx
-│   │   ├── BalanceCard         — 余额卡片
-│   │   ├── UsageCard           — 今日用量卡片
-│   │   ├── KeyCountCard        — Key 数量卡片
-│   │   ├── UsageTrendChart     — 7 天趋势图 (ECharts/Chart.js)
-│   │   └── RecentCallsTable    — 最近调用列表
-│   │
-│   ├── ApiKeys.tsx
-│   │   ├── ApiKeyTable         — ProTable (名称/前缀/状态/最后使用)
-│   │   ├── CreateKeyModal      — 弹窗创建 Key
-│   │   └── KeyConsumptionDrawer— 侧滑查看 Key 消费
-│   │
-│   ├── Logs.tsx
-│   │   ├── LogFilterBar        — 时间/模型/厂商/状态筛选
-│   │   ├── CallLogTable        — ProTable 调用日志列表
-│   │   └── ExportButton        — CSV 导出
-│   │
-│   ├── Recharge.tsx
-│   │   ├── AmountInput         — 金额输入
-│   │   ├── PayMethodSelector   — 微信/支付宝/对公转账 Tab
-│   │   ├── QrCodePanel         — PC 扫码二维码
-│   │   ├── JsapiPanel          — 手机 JSAPI 调起
-│   │   ├── BankTransferForm    — 对公转账表单 + 凭证上传
-│   │   └── RechargeHistoryTable— 充值记录
-│   │
-│   ├── Team.tsx
-│   │   ├── TeamInfoCard        — 团队信息
-│   │   ├── MemberTable         — 成员列表
-│   │   ├── InviteMemberModal   — 生成邀请链接
-│   │   └── QuotaEditor         — 成员额度编辑
-│   │
-│   ├── Docs.tsx
-│   │   └── MarkdownRenderer    — 后台可编辑 Markdown 渲染
-│   │
-│   └── Settings.tsx
-│       ├── ProfileForm         — 修改信息
-│       ├── PasswordForm        — 修改密码
-│       └── RealNameStatus      — 实名状态展示
+├── Login.tsx                       — 登录页（含邮箱验证提示、安全验证码）
+├── Register.tsx                    — 注册页（含密码强度验证）
+├── ForgotPassword.tsx              — 忘记密码（输入邮箱 → 发送重置邮件）
+└── ResetPassword.tsx               — 重置密码（验证 token + 新密码确认）
 ```
 
-### 管理后台（7 页）
+### 用户控制台（12 页）
+
+```
+pages/
+├── Dashboard.tsx
+│   └── (控制台首页概览 — 统计卡片、快捷操作、最近登录)
+│
+├── Models.tsx
+│   └── (模型列表展示 — 名称/类型/供应商价格/状态)
+│
+├── ApiKeys.tsx
+│   ├── ApiKeyList       — API Key 列表
+│   └── CreateKeyModal   — 创建 Key 弹窗
+│
+├── Logs.tsx
+│   └── (调用日志列表 — 支持分页、筛选)
+│
+├── Recharge.tsx
+│   └── (充值页面 — 支持多种支付渠道)
+│
+├── RealName.tsx
+│   └── (实名认证页面 — 个人/企业表单)
+│
+├── Team.tsx
+│   └── (团队管理 — 创建团队、邀请成员、角色修改、移除成员)
+│
+├── Security.tsx
+│   └── (账号安全 — 修改密码、会话管理、登录历史)
+│
+├── Notifications.tsx
+│   └── (通知中心 — 站内信列表、未读标记、标记已读)
+│
+├── Settings.tsx
+│   └── (个人设置 — 昵称修改、邮箱验证、OAuth 绑定)
+│
+├── Docs.tsx
+│   ├── 左侧目录导航     — 模型列表/接入方式/定价收费/使用指南/代码示例
+│   └── 右侧内容区       — 动态显示当前选中章节内容
+│
+└── (其他)
+    └── ApiKeys.tsx, Logs.tsx 等已包含在以上列表中
+```
+
+### 管理后台（19 页）
 
 ```
 pages/
 ├── admin/
 │   ├── Dashboard.tsx
-│   │   ├── StatCards           — 4 卡片（总用户/今日调用/今日收入/厂商健康）
-│   │   ├── PendingList         — 待审核实名/提现/异常告警
-│   │   ├── TrendsChart         — 调用/收入/用户增长趋势
-│   │   ├── HeatmapChart        — 调用热力图（小时-日维度）
-│   │   ├── TopUsersTable       — Top 5 消费者
-│   │   └── RecentFailuresTable — 最近失败请求
+│   │   └── (管理后台首页 — 用户统计、今日充值、系统健康)
 │   │
 │   ├── Users.tsx
-│   │   ├── UserFilterBar       — 搜索/筛选
-│   │   ├── UserProTable        — ProTable 用户列表
-│   │   ├── UserDetailDrawer    — 用户详情弹窗
-│   │   ├── ManualRechargeModal — 手动充值
-│   │   ├── DiscountEditor      — 折扣设置
-│   │   ├── RateLimitOverride   — 限流覆盖
-│   │   ├── ResetPasswordModal  — 重置密码
-│   │   └── RealNameReviewTab   — 实名审核 Tab
+│   │   └── (用户管理 — 列表筛选、详情面板、操作/禁用/提权、模拟登录)
 │   │
-│   ├── Models.tsx
-│   │   ├── ModelCardList       — 模型卡片列表
-│   │   ├── ModelFormModal      — 新增/编辑模型
-│   │   └── VendorModelTable    — 厂商-模型定价表
+│   ├── AdminModels.tsx
+│   │   └── (模型管理 — 模型 CRUD)
 │   │
 │   ├── Vendors.tsx
-│   │   ├── VendorList          — 厂商列表
-│   │   └── VendorFormModal     — 新增/编辑厂商（API Key 维护）
+│   │   └── (厂商管理 — 厂商 CRUD)
+│   │
+│   ├── VendorModels.tsx
+│   │   └── (厂商-模型定价映射)
 │   │
 │   ├── Agents.tsx
-│   │   ├── AgentProTable       — ProTable 代理商列表
-│   │   ├── AgentFormModal      — 新增/编辑代理商
-│   │   ├── ClientAssignment    — 客户分配
-│   │   └── WithdrawReviewTable — 提现审核
+│   │   └── (代理商管理)
 │   │
-│   ├── Finance.tsx
-│   │   ├── TransactionTable    — 交易流水
-│   │   ├── BankTransferReview  — 线下入账审核
-│   │   └── ExportButton        — 对账 CSV 导出
+│   ├── AgentClients.tsx
+│   │   └── (代理商客户列表)
 │   │
-│   └── SystemSettings.tsx
-│       ├── RateLimitConfig     — 限流默认值设置
-│       ├── AlertThresholdConfig— 告警阈值
-│       ├── PricingConfig       — 定价倍率
-│       ├── PaymentConfig       — 支付密钥
-│       ├── EmailConfig         — 邮件 SMTP
-│       ├── AgentConfig         — 日提现次数
-│       ├── TrialConfig         — 免费体验额度/有效期
-│       ├── EmailTemplateEditor — 邮件模板 HTML 编辑 + 预览
-│       └── ContentEditor       — 内容管理（Markdown 编辑）
+│   ├── AdminLogs.tsx
+│   │   └── (调用日志管理 — 全局日志查看)
+│   │
+│   ├── RechargeOrders.tsx
+│   │   └── (充值订单管理 — 审核/确认)
+│   │
+│   ├── RealNameReview.tsx
+│   │   └── (实名审核 — 列表/详情/通过/驳回)
+│   │
+│   ├── Configs.tsx
+│   │   └── (系统配置 — 列表编辑/分组筛选)
+│   │
+│   ├── EmailTemplates.tsx
+│   │   └── (邮件模板管理 — 中英文主题/HTML正文/预览)
+│   │
+│   ├── AuditLogs.tsx
+│   │   └── (审计日志 — 操作记录查询)
+│   │
+│   ├── FinanceDashboard.tsx      — 财务工作台
+│   ├── FinanceCommissions.tsx    — 佣金流水总览
+│   ├── FinanceReconciliation.tsx — 对账报表
+│   ├── SecurityConfig.tsx        — 安全策略配置
+│   ├── SecurityEvents.tsx        — 安全事件列表
+│   ├── SystemHealthPanel.tsx     — 系统健康面板
+│   ├── TrendsCharts.tsx          — 趋势图表
+│   └── Withdraws.tsx             — 提现审核
 ```
 
 ### 代理商控制台（4 页）
@@ -148,21 +161,10 @@ pages/
 ```
 pages/
 ├── agent/
-│   ├── Dashboard.tsx
-│   │   └── AgentStatCards      — 4 卡片（客户数/本月消费/累计分佣/可提现）
-│   │
-│   ├── Clients.tsx
-│   │   ├── ClientProTable      — 客户列表
-│   │   └── ClientConsumption   — 客户消费明细
-│   │
-│   ├── Commissions.tsx
-│   │   ├── CommissionFilterBar — 筛选
-│   │   ├── CommissionTable     — 分佣记录
-│   │   └── ExportButton        — CSV 导出
-│   │
-│   └── Withdraw.tsx
-│       ├── WithdrawForm        — 发起提现（≥50 元）
-│       └── WithdrawHistoryTable— 提现记录
+│   ├── Dashboard.tsx             — 代理商首页
+│   ├── Clients.tsx               — 名下客户
+│   ├── Commissions.tsx           — 分佣记录
+│   └── Withdraw.tsx              — 提现
 ```
 
 ### 通用组件
@@ -170,75 +172,125 @@ pages/
 ```
 components/
 ├── layout/
-│   ├── UserLayout.tsx          — 用户控制台布局（侧边栏 + Header + 内容区）
-│   ├── AdminLayout.tsx         — 管理后台布局
-│   ├── AgentLayout.tsx         — 代理商布局
-│   ├── AuthLayout.tsx          — 登录/注册布局
-│   └── Header.tsx              — 顶部栏（语言切换 + 用户信息 + 退出）
+│   ├── AppLayout.tsx             — 主应用布局（侧边栏 + 内容区 + 模拟态横幅）
+│   └── Sidebar.tsx               — 侧边栏导航（折叠/展开、角色权限过滤、通知下拉、退出模拟）
 │
-├── common/
-│   ├── BalanceDisplay.tsx      — 余额展示组件（含低余额警告）
-│   ├── PaginationTable.tsx     — 通用分页表格封装
-│   ├── StatusBadge.tsx         — 状态标签（成功/失败/待审等）
-│   ├── FileUploader.tsx        — 文件上传控件（实名图片/转账凭证）
-│   ├── CopyButton.tsx          — 复制到剪贴板
-│   └── ConfirmModal.tsx        — 二次确认弹窗
+├── security/
+│   ├── CircuitStatusBadge.tsx    — 熔断状态标签
+│   └── RiskBadge.tsx             — 风险等级标签
+│
+├── ui/
+│   ├── badge.tsx                 — 标签组件
+│   ├── button.tsx                — 按钮组件
+│   ├── card.tsx                  — 卡片组件
+│   ├── input.tsx                 — 输入框组件
+│   ├── CaptchaDialog.tsx         — 验证码弹窗
+│   └── index.ts                  — UI 组件统一导出
 
 hooks/
-├── useAuth.ts                  — 鉴权 hook（Token 管理 / 自动刷新）
-├── useI18n.ts                  — 国际化 hook
-└── usePagination.ts            — 分页状态管理
+├── use-auth.tsx                  — 鉴权 hook（Token 管理 / 自动刷新 / 用户信息）
+├── use-impersonate.tsx           — 模拟登录 hook（管理员以用户身份操作）
+├── use-column-prefs.ts           — 表格列偏好管理
+├── use-page-preferences.ts       — 页面偏好设置（筛选条件持久化）
+└── use-search-history.ts         — 搜索历史
 
-i18n/
-├── zh-CN.json                  — 中文翻译
-├── en.json                     — 英文翻译
-└── index.ts                    — i18n 初始化
+lib/
+├── api.ts                        — axios 实例封装（拦截器 / 错误处理 / 刷新令牌 / 模拟态）
+└── utils.ts                      — 通用工具函数（cn classname 合并等）
+
+types/
+└── index.ts                      — TypeScript 类型定义（所有 API 响应式接口）
 ```
 
 ## 路由配置表
 
 ```typescript
-// src/router.tsx
-const routes = [
-  // Auth
-  { path: "/auth/login", element: <Login /> },
-  { path: "/auth/register", element: <Register /> },
-  { path: "/auth/forgot-password", element: <ForgotPassword /> },
-  { path: "/auth/reset-password", element: <ResetPassword /> },
-  { path: "/auth/verify-email", element: <VerifyEmail /> },
+// src/App.tsx
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+// ... imports ...
 
-  // User Console (requires auth)
-  { path: "/", element: <UserLayout />, children: [
-    { index: true, redirect: "/dashboard" },
-    { path: "dashboard", element: <Dashboard /> },
-    { path: "api-keys", element: <ApiKeys /> },
-    { path: "logs", element: <Logs /> },
-    { path: "recharge", element: <Recharge /> },
-    { path: "recharge/bank-transfer", element: <BankTransfer /> },
-    { path: "team", element: <Team />, roles: ["enterprise"] },
-    { path: "docs", element: <Docs /> },
-    { path: "settings", element: <Settings /> },
-  ] },
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <ImpersonateProvider>
+        <Routes>
+          {/* 登录/注册（无布局） */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
-  // Admin (requires super_admin / admin)
-  { path: "/admin", element: <AdminLayout />, children: [
-    { index: true, redirect: "/admin/dashboard" },
-    { path: "dashboard", element: <AdminDashboard /> },
-    { path: "users", element: <AdminUsers /> },
-    { path: "models", element: <AdminModels /> },
-    { path: "vendors", element: <AdminVendors /> },
-    { path: "agents", element: <AdminAgents /> },
-    { path: "finance", element: <AdminFinance /> },
-    { path: "settings", element: <SystemSettings /> },
-  ] },
+          {/* 主布局 */}
+          <Route path="/" element={<AppLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="models" element={<Models />} />
+            <Route path="api-keys" element={<ApiKeys />} />
+            <Route path="logs" element={<Logs />} />
+            <Route path="recharge" element={<Recharge />} />
+            <Route path="real-name" element={<RealName />} />
+            <Route path="team" element={<Team />} />
+            <Route path="security" element={<Security />} />
+            <Route path="notifications" element={<Notifications />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="docs" element={<Docs />} />
 
-  // Agent Console (requires agent role)
-  { path: "/agent", element: <AgentLayout />, children: [
-    { index: true, redirect: "/agent/dashboard" },
-    { path: "dashboard", element: <AgentDashboard /> },
-    { path: "clients", element: <Clients /> },
-    { path: "commissions", element: <Commissions /> },
-    { path: "withdraw", element: <Withdraw /> },
-  ] },
-];
+            {/* 管理后台 */}
+            <Route path="admin" element={<AdminDashboard />} />
+            <Route path="admin/users" element={<AdminUsers />} />
+            <Route path="admin/models" element={<AdminModels />} />
+            <Route path="admin/vendors" element={<AdminVendors />} />
+            <Route path="admin/vendor-models" element={<AdminVendorModels />} />
+            <Route path="admin/agents" element={<AdminAgents />} />
+            <Route path="admin/agents/:agentId/clients" element={<AdminAgentClients />} />
+            <Route path="admin/logs" element={<AdminLogs />} />
+            <Route path="admin/recharge-orders" element={<AdminRechargeOrders />} />
+            <Route path="admin/real-name-review" element={<AdminRealNameReview />} />
+            <Route path="admin/configs" element={<AdminConfigs />} />
+            <Route path="admin/email-templates" element={<AdminEmailTemplates />} />
+            <Route path="admin/audit-logs" element={<AdminAuditLogs />} />
+            <Route path="admin/finance/dashboard" element={<AdminFinanceDashboard />} />
+            <Route path="admin/finance/commissions" element={<AdminFinanceCommissions />} />
+            <Route path="admin/finance/reconciliation" element={<AdminFinanceReconciliation />} />
+            <Route path="admin/security" element={<AdminSecurityConfig />} />
+            <Route path="admin/security/events" element={<AdminSecurityEvents />} />
+
+            {/* 代理商控制台 */}
+            <Route path="agent/dashboard" element={<AgentDashboard />} />
+            <Route path="agent/clients" element={<AgentClients />} />
+            <Route path="agent/commissions" element={<AgentCommissions />} />
+            <Route path="agent/withdraw" element={<AgentWithdraw />} />
+          </Route>
+        </Routes>
+        </ImpersonateProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  )
+}
 ```
+
+## 功能说明
+
+### 邮箱验证
+- `ForgotPassword.tsx`: 用户输入注册邮箱，触发送重置密码邮件
+- `ResetPassword.tsx`: 从重置链接打开，验证 token 后设置新密码
+- 后端维护 `emailVerifiedAt` 字段标识邮箱验证状态
+
+### 会话管理
+- `Security.tsx`: 查看活跃会话列表、强制登出其他设备
+- 后端 token 通过 Redis 管理，支持手动失效
+
+### 通知中心
+- 站内信：实名审核结果、系统通知、登录提醒等
+- 侧边栏通知下拉组件：实时显示未读数、最近 5 条通知
+- `Notifications.tsx`: 完整通知列表，支持标记已读
+
+### 邮件模板管理
+- Admin 可编辑以下模板（存储在 `system_configs` 中以 `email_template_` 前缀命名）：
+  - `register_verify` — 注册验证
+  - `password_reset` — 密码重置
+  - `recharge_confirm` — 充值确认
+  - `real_name_result` — 实名结果通知
+  - `login_alert` — 异地登录提醒
+  - `account_banned` — 账号封禁通知
+- 每个模板支持中英文主题 & HTML 正文，带预览功能

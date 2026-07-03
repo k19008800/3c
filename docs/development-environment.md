@@ -241,15 +241,121 @@ npm run db:studio
 
 ## 七、生产环境参考
 
-| 配置项 | 生产值 |
+### 7.1 DNS 解析
+
+所有域名解析到 `117.78.2.66`：
+
+| 域名 | 用途 |
 |---|---|
+| `unmisa.com` | Web 控制台（用户端 + 管理后台） |
+| `www.unmisa.com` | Web 控制台（www 别名） |
+| `api.unmisa.com` | Token 代理 API（兼容 OpenAI 格式） |
+| `tokens.unmisa.com` | Token 代理 API（备用地址） |
+
+### 7.2 磁盘信息
+
 | 服务器 | 117.78.2.66 |
 | 操作系统 | Ubuntu 22.04 |
 | CPU/内存/磁盘 | 2C / 1.7G / 40G |
 | Node.js | 20.20.2 |
-| Nginx | 1.30.2 |
-| PostgreSQL | 17 |
-| Redis | 6.0.16 |
+| Nginx | 1.30.2（宝塔管理） |
+| PostgreSQL | 17 + pgvector 0.8.2 |
+| Redis | 6.0.16（密码保留） |
+| PM2 | 7.0.1 |
 | 进程管理 | PM2 |
 
 生产部署流程详见 PRD 第九章「开发路线图」。
+
+---
+
+## 八、运维交接
+
+### 8.1 服务器信息
+
+| 项 | 值 |
+|---|---|
+| IP | `117.78.2.66` |
+| SSH 用户 | `root` |
+| 认证方式 | 密钥认证（密码已禁用） |
+| 内网 IP | `172.31.12.64` |
+| 操作系统 | Ubuntu 22.04 |
+| UFW 规则 | 已开放 22/80/443/8888，key-only |
+| Host Key (ED25519) | `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGLy/c9JsWfQEUAQ/ayIuGvBAxiyNukWpS3sCc8+eDPJ` |
+| SSH 私钥 | `~/.ssh/3cloud_prod` |
+| SSH 公钥指纹 | `SHA256:vnfjagHNE53+4EldSN8OAoGAWN8lcDKGmtu0mdrl7KA` |
+
+```bash
+# SSH 登录（密钥认证）
+ssh root@117.78.2.66
+# 或指定密钥文件：
+ssh -i ~/.ssh/3cloud_prod root@117.78.2.66
+```
+
+> ⚠️ 首次连接验证 Host Key 指纹与上表一致再接受。本地 SSH 配置已在 `~/.ssh/config` 中预配。
+
+### 8.2 宝塔管理面板
+
+| 项 | 值 |
+|---|---|
+| 面板地址 | `https://117.78.2.66:8888/login` |
+| 用户名 | `unmisa` |
+| 密码 | `AsdX23456` |
+
+> ⚠️ 宝塔面板通过 8888 端口 HTTPS 访问，登录后建议修改密码。
+
+### 8.3 数据库连接
+
+| 项 | 值 |
+|---|---|
+| 数据库 | `cloud3` |
+| 用户 | `cloud3` |
+| 密码 | `123457` |
+| 地址 | `127.0.0.1:5432` |
+| SSL | 无（本地连接） |
+| 连接串 | `postgres://cloud3:123457@127.0.0.1:5432/cloud3` |
+
+> ⚠️ 生产库名 `cloud3`（非开发库 `threecloud`），注意区分。
+
+### 8.4 Redis 连接
+
+| 项 | 值 |
+|---|---|
+| 地址 | `127.0.0.1:6379` |
+| 密码 | `96647d7581d0b133` |
+
+```bash
+# 本地测试
+redis-cli -a 96647d7581d0b133 PING
+```
+
+### 8.5 数据库扩展
+
+- PostgreSQL 17 已安装 **pgvector 0.8.2** 扩展
+- 如需向量检索能力，可直接使用（如 AI 嵌入相关功能）
+
+### 8.6 后台管理员账号
+
+| 项 | 值 |
+|---|---|
+| 邮箱 | `admin@3cloud.ai` |
+| 密码 | `Admin1234!` |
+| 角色 | `super_admin` |
+
+> ⚠️ 此为 3cloud 业务系统后台的超级管理员账号。首次登录建议修改密码。
+
+### 8.7 磁盘信息
+
+- **系统盘:** 40GiB
+- **Swap:** 2GiB（已配置）
+- **内存:** 1.7GiB
+
+### 8.8 运维注意事项
+
+1. **内存紧张:** 1.7G 跑 PG + Redis + Node 很极限，注意监控 OOM
+2. **磁盘监控:** PG WAL 日志和 `/uploads/` 可能快速占用磁盘，建议建 crontab 自动清理
+3. **数据库备份:** 每日 `pg_dump` 全量备份，保留 7 天；每周一推送外部存储
+4. **超级管理员灾备:** SSH 到服务器本地运行 `reset-super-admin.ts` 脚本重置，不暴露到网络端口
+5. **CORS:** 生产环境仅允许 `https://unmisa.com`，不设通配符
+
+生产部署流程详见 PRD 第九章「开发路线图」。
+

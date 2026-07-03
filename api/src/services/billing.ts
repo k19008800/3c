@@ -5,7 +5,7 @@
 //  支持流式断连回补、代理商分佣
 // ============================================================
 
-import { eq, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { getRedis } from "../redis.js";
 import {
@@ -14,12 +14,15 @@ import {
   callLogs,
   balanceLogs,
   commissionLogs,
+  commissionRules,
   agents,
   agentClients,
+  agentCustomerConsumption,
   userDiscounts,
   systemConfigs,
 } from "../db/schema.js";
 import { AppError } from "./auth-service.js";
+import { refreshRollupForAgentDate } from "./agent-service.js";
 
 // ── 常量 ──
 
@@ -367,14 +370,15 @@ async function processCommission(
   callLogId: number,
   callCost: string,
 ): Promise<void> {
+  // 固定本次佣金发生时刻，确保 rollup 日期与 createdAt 一致
+  const now = new Date();
+  const reportDate = now.toISOString().slice(0, 10);
   // 查询用户是否代理商客户
   const [client] = await tx
     .select({
       agentId: agentClients.agentId,
-      commissionRate: agents.commissionRate,
     })
     .from(agentClients)
-    .innerJoin(agents, eq(agentClients.agentId, agents.id))
     .where(
       eq(agentClients.clientUserId, userId),
     )
@@ -382,19 +386,359 @@ async function processCommission(
 
   if (!client) return; // 无代理商归属
 
-  const rate = Number(client.commissionRate);
+  // 从 commission_rules 查询销售佣金规则
+  const [rule] = await tx
+    .select({
+      rate: commissionRules.rate,
+      isEnabled: commissionRules.isEnabled,
+      maxCap: commissionRules.maxCap,
+    })
+    .from(commissionRules)
+    .where(
+      and(
+        eq(commissionRules.agentId, client.agentId),
+        eq(commissionRules.ruleType, 'sale'),
+        eq(commissionRules.isEnabled, true),
+        sql`(${commissionRules.validFrom} IS NULL OR ${commissionRules.validFrom} <= NOW())`,
+        sql`(${commissionRules.validUntil} IS NULL OR ${commissionRules.validUntil} > NOW())`,
+      ),
+    )
+    .limit(1);
+
+  if (!rule) return; // 无销售佣金规则
+  const rate = Number(rule.rate);
   if (rate <= 0) return; // 分佣比例为 0，不分佣
 
-  const commissionAmount = (Number(callCost) * rate).toFixed(6);
+  let commissionAmount = Number(callCost) * rate;
+
+  // 封顶
+  const maxCap = rule.maxCap ? Number(rule.maxCap) : null;
+  if (maxCap) {
+    commissionAmount = Math.min(commissionAmount, maxCap);
+  }
+
+  const commissionAmountStr = commissionAmount.toFixed(6);
 
   // 写入佣金流水（状态为 pending，余额在结算时更新）
   await tx.insert(commissionLogs).values({
     agentId: client.agentId,
     clientCallLogId: callLogId,
     callCost: callCost,
-    commissionAmount,
+    commissionAmount: commissionAmountStr,
+    sourceCustomerId: userId,
+    commissionType: "sale",
+    ruleSnapshot: JSON.stringify(rule),
+    calcDetail: JSON.stringify({
+      baseAmount: callCost,
+      rate,
+      maxCap: maxCap ?? null,
+    }),
     status: "pending",
   });
+
+  // 同步更新客户消费汇总表（upsert）
+  const costNum = Number(callCost);
+  const commNum = Number(commissionAmount);
+  await tx.execute(sql`
+    INSERT INTO agent_customer_consumption (agent_id, customer_user_id, total_amount, month_amount, commission_amount, order_count, last_order_at)
+    VALUES (${client.agentId}, ${userId}, ${costNum.toFixed(6)}, ${costNum.toFixed(6)}, ${commNum.toFixed(6)}, 1, NOW())
+    ON CONFLICT (agent_id, customer_user_id)
+    DO UPDATE SET
+      total_amount = agent_customer_consumption.total_amount + ${costNum.toFixed(6)},
+      month_amount = agent_customer_consumption.month_amount + ${costNum.toFixed(6)},
+      commission_amount = agent_customer_consumption.commission_amount + ${commNum.toFixed(6)},
+      order_count = agent_customer_consumption.order_count + 1,
+      last_order_at = NOW(),
+      updated_at = NOW()
+  `);
+
+  // 新增：向上级代理商分发团队佣金（传递固定 reportDate）
+  await processTeamCommission(tx, client.agentId, userId, callLogId, callCost, commissionAmountStr, reportDate);
+
+  // 刷新 rollup 汇总（使用与 createdAt 一致的日期）
+  await refreshRollupForAgentDate(client.agentId, reportDate, tx);
+}
+
+// ── 向上级代理商分发团队佣金（逐级剥皮） ──
+
+/**
+ * 从当前代理商逐级向上，按团队规则抽成
+ * @param tx - 复用上层事务
+ * @param agentId - 直接代理商的 agentId
+ * @param customerUserId - 消费客户
+ * @param callLogId - 调用日志ID
+ * @param callCost - 调用成本
+ * @param saleCommission - 直接代理商获得的销售佣金金额
+ */
+async function processTeamCommission(
+  tx: any,
+  agentId: number,
+  customerUserId: number,
+  callLogId: number,
+  callCost: string,
+  saleCommission: string,
+  reportDate: string,
+) {
+  let currentAgentId = agentId;
+  const maxDepth = 10; // 安全限制
+  let depth = 0;
+
+  while (currentAgentId && depth < maxDepth) {
+    depth++;
+
+    // 查当前代理商的上级
+    const [agent] = await tx
+      .select({ parentAgentId: agents.parentAgentId })
+      .from(agents)
+      .where(eq(agents.id, currentAgentId))
+      .limit(1);
+
+    if (!agent || !agent.parentAgentId) break;
+
+    const parentId = agent.parentAgentId;
+
+    // 查上级的团队佣金规则
+    const [rule] = await tx
+      .select({
+        rate: commissionRules.rate,
+        isEnabled: commissionRules.isEnabled,
+        maxCap: commissionRules.maxCap,
+      })
+      .from(commissionRules)
+      .where(
+        and(
+          eq(commissionRules.agentId, parentId),
+          eq(commissionRules.ruleType, 'team'),
+          eq(commissionRules.isEnabled, true),
+          sql`(${commissionRules.validFrom} IS NULL OR ${commissionRules.validFrom} <= NOW())`,
+          sql`(${commissionRules.validUntil} IS NULL OR ${commissionRules.validUntil} > NOW())`,
+        ),
+      )
+      .limit(1);
+
+    if (!rule || Number(rule.rate) <= 0) {
+      currentAgentId = parentId;
+      continue;
+    }
+
+    const teamRate = Number(rule.rate);
+    const baseAmount = Number(saleCommission);
+    let teamAmount = baseAmount * teamRate;
+
+    if (rule.maxCap) {
+      teamAmount = Math.min(teamAmount, Number(rule.maxCap));
+    }
+
+    if (teamAmount <= 0) {
+      currentAgentId = parentId;
+      continue;
+    }
+
+    // 写入团队佣金
+    await tx.insert(commissionLogs).values({
+      agentId: parentId,
+      clientCallLogId: callLogId,
+      callCost: callCost,
+      commissionAmount: teamAmount.toFixed(6),
+      sourceCustomerId: customerUserId,
+      sourceOrderId: String(callLogId),
+      sourceOrderAmount: callCost,
+      commissionType: "team",
+      feeRate: String(teamRate),
+      feeAmount: "0.000000",
+      netAmount: teamAmount.toFixed(6),
+      ruleSnapshot: JSON.stringify(rule),
+      calcDetail: JSON.stringify({
+        baseCommission: saleCommission,
+        teamRate,
+        sourceAgentId: currentAgentId,
+        sourceAgentCallId: callLogId,
+      }),
+      status: "pending",
+    });
+
+    // 刷新上级代理商的 rollup 汇总（使用与销售佣金一致的日期）
+    await refreshRollupForAgentDate(parentId, reportDate, tx);
+
+    // 继续向上走
+    currentAgentId = parentId;
+  }
+}
+
+// ── 续费佣金处理（充值到账时调用） ──
+
+/**
+ * 处理续费佣金
+ * @param tx - 复用上层事务
+ * @param userId - 充值用户ID
+ * @param rechargeOrderId - 充值订单ID
+ * @param rechargeAmount - 充值金额
+ * @param orderNo - 订单号
+ */
+export async function processRenewalCommission(
+  tx: any,
+  userId: number,
+  rechargeOrderId: number,
+  rechargeAmount: string,
+  orderNo: string,
+): Promise<void> {
+  // 1. 查客户归属的代理商
+  const [client] = await tx
+    .select({
+      agentId: agentClients.agentId,
+    })
+    .from(agentClients)
+    .where(eq(agentClients.clientUserId, userId))
+    .limit(1);
+
+  if (!client) return; // 无代理商归属
+
+  // 2. 查续费规则（仅从 commission_rules 读取）
+  const [rule] = await tx
+    .select({
+      rate: commissionRules.rate,
+      isEnabled: commissionRules.isEnabled,
+      maxCap: commissionRules.maxCap,
+      fixedAmount: commissionRules.fixedAmount,
+    })
+    .from(commissionRules)
+    .where(
+      and(
+        eq(commissionRules.agentId, client.agentId),
+        eq(commissionRules.ruleType, 'renewal'),
+        eq(commissionRules.isEnabled, true),
+        sql`(${commissionRules.validFrom} IS NULL OR ${commissionRules.validFrom} <= NOW())`,
+        sql`(${commissionRules.validUntil} IS NULL OR ${commissionRules.validUntil} > NOW())`,
+      ),
+    )
+    .limit(1);
+
+  if (!rule) return;
+
+  let rate: number;
+  let isFixedAmount = false;
+  let maxCap: number | null = null;
+
+  rate = Number(rule.rate);
+  isFixedAmount = rule.fixedAmount ? true : false;
+  maxCap = rule.maxCap ? Number(rule.maxCap) : null;
+
+  if (rate <= 0 && !rule?.fixedAmount) return;
+
+  const amountNum = Number(rechargeAmount);
+  let commissionAmount = rule?.fixedAmount
+    ? Number(rule.fixedAmount)
+    : amountNum * rate;
+
+  // 封顶
+  if (maxCap) {
+    commissionAmount = Math.min(commissionAmount, maxCap);
+  }
+
+  if (commissionAmount <= 0) return;
+
+  // 3. 记录续费佣金（不更新 agent_customer_consumption，续费不触发消费汇总）
+  await tx.insert(commissionLogs).values({
+    agentId: client.agentId,
+    clientCallLogId: null,
+    callCost: rechargeAmount,
+    commissionAmount: commissionAmount.toFixed(6),
+    sourceCustomerId: userId,
+    sourceOrderId: orderNo,
+    sourceOrderAmount: rechargeAmount,
+    commissionType: "renewal",
+    ruleSnapshot: JSON.stringify(rule),
+    calcDetail: JSON.stringify({
+      baseAmount: rechargeAmount,
+      rate,
+      isFixedAmount,
+      maxCap,
+    }),
+    status: "pending",
+  });
+
+  // 刷新 rollup 汇总（使用实际佣金发生日期）
+  const now = new Date();
+  await refreshRollupForAgentDate(client.agentId, now.toISOString().slice(0, 10), tx);
+}
+
+// ── 活动奖励佣金处理（注册/首充等触点调用） ──
+
+/**
+ * 处理活动奖励佣金
+ * @param tx - 复用上层事务（若无事务可传 null，内部自己创建）
+ * @param agentId - 代理商ID
+ * @param customerUserId - 客户用户ID
+ * @param activityType - 活动类型
+ * @param triggerAmount - 触发金额（如充值金额），可选
+ * @param refId - 关联ID（订单号等）
+ */
+export async function processActivityCommission(
+  tx: any,
+  agentId: number,
+  customerUserId: number,
+  activityType: string,
+  triggerAmount?: string,
+  refId?: string,
+): Promise<void> {
+  const db = tx ?? getDb();
+
+  // 查活动规则
+  const [rule] = await db
+    .select({
+      rate: commissionRules.rate,
+      isEnabled: commissionRules.isEnabled,
+      maxCap: commissionRules.maxCap,
+      fixedAmount: commissionRules.fixedAmount,
+      activityName: commissionRules.activityName,
+    })
+    .from(commissionRules)
+    .where(
+      and(
+        eq(commissionRules.agentId, agentId),
+        eq(commissionRules.ruleType, 'activity'),
+        eq(commissionRules.activityType, activityType as any),
+        eq(commissionRules.isEnabled, true),
+        sql`(${commissionRules.validFrom} IS NULL OR ${commissionRules.validFrom} <= NOW())`,
+        sql`(${commissionRules.validUntil} IS NULL OR ${commissionRules.validUntil} > NOW())`,
+      ),
+    )
+    .limit(1);
+
+  if (!rule) return;
+
+  let amount = rule.fixedAmount
+    ? Number(rule.fixedAmount)
+    : (triggerAmount ? Number(triggerAmount) * Number(rule.rate) : 0);
+
+  if (rule.maxCap) {
+    amount = Math.min(amount, Number(rule.maxCap));
+  }
+
+  if (amount <= 0) return;
+
+  await db.insert(commissionLogs).values({
+    agentId,
+    clientCallLogId: null,
+    callCost: triggerAmount ?? "0.000000",
+    commissionAmount: amount.toFixed(6),
+    sourceCustomerId: customerUserId,
+    sourceOrderId: refId ?? null,
+    sourceOrderAmount: triggerAmount ?? null,
+    commissionType: "activity",
+    ruleSnapshot: JSON.stringify(rule),
+    calcDetail: JSON.stringify({
+      activityType,
+      isFixed: !!rule.fixedAmount,
+      rate: rule.rate,
+      triggerAmount,
+    }),
+    status: "pending",
+  });
+
+  // 刷新 rollup 汇总（使用实际佣金发生日期）
+  const now = new Date();
+  await refreshRollupForAgentDate(agentId, now.toISOString().slice(0, 10), tx);
 }
 
 // ── 简单日志输出（生产应替换为正式 logger） ──

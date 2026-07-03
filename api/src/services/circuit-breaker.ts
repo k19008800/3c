@@ -203,12 +203,15 @@ export async function getAllCircuitStatuses(): Promise<CircuitStatus[]> {
   // 填充 vendor 信息（从数据库）
   if (resultMap.size > 0) {
     try {
-      const { eq, sql } = await import("drizzle-orm");
+      const { eq, inArray } = await import("drizzle-orm");
       const { getDb } = await import("../db/index.js");
       const { vendorModels, vendors } = await import("../db/schema.js");
       const db = getDb();
 
       const vmIds = Array.from(resultMap.keys());
+
+      if (vmIds.length === 0) return Array.from(resultMap.values());
+
       const rows = await db
         .select({
           id: vendorModels.id,
@@ -218,7 +221,7 @@ export async function getAllCircuitStatuses(): Promise<CircuitStatus[]> {
         })
         .from(vendorModels)
         .innerJoin(vendors, eq(vendorModels.vendorId, vendors.id))
-        .where(sql`${vendorModels.id} IN (${vmIds.join(",")})`);
+        .where(inArray(vendorModels.id, vmIds));
 
       for (const row of rows) {
         const existing = resultMap.get(row.id);

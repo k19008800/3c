@@ -8,7 +8,7 @@
 // ============================================================
 
 import { FastifyInstance } from "fastify";
-import { authenticateJWT, guardNotImpersonating } from "../middleware/auth.js";
+import { authenticateJWT, guardNotImpersonating, guardNotImpersonatingWrite } from "../middleware/auth.js";
 import { AppError } from "../services/auth-service.js";
 import {
   createRechargeOrder,
@@ -23,6 +23,9 @@ import {
   bankTransferSchema,
 } from "../schemas.js";
 import type { RechargeInput, BankTransferInput } from "../schemas.js";
+import { getDb } from "../db/index.js";
+import { rechargeOrders } from "../db/schema.js";
+import { eq } from "drizzle-orm";
 
 export async function rechargeRoutes(app: FastifyInstance) {
   // ──────────────────────────────────────────────
@@ -64,7 +67,7 @@ export async function rechargeRoutes(app: FastifyInstance) {
   // ──────────────────────────────────────────────
 
   app.get("/api/v1/recharge/bank-transfer/saved-info", {
-    preHandler: [authenticateJWT],
+    preHandler: [authenticateJWT, guardNotImpersonatingWrite],
     handler: async (request, reply) => {
       try {
         const result = await getSavedPayerInfo(request.user!.userId);
@@ -126,7 +129,7 @@ export async function rechargeRoutes(app: FastifyInstance) {
   // ──────────────────────────────────────────────
 
   app.get("/api/v1/recharge/orders", {
-    preHandler: [authenticateJWT],
+    preHandler: [authenticateJWT, guardNotImpersonatingWrite],
     handler: async (request, reply) => {
       try {
         const query = request.query as {
@@ -165,7 +168,7 @@ export async function rechargeRoutes(app: FastifyInstance) {
   // ──────────────────────────────────────────────
 
   app.post("/api/v1/recharge/:id/cancel", {
-    preHandler: [authenticateJWT],
+    preHandler: [authenticateJWT, guardNotImpersonating],
     handler: async (request, reply) => {
       try {
         const { id } = request.params as { id: string };
@@ -206,9 +209,21 @@ export async function rechargeRoutes(app: FastifyInstance) {
         return;
       }
 
-      // TODO: 生产环境加入签名校验
-      // const signValid = verifyPaySign(body.orderNo, body.amount, body.sign);
-      // if (!signValid) { ... }
+      // ── 签名校验 ──
+      const { verifyPaySign } = await import("../services/payment-security.js");
+
+      // 先查出订单的 channel 用于签名验证
+      const [order] = await getDb()
+        .select({ channel: rechargeOrders.channel })
+        .from(rechargeOrders)
+        .where(eq(rechargeOrders.orderNo, body.orderNo))
+        .limit(1);
+      const channelName = order?.channel ?? "unknown";
+
+      if (!verifyPaySign(body.orderNo, body.amount, body.channelOrderNo, channelName, body.sign, request.ip)) {
+        reply.status(400).send({ code: 400, message: "签名验证失败" });
+        return;
+      }
 
       await handlePaymentNotify(body.orderNo, body.channelOrderNo, body.amount);
 
