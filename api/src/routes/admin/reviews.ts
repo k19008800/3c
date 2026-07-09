@@ -9,7 +9,7 @@
 // ============================================================
 
 import { FastifyInstance } from "fastify";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, lte } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import {
   users,
@@ -397,7 +397,14 @@ export async function adminReviewRoutes(app: FastifyInstance) {
         userType: users.userType,
         realNameStatus: users.realNameStatus,
         realName: users.realName,
+        idNumber: users.idNumber,
+        idFrontImage: users.idFrontImage,
+        idBackImage: users.idBackImage,
         companyName: users.companyName,
+        companyRegNumber: users.companyRegNumber,
+        businessLicense: users.businessLicense,
+        bankName: users.bankName,
+        bankAccount: users.bankAccount,
         rejectReason: users.rejectReason,
         updatedAt: users.updatedAt,
       })
@@ -407,12 +414,50 @@ export async function adminReviewRoutes(app: FastifyInstance) {
       .limit(pageSize)
       .offset(offset);
 
+    // 批量加载最新版本的 OCR 结果（逐条查询，避免 ANY/ARRAY 兼容问题）
+    const ocrMap: Record<number, any> = {};
+    if (rows.length > 0) {
+      for (const r of rows) {
+        const [latest] = await db
+          .select({
+            userId: userRealNameReviews.userId,
+            ocrResult: userRealNameReviews.ocrResult,
+          })
+          .from(userRealNameReviews)
+          .where(eq(userRealNameReviews.userId, r.userId))
+          .orderBy(desc(userRealNameReviews.version))
+          .limit(1);
+        if (latest) {
+          ocrMap[r.userId] = latest.ocrResult;
+        }
+      }
+    }
+
     reply.status(200).send({
       code: 0,
       data: {
         list: rows.map((r) => ({
-          ...r,
+          id: r.userId,
+          userId: r.userId,
+          email: r.email,
+          nickname: r.nickname,
+          userType: r.userType,
+          realNameStatus: r.realNameStatus,
+          version: 0,
+          realName: r.realName,
+          idNumber: r.idNumber,
+          idFrontImage: r.idFrontImage,
+          idBackImage: r.idBackImage,
+          companyName: r.companyName,
+          companyRegNumber: r.companyRegNumber,
+          businessLicense: r.businessLicense,
+          bankName: r.bankName,
+          bankAccount: r.bankAccount,
+          status: r.realNameStatus,
+          rejectReason: r.rejectReason,
+          createdAt: null as any,
           updatedAt: r.updatedAt?.toISOString() ?? null,
+          ocrResult: ocrMap[r.userId] ?? null,
         })),
         total,
         page,

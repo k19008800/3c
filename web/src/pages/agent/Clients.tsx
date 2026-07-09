@@ -1,11 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { get } from '@/lib/api'
 import type { AgentClient, ReferralLink, PaginatedData } from '@/types'
+import PaginationBar from '@/components/ui/PaginationBar'
 import {
   Loader2,
   AlertCircle,
-  ChevronLeft,
-  ChevronRight,
   RefreshCw,
   Link2,
   Copy,
@@ -213,58 +212,14 @@ export default function AgentClients() {
 
         {/* ── 增强分页 ── */}
         {total > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 bg-slate-50">
-            <div className="flex items-center gap-3 text-sm text-slate-500">
-              <div className="flex items-center gap-1">
-                <span>每页</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-                  className="px-2 py-1 border border-slate-300 rounded text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-                <span>条</span>
-              </div>
-              <span>第 {page} / {totalPages} 页，共 {total} 条</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 text-sm">
-                <span>跳至</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={totalPages}
-                  defaultValue={page}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      const val = parseInt((e.target as HTMLInputElement).value, 10);
-                      if (val >= 1 && val <= totalPages) setPage(val);
-                    }
-                  }}
-                  className="w-14 px-2 py-1 border border-slate-300 rounded text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <span>页</span>
-              </div>
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-          </div>
+          <PaginationBar
+            page={page}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            total={total}
+            totalPages={totalPages}
+          />
         )}
       </div>
     </div>

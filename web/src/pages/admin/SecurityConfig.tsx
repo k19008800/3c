@@ -269,24 +269,15 @@ export default function AdminSecurityConfig() {
               })}
             </div>
           )}
-          {historyTotal > 20 && (
-            <div className="px-4 py-3 bg-slate-50 border-t flex justify-center gap-2">
-              <button
-                disabled={historyPage <= 1}
-                onClick={() => setHistoryPage(p => p - 1)}
-                className="px-3 py-1 text-xs border rounded-md disabled:opacity-40 hover:bg-white"
-              >
-                上一页
-              </button>
-              <span className="px-3 py-1 text-xs text-slate-500">{historyPage}/{Math.ceil(historyTotal / 20)}</span>
-              <button
-                disabled={historyPage >= Math.ceil(historyTotal / 20)}
-                onClick={() => setHistoryPage(p => p + 1)}
-                className="px-3 py-1 text-xs border rounded-md disabled:opacity-40 hover:bg-white"
-              >
-                下一页
-              </button>
-            </div>
+          {historyTotal > 0 && (
+            <PaginationBar
+              page={historyPage}
+              onPageChange={setHistoryPage}
+              pageSize={historyPageSize}
+              onPageSizeChange={setHistoryPageSize}
+              total={historyTotal}
+              totalPages={Math.ceil(historyTotal / historyPageSize)}
+            />
           )}
         </div>
       )}

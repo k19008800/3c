@@ -39,6 +39,7 @@ import { notificationRoutes } from "./routes/notifications.js";
 import { authSecurityRoutes } from "./routes/auth-security.js";
 import { adminSecurityRoutes } from "./routes/admin/security.js";
 import { preferenceRoutes } from "./routes/preferences.js";
+import { realNameOcrRoutes } from "./routes/real-name-ocr.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -138,6 +139,9 @@ export async function buildApp() {
 
   // ── 通知中心（站内信） ──
   await app.register(notificationRoutes, { prefix: "" });
+
+  // ── OCR 证件识别 ──
+  await app.register(realNameOcrRoutes, { prefix: "" });
 
   // ── 用户端安全 ──
   await app.register(authSecurityRoutes, { prefix: "" });

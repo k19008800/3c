@@ -19,6 +19,7 @@ import RevenueBreakdown from './dashboard/RevenueBreakdown'
 import VendorHealthPanel from './dashboard/VendorHealthPanel'
 import TopUsersTable from './dashboard/TopUsersTable'
 import TodoQueuePanel from './dashboard/TodoQueue'
+import ModelSchedulingRealtime from './dashboard/ModelSchedulingRealtime'
 
 /* ── helpers ── */
 
@@ -551,6 +552,9 @@ export default function AdminDashboard() {
       </div>
 
       {/* ── Recent Activity section (reuse from existing) ── */}
+      {/* ── Row 6: Model Scheduling Realtime ── */}
+      <ModelSchedulingRealtime />
+
       <RecentActivitySection />
 
     </div>

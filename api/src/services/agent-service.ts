@@ -112,7 +112,10 @@ export async function settleCommissions(agentId?: number): Promise<number> {
       for (const [aid, amount] of agentSumMap) {
         await tx
           .update(agents)
-          .set({ settledCommission: sql`settled_commission + ${amount}` })
+          .set({
+            settledCommission: sql`settled_commission + ${amount}`,
+            pendingWithdraw: sql`pending_withdraw + ${amount}`,
+          })
           .where(eq(agents.id, aid));
       }
     });
@@ -209,7 +212,10 @@ export async function batchSettleCommissions(ids: number[]): Promise<number> {
       for (const [aid, amount] of agentSumMap) {
         await tx
           .update(agents)
-          .set({ settledCommission: sql`settled_commission + ${amount}` })
+          .set({
+            settledCommission: sql`settled_commission + ${amount}`,
+            pendingWithdraw: sql`pending_withdraw + ${amount}`,
+          })
           .where(eq(agents.id, aid));
       }
     });
@@ -1500,6 +1506,7 @@ export async function getAgentById(agentId: number) {
       email: users.email,
       nickname: users.nickname,
       totalCommission: agents.totalCommission,
+      settledCommission: agents.settledCommission,
       pendingWithdraw: agents.pendingWithdraw,
       frozenAmount: agents.frozenAmount,
       status: agents.status,
@@ -1513,9 +1520,29 @@ export async function getAgentById(agentId: number) {
 
   if (!row) return null;
 
+  // 实时查询提现汇总（保证数据准确，不依赖 agents.pending_withdraw 字段）
+  const [withdrawRow] = await db
+    .select({
+      paidTotal: sql<string>`COALESCE(SUM(CAST(${withdrawOrders.amount} AS DECIMAL)) FILTER (WHERE ${withdrawOrders.status} = 'paid'), 0)`,
+      pendingTotal: sql<string>`COALESCE(SUM(CAST(${withdrawOrders.amount} AS DECIMAL)) FILTER (WHERE ${withdrawOrders.status} NOT IN ('paid', 'rejected')), 0)`,
+    })
+    .from(withdrawOrders)
+    .where(eq(withdrawOrders.agentId, agentId));
+
+  const settled = num(row.settledCommission);
+  const paidTotal = num(withdrawRow?.paidTotal ?? "0");
+  const pendingTotal = num(withdrawRow?.pendingTotal ?? "0");
+  const frozen = num(row.frozenAmount);
+
+  // 可用余额 = settledCommission - 已打款 - 待处理提现 - 冻结
+  const availableBalance = Math.max(0, settled - paidTotal - pendingTotal - frozen);
+
   return {
     ...row,
-    availableBalance: (Number(row.pendingWithdraw || 0) - Number(row.frozenAmount || 0)).toFixed(6),
+    settledCommission: row.settledCommission,
+    pendingWithdraw: pendingTotal.toFixed(6),
+    frozenAmount: row.frozenAmount ?? "0.000000",
+    availableBalance: availableBalance.toFixed(6),
   };
 }
 
@@ -1556,15 +1583,41 @@ export async function listAllAgents(page: number, pageSize: number, status?: str
     .limit(pageSize)
     .offset(offset);
 
+  // 批量查询提现汇总（实时计算，不依赖 agents.pending_withdraw）
+  const agentIds = rows.map((r) => r.id);
+  const withdrawMap = new Map<number, { paidTotal: number; pendingTotal: number }>();
+  if (agentIds.length > 0) {
+    const withdrawRows = await db
+      .select({
+        agentId: withdrawOrders.agentId,
+        paidTotal: sql<string>`COALESCE(SUM(CAST(${withdrawOrders.amount} AS DECIMAL)) FILTER (WHERE ${withdrawOrders.status} = 'paid'), 0)`,
+        pendingTotal: sql<string>`COALESCE(SUM(CAST(${withdrawOrders.amount} AS DECIMAL)) FILTER (WHERE ${withdrawOrders.status} NOT IN ('paid', 'rejected')), 0)`,
+      })
+      .from(withdrawOrders)
+      .where(inArray(withdrawOrders.agentId, agentIds))
+      .groupBy(withdrawOrders.agentId);
+
+    for (const wr of withdrawRows) {
+      withdrawMap.set(wr.agentId, {
+        paidTotal: num(wr.paidTotal),
+        pendingTotal: num(wr.pendingTotal),
+      });
+    }
+  }
+
   return {
     list: rows.map((r) => {
       const totalCommission = num(r.totalCommission);
-      const pendingW = num(r.pendingWithdraw);
       const frozen = num(r.frozenAmount ?? "0.000000");
+      const ws = withdrawMap.get(r.id);
+      const paidTotal = ws?.paidTotal ?? 0;
+      const pendingTotal = ws?.pendingTotal ?? 0;
+      const availableBalance = Math.max(0, totalCommission - paidTotal - pendingTotal - frozen);
       return {
         ...r,
+        pendingWithdraw: pendingTotal.toFixed(6),
         frozenAmount: r.frozenAmount ?? "0.000000",
-        availableBalance: fmt(totalCommission - pendingW - frozen),
+        availableBalance: availableBalance.toFixed(6),
         createdAt: r.createdAt.toISOString(),
       };
     }),
@@ -1702,7 +1755,6 @@ export async function deleteAgent(operatorId: number, agentId: number): Promise<
     .select({
       id: agents.id,
       userId: agents.userId,
-      pendingWithdraw: agents.pendingWithdraw,
     })
     .from(agents)
     .where(eq(agents.id, agentId))
@@ -1737,9 +1789,18 @@ export async function deleteAgent(operatorId: number, agentId: number): Promise<
     throw new AppError("HAS_SUB_AGENTS", "该代理商有下级代理，请先转移或解除关系", 400);
   }
 
-  // 检查待处理提现
-  const pendingWithdraw = Number(agent.pendingWithdraw);
-  if (pendingWithdraw > 0) {
+  // 检查待处理提现（实时查询 withdraw_orders，不依赖可能过期的 agents.pendingWithdraw）
+  const [pendingWithdrawResult] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(withdrawOrders)
+    .where(
+      and(
+        eq(withdrawOrders.agentId, agentId),
+        sql`${withdrawOrders.status} NOT IN ('paid', 'rejected')`,
+      ),
+    );
+  const pendingWithdrawCount = Number(pendingWithdrawResult?.count ?? 0);
+  if (pendingWithdrawCount > 0) {
     throw new AppError("HAS_PENDING_WITHDRAW", "该代理商有待处理提现，请先处理", 400);
   }
 

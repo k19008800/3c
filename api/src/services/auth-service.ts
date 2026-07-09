@@ -297,27 +297,39 @@ export async function loginUser(
     );
   }
 
-  if (preCheck.requireCaptcha && captchaSession) {
-    // 用户提交了验证码，需要验证
-    if (captcha) {
-      const captchaResult = await verifyCaptchaSession(captchaSession, captcha);
-      if (!captchaResult.valid || captchaResult.userId !== userId) {
-        if (userId) {
-          await recordLogin(userId, false, "wrong_captcha");
+  if (preCheck.requireCaptcha) {
+    // 用户有 captchaSession 参数 → 正常走验证码验证
+    if (captchaSession) {
+      if (captcha) {
+        const captchaResult = await verifyCaptchaSession(captchaSession, captcha);
+        if (!captchaResult.valid || captchaResult.userId !== userId) {
+          if (userId) {
+            await recordLogin(userId, false, "wrong_captcha");
+          }
+          throw new AppError("INVALID_CAPTCHA", "验证码错误或已过期", 400);
         }
-        throw new AppError("INVALID_CAPTCHA", "验证码错误或已过期", 400);
+      } else {
+        if (userId) {
+          await recordLogin(userId, false, "captcha_required");
+        }
+        return {
+          user: null as any,
+          tokens: null as any,
+          captchaRequired: true,
+          captchaSession,
+        };
       }
     } else {
-      // 请求验证码，但未提交验证码字段
+      // 前端未传 captchaSession → 使用 preCheck 返回的 session 引导前端弹验证码
+      const newSession = preCheck.captchaSession!;
       if (userId) {
         await recordLogin(userId, false, "captcha_required");
       }
-      // 返回需要验证码
       return {
         user: null as any,
         tokens: null as any,
         captchaRequired: true,
-        captchaSession,
+        captchaSession: newSession,
       };
     }
   }

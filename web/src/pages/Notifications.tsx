@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { get, post } from '@/lib/api'
 import type { NotificationItem } from '@/types'
+import PaginationBar from '@/components/ui/PaginationBar'
 import {
   Loader2, Bell, CheckCircle2, AlertCircle, Info, AlertTriangle,
-  CreditCard, Shield, Settings, Mail, Gift, ChevronLeft, ChevronRight,
+  CreditCard, Shield, Settings, Mail, Gift,
 } from 'lucide-react'
 
 const typeConfig: Record<string, { icon: any; color: string }> = {
@@ -27,7 +28,7 @@ export default function Notifications() {
   const [total, setTotal] = useState(0)
   const [totalUnread, setTotalUnread] = useState(0)
   const [markLoading, setMarkLoading] = useState<number | null>(null)
-  const pageSize = 20
+  const [pageSize, setPageSize] = useState(20)
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true)
@@ -196,36 +197,15 @@ export default function Notifications() {
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page <= 1}
-            className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPage(p)}
-              className={`w-8 h-8 rounded-lg text-sm transition ${
-                p === page
-                  ? 'bg-blue-600 text-white'
-                  : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page >= totalPages}
-            className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
+      {totalPages > 0 && (
+        <PaginationBar
+          page={page}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          total={total}
+          totalPages={totalPages}
+        />
       )}
     </div>
   )

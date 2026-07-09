@@ -118,7 +118,7 @@ export default function AdminAgentDetail() {
               {' · '}
               总佣金 ¥{Number(agent.totalCommission || 0).toFixed(2)}
               {' · '}
-              可提现 ¥{Number(agent.pendingWithdraw || 0).toFixed(2)}
+              待提现 ¥{Number(agent.pendingWithdraw || 0).toFixed(2)} · 可提现 ¥{Number(agent.availableBalance || 0).toFixed(2)}
             </p>
           </div>
         </div>

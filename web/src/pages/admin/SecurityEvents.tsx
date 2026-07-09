@@ -380,20 +380,14 @@ export default function AdminSecurityEvents() {
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-slate-500">共 {total} 条</span>
-          <div className="flex gap-2">
-            <button disabled={page <= 1} onClick={() => setPage(p => p - 1)}
-              className="px-3 py-1.5 border border-slate-300 rounded-md text-sm disabled:opacity-40 hover:bg-slate-50">
-              <ChevronLeft size={16} />
-            </button>
-            <span className="px-3 py-1.5 text-sm text-slate-600">{page}/{totalPages}</span>
-            <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}
-              className="px-3 py-1.5 border border-slate-300 rounded-md text-sm disabled:opacity-40 hover:bg-slate-50">
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
+        <PaginationBar
+          page={page}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          total={total}
+          totalPages={totalPages}
+        />
       )}
 
       {/* 事件详情弹窗 */}

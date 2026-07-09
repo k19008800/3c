@@ -1,11 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { get } from '@/lib/api'
 import type { AuditLog, AuditLogDetail, PaginatedData } from '@/types'
+import PaginationBar from '@/components/ui/PaginationBar'
 import {
   Loader2,
   AlertCircle,
-  ChevronLeft,
-  ChevronRight,
   Search,
   RefreshCw,
   Eye,
@@ -345,7 +344,7 @@ export default function AdminAuditLogs() {
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [pageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -651,28 +650,14 @@ export default function AdminAuditLogs() {
 
         {/* Pagination */}
         {total > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
-            <span className="text-sm text-slate-500">
-              第 {page} / {totalPages} 页（共 {total} 条）
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onPageChange(Math.max(1, page - 1))}
-                disabled={page <= 1}
-                className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <span className="text-sm text-slate-600 min-w-[40px] text-center">{page}</span>
-              <button
-                onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-                disabled={page >= totalPages}
-                className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-          </div>
+          <PaginationBar
+            page={page}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            total={total}
+            totalPages={totalPages}
+          />
         )}
       </div>
 

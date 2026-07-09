@@ -2,10 +2,19 @@ import { useEffect, useState, useCallback } from 'react'
 import { get, post } from '@/lib/api'
 import type { RealNameReviewRecord, PaginatedData } from '@/types'
 import { usePagePreferences } from '@/hooks/use-page-preferences'
+
+// 管理员审查证件图片 URL 构建
+function buildAdminFileUrl(userId: number, relativePath: string | null): string | null {
+  if (!relativePath) return null
+  const filename = relativePath.split('/').pop()
+  if (!filename) return null
+  return `/api/v1/admin/real-name/file/${userId}/${filename}`
+}
+import PaginationBar from '@/components/ui/PaginationBar'
 import {
   Loader2, AlertCircle, CheckCircle2, XCircle,
-  ChevronLeft, ChevronRight, Search, Eye, ExternalLink,
-  Ban, Building2, User,
+  Search, Eye, ExternalLink,
+  Ban, Building2, User, FileImage,
 } from 'lucide-react'
 
 const REJECT_REASONS = [
@@ -33,7 +42,7 @@ export default function AdminRealNameReview() {
   const [records, setRecords] = useState<RealNameReviewRecord[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [pageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [msg, setMsg] = useState('')
@@ -43,6 +52,7 @@ export default function AdminRealNameReview() {
   const [showDetail, setShowDetail] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
   const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({})
 
   const { filters, loaded: prefsLoaded, updateFilter } = usePagePreferences('admin_real_name_review')
 
@@ -177,11 +187,14 @@ export default function AdminRealNameReview() {
 
         {total > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
-            <span className="text-sm text-slate-500">第 {page} / {totalPages} 页</span>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"><ChevronLeft size={18} /></button>
-              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"><ChevronRight size={18} /></button>
-            </div>
+            <PaginationBar
+              page={page}
+              onPageChange={setPage}
+              pageSize={pageSize}
+              onPageSizeChange={setPageSize}
+              total={total}
+              totalPages={totalPages}
+            />
           </div>
         )}
       </div>
@@ -212,6 +225,111 @@ export default function AdminRealNameReview() {
                 <div><span className="text-slate-500">类型：</span>{userTypeLabel[selected.userType] || selected.userType}</div>
               </div>
 
+              {/* OCR 识别结果摘要 */}
+              {selected.ocrResult && (
+                <div className="border rounded-lg p-4 bg-blue-50/30 space-y-2">
+                  <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-1">
+                    <FileImage size={14} /> 📸 OCR 识别结果
+                  </h3>
+                  {selected.ocrResult.id_front && (
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                      {selected.ocrResult.id_front.name && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-slate-500">姓名：</span>
+                          <span className="font-medium">{selected.ocrResult.id_front.name}</span>
+                          {selected.realName === selected.ocrResult.id_front.name
+                            ? <CheckCircle2 size={14} className="text-green-500 shrink-0" />
+                            : <XCircle size={14} className="text-red-500 shrink-0" />
+                          }
+                        </div>
+                      )}
+                      {selected.ocrResult.id_front.idNumber && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-slate-500">身份证号：</span>
+                          <span className="font-mono text-xs">{selected.ocrResult.id_front.idNumber}</span>
+                          {selected.idNumber === selected.ocrResult.id_front.idNumber
+                            ? <CheckCircle2 size={14} className="text-green-500 shrink-0" />
+                            : <XCircle size={14} className="text-red-500 shrink-0" />
+                          }
+                        </div>
+                      )}
+                      {selected.ocrResult.id_front.gender && (
+                        <div><span className="text-slate-500">性别：</span>{selected.ocrResult.id_front.gender}</div>
+                      )}
+                      {selected.ocrResult.id_front.nationality && (
+                        <div><span className="text-slate-500">民族：</span>{selected.ocrResult.id_front.nationality}</div>
+                      )}
+                      {selected.ocrResult.id_front.birthDate && (
+                        <div><span className="text-slate-500">出生日期：</span>{selected.ocrResult.id_front.birthDate}</div>
+                      )}
+                      {selected.ocrResult.id_front.address && (
+                        <div className="col-span-2"><span className="text-slate-500">住址：</span>{selected.ocrResult.id_front.address}</div>
+                      )}
+                    </div>
+                  )}
+                  {selected.ocrResult.id_back && (
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm border-t border-blue-100 pt-2 mt-1">
+                      {selected.ocrResult.id_back.issuedBy && (
+                        <div><span className="text-slate-500">签发机关：</span>{selected.ocrResult.id_back.issuedBy}</div>
+                      )}
+                      {selected.ocrResult.id_back.validDate && (
+                        <div><span className="text-slate-500">有效期：</span>{selected.ocrResult.id_back.validDate}</div>
+                      )}
+                    </div>
+                  )}
+                  {selected.ocrResult.business_license && (
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm border-t border-blue-100 pt-2 mt-1">
+                      {selected.ocrResult.business_license.companyName && (
+                        <div className="col-span-2 flex items-center gap-1.5">
+                          <span className="text-slate-500">企业名称：</span>
+                          <span className="font-medium">{selected.ocrResult.business_license.companyName}</span>
+                          {selected.companyName === selected.ocrResult.business_license.companyName
+                            ? <CheckCircle2 size={14} className="text-green-500 shrink-0" />
+                            : <XCircle size={14} className="text-red-500 shrink-0" />
+                          }
+                        </div>
+                      )}
+                      {selected.ocrResult.business_license.regNumber && (
+                        <div className="col-span-2 flex items-center gap-1.5">
+                          <span className="text-slate-500">统一信用代码：</span>
+                          <span className="font-mono text-xs">{selected.ocrResult.business_license.regNumber}</span>
+                          {selected.companyRegNumber === selected.ocrResult.business_license.regNumber
+                            ? <CheckCircle2 size={14} className="text-green-500 shrink-0" />
+                            : <XCircle size={14} className="text-red-500 shrink-0" />
+                          }
+                        </div>
+                      )}
+                      {selected.ocrResult.business_license.legalPerson && (
+                        <div className="col-span-2">
+                          <span className="text-slate-500">法定代表人：</span>{selected.ocrResult.business_license.legalPerson}
+                        </div>
+                      )}
+                      {selected.ocrResult.business_license.registeredCapital && (
+                        <div><span className="text-slate-500">注册资本：</span>{selected.ocrResult.business_license.registeredCapital}</div>
+                      )}
+                      {selected.ocrResult.business_license.establishedDate && (
+                        <div><span className="text-slate-500">成立日期：</span>{selected.ocrResult.business_license.establishedDate}</div>
+                      )}
+                      {selected.ocrResult.business_license.validPeriod && (
+                        <div><span className="text-slate-500">营业期限：</span>{selected.ocrResult.business_license.validPeriod}</div>
+                      )}
+                      {selected.ocrResult.business_license.address && (
+                        <div className="col-span-2"><span className="text-slate-500">注册地址：</span>{selected.ocrResult.business_license.address}</div>
+                      )}
+                    </div>
+                  )}
+                  {/* 置信度 */}
+                  <div className="flex items-center gap-2 text-xs text-slate-400 border-t border-blue-100 pt-2 mt-1">
+                    {selected.ocrResult.id_front && (
+                      <span>身份证置信度：{Math.round(selected.ocrResult.id_front.confidence * 100)}%</span>
+                    )}
+                    {selected.ocrResult.business_license && (
+                      <span>营业执照置信度：{Math.round(selected.ocrResult.business_license.confidence * 100)}%</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Personal Info */}
               <div>
                 <h3 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1"><User size={14} /> 个人信息</h3>
@@ -219,21 +337,66 @@ export default function AdminRealNameReview() {
                   <div><span className="text-slate-500">真实姓名：</span>{selected.realName || '-'}</div>
                   <div><span className="text-slate-500">身份证号：</span><span className="font-mono">{selected.idNumber || '-'}</span></div>
                 </div>
-                {/* 个人用户：显示身份证正反面缩略图，点击放大 */}
-                {selected.userType === 'personal' && (selected.idFrontImage || selected.idBackImage) && (
-                  <div className="flex gap-4 mt-3">
-                    {selected.idFrontImage && (
-                      <div>
-                        <p className="text-xs text-slate-500 mb-1">身份证正面</p>
-                        <img src={selected.idFrontImage} alt="身份证正面" className="w-48 h-32 object-cover border rounded-lg cursor-pointer hover:opacity-80 transition" onClick={() => setPreviewImage(selected.idFrontImage)} />
-                      </div>
-                    )}
-                    {selected.idBackImage && (
-                      <div>
-                        <p className="text-xs text-slate-500 mb-1">身份证反面</p>
-                        <img src={selected.idBackImage} alt="身份证反面" className="w-48 h-32 object-cover border rounded-lg cursor-pointer hover:opacity-80 transition" onClick={() => setPreviewImage(selected.idBackImage)} />
-                      </div>
-                    )}
+                {/* 证件附件展示：个人和企业都显示身份证 */}
+                {(selected.idFrontImage || selected.idBackImage || (selected.userType === 'enterprise' && selected.businessLicense)) && (
+                  <div className="border-t pt-4">
+                    <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-1"><FileImage size={14} /> 上传的证件附件</h3>
+                    <div className="flex flex-wrap gap-4">
+                      {(() => {
+                        const url = buildAdminFileUrl(selected.userId, selected.idFrontImage)
+                        return url ? (
+                          <div key="idFront">
+                            <p className="text-xs text-slate-500 mb-1">身份证正面</p>
+                            {imgErrors['idFront'] ? (
+                              <div className="w-48 h-32 flex flex-col items-center justify-center bg-slate-100 border rounded-lg">
+                                <FileImage size={20} className="text-slate-400" />
+                                <span className="text-xs text-slate-400 mt-1">加载失败</span>
+                              </div>
+                            ) : (
+                              <img src={url} alt="身份证正面" className="w-48 h-32 object-contain border rounded-lg cursor-pointer hover:opacity-80 transition bg-slate-50"
+                                onError={() => setImgErrors(p => ({ ...p, idFront: true }))}
+                                onClick={() => setPreviewImage(url)} />
+                            )}
+                          </div>
+                        ) : null
+                      })()}
+                      {(() => {
+                        const url = buildAdminFileUrl(selected.userId, selected.idBackImage)
+                        return url ? (
+                          <div key="idBack">
+                            <p className="text-xs text-slate-500 mb-1">身份证反面</p>
+                            {imgErrors['idBack'] ? (
+                              <div className="w-48 h-32 flex flex-col items-center justify-center bg-slate-100 border rounded-lg">
+                                <FileImage size={20} className="text-slate-400" />
+                                <span className="text-xs text-slate-400 mt-1">加载失败</span>
+                              </div>
+                            ) : (
+                              <img src={url} alt="身份证反面" className="w-48 h-32 object-contain border rounded-lg cursor-pointer hover:opacity-80 transition bg-slate-50"
+                                onError={() => setImgErrors(p => ({ ...p, idBack: true }))}
+                                onClick={() => setPreviewImage(url)} />
+                            )}
+                          </div>
+                        ) : null
+                      })()}
+                      {selected.userType === 'enterprise' && (() => {
+                        const url = buildAdminFileUrl(selected.userId, selected.businessLicense)
+                        return url ? (
+                          <div key="bizLicense">
+                            <p className="text-xs text-slate-500 mb-1">营业执照</p>
+                            {imgErrors['bizLicense'] ? (
+                              <div className="w-48 h-32 flex flex-col items-center justify-center bg-slate-100 border rounded-lg">
+                                <FileImage size={20} className="text-slate-400" />
+                                <span className="text-xs text-slate-400 mt-1">加载失败</span>
+                              </div>
+                            ) : (
+                              <img src={url} alt="营业执照" className="w-48 h-32 object-contain border rounded-lg cursor-pointer hover:opacity-80 transition bg-slate-50"
+                                onError={() => setImgErrors(p => ({ ...p, bizLicense: true }))}
+                                onClick={() => setPreviewImage(url)} />
+                            )}
+                          </div>
+                        ) : null
+                      })()}
+                    </div>
                   </div>
                 )}
               </div>
@@ -251,13 +414,7 @@ export default function AdminRealNameReview() {
                     <div><span className="text-slate-500">发票抬头：</span>{selected.invoiceTitle || '-'}</div>
                     <div><span className="text-slate-500">税号：</span>{selected.invoiceTaxId || '-'}</div>
                   </div>
-                  {/* 企业用户：显示营业执照缩略图，点击放大 */}
-                  {selected.userType === 'enterprise' && selected.businessLicense && (
-                    <div className="mt-3">
-                      <p className="text-xs text-slate-500 mb-1">营业执照</p>
-                      <img src={selected.businessLicense} alt="营业执照" className="w-48 h-32 object-cover border rounded-lg cursor-pointer hover:opacity-80 transition" onClick={() => setPreviewImage(selected.businessLicense)} />
-                    </div>
-                  )}
+
                 </div>
               )}
 

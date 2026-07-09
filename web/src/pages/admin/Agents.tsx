@@ -2,11 +2,10 @@ import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { get, post, patch, del } from '@/lib/api'
 import type { Agent, WithdrawOrder, PaginatedData } from '@/types'
+import PaginationBar from '@/components/ui/PaginationBar'
 import {
   Loader2,
   AlertCircle,
-  ChevronLeft,
-  ChevronRight,
   RefreshCw,
   Users,
   Wallet,
@@ -63,7 +62,7 @@ function AgentsList() {
   const [agents, setAgents] = useState<Agent[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [pageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showCreate, setShowCreate] = useState(false)
@@ -224,27 +223,14 @@ function AgentsList() {
         </div>
 
         {total > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
-            <span className="text-sm text-slate-500">
-              第 {page} / {totalPages} 页，共 {total} 条
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-          </div>
+          <PaginationBar
+            page={page}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            total={total}
+            totalPages={totalPages}
+          />
         )}
       </div>
 
@@ -603,7 +589,7 @@ function WithdrawOrders() {
   const [orders, setOrders] = useState<WithdrawOrder[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [pageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -766,27 +752,14 @@ function WithdrawOrders() {
         </div>
 
         {total > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
-            <span className="text-sm text-slate-500">
-              第 {page} / {totalPages} 页，共 {total} 条
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-          </div>
+          <PaginationBar
+            page={page}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            total={total}
+            totalPages={totalPages}
+          />
         )}
       </div>
 

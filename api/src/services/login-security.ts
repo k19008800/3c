@@ -107,6 +107,7 @@ export interface PreLoginCheckResult {
   allowed: boolean;
   retryAfterMs?: number;
   requireCaptcha?: boolean;
+  captchaSession?: string;
   blockedReason?: string;
 }
 
@@ -153,12 +154,8 @@ export async function preLoginCheck(
     // 3. 检查是否频繁失败触发验证码
     const failCount = await countInWindow(KEY.failUser(userId));
     if (failCount >= cfg.userCaptchaAfter) {
-      // 如果已有验证码 session，要求验证码
-      const hasChallenge = await redis.exists(KEY.captcha(userId));
-      if (hasChallenge) {
-        return { allowed: true, requireCaptcha: true };
-      }
-      // 没有验证码就生成一个
+      // 无论是否已有验证码，都生成新验证码（覆盖旧的）
+      // 确保前端能收到 captchaSession
       const captchaSession = Math.random().toString(36).slice(2, 10);
       const captchaCode = Math.random().toString().slice(2, 8);
       await redis.setex(KEY.captcha(userId), 300, captchaCode);
@@ -173,7 +170,7 @@ export async function preLoginCheck(
         detail: { failCount },
       });
 
-      return { allowed: true, requireCaptcha: true };
+      return { allowed: true, requireCaptcha: true, captchaSession };
     }
   }
 

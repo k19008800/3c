@@ -479,7 +479,7 @@ export default function RealName() {
                     accept="image/*"
                     state={pIdFront}
                     disabled={currentStatus === 'pending_review'}
-                    onSelect={(e) => handleFileSelect(e, 'id_front', setPIdFront)}
+                    onSelect={(e) => handleFileSelect(e, 'id_front', setPIdFront, 'pIdFront')}
                     onRemove={() => removeFile(setPIdFront)}
                   />
                   <FileUploadBlock
@@ -488,7 +488,7 @@ export default function RealName() {
                     accept="image/*"
                     state={pIdBack}
                     disabled={currentStatus === 'pending_review'}
-                    onSelect={(e) => handleFileSelect(e, 'id_back', setPIdBack)}
+                    onSelect={(e) => handleFileSelect(e, 'id_back', setPIdBack, 'pIdBack')}
                     onRemove={() => removeFile(setPIdBack)}
                   />
                 </div>
@@ -561,33 +561,66 @@ export default function RealName() {
                 <h4 className="text-sm font-medium text-slate-700 mb-3">上传证件照片</h4>
                 <p className="text-xs text-slate-400 mb-3">支持 JPG / PNG 格式，建议单张不超过 5MB</p>
                 <div className="grid grid-cols-3 gap-4">
-                  <FileUploadBlock
-                    label="身份证正面"
-                    hint="人像面"
-                    accept="image/*"
-                    state={eIdFront}
-                    disabled={currentStatus === 'pending_review'}
-                    onSelect={(e) => handleFileSelect(e, 'id_front', setEIdFront)}
-                    onRemove={() => removeFile(setEIdFront)}
-                  />
-                  <FileUploadBlock
-                    label="身份证反面"
-                    hint="国徽面"
-                    accept="image/*"
-                    state={eIdBack}
-                    disabled={currentStatus === 'pending_review'}
-                    onSelect={(e) => handleFileSelect(e, 'id_back', setEIdBack)}
-                    onRemove={() => removeFile(setEIdBack)}
-                  />
-                  <FileUploadBlock
-                    label="营业执照"
-                    hint="可上传照片或 PDF"
-                    accept="image/*,.pdf"
-                    state={eBizLicense}
-                    disabled={currentStatus === 'pending_review'}
-                    onSelect={(e) => handleFileSelect(e, 'business_license', setEBizLicense)}
-                    onRemove={() => removeFile(setEBizLicense)}
-                  />
+                  <div>
+                    <FileUploadBlock
+                      label="身份证正面"
+                      hint="人像面"
+                      accept="image/*"
+                      state={eIdFront}
+                      disabled={currentStatus === 'pending_review'}
+                      onSelect={(e) => handleFileSelect(e, 'id_front', setEIdFront, 'eIdFront')}
+                      onRemove={() => removeFile(setEIdFront)}
+                    />
+                    {ocrStates.eIdFront === 'recognizing' && (
+                      <div className="flex items-center gap-1 text-xs text-blue-600 mt-1">
+                        <Loader2 size={10} className="animate-spin" /> 识别中
+                      </div>
+                    )}
+                    {ocrStates.eIdFront === 'done' && (
+                      <div className="text-xs text-green-600 mt-1">✅ 已自动填写</div>
+                    )}
+                  </div>
+                  <div>
+                    <FileUploadBlock
+                      label="身份证反面"
+                      hint="国徽面"
+                      accept="image/*"
+                      state={eIdBack}
+                      disabled={currentStatus === 'pending_review'}
+                      onSelect={(e) => handleFileSelect(e, 'id_back', setEIdBack, 'eIdBack')}
+                      onRemove={() => removeFile(setEIdBack)}
+                    />
+                    {ocrStates.eIdBack === 'recognizing' && (
+                      <div className="flex items-center gap-1 text-xs text-blue-600 mt-1">
+                        <Loader2 size={10} className="animate-spin" /> 识别中
+                      </div>
+                    )}
+                    {ocrStates.eIdBack === 'done' && (
+                      <div className="text-xs text-green-600 mt-1">✅ 已识别</div>
+                    )}
+                  </div>
+                  <div>
+                    <FileUploadBlock
+                      label="营业执照"
+                      hint="可上传照片"
+                      accept="image/*"
+                      state={eBizLicense}
+                      disabled={currentStatus === 'pending_review'}
+                      onSelect={(e) => handleFileSelect(e, 'business_license', setEBizLicense, 'eBizLicense')}
+                      onRemove={() => removeFile(setEBizLicense)}
+                    />
+                    {ocrStates.eBizLicense === 'recognizing' && (
+                      <div className="flex items-center gap-1 text-xs text-blue-600 mt-1">
+                        <Loader2 size={10} className="animate-spin" /> 识别中
+                      </div>
+                    )}
+                    {ocrStates.eBizLicense === 'done' && (
+                      <div className="text-xs text-green-600 mt-1">✅ 已自动填写企业信息</div>
+                    )}
+                    {ocrStates.eBizLicense === 'error' && (
+                      <div className="text-xs text-amber-600 mt-1">⚠️ 识别失败</div>
+                    )}
+                  </div>
                 </div>
               </div>
 

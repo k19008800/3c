@@ -5,6 +5,12 @@
 
 import "dotenv/config";
 
+function parseOrigins(val: string | undefined): string | string[] {
+  if (!val) return "http://localhost:5173";
+  const parts = val.split(",").map(s => s.trim()).filter(Boolean);
+  return parts.length === 1 ? parts[0] : parts;
+}
+
 export const config = {
   nodeEnv: process.env.NODE_ENV || "development",
   isDev: (process.env.NODE_ENV || "development") === "development",
@@ -34,10 +40,10 @@ export const config = {
     key: process.env.VENDOR_KEY_ENCRYPTION_KEY || "",
   },
 
-  appUrl: process.env.APP_URL || process.env.CORS_ORIGIN || "http://localhost:5173",
+  appUrl: process.env.APP_URL || (process.env.CORS_ORIGIN || "http://localhost:5173").split(",")[0]?.trim() || "http://localhost:5173",
 
   cors: {
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: parseOrigins(process.env.CORS_ORIGIN),
   },
 
   upload: {

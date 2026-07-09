@@ -215,6 +215,10 @@ export async function proxyRoutes(app: FastifyInstance) {
           userAgent: request.headers["user-agent"] as string,
         }).catch(() => {});
         await recordTokensForLimit(userId, fallbackResult.usage.totalTokens);
+
+        // 记录调度实时指标
+        const { recordSchedulingStats } = await import("../services/scheduling-stats.js");
+        recordSchedulingStats(fallbackRoute.vendorName, model.name, fallbackResult.usage.totalTokens, durationMs).catch(() => {});
       }
 
       return fallbackResult.body;
@@ -335,6 +339,10 @@ export async function proxyRoutes(app: FastifyInstance) {
 
       // 更新 TPM 限流窗口
       await recordTokensForLimit(userId, result.usage.totalTokens);
+
+      // 记录调度实时指标
+      const { recordSchedulingStats } = await import("../services/scheduling-stats.js");
+      recordSchedulingStats(route.vendorName, model.name, result.usage.totalTokens, durationMs).catch(() => {});
     }
 
     // 原始响应返回
@@ -491,6 +499,10 @@ export async function proxyRoutes(app: FastifyInstance) {
         durationMs, isStreaming: true, status: "success",
         ip: request.ip, userAgent: request.headers["user-agent"] as string,
       }).catch((err) => request.log.error({ err }, "流式计费失败"));
+
+      // 记录调度实时指标
+      const { recordSchedulingStats } = await import("../services/scheduling-stats.js");
+      recordSchedulingStats(route.vendorName, model.name, usage.totalTokens, durationMs).catch(() => {});
 
       // 更新 TPM 限流窗口
       await recordTokensForLimit(userId, usage.totalTokens);

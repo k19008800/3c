@@ -2,11 +2,10 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { get, post } from '@/lib/api'
 import type { AgentClientDetail } from '@/types'
+import PaginationBar from '@/components/ui/PaginationBar'
 import {
   Loader2,
   AlertCircle,
-  ChevronLeft,
-  ChevronRight,
   RefreshCw,
   ArrowLeft,
   UserPlus,
@@ -21,7 +20,7 @@ export default function AdminAgentClients() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [page, setPage] = useState(1)
-  const [pageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(20)
   const [showBind, setShowBind] = useState(false)
 
   const totalPages = data ? Math.ceil(data.total / pageSize) : 0
@@ -199,27 +198,14 @@ export default function AdminAgentClients() {
         </div>
 
         {data && data.total > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
-            <span className="text-sm text-slate-500">
-              第 {page} / {totalPages} 页，共 {data.total} 条
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-          </div>
+          <PaginationBar
+            page={page}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            total={data.total}
+            totalPages={totalPages}
+          />
         )}
       </div>
 

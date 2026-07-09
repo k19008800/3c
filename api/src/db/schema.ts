@@ -441,6 +441,7 @@ export const userRealNameReviews = pgTable(
     bankAddress: varchar("bank_address", { length: 500 }),
     invoiceTitle: varchar("invoice_title", { length: 255 }),
     invoiceTaxId: varchar("invoice_tax_id", { length: 50 }),
+    ocrResult: jsonb("ocr_result"),
     // 审核结果
     status: realNameStatusEnum("status").notNull().default("pending_review"),
     reviewerId: integer("reviewer_id").references(() => users.id),

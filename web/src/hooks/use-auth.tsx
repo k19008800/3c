@@ -55,7 +55,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // 使用原始 axios 发登录请求（不经过 api.ts 的 401 拦截）
-    const res = await axios.post('/api/v1/auth/login', body)
+    let res
+    try {
+      res = await axios.post('/api/v1/auth/login', body)
+    } catch (err: any) {
+      // 提取服务端返回的真实错误信息（例如风控封禁、验证码要求等）
+      const serverMsg = err?.response?.data?.message
+      if (serverMsg) {
+        throw new Error(serverMsg)
+      }
+      throw new Error(err.message || '登录失败')
+    }
     const responseData = res.data
 
     if (responseData.code !== 0) {

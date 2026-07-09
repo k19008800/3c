@@ -8,8 +8,9 @@ import type {
   RoleHistoryRecord, AuditLogRecord, BalanceLogRecord, ImpersonateResult,
   UserRealNameHistoryRecord
 } from '@/types'
+import PaginationBar from '@/components/ui/PaginationBar'
 import {
-  Loader2, AlertCircle, ChevronLeft, ChevronRight, ChevronDown,
+  Loader2, AlertCircle, ChevronDown,
   Search, UserPlus, Download, FileJson, LogIn,
   CheckCircle2, XCircle, Plus, Trash2, RefreshCw,
   Ban, User, Key, History, Shield, FileText,
@@ -55,7 +56,7 @@ export default function AdminUsers() {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [pageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [keyword, setKeyword] = useState('')
@@ -257,13 +258,14 @@ export default function AdminUsers() {
         </div>
 
         {total > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
-            <span className="text-sm text-slate-500">第 {page} / {totalPages} 页，共 {total} 条</span>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"><ChevronLeft size={18} /></button>
-              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"><ChevronRight size={18} /></button>
-            </div>
-          </div>
+          <PaginationBar
+            page={page}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            total={total}
+            totalPages={totalPages}
+          />
         )}
       </div>
 
@@ -842,7 +844,7 @@ function CallStatsTab({ userId }: { userId: number }) {
   const [days, setDays] = useState(7)
   const [granularity, setGranularity] = useState<'day' | 'hour'>('day')
   const [logPage, setLogPage] = useState(1)
-  const logPageSize = 10
+  const [logPageSize, setLogPageSize] = useState(20)
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
@@ -958,14 +960,15 @@ function CallStatsTab({ userId }: { userId: number }) {
             </table>
           </div>
         )}
-        {logTotalPages > 1 && (
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-xs text-slate-400">第 {logPage}/{logTotalPages} 页</span>
-            <div className="flex gap-1">
-              <button disabled={logPage <= 1} onClick={() => setLogPage(p => p - 1)} className="px-2 py-1 text-xs border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-30">上一页</button>
-              <button disabled={logPage >= logTotalPages} onClick={() => setLogPage(p => p + 1)} className="px-2 py-1 text-xs border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-30">下一页</button>
-            </div>
-          </div>
+        {logTotalPages > 0 && (
+          <PaginationBar
+            page={logPage}
+            onPageChange={setLogPage}
+            pageSize={logPageSize}
+            onPageSizeChange={setLogPageSize}
+            total={logTotal}
+            totalPages={logTotalPages}
+          />
         )}
       </div>
 
@@ -1253,7 +1256,7 @@ function ApiKeyStatsPanel({ userId, keyId, keyName }: { userId: number; keyId: n
   const [loading, setLoading] = useState(true)
   const [days, setDays] = useState(7)
   const [logPage, setLogPage] = useState(1)
-  const logPageSize = 10
+  const [logPageSize, setLogPageSize] = useState(20)
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
@@ -1341,14 +1344,15 @@ function ApiKeyStatsPanel({ userId, keyId, keyName }: { userId: number; keyId: n
             </tbody>
           </table>
         )}
-        {logTotalPages > 1 && (
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-[10px] text-slate-400">{logPage}/{logTotalPages}</span>
-            <div className="flex gap-1">
-              <button disabled={logPage <= 1} onClick={() => setLogPage(p => p - 1)} className="px-1.5 py-0.5 text-[10px] border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-30">上一页</button>
-              <button disabled={logPage >= logTotalPages} onClick={() => setLogPage(p => p + 1)} className="px-1.5 py-0.5 text-[10px] border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-30">下一页</button>
-            </div>
-          </div>
+        {logTotalPages > 0 && (
+          <PaginationBar
+            page={logPage}
+            onPageChange={setLogPage}
+            pageSize={logPageSize}
+            onPageSizeChange={setLogPageSize}
+            total={logTotal}
+            totalPages={logTotalPages}
+          />
         )}
       </div>
     </div>
