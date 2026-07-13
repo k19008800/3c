@@ -9,9 +9,12 @@
 
 import { FastifyInstance } from "fastify";
 import { eq, asc, sql } from "drizzle-orm";
+import { createHash, randomBytes } from "node:crypto";
+import { vendors, vendorModels, vendorApiKeys, auditLogs, models } from "../../db/schema.js";
 import { getDb } from "../../db/index.js";
-import { vendors, vendorModels, auditLogs } from "../../db/schema.js";
 import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
+import { syncVendorModels } from "../../services/vendor-sync.js";
+import { encryptApiKey } from "../../services/encryption.js";
 
 export async function adminVendorRoutes(app: FastifyInstance) {
   // 所有路由需要 admin/super_admin 权限
@@ -22,7 +25,8 @@ export async function adminVendorRoutes(app: FastifyInstance) {
     preHandler: [requirePerm(Perm.MODEL_MANAGE)],
   }, async (request, reply) => {
     const db = getDb();
-    const { name, baseUrl, description } = request.body as {
+    const body = request.body || {} as any;
+    const { name, baseUrl, description } = body as {
       name: string;
       baseUrl: string;
       description?: string;
@@ -90,9 +94,28 @@ export async function adminVendorRoutes(app: FastifyInstance) {
       .where(whereClause);
     const total = Number(totalResult?.count ?? 0);
 
+    // 主查询带 JOIN：model count
     const rows = await db
-      .select()
+      .select({
+        id: vendors.id,
+        name: vendors.name,
+        baseUrl: vendors.baseUrl,
+        status: vendors.status,
+        description: vendors.description,
+        userId: vendors.userId,
+        companyName: vendors.companyName,
+        contactName: vendors.contactName,
+        contactPhone: vendors.contactPhone,
+        contactEmail: vendors.contactEmail,
+        createdAt: vendors.createdAt,
+        updatedAt: vendors.updatedAt,
+        modelCount: sql<number>`COALESCE(vm_counts.cnt, 0)`,
+      })
       .from(vendors)
+      .leftJoin(
+        sql`(SELECT vendor_id, count(*) AS cnt FROM vendor_models WHERE status = true GROUP BY vendor_id) AS vm_counts`,
+        eq(vendors.id, sql`vm_counts.vendor_id`)
+      )
       .where(whereClause)
       .orderBy(asc(vendors.id))
       .limit(pageSize)
@@ -143,6 +166,52 @@ export async function adminVendorRoutes(app: FastifyInstance) {
     });
   });
 
+  // ── 获取厂商下的模型映射列表（用于行内展开） ──
+  app.get("/api/v1/admin/vendors/:id/models", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
+    const db = getDb();
+    const vendorId = parseInt((request.params as any).id, 10);
+    if (isNaN(vendorId)) {
+      reply.status(400).send({ code: 400, data: null, message: "无效的厂商 ID" });
+      return;
+    }
+
+    const rows = await db
+      .select({
+        id: vendorModels.id,
+        vendorId: vendorModels.vendorId,
+        modelId: vendorModels.modelId,
+        modelName: models.name,
+        modelType: models.type,
+        upstreamModelName: vendorModels.upstreamModelName,
+        apiEndpoint: vendorModels.apiEndpoint,
+        costPriceInput: vendorModels.costPriceInput,
+        costPriceOutput: vendorModels.costPriceOutput,
+        sellPriceInput: vendorModels.sellPriceInput,
+        sellPriceOutput: vendorModels.sellPriceOutput,
+        weight: vendorModels.weight,
+        rpmLimit: vendorModels.rpmLimit,
+        tpmLimit: vendorModels.tpmLimit,
+        status: vendorModels.status,
+        healthScore: vendorModels.healthScore,
+        healthSamples: vendorModels.healthSamples,
+        isDown: vendorModels.isDown,
+        circuitState: vendorModels.circuitState,
+        circuitOpenedAt: vendorModels.circuitOpenedAt,
+        circuitRetryAfter: vendorModels.circuitRetryAfter,
+        circuitFailCount: vendorModels.circuitFailCount,
+        createdAt: vendorModels.createdAt,
+        updatedAt: vendorModels.updatedAt,
+      })
+      .from(vendorModels)
+      .innerJoin(models, eq(vendorModels.modelId, models.id))
+      .where(eq(vendorModels.vendorId, vendorId))
+      .orderBy(asc(vendorModels.modelId));
+
+    reply.status(200).send({ code: 0, data: rows, message: "ok" });
+  });
+
   // ── 更新 ──
   app.patch("/api/v1/admin/vendors/:id", {
     preHandler: [requirePerm(Perm.MODEL_MANAGE)],
@@ -151,7 +220,7 @@ export async function adminVendorRoutes(app: FastifyInstance) {
     const id = parseInt((request.params as any).id);
     const body = request.body as Record<string, any>;
 
-    const allowedFields = ["baseUrl", "description", "status"] as const;
+    const allowedFields = ["baseUrl", "description", "status", "name", "companyName", "contactName", "contactPhone", "contactEmail"] as const;
     const updates: Record<string, any> = {};
     for (const field of allowedFields) {
       if (body[field] !== undefined) updates[field] = body[field];
@@ -245,5 +314,420 @@ export async function adminVendorRoutes(app: FastifyInstance) {
     });
 
     reply.status(200).send({ code: 0, data: null, message: "ok" });
+  });
+
+  // ══════════════════════════════════════════════
+  //  供应商自助管理 — 管理员审核路由
+  // ══════════════════════════════════════════════
+
+  // ── POST /api/v1/admin/vendors/:id/approve — 审核通过供应商注册 ──
+  app.post("/api/v1/admin/vendors/:id/approve", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
+    const db = getDb();
+    const id = parseInt((request.params as any).id, 10);
+    if (isNaN(id)) {
+      reply.status(400).send({ code: 400, data: null, message: "无效的厂商 ID" });
+      return;
+    }
+
+    const [vendor] = await db.select().from(vendors).where(eq(vendors.id, id)).limit(1);
+    if (!vendor) {
+      reply.status(404).send({ code: 404, data: null, message: "厂商不存在" });
+      return;
+    }
+
+    if (vendor.status !== "pending") {
+      reply.status(400).send({ code: 400, data: null, message: `当前状态为 ${vendor.status}，不可审核` });
+      return;
+    }
+
+    const operatorId = request.user!.userId;
+
+    const [updated] = await db
+      .update(vendors)
+      .set({ status: "active" })
+      .where(eq(vendors.id, id))
+      .returning();
+
+    // Generate a vendor API key automatically upon approval
+    const rawKey = `v_${randomBytes(24).toString("hex")}`;
+    const keyHash = createHash("sha256").update(rawKey).digest("hex");
+    const keyPrefix = rawKey.slice(0, 8);
+
+    await db.insert(vendorApiKeys).values({
+      vendorId: id,
+      keyHash,
+      keyPrefix,
+      permissions: ["vendor:*"],
+      status: true,
+    });
+
+    await db.insert(auditLogs).values({
+      operatorId,
+      action: "vendor_approve",
+      targetType: "vendor",
+      targetId: id,
+      before: { status: "pending" },
+      after: { status: "active" },
+      ip: request.ip,
+      description: `审核通过供应商: ${vendor.name}`,
+    });
+
+    reply.status(200).send({
+      code: 0,
+      data: {
+        vendor: updated,
+        vendorKey: rawKey,
+        vendorKeyPrefix: keyPrefix,
+      },
+      message: "供应商已审核通过，以下为 Vendor Key（请妥善保管）：" + rawKey.slice(0, 8) + "..."
+    });
+  });
+
+  // ── POST /api/v1/admin/vendors/:id/vendor-key — 为供应商生成/重置 API Key ──
+  app.post("/api/v1/admin/vendors/:id/vendor-key", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
+    const db = getDb();
+    const id = parseInt((request.params as any).id, 10);
+    if (isNaN(id)) {
+      reply.status(400).send({ code: 400, data: null, message: "无效的厂商 ID" });
+      return;
+    }
+
+    const [vendor] = await db
+      .select({ id: vendors.id, name: vendors.name })
+      .from(vendors)
+      .where(eq(vendors.id, id))
+      .limit(1);
+
+    if (!vendor) {
+      reply.status(404).send({ code: 404, data: null, message: "厂商不存在" });
+      return;
+    }
+
+    const operatorId = request.user!.userId;
+
+    // Disable all existing keys
+    await db
+      .update(vendorApiKeys)
+      .set({ status: false })
+      .where(eq(vendorApiKeys.vendorId, id));
+
+    // Generate new key
+    const rawKey = `v_${randomBytes(24).toString("hex")}`;
+    const keyHash = createHash("sha256").update(rawKey).digest("hex");
+    const keyPrefix = rawKey.slice(0, 8);
+
+    await db.insert(vendorApiKeys).values({
+      vendorId: id,
+      keyHash,
+      keyPrefix,
+      permissions: ["vendor:*"],
+      status: true,
+    });
+
+    await db.insert(auditLogs).values({
+      operatorId,
+      action: "vendor_key_generate",
+      targetType: "vendor",
+      targetId: id,
+      ip: request.ip,
+      description: `为供应商 ${vendor.name} 生成新的 API Key`,
+    });
+
+    reply.status(200).send({
+      code: 0,
+      data: { vendorKey: rawKey, keyPrefix },
+      message: "Vendor Key 已生成"
+    });
+  });
+
+  // ── POST /api/v1/admin/vendor-models/:id/approve — 审核供应商模型变更 ──
+  app.post("/api/v1/admin/vendor-models/:id/approve", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
+    const db = getDb();
+    const vmId = parseInt((request.params as any).id, 10);
+    if (isNaN(vmId)) {
+      reply.status(400).send({ code: 400, data: null, message: "无效的模型配置 ID" });
+      return;
+    }
+
+    const body = request.body as { apiKey?: string; costPriceInput?: string; costPriceOutput?: string } | null;
+
+    const [vm] = await db
+      .select({
+        id: vendorModels.id,
+        vendorId: vendorModels.vendorId,
+        modelId: vendorModels.modelId,
+        upstreamModelName: vendorModels.upstreamModelName,
+        status: vendorModels.status,
+        apiEndpoint: vendorModels.apiEndpoint,
+        apiKeyEncrypted: vendorModels.apiKeyEncrypted,
+      })
+      .from(vendorModels)
+      .where(eq(vendorModels.id, vmId))
+      .limit(1);
+
+    if (!vm) {
+      reply.status(404).send({ code: 404, data: null, message: "模型配置不存在" });
+      return;
+    }
+
+    const operatorId = request.user!.userId;
+
+    // Prepare updates
+    const updates: Record<string, any> = { status: true };
+
+    // If apiKey provided, encrypt it
+    if (body?.apiKey) {
+      const { encryptApiKey } = await import("../../services/encryption.js");
+      updates.apiKeyEncrypted = encryptApiKey(body.apiKey);
+    }
+
+    // If cost prices provided, update them
+    if (body?.costPriceInput !== undefined) updates.costPriceInput = body.costPriceInput;
+    if (body?.costPriceOutput !== undefined) updates.costPriceOutput = body.costPriceOutput;
+
+    const [updated] = await db
+      .update(vendorModels)
+      .set(updates)
+      .where(eq(vendorModels.id, vmId))
+      .returning();
+
+    await db.insert(auditLogs).values({
+      operatorId,
+      action: "vendor_model_approve",
+      targetType: "vendor_model",
+      targetId: vmId,
+      before: { status: vm.status },
+      after: updates,
+      ip: request.ip,
+      description: `审核通过供应商模型配置: ${vm.upstreamModelName}`,
+    });
+
+    reply.status(200).send({ code: 0, data: updated, message: "模型配置已审核通过" });
+  });
+
+  // ── 同步上游模型：拉取供应商 /v1/models 并自动创建 models + vendor_models ──
+  app.post("/api/v1/admin/vendors/:id/sync-models", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
+    const db = getDb();
+    const vendorId = parseInt((request.params as any).id);
+    const body = request.body as { apiKey?: string; apiEndpoint?: string } | undefined;
+
+    // 查供应商信息
+    const [vendor] = await db
+      .select({ id: vendors.id, name: vendors.name, baseUrl: vendors.baseUrl })
+      .from(vendors)
+      .where(eq(vendors.id, vendorId))
+      .limit(1);
+
+    if (!vendor) {
+      reply.status(404).send({ code: 404, data: null, message: "供应商不存在" });
+      return;
+    }
+
+    const apiKey = body?.apiKey?.trim();
+    if (!apiKey) {
+      reply.status(400).send({ code: 400, data: null, message: "apiKey 必填" });
+      return;
+    }
+
+    // 默认从供应商 baseUrl 推导 models 接口，也可手动指定覆盖
+    const baseEndpoint = (body?.apiEndpoint?.trim() || vendor.baseUrl.replace(/\/+$/, "")) + "/models";
+
+    // 拉取上游模型列表
+    let upstreamModels: { id: string; owned_by?: string }[] = [];
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15_000);
+      const res = await fetch(baseEndpoint, {
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        reply.status(502).send({ code: 502, data: null, message: `上游返回 ${res.status}: ${errText.slice(0, 200)}` });
+        return;
+      }
+
+      const data = await res.json() as any;
+      upstreamModels = data?.data ?? [];
+      if (!Array.isArray(upstreamModels) || upstreamModels.length === 0) {
+        reply.status(502).send({ code: 502, data: null, message: "上游未返回有效模型列表" });
+        return;
+      }
+    } catch (err: any) {
+      reply.status(502).send({ code: 502, data: null, message: `连接上游失败: ${err.message || err}` });
+      return;
+    }
+
+    // 推断模型类型
+    const typeHints: Record<string, string> = {
+      embedding: "embedding", embed: "embedding",
+      rerank: "rerank", reranker: "rerank",
+      image: "image", dalle: "image",
+      video: "video", happyhorse: "video", seedance: "video",
+      audio: "audio", tts: "audio", whisper: "audio", speech: "audio",
+      moderation: "moderation",
+      realtime: "realtime",
+    };
+
+    function guessModelType(id: string): string {
+      const lower = id.toLowerCase();
+      for (const [kw, t] of Object.entries(typeHints)) {
+        if (lower.includes(kw)) return t;
+      }
+      return "chat";
+    }
+
+    const encryptedKey = encryptApiKey(apiKey);
+    const apiEndpoint = baseEndpoint.replace(/\/models$/, "/chat/completions");
+
+    // ── 定价数据 ──（CNY per 1K tokens，cost price 从上游获取/使用默认值）
+    const pricingMultiplier = 1.01; // 默认利润倍率（由系统配置 pricing_multiplier 控制，后台价格管理页可维护）
+    const KNOWN_PRICES: Record<string, { input: number; output: number }> = {
+      'claude-opus-4-8':  { input: 0.1045, output: 0.5223 },
+      'claude-opus-4.7':  { input: 0.1045, output: 0.5223 },
+      'claude-sonnet-5':  { input: 0.0209, output: 0.1045 },
+      'claude-sonnet-4.6':{ input: 0.0209, output: 0.1045 },
+      'claude-haiku-4-5': { input: 0.0052, output: 0.0261 },
+      'gpt-5.4':          { input: 0.0365, output: 0.1460 },
+      'gpt-4o':           { input: 0.0157, output: 0.0626 },
+      'gpt-4o-mini':      { input: 0.0010, output: 0.0042 },
+      'deepseek-chat':    { input: 0.0027, output: 0.0110 },
+      'deepseek-v4-pro':  { input: 0.0055, output: 0.0219 },
+      'deepseek-v4-flash':{ input: 0.0027, output: 0.0110 },
+      'gemini-2.5-pro':   { input: 0.0083, output: 0.0333 },
+      'gemini-2.5-flash': { input: 0.0015, output: 0.0060 },
+    };
+    const defaultPrice = { input: 0.0030, output: 0.0150 };
+
+    function getPrices(name: string) {
+      const direct = KNOWN_PRICES[name];
+      if (direct) return direct;
+      // try lowercased match
+      for (const [k, v] of Object.entries(KNOWN_PRICES)) {
+        if (k.toLowerCase() === name.toLowerCase()) return v;
+      }
+      return defaultPrice;
+    }
+
+    let createdModels = 0;
+    let skippedModels = 0;
+    let createdMappings = 0;
+    let skippedMappings = 0;
+    let updatedPrices = 0;
+
+    for (const um of upstreamModels) {
+      const modelName = um.id?.trim();
+      if (!modelName) continue;
+
+      const modelType = guessModelType(modelName);
+
+      // Upsert model
+      let modelId: number;
+      const [existingModel] = await db
+        .select({ id: models.id })
+        .from(models)
+        .where(eq(models.name, modelName))
+        .limit(1);
+
+      if (existingModel) {
+        modelId = existingModel.id;
+        skippedModels++;
+      } else {
+        const [newModel] = await db
+          .insert(models)
+          .values({
+            name: modelName,
+            displayName: modelName,
+            type: modelType as any,
+          })
+          .returning({ id: models.id });
+        modelId = newModel.id;
+        createdModels++;
+      }
+
+      // Check existing mapping
+      const [existingMapping] = await db
+        .select({ id: vendorModels.id, costPriceInput: vendorModels.costPriceInput, costPriceOutput: vendorModels.costPriceOutput, sellPriceInput: vendorModels.sellPriceInput, sellPriceOutput: vendorModels.sellPriceOutput })
+        .from(vendorModels)
+        .where(sql`${vendorModels.vendorId} = ${vendorId} AND ${vendorModels.modelId} = ${modelId}`)
+        .limit(1);
+
+      const prices = getPrices(modelName);
+      const sellInput = String((prices.input * pricingMultiplier).toFixed(6));
+      const sellOutput = String((prices.output * pricingMultiplier).toFixed(6));
+
+      if (existingMapping) {
+        // Update pricing if existing mapping has zero/outdated prices
+        const hasNoPrice = Number(existingMapping.sellPriceInput) === 0 && Number(existingMapping.sellPriceOutput) === 0;
+        if (hasNoPrice) {
+          await db.update(vendorModels).set({
+            costPriceInput: String(prices.input), costPriceOutput: String(prices.output),
+            sellPriceInput: sellInput, sellPriceOutput: sellOutput,
+          }).where(eq(vendorModels.id, existingMapping.id));
+          updatedPrices++;
+        }
+        skippedMappings++;
+        continue;
+      }
+
+      await db.insert(vendorModels).values({
+        vendorId, modelId, upstreamModelName: modelName, apiEndpoint,
+        apiKeyEncrypted: encryptedKey,
+        costPriceInput: String(prices.input), costPriceOutput: String(prices.output),
+        sellPriceInput: sellInput, sellPriceOutput: sellOutput,
+        weight: 100,
+      });
+      createdMappings++;
+    }
+
+    await db.insert(auditLogs).values({
+      operatorId: request.user!.userId,
+      action: "vendor_update",
+      targetType: "vendor",
+      targetId: vendorId,
+      after: {
+        totalUpstream: upstreamModels.length,
+        createdModels,
+        skippedModels,
+        createdMappings,
+        skippedMappings,
+      },
+      ip: request.ip,
+      description: `${vendor.name}: 同步 ${upstreamModels.length} 个上游模型 (新增模型 ${createdModels}, 新增映射 ${createdMappings}, 跳过 ${skippedMappings})`,
+    });
+
+    reply.status(200).send({
+      code: 0,
+      data: {
+        vendorId,
+        vendorName: vendor.name,
+        totalUpstream: upstreamModels.length,
+        createdModels,
+        skippedModels,
+        createdMappings,
+        skippedMappings,
+      },
+      message: `成功同步 ${createdMappings} 个新映射，跳过 ${skippedMappings} 个已有映射${updatedPrices > 0 ? `，${updatedPrices} 个定价更新` : ''}`,
+    });
+  });
+
+  // ── 查询同步状态 ──
+  app.get("/api/v1/admin/vendors/:id/sync-status", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
+    const vendorId = parseInt((request.params as any).id);
+    const { getSyncStatus } = await import("../../services/vendor-sync.js");
+    const status = getSyncStatus(vendorId);
+    reply.send({ code: 0, data: status, message: "ok" });
   });
 }

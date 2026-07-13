@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "3cloud-api-test",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vitest", "run", "--config", "vitest.config.ts"],
+      "cwd": "${workspaceFolder}/api",
+      "port": 0
+    }
+  ]
+}

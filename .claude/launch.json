@@ -1,0 +1,26 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "3cloud-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5175,
+      "cwd": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web"
+    },
+    {
+      "name": "3cloud-api",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["tsx", "src/index.ts"],
+      "port": 3000,
+      "cwd": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api"
+    },
+    {
+      "name": "3cloud-test",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vitest", "run", "--config", "vitest.config.ts"],
+      "port": 0,
+      "cwd": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api"
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import { get, post, patch, del } from '@/lib/api'
 import type { VendorModel, Vendor, AdminModel, PaginatedData } from '@/types'
 import { Link } from 'react-router-dom'
 import PaginationBar from '@/components/ui/PaginationBar'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
   Loader2,
   AlertCircle,
@@ -162,6 +163,7 @@ export default function AdminVendorModels() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">供应商模型映射</h1>
+        <FeatureDescription page="admin/vendor-models" className="ml-2" />
         <div className="flex items-center gap-2">
           <button
             onClick={handleExport}

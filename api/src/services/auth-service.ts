@@ -1,7 +1,74 @@
 // ============================================================
-//  3cloud (3C) — Auth 服务层
-//  注册 / 登录 / 邮箱验证 / JWT / 密码管理
+//  3cloud (3C) — Auth 服务层 (Business Logic)
 // ============================================================
+//
+// ── 业务逻辑 ──
+//
+// 【注册流程 (registerUser)】
+//   1. email 唯一性检查 (lowercase)
+//   2. bcrypt.hash(password, saltRounds=12)
+//   3. INSERT users (status='pending') — 未验证邮箱
+//   4. 发放免费体验额度: system_configs key=trial_token_quota (default 10 元)
+//      - UPDATE users.balance = trialQuota
+//      - INSERT balance_logs (type='trial_grant')
+//   5. 推荐码处理: refCode → Redis ref:link:{code} → agentId → INSERT agent_clients
+//      - 触发活动奖励: processActivityCommission(register_bonus)
+//      - 静默失败, 不影响注册
+//   6. 生成邮箱验证码: 6位数字, Redis verify:email:{userId}, TTL 300s
+//   7. 签发 JWT: accessToken(2h) + refreshToken(7d)
+//
+// 【登录流程 (loginUser)】
+//   1. 查找用户: email (lowercase)
+//   2. 登录前风控 (login-security.ts): preLoginCheck(ip, userId, email)
+//      - IP 级失败计数 → 5次/min IP封禁 5min
+//      - 用户级失败计数 → 3次需验证码 → 5次/min 账号封禁 15min
+//      - requireCaptcha → 返回 captchaRequired=true + captchaSession 引导前端
+//   3. 状态检查: disabled → USER_DISABLED, deleted → USER_DELETED, forceLogoutAt → FORCE_LOGOUT
+//   4. bcrypt.compare(password, passwordHash)
+//      - 失败 → handleLoginFailure(ip, userId) 触发风控计数 + recordLogin(success=false)
+//   5. 成功 → handleLoginSuccess 清除计数器
+//   6. 异地检测 (异步, geo-check.ts):
+//      - lookupGeo(ip) → 获取 city/country
+//      - detectUnusualLogin → riskLevel: low/high/critical
+//      - high/critical → notifyLoginAlertEmail + recordSecurityEvent
+//   7. force_logout_at 过期清理 (异步)
+//   8. 签发 JWT + createSession (session-manager.ts)
+//
+// 【Token 刷新 (refreshAccessToken)】
+//   - verifyRefreshToken: 验证 refresh secret + type='refresh' 断言
+//   - 返回新 accessToken (2h), 不返回新 refreshToken
+//   - refreshToken 过期 → 必须重新登录
+//
+// 【权限模型 (getUserProfile)】
+//   - 基础角色: users.role (user/agent/super_admin/admin/...)
+//   - RBAC 升权: user_role_assignments JOIN admin_roles
+//     - 按优先级取最高管理角色: super_admin > admin > finance_ops > ops > support > auditor
+//   - 权限 bitset: getUserPermissions (permission-engine.ts)
+//     - admin_roles.permissions (bigint bitmask)
+//     - perms.toString() 返回给前端
+//
+// 【密码管理】
+//   - changeUserPassword: bcrypt.compare(old) → hash(new) → UPDATE
+//   - forgotPassword: crypto.randomBytes(32) → Redis reset:token:{token} (TTL 1800s) → 发送邮件
+//     - 邮箱不存在也返回成功 (防枚举)
+//   - resetPasswordWithToken: Redis 查 token → hash(new) → 清 token → revokeAllUserSessions
+//
+// 【邮箱验证】
+//   - 注册时生成 6 位数字验证码, Redis TTL 300s
+//   - verifyUserEmail: 比对 code → 更新 status='active' + emailVerifiedAt
+//   - resendVerifyCode: 60s 频率限制 (TTL > 240s 则拒绝)
+//
+// 【Token 参数】
+//   - ACCESS_EXPIRES_SECONDS = 7200 (2h)
+//   - REFRESH_EXPIRES_SECONDS = 604800 (7d)
+//   - jwt.sign: { userId, role, impersonatorId? }, HS256 (config.jwt.accessSecret/refreshSecret)
+//
+// 【安全集成点】
+//   - login-security.ts: 风控计数器 (Redis), 验证码会话, IP/用户封禁
+//   - session-manager.ts: 会话创建/撤销/列表
+//   - geo-check.ts: IP 地理位置查询 + 异地检测
+//   - security-event.ts: 安全事件记录
+//   - email-service.ts: 登录告警邮件/密码重置邮件
 
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -10,7 +77,7 @@ import { nanoid } from "nanoid";
 import { getDb } from "../db/index.js";
 import { getRedis } from "../redis.js";
 import { config } from "../config.js";
-import { users, agents, agentClients, balanceLogs, userLoginHistory } from "../db/schema.js";
+import { users, agents, agentClients, balanceLogs, userLoginHistory, systemConfigs, adminRoles, userRoleAssignments } from "../db/schema.js";
 
 // ── 类型 ──
 
@@ -136,7 +203,15 @@ export async function registerUser(
     });
 
   // 4. 发放免费体验额度（更新余额 + 写入流水）
-  const trialQuota = "50000.000000";
+  // 从系统配置读取 trial_token_quota（单位为元），默认 10 元
+  const [trialCfg] = await db
+    .select({ value: systemConfigs.value })
+    .from(systemConfigs)
+    .where(eq(systemConfigs.key, "trial_token_quota"))
+    .limit(1);
+  const trialRmb = trialCfg?.value ?? "10";
+  const trialQuota = (parseFloat(trialRmb) || 0).toFixed(6);
+
   await db
     .update(users)
     .set({ balance: trialQuota })
@@ -147,7 +222,7 @@ export async function registerUser(
     amount: trialQuota,
     balanceAfter: trialQuota,
     type: "trial_grant",
-    description: "新用户免费体验额度",
+    description: `新用户免费体验额度（${trialRmb}元）`,
   });
 
   // 更新返回中的 balance
@@ -509,8 +584,6 @@ export async function getUserProfile(userId: number) {
       discountRate: users.discountRate,
       rpmOverride: users.rpmOverride,
       tpmOverride: users.tpmOverride,
-      teamId: users.teamId,
-      teamRole: users.teamRole,
       emailVerifiedAt: users.emailVerifiedAt,
       createdAt: users.createdAt,
     })
@@ -522,10 +595,48 @@ export async function getUserProfile(userId: number) {
     throw new AppError("USER_NOT_FOUND", "用户不存在", 404);
   }
 
+  // ── 从 RBAC (user_role_assignments) 计算有效角色 ──
+  // 当 users.role 非管理角色时，检查是否有 RBAC 管理角色分配
+  const ADMIN_ROLES = ['super_admin', 'admin', 'finance_ops', 'ops', 'support', 'auditor'] as const;
+  type AdminRole = typeof ADMIN_ROLES[number];
+  const ADMIN_ROLE_SET = new Set<string>(ADMIN_ROLES);
+  let effectiveRole = user.role;
+
+  if (!ADMIN_ROLE_SET.has(user.role)) {
+    const assignments = await db
+      .select({ roleName: adminRoles.name })
+      .from(userRoleAssignments)
+      .innerJoin(adminRoles, eq(userRoleAssignments.adminRoleId, adminRoles.id))
+      .where(eq(userRoleAssignments.userId, userId));
+
+    if (assignments.length > 0) {
+      // 按优先级取最高管理角色
+      const PRIORITY = ADMIN_ROLES;
+      let best: AdminRole | null = null;
+      let bestRank = Infinity;
+      for (const a of assignments) {
+        const rank = PRIORITY.indexOf(a.roleName as AdminRole);
+        if (rank !== -1 && rank < bestRank) {
+          bestRank = rank;
+          best = a.roleName as AdminRole;
+        }
+      }
+      if (best) {
+        effectiveRole = best;
+      }
+    }
+  }
+
+  // 查询权限 bitset（来自 permission-engine: admin_roles / overrides / 硬编码）
+  const { getUserPermissions } = await import("./permission-engine.js");
+  const perms = await getUserPermissions(userId);
+
   return {
     ...user,
+    role: effectiveRole as typeof user.role,
     emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
     createdAt: user.createdAt?.toISOString() ?? null,
+    permissions: perms.toString(),
   };
 }
 

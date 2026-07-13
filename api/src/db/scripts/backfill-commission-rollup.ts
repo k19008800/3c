@@ -12,7 +12,7 @@
 
 import "dotenv/config";
 import { createDb } from "../index.js";
-import { computeDailyCommissionRollup } from "../../services/agent-service.js";
+import { computeDailyCommissionRollup } from "../../services/agent-finance.js";
 
 async function main() {
   createDb(); // Initialize DB connection

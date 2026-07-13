@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('refreshToken', data.refreshToken)
     localStorage.setItem('user', JSON.stringify(data.user))
     setState({ user: data.user, isAuthenticated: true, isLoading: false })
-    navigate('/')
+    navigate('/console')
   }, [navigate])
 
   const register = useCallback(async (email: string, password: string, confirmPassword: string) => {

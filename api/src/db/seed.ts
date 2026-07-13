@@ -29,7 +29,7 @@ const defaultConfigs: { key: string; value: string; description: string }[] = [
   { key: "agent_daily_withdraw_limit", value: "3", description: "代理商每日提现次数上限" },
 
   // ── 免费体验 ──
-  { key: "trial_token_quota", value: "50000", description: "新用户免费体验额度（Token）" },
+  { key: "trial_token_quota", value: "10", description: "新用户免费体验额度（元）" },
   { key: "trial_duration_days", value: "7", description: "免费体验有效期（天）" },
 
   // ── 折扣 ──

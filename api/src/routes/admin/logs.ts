@@ -114,4 +114,206 @@ export async function adminLogRoutes(app: FastifyInstance) {
       message: "ok",
     });
   });
+
+  // ──────────────────────────────────────────────
+  //  GET /api/v1/admin/logs/analytics — 日志分析摘要
+  // ──────────────────────────────────────────────
+
+  app.get("/api/v1/admin/logs/analytics", {
+    preHandler: [requirePerm(Perm.LOG_VIEW)],
+  }, async (request, reply) => {
+    try {
+      const db = getDb();
+      const query = request.query as { limit?: string };
+      const limit = Math.min(10000, Math.max(100, parseInt(query.limit ?? "1000", 10) || 1000));
+
+      const now = new Date();
+      const since24h = new Date(now.getTime() - 86400000);
+
+      // 24h summary
+      const [summary] = await db
+        .select({
+          totalCalls: sql<number>`count(*)::int`,
+          successCalls: sql<number>`count(*) filter (where ${callLogs.status} = 'success')::int`,
+          failedCalls: sql<number>`count(*) filter (where ${callLogs.status} = 'failed')::int`,
+          totalTokens: sql<number>`coalesce(sum(${callLogs.totalTokens}), 0)::bigint`,
+          totalCost: sql<string>`coalesce(sum(${callLogs.cost}::numeric), 0)`,
+        })
+        .from(callLogs)
+        .where(and(gte(callLogs.createdAt, since24h), lt(callLogs.createdAt, now)));
+
+      // Error pattern analysis
+      const errors = await db
+        .select({
+          errorMessage: callLogs.errorMessage,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(callLogs)
+        .where(and(
+          gte(callLogs.createdAt, since24h),
+          eq(callLogs.status, "failed"),
+          sql`${callLogs.errorMessage} IS NOT NULL`,
+        ))
+        .groupBy(callLogs.errorMessage)
+        .orderBy(sql`count(*)::int desc`)
+        .limit(10);
+
+      // Hourly distribution
+      const hourly = await db
+        .select({
+          hour: sql<number>`extract(hour from ${callLogs.createdAt})::int`,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(callLogs)
+        .where(and(gte(callLogs.createdAt, since24h), lt(callLogs.createdAt, now)))
+        .groupBy(sql`extract(hour from ${callLogs.createdAt})`)
+        .orderBy(sql`extract(hour from ${callLogs.createdAt}) asc`);
+
+      // Top consumers
+      const topConsumers = await db
+        .select({
+          email: users.email,
+          totalTokens: sql<number>`coalesce(sum(${callLogs.totalTokens}), 0)::bigint`,
+          totalCalls: sql<number>`count(*)::int`,
+        })
+        .from(callLogs)
+        .innerJoin(users, eq(callLogs.userId, users.id))
+        .where(and(gte(callLogs.createdAt, since24h), lt(callLogs.createdAt, now)))
+        .groupBy(users.id, users.email)
+        .orderBy(sql`coalesce(sum(${callLogs.totalTokens}), 0) desc`)
+        .limit(limit);
+
+      // Day-over-day trend
+      const trend = await db
+        .select({
+          date: sql<string>`${callLogs.createdAt}::date::text`,
+          totalCalls: sql<number>`count(*)::int`,
+        })
+        .from(callLogs)
+        .where(and(
+          gte(callLogs.createdAt, new Date(now.getTime() - 7 * 86400000)),
+          lt(callLogs.createdAt, now),
+        ))
+        .groupBy(sql`${callLogs.createdAt}::date`)
+        .orderBy(sql`${callLogs.createdAt}::date asc`);
+
+      reply.send({
+        code: 0,
+        data: {
+          summary: {
+            totalCalls: summary?.totalCalls ?? 0,
+            successCalls: summary?.successCalls ?? 0,
+            failedCalls: summary?.failedCalls ?? 0,
+            totalTokens: Number(summary?.totalTokens ?? 0),
+            totalCost: summary?.totalCost ?? "0",
+            successRate: summary && summary.totalCalls > 0
+              ? Number(((summary.successCalls / summary.totalCalls) * 100).toFixed(2))
+              : 100,
+          },
+          errors: errors.map(e => ({ message: e.errorMessage, count: e.count })),
+          hourly: hourly.map(h => ({ hour: h.hour, count: h.count })),
+          topConsumers: topConsumers.map(c => ({
+            email: c.email,
+            totalTokens: Number(c.totalTokens),
+            totalCalls: Number(c.totalCalls),
+          })),
+          trend: trend.map(t => ({ date: t.date, totalCalls: t.totalCalls })),
+        },
+        message: "ok",
+      });
+    } catch (err) {
+      reply.status(500).send({ code: 500, data: null, message: "分析查询失败" });
+    }
+  });
+
+  // ──────────────────────────────────────────────
+  //  GET /api/v1/admin/logs/analytics/export — 导出分析 CSV
+  // ──────────────────────────────────────────────
+
+  app.get("/api/v1/admin/logs/analytics/export", {
+    preHandler: [requirePerm(Perm.LOG_VIEW)],
+  }, async (request, reply) => {
+    try {
+      const db = getDb();
+      const query = request.query as { tab?: string };
+      const tab = query.tab ?? "summary";
+      const now = new Date();
+      const since24h = new Date(now.getTime() - 86400000);
+
+      let csv = "﻿";
+
+      if (tab === "errors") {
+        const errors = await db
+          .select({
+            errorMessage: callLogs.errorMessage,
+            count: sql<number>`count(*)::int`,
+          })
+          .from(callLogs)
+          .where(and(
+            gte(callLogs.createdAt, since24h),
+            eq(callLogs.status, "failed"),
+            sql`${callLogs.errorMessage} IS NOT NULL`,
+          ))
+          .groupBy(callLogs.errorMessage)
+          .orderBy(sql`count(*)::int desc`);
+
+        csv += "错误信息,次数\n";
+        csv += errors.map(e => `"${(e.errorMessage ?? "").replace(/"/g, '""')}",${e.count}`).join("\n");
+      } else if (tab === "hourly") {
+        const hourly = await db
+          .select({
+            hour: sql<number>`extract(hour from ${callLogs.createdAt})::int`,
+            count: sql<number>`count(*)::int`,
+          })
+          .from(callLogs)
+          .where(and(gte(callLogs.createdAt, since24h), lt(callLogs.createdAt, now)))
+          .groupBy(sql`extract(hour from ${callLogs.createdAt})`)
+          .orderBy(sql`extract(hour from ${callLogs.createdAt}) asc`);
+
+        csv += "小时,调用量\n";
+        csv += hourly.map(h => `${h.hour},${h.count}`).join("\n");
+      } else if (tab === "top") {
+        const top = await db
+          .select({
+            email: users.email,
+            totalTokens: sql<number>`coalesce(sum(${callLogs.totalTokens}), 0)::bigint`,
+            totalCalls: sql<number>`count(*)::int`,
+          })
+          .from(callLogs)
+          .innerJoin(users, eq(callLogs.userId, users.id))
+          .where(and(gte(callLogs.createdAt, since24h), lt(callLogs.createdAt, now)))
+          .groupBy(users.id, users.email)
+          .orderBy(sql`coalesce(sum(${callLogs.totalTokens}), 0) desc`)
+          .limit(100);
+
+        csv += "邮箱,Token数,调用量\n";
+        csv += top.map(t => `${t.email},${t.totalTokens},${t.totalCalls}`).join("\n");
+      } else {
+        // summary
+        const [summary] = await db
+          .select({
+            totalCalls: sql<number>`count(*)::int`,
+            successCalls: sql<number>`count(*) filter (where ${callLogs.status} = 'success')::int`,
+            failedCalls: sql<number>`count(*) filter (where ${callLogs.status} = 'failed')::int`,
+            totalTokens: sql<number>`coalesce(sum(${callLogs.totalTokens}), 0)::bigint`,
+            totalCost: sql<string>`coalesce(sum(${callLogs.cost}::numeric), 0)`,
+          })
+          .from(callLogs)
+          .where(and(gte(callLogs.createdAt, since24h), lt(callLogs.createdAt, now)));
+
+        csv += "指标,值\n";
+        csv += `总调用量,${summary?.totalCalls ?? 0}\n`;
+        csv += `成功调用量,${summary?.successCalls ?? 0}\n`;
+        csv += `失败调用量,${summary?.failedCalls ?? 0}\n`;
+        csv += `总Token,${summary?.totalTokens ?? 0}\n`;
+        csv += `总花费,${summary?.totalCost ?? "0"}`;
+      }
+
+      reply.header("Content-Type", "text/csv; charset=utf-8");
+      reply.header("Content-Disposition", `attachment; filename="logs-analytics-${tab}.csv"`);
+      reply.send(csv);
+    } catch (err) {
+      reply.status(500).send({ code: 500, data: null, message: "导出失败" });
+    }
+  });
 }

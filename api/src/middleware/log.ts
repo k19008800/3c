@@ -13,8 +13,7 @@ import { auditLogs } from "../db/schema.js";
  *   balance_adjust, role_change, real_name_approve, real_name_reject,
  *   withdraw_approve, withdraw_reject, withdraw_first_approve, withdraw_second_approve, withdraw_paid,
  *   agent_create, agent_update, config_update, vendor_create, vendor_update,
- *   model_create, model_update, model_delete, team_create, team_update,
- *   team_delete, member_join, member_leave, api_key_create, api_key_delete
+ *   model_create, model_update, model_delete, api_key_create, api_key_delete
  */
 export async function recordAuditLog(
   operatorId: number,

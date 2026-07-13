@@ -43,6 +43,7 @@ import {
   resetPasswordConfirmSchema,
 } from "../schemas.js";
 import type { RegisterInput, LoginInput, RefreshInput, ChangePasswordInput, RealNamePersonalInput, RealNameEnterpriseInput, RealNameUploadInput, ResetPasswordInput, ResetPasswordConfirmInput } from "../schemas.js";
+import { logOperation } from "../services/operation-log.js";
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -61,6 +62,17 @@ export async function authRoutes(app: FastifyInstance) {
     try {
       const parsed = registerSchema.parse(request.body);
       const result = await registerUser(parsed.email, parsed.password, parsed.refCode);
+
+      // 操作日志：注册成功
+      logOperation({
+        userId: result.user.id,
+        userRole: result.user.role,
+        category: "auth",
+        action: "register",
+        summary: `用户注册: ${parsed.email}`,
+        ip: request.ip,
+        userAgent: request.headers["user-agent"] as string | undefined,
+      });
 
       reply.status(200).send({
         code: 0,
@@ -142,6 +154,19 @@ export async function authRoutes(app: FastifyInstance) {
         (parsed as any).captchaSession,
       );
 
+      // 如果 result.user 存在，说明登录成功
+      if (result.user) {
+        logOperation({
+          userId: result.user.id,
+          userRole: result.user.role,
+          category: "auth",
+          action: "login",
+          summary: `用户登录: ${result.user.email}`,
+          ip: request.ip,
+          userAgent: request.headers["user-agent"] as string | undefined,
+        });
+      }
+
       // 如果需要验证码（未提交验证码时）
       if (result.captchaRequired) {
         reply.status(200).send({
@@ -222,6 +247,17 @@ export async function authRoutes(app: FastifyInstance) {
       try {
         const parsed = changePasswordSchema.parse(request.body);
         await changeUserPassword(request.user!.userId, parsed.oldPassword, parsed.newPassword);
+
+        logOperation({
+          userId: request.user!.userId,
+          userRole: request.user!.role,
+          category: "auth",
+          action: "change_password",
+          summary: "修改密码",
+          ip: request.ip,
+          userAgent: request.headers["user-agent"] as string | undefined,
+        });
+
         reply.status(200).send({ code: 0, data: null, message: "密码修改成功" });
       } catch (err: any) {
         if (err instanceof AppError) {

@@ -30,6 +30,7 @@ interface ModelListItem {
   id: number;
   name: string;
   displayName: string | null;
+  description: string | null;
   type: string;
   vendors: ModelVendorInfo[];
 }
@@ -61,6 +62,7 @@ export async function modelListRoutes(app: FastifyInstance) {
       .select({
         modelId: models.id,
         modelName: models.name,
+        modelDescription: models.description,
         modelDisplayName: models.displayName,
         modelType: models.type,
         vendorId: vendors.id,
@@ -96,6 +98,7 @@ export async function modelListRoutes(app: FastifyInstance) {
           id: row.modelId,
           name: row.modelName,
           displayName: row.modelDisplayName,
+          description: row.modelDescription,
           type: row.modelType,
           vendors: [],
         };

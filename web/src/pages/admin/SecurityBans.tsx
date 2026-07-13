@@ -5,6 +5,7 @@ import {
   Loader2, AlertCircle, Lock, Unlock, RefreshCw,
   ShieldOff, UserX, Clock, Plus, X
 } from 'lucide-react'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 
 export default function AdminSecurityBans() {
   const [banData, setBanData] = useState<BanList | null>(null)
@@ -122,6 +123,7 @@ export default function AdminSecurityBans() {
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <Lock size={24} /> 封禁管理
         </h1>
+        <FeatureDescription page="admin/security/bans" className="ml-2" />
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowBanIpDialog(true)}

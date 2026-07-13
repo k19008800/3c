@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { get } from '@/lib/api'
 import type { SecurityDashboardData, SecurityEvent } from '@/types'
 import RiskBadge from '@/components/security/RiskBadge'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
   Loader2, AlertCircle, ShieldAlert, AlertTriangle, Lock,
   CircuitBoard, TrendingUp, ArrowRight, CheckCircle2
@@ -96,6 +97,7 @@ export default function AdminSecurityDashboard() {
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <ShieldAlert size={24} /> 安全总览
         </h1>
+        <FeatureDescription page="admin/security" className="ml-2" />
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-400">
             <span className="font-semibold text-slate-600">{totalEvents}</span> 近7天事件 ·

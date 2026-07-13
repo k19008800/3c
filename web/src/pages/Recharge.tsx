@@ -10,9 +10,27 @@ import {
   Banknote,
   QrCode,
   History,
+  Calculator,
+  Clock,
+  FileText,
+  UserCheck,
 } from 'lucide-react'
 
 type Tab = 'online' | 'bank' | 'history'
+
+// ── 充值（用户端）─-
+//
+// 【业务说明】
+//   用户充值入口，支持两种支付方式：
+//   1. 在线支付（微信/支付宝）：选择金额 → 选择渠道 → 创建订单 → 扫码支付 → 自动到账
+//   2. 银行转账：填写金额/银行/账号/日期 → 提交凭证 → 等待管理员双审确认
+//   充值估算器：输入预期 Token 量 → 计算所需金额。
+//   充值记录标签页：查看历史订单，支持按状态筛选（待支付/已支付/已确认/已过期）。
+//
+// 【状态流转】pending → paid(在线)/confirmed(银行双审通过) | expired | cancelled
+// 【审核中指示】银行转账订单 status=pending 时显示"审核中"琥珀色标识
+// 【权限要求】登录即可充值；银行转账需管理员审核
+// 【数据来源】POST /api/v1/recharge, POST /api/v1/recharge/bank-transfer, GET /api/v1/recharge/orders
 
 export default function Recharge() {
   const [tab, setTab] = useState<Tab>('online')
@@ -202,6 +220,10 @@ function OnlinePayment() {
   )
 }
 
+// ── Price per token estimate (simplified; 3cloud charges by token, not a flat rate) ──
+// Use a configurable rate: CNY per 1000 tokens.
+const DEFAULT_RATE_PER_1K = 0.001 // 0.001 CNY per 1000 tokens — adjust as needed
+
 function BankTransfer() {
   const [form, setForm] = useState({
     amount: '',
@@ -213,7 +235,20 @@ function BankTransfer() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [successSummary, setSuccessSummary] = useState<{
+    amount: string
+    bankName: string
+    accountNumber: string
+    transferDate: string
+    remark: string
+    orderNo?: string
+    submittedAt: string
+  } | null>(null)
   const [savedPayer, setSavedPayer] = useState<{ bankName: string | null; accountNumber: string | null } | null>(null)
+
+  // ── Recharge estimate ──
+  const [estimateTokens, setEstimateTokens] = useState('')
+  const [ratePer1k, setRatePer1k] = useState(DEFAULT_RATE_PER_1K.toString())
 
   // 获取上次成功对公转账的付款账户信息
   useEffect(() => {
@@ -232,6 +267,7 @@ function BankTransfer() {
     e.preventDefault()
     setError('')
     setSuccess(false)
+    setSuccessSummary(null)
     const amt = form.amount.trim()
     if (!amt || parseFloat(amt) <= 0) {
       setError('请输入有效的金额')
@@ -243,14 +279,23 @@ function BankTransfer() {
     }
     setLoading(true)
     try {
-      await post('/api/v1/recharge/bank-transfer', {
+      const result = await post('/api/v1/recharge/bank-transfer', {
         amount: amt,
         bankName: form.bankName,
         accountNumber: form.accountNumber,
         transferDate: form.transferDate,
         remark: form.remark || undefined,
-      })
+      }) as any
       setSuccess(true)
+      setSuccessSummary({
+        amount: amt,
+        bankName: form.bankName,
+        accountNumber: form.accountNumber,
+        transferDate: form.transferDate,
+        remark: form.remark,
+        orderNo: result?.orderNo,
+        submittedAt: new Date().toLocaleString('zh-CN'),
+      })
       // 保留上次银行信息，只清金额、日期和备注
       setForm(f => ({ ...f, amount: '', transferDate: '', remark: '' }))
     } catch (err: any) {
@@ -259,6 +304,13 @@ function BankTransfer() {
       setLoading(false)
     }
   }
+
+  const estimatedAmount = (() => {
+    const tokens = parseInt(estimateTokens, 10)
+    if (!tokens || tokens <= 0) return null
+    const rate = parseFloat(ratePer1k) || DEFAULT_RATE_PER_1K
+    return (tokens / 1000) * rate
+  })()
 
   return (
     <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 space-y-4">
@@ -270,6 +322,45 @@ function BankTransfer() {
       )}
       <p className="text-sm text-slate-500">提交银行转账信息后，请等待管理员审核确认。</p>
 
+      {/* ── Recharge Estimate ── */}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+        <div className="flex items-center gap-2 text-amber-800">
+          <Calculator size={16} />
+          <h3 className="text-sm font-semibold">充值估算</h3>
+        </div>
+        <p className="text-xs text-amber-600">输入期望获得的 Token 数量，估算需要充值多少金额</p>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-slate-600 whitespace-nowrap">期望 Token 数：</label>
+            <input
+              type="number"
+              min="1"
+              value={estimateTokens}
+              onChange={(e) => setEstimateTokens(e.target.value)}
+              placeholder="如 1000000"
+              className="w-36 px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-slate-600 whitespace-nowrap">单价 (¥/千tokens)：</label>
+            <input
+              type="number"
+              step="0.0001"
+              min="0.0001"
+              value={ratePer1k}
+              onChange={(e) => setRatePer1k(e.target.value)}
+              className="w-28 px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+          </div>
+        </div>
+        {estimatedAmount !== null && (
+          <div className="flex items-center gap-2 text-sm font-semibold text-amber-900 bg-amber-100 rounded-lg px-4 py-2">
+            <Calculator size={14} />
+            预计需要充值约 <span className="text-lg">¥{estimatedAmount.toFixed(2)}</span>
+          </div>
+        )}
+      </div>
+
       {error && (
         <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg text-sm">
           <AlertCircle size={16} />
@@ -277,10 +368,64 @@ function BankTransfer() {
         </div>
       )}
 
-      {success && (
-        <div className="flex items-center gap-2 text-green-700 bg-green-50 p-3 rounded-lg text-sm">
-          <CheckCircle2 size={16} />
-          银行转账信息已提交，等待管理员审核确认。
+      {success && successSummary && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-5 space-y-4">
+          <div className="flex items-center gap-2 text-green-700 font-semibold text-base">
+            <CheckCircle2 size={20} />
+            转账信息已保存
+          </div>
+          <p className="text-sm text-green-600">您的银行转账信息已成功提交，请等待管理员审核确认。</p>
+
+          {/* Summary Card */}
+          <div className="bg-white border border-green-200 rounded-lg p-4 space-y-2">
+            <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
+              <FileText size={14} className="text-slate-500" />
+              提交摘要
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-500">提交时间：</span>
+                <span className="text-slate-800">{successSummary.submittedAt}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">充值金额：</span>
+                <span className="font-semibold text-green-700">¥{Number(successSummary.amount).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">银行名称：</span>
+                <span className="text-slate-800">{successSummary.bankName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">转账账号：</span>
+                <span className="text-slate-800 font-mono">{successSummary.accountNumber}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">转账日期：</span>
+                <span className="text-slate-800">{successSummary.transferDate}</span>
+              </div>
+              {successSummary.orderNo && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">订单号：</span>
+                  <span className="text-slate-800 font-mono">{successSummary.orderNo}</span>
+                </div>
+              )}
+            </div>
+            {successSummary.remark && (
+              <div className="mt-2 pt-2 border-t border-slate-100 text-sm">
+                <span className="text-slate-500">备注：</span>
+                <span className="text-slate-700">{successSummary.remark}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Pending review status indicator */}
+          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+            <Clock size={16} className="text-amber-600 animate-pulse" />
+            <div>
+              <span className="text-sm font-medium text-amber-800">审核中</span>
+              <span className="text-xs text-amber-600 ml-2">预计 1-2 个工作日内完成审核</span>
+            </div>
+          </div>
         </div>
       )}
 
@@ -393,6 +538,7 @@ function OrderHistory() {
       confirmed: 'bg-green-100 text-green-700',
       failed: 'bg-red-100 text-red-700',
       expired: 'bg-slate-100 text-slate-500',
+      reviewing: 'bg-amber-100 text-amber-700',
     }
     const labels: Record<string, string> = {
       pending: '待支付',
@@ -400,6 +546,7 @@ function OrderHistory() {
       confirmed: '已确认',
       failed: '失败',
       expired: '已过期',
+      reviewing: '审核中',
     }
     return (
       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${map[status] || 'bg-slate-100 text-slate-700'}`}>
@@ -407,6 +554,11 @@ function OrderHistory() {
       </span>
     )
   }
+
+  // ── Pending review count ──
+  const pendingReviewCount = orders.filter(
+    (o) => o.status === 'reviewing' || (o.channel === 'bank_transfer' && o.status === 'pending')
+  ).length
 
   if (loading) {
     return (
@@ -428,7 +580,16 @@ function OrderHistory() {
   return (
     <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">充值记录</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold">充值记录</h2>
+          {/* Pending review indicator */}
+          {pendingReviewCount > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
+              <Clock size={12} className="animate-pulse" />
+              {pendingReviewCount} 笔审核中
+            </span>
+          )}
+        </div>
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
@@ -437,6 +598,7 @@ function OrderHistory() {
           <option value="">全部状态</option>
           <option value="pending">待支付</option>
           <option value="paid">已支付</option>
+          <option value="reviewing">审核中</option>
           <option value="confirmed">已确认</option>
           <option value="failed">失败</option>
           <option value="expired">已过期</option>
@@ -463,18 +625,33 @@ function OrderHistory() {
                 </td>
               </tr>
             ) : (
-              orders.map((order) => (
-                <tr key={order.id} className="hover:bg-slate-50 transition">
-                  <td className="px-4 py-3 text-sm text-slate-600 font-mono">{order.orderNo}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-slate-900">¥{Number(order.amount || 0).toFixed(2)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{order.channel === 'wechat_scan' ? '微信支付' : order.channel === 'alipay_scan' ? '支付宝' : order.channel === 'bank_transfer' ? '银行转账' : order.channel}</td>
-                  <td className="px-4 py-3">{getStatusBadge(order.status)}</td>
-                  <td className="px-4 py-3 text-sm text-slate-500 whitespace-nowrap">
-                    {new Date(order.createdAt).toLocaleString('zh-CN')}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-500">{order.remark || '-'}</td>
-                </tr>
-              ))
+              orders.map((order) => {
+                // Bank transfer orders with pending status show as "reviewing"
+                const displayStatus = order.channel === 'bank_transfer' && order.status === 'pending'
+                  ? 'reviewing'
+                  : order.status
+                return (
+                  <tr key={order.id} className="hover:bg-slate-50 transition">
+                    <td className="px-4 py-3 text-sm text-slate-600 font-mono">{order.orderNo}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-slate-900">¥{Number(order.amount || 0).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{order.channel === 'wechat_scan' ? '微信支付' : order.channel === 'alipay_scan' ? '支付宝' : order.channel === 'bank_transfer' ? '银行转账' : order.channel}</td>
+                    <td className="px-4 py-3">{getStatusBadge(displayStatus)}</td>
+                    <td className="px-4 py-3 text-sm text-slate-500 whitespace-nowrap">
+                      {new Date(order.createdAt).toLocaleString('zh-CN')}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-500">
+                      <div className="flex items-center gap-1.5">
+                        {order.remark || '-'}
+                        {order.channel === 'bank_transfer' && order.status === 'pending' && (
+                          <span className="inline-flex items-center gap-0.5 text-amber-600" title="等待管理员审核">
+                            <UserCheck size={12} />
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })
             )}
           </tbody>
         </table>

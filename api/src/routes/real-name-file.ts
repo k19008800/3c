@@ -5,7 +5,7 @@
 // ============================================================
 
 import { FastifyInstance } from "fastify";
-import { authenticateJWT, requireRole } from "../middleware/auth.js";
+import { authenticateJWT, requirePerm, Perm } from "../middleware/auth.js";
 import { getFileAbsolutePath, getMimeType } from "../services/real-name-service.js";
 import fs from "node:fs";
 import path from "node:path";
@@ -19,7 +19,7 @@ export async function realNameFileRoutes(app: FastifyInstance) {
   //   如: 3_id_front.jpg, 1_id_back.png, 2_business_license.pdf
 
   app.get("/api/v1/admin/real-name/file/:userId/:filename", {
-    preHandler: [authenticateJWT, requireRole("admin", "super_admin")],
+    preHandler: [authenticateJWT, requirePerm(Perm.REVIEW_ACTION)],
     handler: async (request, reply) => {
       const params = request.params as {
         userId: string;

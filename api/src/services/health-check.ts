@@ -8,6 +8,7 @@ import { eq, lte, and, asc, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { vendorModels, vendors } from "../db/schema.js";
 import { decryptApiKey } from "./encryption.js";
+import { logger } from "../logger.js";
 
 // ── 常量 ──
 
@@ -112,7 +113,7 @@ export async function activeHealthCheck(): Promise<void> {
 
   if (downVms.length === 0) return;
 
-  console.log(`[HealthCheck] 开始主动检查 ${downVms.length} 个 down 厂商...`);
+  logger.info({ count: downVms.length }, "[HealthCheck] 开始主动检查 down 厂商");
 
   for (const vm of downVms) {
     await checkSingleVendor(vm);
@@ -153,7 +154,7 @@ async function checkSingleVendor(vm: DownVendorInfo): Promise<void> {
     success = response.ok;
   } catch (err: any) {
     success = false;
-    console.log(`[HealthCheck] ${vm.vendorName} / ${vm.upstreamModelName} — 检查失败: ${err.message}`);
+    logger.info({ vendor: vm.vendorName, model: vm.upstreamModelName, error: err.message }, "[HealthCheck] 检查失败");
   }
 
   const consecutive = (vm.consecutiveSuccess ?? 0) + (success ? 1 : 0);
@@ -170,7 +171,7 @@ async function checkSingleVendor(vm: DownVendorInfo): Promise<void> {
       })
       .where(eq(vendorModels.id, vm.id));
 
-    console.log(`[HealthCheck] ✅ ${vm.vendorName} / ${vm.upstreamModelName} — 已恢复`);
+    logger.info({ vendor: vm.vendorName, model: vm.upstreamModelName }, "[HealthCheck] 厂商已恢复");
   } else if (success) {
     // 成功但还未达到恢复阈值
     await db
@@ -182,7 +183,7 @@ async function checkSingleVendor(vm: DownVendorInfo): Promise<void> {
       })
       .where(eq(vendorModels.id, vm.id));
 
-    console.log(`[HealthCheck] ⏳ ${vm.vendorName} / ${vm.upstreamModelName} — 连续成功 ${consecutive}/${RECOVERY_CONSECUTIVE}`);
+    logger.info({ vendor: vm.vendorName, model: vm.upstreamModelName, consecutive, required: RECOVERY_CONSECUTIVE }, "[HealthCheck] 连续成功");
   } else {
     // 失败，重置连续计数
     await db

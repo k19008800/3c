@@ -21,11 +21,19 @@ import {
   deleteAgent,
   listAgentClientsForAdmin,
   bindAgentClient,
+} from "../../services/agent-core.js";
+import {
   getAgentCommissionRules,
   upsertCommissionRule,
   deleteCommissionRule,
   setAgentParent,
-} from "../../services/agent-service.js";
+} from "../../services/agent-commission.js";
+import {
+  updateSettlementConfig,
+  getSettlementConfig,
+  settleAgentManually,
+  getSettlementHistory,
+} from "../../services/agent-settlement.js";
 import {
   createAgentSchema,
   updateAgentSchema,
@@ -488,6 +496,148 @@ export async function adminAgentRoutes(app: FastifyInstance) {
       });
 
       reply.status(200).send({ code: 0, data: result, message: "代理商身份已删除" });
+    } catch (err: any) {
+      if (err instanceof AppError) {
+        reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // ──────────────────────────────────────────────
+  //  GET /api/v1/admin/agents/:id/settlement-config — 获取结算设置
+  // ──────────────────────────────────────────────
+
+  app.get("/api/v1/admin/agents/:id/settlement-config", {
+    preHandler: [requirePerm(Perm.AGENT_LIST)],
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const agentId = parseInt(id, 10);
+
+      if (isNaN(agentId)) {
+        reply.status(400).send({ code: 400, data: null, message: "无效的代理商 ID" });
+        return;
+      }
+
+      const result = await getSettlementConfig(agentId);
+
+      reply.status(200).send({
+        code: 0,
+        data: result,
+        message: "ok",
+      });
+    } catch (err: any) {
+      if (err instanceof AppError) {
+        reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // ──────────────────────────────────────────────
+  //  PUT /api/v1/admin/agents/:id/settlement-config — 更新结算周期
+  // ──────────────────────────────────────────────
+
+  app.put("/api/v1/admin/agents/:id/settlement-config", {
+    preHandler: [requirePerm(Perm.AGENT_MANAGE)],
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const agentId = parseInt(id, 10);
+
+      if (isNaN(agentId)) {
+        reply.status(400).send({ code: 400, data: null, message: "无效的代理商 ID" });
+        return;
+      }
+
+      const body = request.body as { settlementCycle?: string };
+
+      if (!body.settlementCycle) {
+        reply.status(400).send({ code: 400, data: null, message: "settlementCycle 必填" });
+        return;
+      }
+
+      const result = await updateSettlementConfig(agentId, body.settlementCycle, request.user!.userId);
+
+      reply.status(200).send({
+        code: 0,
+        data: result,
+        message: "结算周期已更新",
+      });
+    } catch (err: any) {
+      if (err instanceof AppError) {
+        reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // ──────────────────────────────────────────────
+  //  POST /api/v1/admin/agents/:id/settle — 立即结算该代理商
+  // ──────────────────────────────────────────────
+
+  app.post("/api/v1/admin/agents/:id/settle", {
+    preHandler: [requirePerm(Perm.FINANCE_COMMISSION)],
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const agentId = parseInt(id, 10);
+
+      if (isNaN(agentId)) {
+        reply.status(400).send({ code: 400, data: null, message: "无效的代理商 ID" });
+        return;
+      }
+
+      const result = await settleAgentManually(agentId, request.user!.userId);
+
+      reply.status(200).send({
+        code: 0,
+        data: result,
+        message: "结算成功",
+      });
+    } catch (err: any) {
+      if (err instanceof AppError) {
+        reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // ──────────────────────────────────────────────
+  //  GET /api/v1/admin/agents/settlement-history — 结算历史
+  // ──────────────────────────────────────────────
+
+  app.get("/api/v1/admin/agents/settlement-history", {
+    preHandler: [requirePerm(Perm.AGENT_LIST)],
+  }, async (request, reply) => {
+    try {
+      const query = request.query as {
+        agentId?: string;
+        page?: string;
+        pageSize?: string;
+      };
+
+      const agentId = parseInt(query.agentId ?? "", 10);
+      if (isNaN(agentId)) {
+        reply.status(400).send({ code: 400, data: null, message: "agentId 必填" });
+        return;
+      }
+
+      const page = Math.max(1, parseInt(query.page ?? "1", 10) || 1);
+      const pageSize = Math.min(100, Math.max(1, parseInt(query.pageSize ?? "20", 10) || 20));
+
+      const result = await getSettlementHistory(agentId, page, pageSize);
+
+      reply.status(200).send({
+        code: 0,
+        data: result,
+        message: "ok",
+      });
     } catch (err: any) {
       if (err instanceof AppError) {
         reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });

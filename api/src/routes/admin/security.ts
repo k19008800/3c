@@ -660,4 +660,35 @@ export async function adminSecurityRoutes(app: FastifyInstance) {
       message: "熔断已重置",
     });
   });
+
+  // ──────────────────────────────────────────────
+  //  POST /api/v1/admin/security/test-alert — 发送测试告警
+  // ──────────────────────────────────────────────
+
+  app.post("/api/v1/admin/security/test-alert", {
+    preHandler: [requirePerm(Perm.SECURITY_ACTION)],
+  }, async (request, reply) => {
+    try {
+      const operatorId = request.user!.userId;
+
+      // 记录一条测试安全事件
+      await recordSecurityEvent({
+        eventType: "test_alert",
+        riskLevel: "low",
+        detail: { operatorId, message: "管理员手动触发测试告警" },
+      });
+
+      reply.status(200).send({
+        code: 0,
+        data: { ok: true, message: "测试告警已发送" },
+        message: "ok",
+      });
+    } catch (err) {
+      reply.status(500).send({
+        code: 0,
+        data: { ok: false, message: "测试告警发送失败" },
+        message: "error",
+      });
+    }
+  });
 }

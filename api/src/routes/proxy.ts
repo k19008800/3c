@@ -7,11 +7,11 @@
 //  流程：鉴权 → 限流 → 路由 → 转发 → 计费 → 更新限流
 // ============================================================
 
-import { FastifyInstance } from "fastify";
+import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { Readable } from "node:stream";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNotNull } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { models, users } from "../db/schema.js";
+import { models, users, callLogs } from "../db/schema.js";
 import { authenticateApiKey } from "../middleware/auth.js";
 import {
   checkRateLimit,
@@ -19,13 +19,17 @@ import {
   recordTokensForLimit,
 } from "../middleware/rate-limit.js";
 import { AppError } from "../services/auth-service.js";
+import { getActiveUserQuota } from "../services/quota-service.js";
 import { enrichCallGeo } from "../services/geo-check.js";
 import { selectRoute, forwardRequest, forwardStreamRequest } from "../services/router.js";
+import type { VendorModelRoute } from "../services/router.js";
 import { charge, calculateCost } from "../services/billing.js";
 import { updateHealthAfterCall } from "../services/health-check.js";
 import {
   chatCompletionSchema,
   embeddingsSchema,
+  type ChatCompletionInput,
+  type EmbeddingsInput,
 } from "../schemas.js";
 
 // ── 用户限流配置缓存（60 秒） ──
@@ -93,15 +97,45 @@ export async function proxyRoutes(app: FastifyInstance) {
     const apiKeyId = request.apiKey?.id ?? null;
     const { userType, rpmOverride, tpmOverride } = await getUserLimitInfo(userId);
 
-    const rejected = await checkRateLimit(userId, apiKeyId, userType, rpmOverride, tpmOverride);
+    // 获取用户额度中的 TPM/RPM 覆盖值（额度级 > 用户级 override > 类型默认值）
+    let quotaRpmLimit: number | null | undefined;
+    let quotaTpmLimit: number | null | undefined;
+    try {
+      const activeQuota = await getActiveUserQuota(userId);
+      if (activeQuota) {
+        quotaRpmLimit = activeQuota.rpmLimit;
+        quotaTpmLimit = activeQuota.tpmLimit;
+      }
+    } catch {
+      // 静默失败，继续使用用户级/默认限流
+    }
+
+    const rejected = await checkRateLimit(
+      userId, apiKeyId, userType, rpmOverride, tpmOverride,
+      quotaRpmLimit, quotaTpmLimit,
+    );
     if (rejected) {
-      reply.status(429);
-      return openaiError(
+      // 记录 429 到 call_logs
+      try {
+        const db = getDb();
+        await db.insert(callLogs).values({
+          userId,
+          apiKeyId,
+          status: 'rate_limited',
+          errorMessage: `请求频率超限（${rejected.dimension.toUpperCase()} ${rejected.level}: ${rejected.current}/${rejected.limit}）`,
+          durationMs: 0,
+          ip: request.ip,
+          userAgent: request.headers["user-agent"] ?? null,
+        });
+      } catch { /* 429 记录失败不影响主流程 */ }
+
+      reply.header("Retry-After", String(Math.ceil((rejected.retryAfterMs ?? 60000) / 1000)));
+      return reply.status(429).send(openaiError(
         429,
         `请求频率超限（${rejected.dimension.toUpperCase()} ${rejected.level}: ${rejected.current}/${rejected.limit}）`,
         "rate_limit_error",
         "rate_limit_exceeded",
-      );
+      ));
     }
   });
 
@@ -128,12 +162,12 @@ export async function proxyRoutes(app: FastifyInstance) {
   // ── Fallback: 主厂商 5xx 时尝试次优厂商 ──
   async function tryFallback(
     model: { id: number; name: string },
-    request: any,
-    failedRoute: any,
+    request: FastifyRequest,
+    failedRoute: VendorModelRoute,
     userId: number,
     apiKeyId: number | null,
     originalStartTime: number,
-  ): Promise<any> {
+  ): Promise<unknown> {
     try {
       const { eq, asc, and, sql } = await import("drizzle-orm");
       const { getDb } = await import("../db/index.js");
@@ -230,9 +264,9 @@ export async function proxyRoutes(app: FastifyInstance) {
 
   // ── 通用非流式转发 + 计费 ──
   async function handleNonStreaming(
-    request: any,
-    reply: any,
-    body: any,
+    request: FastifyRequest,
+    reply: FastifyReply,
+    body: Record<string, unknown>,
     modelName: string,
   ) {
     const model = await resolveModel(modelName);
@@ -359,7 +393,7 @@ export async function proxyRoutes(app: FastifyInstance) {
   //  POST <prefix>/chat/completions
   app.post(prefix + "/chat/completions", async (request, reply) => {
     try {
-      const body = chatCompletionSchema.parse((request as any).body) as any;
+      const body: ChatCompletionInput = chatCompletionSchema.parse(request.body);
       const modelName = body.model;
 
       // 非阻塞 Geo 富化（背景执行，不阻塞代理响应）
@@ -378,7 +412,7 @@ export async function proxyRoutes(app: FastifyInstance) {
   //  POST <prefix>/embeddings
   app.post(prefix + "/embeddings", async (request, reply) => {
     try {
-      const body = embeddingsSchema.parse((request as any).body) as any;
+      const body: EmbeddingsInput = embeddingsSchema.parse(request.body);
 
       // 非阻塞 Geo 富化
       enrichCallGeo(request.ip, request.user!.userId).catch(() => {});
@@ -391,11 +425,179 @@ export async function proxyRoutes(app: FastifyInstance) {
 
   } // end for prefix loop
 
+  // ══════════════════════════════════════════════
+  //  扩展模型类型代理路由
+  // ══════════════════════════════════════════════
+
+  /**
+   * 通用处理函数：非 Token 计费模型（图片、音频、Rerank 等）
+   * 计费方式：按次/按张/按秒，使用虚拟 token 数记录
+   */
+  async function handleNonTokenBilling(
+    request: FastifyRequest,
+    reply: FastifyReply,
+    body: Record<string, unknown>,
+    modelName: string,
+    billingUnit: "image" | "audio" | "rerank",
+  ) {
+    const model = await resolveModel(modelName);
+    const userId = request.user!.userId;
+    const apiKeyId = request.apiKey?.id ?? null;
+
+    await recordRequestForLimit(userId, apiKeyId);
+
+    const route = await selectRoute({ modelName: model.name, userId });
+
+    const startTime = Date.now();
+    let result: Awaited<ReturnType<typeof forwardRequest>>;
+    try {
+      result = await forwardRequest(route, request);
+    } catch (err: any) {
+      const durationMs = Date.now() - startTime;
+      await updateHealthAfterCall(route.vendorModelId, false, durationMs);
+      try {
+        const { recordVendorModelFailure } = await import("../services/circuit-breaker.js");
+        await recordVendorModelFailure(route.vendorModelId, `网络错误: ${err.message}`);
+      } catch {}
+      await charge({
+        userId, apiKeyId, modelId: model.id,
+        vendorModelId: route.vendorModelId, vendorName: route.vendorName,
+        modelName: model.name,
+        promptTokens: 0, completionTokens: 0, totalTokens: 0,
+        durationMs, isStreaming: false, status: "failed",
+        errorMessage: `网络错误: ${err.message}`,
+        ip: request.ip, userAgent: request.headers["user-agent"] as string,
+      }).catch(() => {});
+      reply.status(502);
+      return openaiError(502, `上游厂商连接失败: ${err.message}`, "upstream_error", "upstream_unreachable");
+    }
+    const durationMs = Date.now() - startTime;
+
+    await updateHealthAfterCall(route.vendorModelId, result.status >= 200 && result.status < 500, durationMs);
+
+    // Handle upstream errors
+    if (result.status >= 400) {
+      try {
+        const { recordVendorModelFailure } = await import("../services/circuit-breaker.js");
+        await recordVendorModelFailure(route.vendorModelId, result.body?.error?.message ?? `HTTP ${result.status}`);
+      } catch {}
+      await charge({
+        userId, apiKeyId, modelId: model.id,
+        vendorModelId: route.vendorModelId, vendorName: route.vendorName,
+        modelName: model.name,
+        promptTokens: 0, completionTokens: 0, totalTokens: 0,
+        durationMs, isStreaming: false, status: "failed",
+        errorMessage: result.body?.error?.message ?? `上游返回 ${result.status}`,
+        ip: request.ip, userAgent: request.headers["user-agent"] as string,
+      }).catch(() => {});
+      reply.status(result.status);
+      return openaiError(
+        result.status,
+        result.body?.error?.message ?? "上游厂商错误",
+        result.body?.error?.type ?? "upstream_error",
+        result.body?.error?.code ?? String(result.status),
+      );
+    }
+
+    // Calculate virtual tokens for billing
+    let virtualTokens = 0;
+    if (billingUnit === "image") {
+      // 图片：每个请求算 1000 token（基础费用），n 张 = n * 1000
+      const n = Number(body?.n ?? 1);
+      virtualTokens = n * 1000;
+    } else if (billingUnit === "audio") {
+      // 音频：按 durationMs 估算，每 10 秒 = 1000 token
+      virtualTokens = Math.max(500, Math.round(durationMs / 10));
+    } else if (billingUnit === "rerank") {
+      // Rerank：按输入文档数估算，每个文档 = 500 token
+      const documents = (body?.documents ?? []) as unknown[];
+      virtualTokens = Math.max(100, documents.length * 500);
+    }
+
+    await charge({
+      userId, apiKeyId, modelId: model.id,
+      vendorModelId: route.vendorModelId, vendorName: route.vendorName,
+      modelName: model.name,
+      promptTokens: virtualTokens,
+      completionTokens: 0,
+      totalTokens: virtualTokens,
+      durationMs, isStreaming: false, status: "success",
+      ip: request.ip, userAgent: request.headers["user-agent"] as string,
+    }).catch((err) => request.log.error({ err }, "计费失败"));
+
+    await recordTokensForLimit(userId, virtualTokens);
+
+    // Return original response body
+    return result.body;
+  }
+
+  // ── Rerank 代理 ──
+  for (const prefix of ["/v1", "/api/v1"]) {
+    app.post(prefix + "/rerank", async (request, reply) => {
+      try {
+        const body = request.body as Record<string, unknown>;
+        const modelName = body?.model as string | undefined;
+        if (!modelName) {
+          reply.status(400);
+          return openaiError(400, "model 必填", "invalid_request_error", "missing_model");
+        }
+        return await handleNonTokenBilling(request, reply, body, modelName, "rerank");
+      } catch (err: any) {
+        return handleProxyError(reply, err);
+      }
+    });
+
+    // ── 图片生成代理 ──
+    app.post(prefix + "/images/generations", async (request, reply) => {
+      try {
+        const body = request.body as Record<string, unknown>;
+        const modelName = body?.model as string | undefined;
+        if (!modelName) {
+          reply.status(400);
+          return openaiError(400, "model 必填", "invalid_request_error", "missing_model");
+        }
+        return await handleNonTokenBilling(request, reply, body, modelName, "image");
+      } catch (err: any) {
+        return handleProxyError(reply, err);
+      }
+    });
+
+    // ── TTS 代理 ──
+    app.post(prefix + "/audio/speech", async (request, reply) => {
+      try {
+        const body = request.body as Record<string, unknown>;
+        const modelName = body?.model as string | undefined;
+        if (!modelName) {
+          reply.status(400);
+          return openaiError(400, "model 必填", "invalid_request_error", "missing_model");
+        }
+        return await handleNonTokenBilling(request, reply, body, modelName, "audio");
+      } catch (err: any) {
+        return handleProxyError(reply, err);
+      }
+    });
+
+    // ── STT 代理 ──
+    app.post(prefix + "/audio/transcriptions", async (request, reply) => {
+      try {
+        const body = request.body as Record<string, unknown>;
+        const modelName = body?.model as string | undefined;
+        if (!modelName) {
+          reply.status(400);
+          return openaiError(400, "model 必填", "invalid_request_error", "missing_model");
+        }
+        return await handleNonTokenBilling(request, reply, body, modelName, "audio");
+      } catch (err: any) {
+        return handleProxyError(reply, err);
+      }
+    });
+  }
+
   // ── 流式处理核心 ──
 
   async function handleStreamingChat(
-    request: any,
-    reply: any,
+    request: FastifyRequest,
+    reply: FastifyReply,
     modelName: string,
   ) {
     const model = await resolveModel(modelName);
@@ -440,7 +642,7 @@ export async function proxyRoutes(app: FastifyInstance) {
     });
 
     // 将 ReadableStream 转为 Node.js Readable 并 pipe 到 reply.raw
-    const nodeStream = Readable.fromWeb(streamResult.stream as any);
+    const nodeStream = Readable.fromWeb(streamResult.stream);
 
     // 处理客户端断连
     let disconnected = false;
@@ -524,14 +726,14 @@ export async function proxyRoutes(app: FastifyInstance) {
   }
 
   // ── 统一错误处理 ──
-  function handleProxyError(reply: any, err: any) {
+  function handleProxyError(reply: FastifyReply, err: unknown) {
     if (err instanceof AppError) {
       reply.status(err.statusCode);
       return openaiError(err.statusCode, err.message, "invalid_request_error", err.code);
     }
-    if (err?.name === "ZodError") {
+    if ((err as any)?.name === "ZodError") {
       reply.status(400);
-      return openaiError(400, err.errors?.[0]?.message || "请求参数校验失败", "invalid_request_error", "invalid_params");
+      return openaiError(400, (err as any).errors?.[0]?.message || "请求参数校验失败", "invalid_request_error", "invalid_params");
     }
     // Fastify 会处理其他未捕获异常
     throw err;

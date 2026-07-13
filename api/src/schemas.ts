@@ -167,28 +167,6 @@ export const updateApiKeySchema = z.object({
 export type UpdateApiKeyInput = z.infer<typeof updateApiKeySchema>;
 
 // ──────────────────────────────────────────────
-//  Team
-// ──────────────────────────────────────────────
-
-export const createTeamSchema = z.object({
-  name: z.string().min(1).max(100),
-});
-export type CreateTeamInput = z.infer<typeof createTeamSchema>;
-
-export const inviteTeamMemberSchema = z.object({
-  email: z.string().email(),
-  role: z.enum(["team_admin", "team_member"]).default("team_member"),
-  quotaBalance: z.string().optional(), // DECIMAL(18,6) as string
-});
-export type InviteTeamMemberInput = z.infer<typeof inviteTeamMemberSchema>;
-
-export const updateTeamMemberSchema = z.object({
-  role: z.enum(["team_admin", "team_member", "team_owner"]).optional(),
-  quotaBalance: z.string().optional(),
-});
-export type UpdateTeamMemberInput = z.infer<typeof updateTeamMemberSchema>;
-
-// ──────────────────────────────────────────────
 //  Billing
 // ──────────────────────────────────────────────
 
@@ -211,16 +189,6 @@ export const bankTransferSchema = z.object({
   remark: z.string().max(500).optional(),
 });
 export type BankTransferInput = z.infer<typeof bankTransferSchema>;
-
-// ──────────────────────────────────────────────
-//  Team Quota
-// ──────────────────────────────────────────────
-
-export const setMemberQuotaSchema = z.object({
-  memberUserId: z.number(),
-  quotaBalance: z.string(),         // DECIMAL(18,6) as string, null=无上限
-}).nullable();
-export type SetMemberQuotaInput = z.infer<typeof setMemberQuotaSchema>;
 
 // ──────────────────────────────────────────────
 //  Admin — User Management
@@ -404,7 +372,7 @@ export const updateVendorSchema = z.object({
 export const createModelSchema = z.object({
   name: z.string().min(1).max(100),
   displayName: z.string().max(200).optional(),
-  type: z.enum(["chat", "embedding", "image", "audio"]),
+  type: z.enum(["chat", "embedding", "image", "audio", "rerank", "video", "moderation", "realtime"]),
 });
 export type CreateModelInput = z.infer<typeof createModelSchema>;
 
@@ -436,6 +404,57 @@ export const updateVendorModelSchema = z.object({
   status: z.union([z.boolean(), z.number()]).transform(v => Boolean(v)).optional(),
 });
 export type UpdateVendorModelInput = z.infer<typeof updateVendorModelSchema>;
+
+// ──────────────────────────────────────────────
+//  Vendor Self-Service
+// ──────────────────────────────────────────────
+
+export const vendorRegisterSchema = z.object({
+  name: z.string().min(1).max(100),
+  baseUrl: z.string().url(),
+  description: z.string().max(500).optional(),
+  companyName: z.string().max(255).optional(),
+  contactName: z.string().max(100).optional(),
+  contactPhone: z.string().max(20).optional(),
+  contactEmail: z.string().email().optional(),
+});
+export type VendorRegisterInput = z.infer<typeof vendorRegisterSchema>;
+
+export const vendorUpdateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  baseUrl: z.string().url().optional(),
+  description: z.string().max(500).optional(),
+  companyName: z.string().max(255).optional(),
+  contactName: z.string().max(100).optional(),
+  contactPhone: z.string().max(20).optional(),
+  contactEmail: z.string().email().optional(),
+});
+export type VendorUpdateInput = z.infer<typeof vendorUpdateSchema>;
+
+export const vendorAddModelSchema = z.object({
+  modelId: z.number(),
+  upstreamModelName: z.string().min(1).max(200),
+  apiEndpoint: z.string().url().optional(),
+  costPriceInput: z.string(),
+  costPriceOutput: z.string(),
+  sellPriceInput: z.string(),
+  sellPriceOutput: z.string(),
+  rpmLimit: z.number().int().positive().optional(),
+  tpmLimit: z.number().int().positive().optional(),
+});
+export type VendorAddModelInput = z.infer<typeof vendorAddModelSchema>;
+
+export const vendorUpdateModelSchema = z.object({
+  sellPriceInput: z.string().optional(),
+  sellPriceOutput: z.string().optional(),
+  status: z.boolean().optional(),
+});
+export type VendorUpdateModelInput = z.infer<typeof vendorUpdateModelSchema>;
+
+export const vendorRotateKeySchema = z.object({
+  reason: z.string().max(500).optional(),
+});
+export type VendorRotateKeyInput = z.infer<typeof vendorRotateKeySchema>;
 
 // ──────────────────────────────────────────────
 //  Admin — Agent

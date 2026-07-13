@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { get, post } from '@/lib/api'
 import type { RechargeOrder, PaginatedData } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
   Loader2, AlertCircle, CheckCircle2, XCircle,
   Ban, ShieldCheck, Shield,
@@ -365,6 +366,7 @@ export default function AdminRechargeOrders() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-slate-900">充值订单管理</h1>
+      <FeatureDescription page="admin/recharge-orders" className="ml-2" />
 
       {/* 消息提示 */}
       {msg && (

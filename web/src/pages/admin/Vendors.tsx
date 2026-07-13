@@ -3,12 +3,9 @@ import { get, post, patch, del } from '@/lib/api'
 import type { Vendor, PaginatedData } from '@/types'
 import CircuitStatusBadge from '@/components/security/CircuitStatusBadge'
 import PaginationBar from '@/components/ui/PaginationBar'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
-  Loader2,
-  AlertCircle,
-  Search,
-  Plus,
-  CheckCircle2,
+  Loader2, AlertCircle, Search, Plus, CheckCircle2, RefreshCw,
 } from 'lucide-react'
 
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
@@ -22,7 +19,7 @@ function getStatusBadge(status: string) {
   return STATUS_MAP[status] || { label: status, className: 'bg-slate-100 text-slate-700' }
 }
 
-const emptyForm = { name: '', baseUrl: '', description: '' }
+const emptyForm = { name: '', baseUrl: '', description: '', status: 'active' }
 
 export default function AdminVendors() {
   const [vendors, setVendors] = useState<Vendor[]>([])
@@ -38,6 +35,8 @@ export default function AdminVendors() {
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<Vendor | null>(null)
   const [circuits, setCircuits] = useState<Record<number, string>>({})
+  const [syncingId, setSyncingId] = useState<number | null>(null)
+  const [syncMsg, setSyncMsg] = useState('')
 
   const totalPages = Math.ceil(total / pageSize)
 
@@ -74,6 +73,7 @@ export default function AdminVendors() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">供应商管理</h1>
+        <FeatureDescription page="admin/vendors" className="ml-2" />
         <button
           onClick={() => { setEditingVendor(null); setModalOpen(true) }}
           className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition"
@@ -121,6 +121,14 @@ export default function AdminVendors() {
         <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg text-sm">
           <AlertCircle size={16} />
           {error}
+        </div>
+      )}
+
+      {syncMsg && (
+        <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${syncMsg.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+          <CheckCircle2 size={16} />
+          {syncMsg}
+          <button onClick={() => setSyncMsg('')} className="ml-auto text-slate-400 hover:text-slate-600">&times;</button>
         </div>
       )}
 
@@ -197,6 +205,26 @@ export default function AdminVendors() {
                           >
                             删除
                           </button>
+                          <button
+                            onClick={async () => {
+                              const apiKey = prompt(`请输入 ${v.name} 的 API Key 用于拉取模型列表：`)
+                              if (!apiKey) return
+                              setSyncingId(v.id); setSyncMsg('')
+                              try {
+                                const res = await post(`/api/v1/admin/vendors/${v.id}/sync-models`, { apiKey })
+                                const d = res as any
+                                setSyncMsg(`✅ ${v.name}: ${d.message || '同步完成'}（${d.data?.createdMappings ?? 0} 新，${d.data?.updatedPrices ?? 0} 定价更新）`)
+                              } catch (e: any) {
+                                setSyncMsg(`❌ ${v.name}: ${e?.response?.data?.message || e.message || '同步失败'}`)
+                              } finally { setSyncingId(null) }
+                            }}
+                            disabled={syncingId === v.id}
+                            className="text-sm text-emerald-600 hover:text-emerald-800 disabled:opacity-50"
+                            title="从上游 API 同步模型列表和定价"
+                          >
+                            {syncingId === v.id ? <Loader2 className="animate-spin inline" size={14} /> : <RefreshCw size={14} />}
+                            {' '}同步模型
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -254,7 +282,7 @@ function VendorFormModal({
   const isEdit = vendor !== null
   const [form, setForm] = useState(
     isEdit
-      ? { name: vendor.name, baseUrl: vendor.baseUrl, description: vendor.description || '' }
+      ? { name: vendor.name, baseUrl: vendor.baseUrl, description: vendor.description || '', status: vendor.status || 'active' }
       : { ...emptyForm }
   )
   const [saving, setSaving] = useState(false)
@@ -278,6 +306,7 @@ function VendorFormModal({
         if (form.name !== vendor.name) body.name = form.name.trim()
         if (form.baseUrl !== vendor.baseUrl) body.baseUrl = form.baseUrl.trim()
         if (form.description !== (vendor.description || '')) body.description = form.description.trim()
+        if (form.status !== (vendor.status || 'active')) body.status = form.status
         await patch(`/api/v1/admin/vendors/${vendor.id}`, body)
         setMessage('供应商信息已更新')
       } else {
@@ -285,6 +314,7 @@ function VendorFormModal({
           name: form.name.trim(),
           baseUrl: form.baseUrl.trim(),
           description: form.description.trim() || undefined,
+          status: form.status || 'active',
         })
         setMessage('供应商已创建')
       }
@@ -346,6 +376,19 @@ function VendorFormModal({
                 placeholder="例如：https://api.openai.com"
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">状态</label>
+              <select
+                value={form.status || 'active'}
+                onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="active">正常</option>
+                <option value="degraded">降级</option>
+                <option value="down">宕机</option>
+                <option value="disabled">禁用</option>
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">描述</label>

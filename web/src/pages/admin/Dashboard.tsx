@@ -10,10 +10,10 @@ import type {
 import {
   Loader2, AlertCircle, RefreshCw,
   PhoneCall, DollarSign, Activity,
+  Sun, CalendarDays, Calendar, CalendarRange, X,
 } from 'lucide-react'
-import KpiCards from './dashboard/KpiCards'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 import AlertBar from './dashboard/AlertBar'
-import TimeRangeSelector from './dashboard/TimeRangeSelector'
 import ModelRankBar from './dashboard/ModelRankBar'
 import RevenueBreakdown from './dashboard/RevenueBreakdown'
 import VendorHealthPanel from './dashboard/VendorHealthPanel'
@@ -26,6 +26,12 @@ import ModelSchedulingRealtime from './dashboard/ModelSchedulingRealtime'
 function fmtMoney(v: string | number): string {
   const n = typeof v === 'string' ? parseFloat(v) : v
   return n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function fmtTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 10000) return `${(n / 10000).toFixed(1)}万`
+  return n.toLocaleString()
 }
 
 /* ════════════════════════════════════════
@@ -43,6 +49,13 @@ interface DaySeries {
    AdminDashboard
    ════════════════════════════════════════ */
 
+const TIME_TABS = [
+  { key: 1 as const, label: '今日', icon: Sun },
+  { key: 7 as const, label: '本周', icon: CalendarDays },
+  { key: 30 as const, label: '本月', icon: Calendar },
+  { key: 0 as const, label: '自定义', icon: CalendarRange },
+] as const
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null)
   const [revenue, setRevenue] = useState<RevenueAnalysis | null>(null)
@@ -55,11 +68,15 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  // Custom date range modal
+  const [customOpen, setCustomOpen] = useState(false)
+  const [customDays, setCustomDays] = useState('')
+
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      const [s, r, tc, tq, h, tr, eu] = await Promise.all([
+      const [s, r, tc, tq, h, tr] = await Promise.all([
         get<AdminDashboardStats>('/api/v1/admin/dashboard/stats'),
         get<RevenueAnalysis>('/api/v1/admin/dashboard/revenue-analysis'),
         get<TopConsumersData>('/api/v1/admin/dashboard/top-consumers'),
@@ -84,6 +101,14 @@ export default function AdminDashboard() {
     fetchData()
   }, [fetchData])
 
+  const handleCustomSubmit = () => {
+    const d = parseInt(customDays)
+    if (d >= 1 && d <= 365) {
+      setDays(d)
+      setCustomOpen(false)
+      setCustomDays('')
+    }
+  }
 
   /* ── Loading state ── */
   if (loading && !stats) {
@@ -116,8 +141,46 @@ export default function AdminDashboard() {
     successRate: d.calls.successRate,
   })) ?? []
 
-  /* ── Top 10 models (from today's top5 + enhanced data) ── */
+  /* ── Top 10 models ── */
   const topModels = s.topModels.length > 0 ? s.topModels : []
+
+  /* ── KPI computed values ── */
+  const todayCalls = s.calls.today
+  const yesterdayCalls = s.calls.yesterday
+  const successRate = todayCalls.total > 0
+    ? ((todayCalls.success / todayCalls.total) * 100).toFixed(2)
+    : '100.00'
+
+  const kpiCards = [
+    {
+      label: '今日调用',
+      value: todayCalls.total.toLocaleString(),
+      sub: `${todayCalls.success} 成功 / ${todayCalls.failed + todayCalls.timeout} 失败`,
+      color: 'border-blue-200 bg-blue-50',
+      textColor: 'text-blue-700',
+    },
+    {
+      label: '今日 Token',
+      value: fmtTokens(todayCalls.totalTokens),
+      sub: `消耗 ¥${fmtMoney(todayCalls.totalCost)}`,
+      color: 'border-purple-200 bg-purple-50',
+      textColor: 'text-purple-700',
+    },
+    {
+      label: '今日营收',
+      value: `¥${fmtMoney(s.revenue.todayRecharge)}`,
+      sub: `${s.revenue.todayRechargeCount} 笔充值`,
+      color: 'border-green-200 bg-green-50',
+      textColor: 'text-green-700',
+    },
+    {
+      label: '活跃用户',
+      value: s.yesterdayDau.toLocaleString(),
+      sub: `总用户 ${s.users.total.toLocaleString()} · 成功率 ${successRate}%`,
+      color: 'border-amber-200 bg-amber-50',
+      textColor: 'text-amber-700',
+    },
+  ]
 
   return (
     <div className="space-y-5">
@@ -125,6 +188,7 @@ export default function AdminDashboard() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">管理仪表盘</h1>
+        <FeatureDescription page="admin" className="ml-2" />
         <button
           onClick={fetchData}
           disabled={loading}
@@ -146,11 +210,105 @@ export default function AdminDashboard() {
       {/* ── Alert Bar ── */}
       <AlertBar system={s.system} lowBalanceUsers={s.lowBalanceUsers} />
 
-      {/* ── Time Range Selector ── */}
-      <TimeRangeSelector days={days} onChange={setDays} onRefresh={fetchData} loading={loading} />
+      {/* ══════════════════════════════════════ */}
+      {/*  Tabbed Analytics Panel                */}
+      {/* ══════════════════════════════════════ */}
 
-      {/* ── KPI Cards ── */}
-      <KpiCards stats={s} />
+      <div className="bg-gradient-to-b from-blue-50/30 to-white rounded-2xl border border-blue-100/50 p-5 space-y-4">
+
+        {/* Tab bar + refresh */}
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+            {TIME_TABS.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => tab.key === 0 ? setCustomOpen(true) : setDays(tab.key)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition ${
+                  tab.key === 0 && days !== 1 && days !== 7 && days !== 30
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : tab.key === days
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <tab.icon size={13} /> {tab.label}
+                {tab.key === 0 && days !== 1 && days !== 7 && days !== 30 && (
+                  <span className="ml-0.5 text-[10px]">({days}天)</span>
+                )}
+              </button>
+            ))}
+          </div>
+          <span className="text-xs text-slate-400">
+            {loading ? '加载中...' : `最近 ${days} 天 · 点击上方标签切换时间范围`}
+          </span>
+        </div>
+
+        {/* Custom date modal */}
+        {customOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-slate-800">自定义天数</h3>
+                <button onClick={() => setCustomOpen(false)} className="text-slate-400 hover:text-slate-600">
+                  <X size={18} />
+                </button>
+              </div>
+              <input
+                type="number"
+                min={1}
+                max={365}
+                value={customDays}
+                onChange={(e) => setCustomDays(e.target.value)}
+                placeholder="输入天数 (1-365)"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setCustomOpen(false)} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">取消</button>
+                <button onClick={handleCustomSubmit} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">确认</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* KPI Cards — colored pattern */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {kpiCards.map((card) => (
+            <div key={card.label} className={`rounded-lg border p-3 ${card.color}`}>
+              <p className="text-xs text-slate-500 mb-1">{card.label}</p>
+              <p className="text-lg font-bold text-slate-800">{card.value}</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">{card.sub}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Mini 总览趋势 bar chart (7-day revenue + calls) */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-semibold text-slate-700">
+              <Activity size={12} className="inline mr-1 text-blue-500" />
+              总览趋势（近7天）
+            </h3>
+            <span className="text-[10px] text-slate-400">营收 & 调用量</span>
+          </div>
+          {trendChartData.length === 0 ? (
+            <div className="h-[150px] flex items-center justify-center text-sm text-slate-400">暂无数据</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={150}>
+              <BarChart data={trendChartData.slice(-7)}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} tickFormatter={(v) => `¥${v}`} />
+                <Tooltip
+                  contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }}
+                />
+                <Bar yAxisId="left" dataKey="calls" fill="#3B82F6" radius={[3, 3, 0, 0]} name="调用量" />
+                <Bar yAxisId="right" dataKey="revenue" fill="#10B981" radius={[3, 3, 0, 0]} name="营收" />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
 
       {/* ── Row 1: Call Trend + Model Top 10 ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -160,7 +318,7 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Activity size={16} className="text-slate-600" />
-                <h3 className="text-sm font-semibold text-slate-800">📈 调用量 & Token 趋势</h3>
+                <h3 className="text-sm font-semibold text-slate-800">调用量 & Token 趋势</h3>
               </div>
             </div>
           </div>
@@ -205,7 +363,7 @@ export default function AdminDashboard() {
                     <span><span className="inline-block w-3 h-0.5 bg-blue-500 align-middle mr-1" /> 调用量</span>
                     <span><span className="inline-block w-3 h-0.5 bg-violet-500 align-middle mr-1" style={{ borderTop: '2px dashed #6c5ce7', height: 0 }} /> Token 消耗</span>
                   </div>
-                  <span className="text-xs text-slate-400">🌐 整体视图</span>
+                  <span className="text-xs text-slate-400">整体视图</span>
                 </div>
               </>
             )}
@@ -224,7 +382,7 @@ export default function AdminDashboard() {
         {/* Cost vs Revenue (month trend mini chart) */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">
           <div className="px-5 py-4 border-b border-slate-100">
-            <h3 className="text-sm font-semibold text-slate-800">📊 成本 vs 售价（本月）</h3>
+            <h3 className="text-sm font-semibold text-slate-800">成本 vs 售价（本月）</h3>
           </div>
           <div className="p-5">
             {!revenue || revenue.month.revenueTrend.length === 0 ? (
@@ -259,7 +417,7 @@ export default function AdminDashboard() {
         {/* User Activity */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">
           <div className="px-5 py-4 border-b border-slate-100">
-            <h3 className="text-sm font-semibold text-slate-800">👥 用户活跃度</h3>
+            <h3 className="text-sm font-semibold text-slate-800">用户活跃度</h3>
           </div>
           <div className="p-5">
             <div className="flex items-center justify-center gap-6 mb-4">
@@ -279,7 +437,7 @@ export default function AdminDashboard() {
 
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">🟢 高频 (≥50次/日)</span>
+                <span className="text-slate-600">高频 ({'>='}50次/日)</span>
                 <span className="font-semibold text-slate-800">
                   {s.calls.today.total > 0
                     ? Math.round(s.calls.today.success * 0.22).toLocaleString()
@@ -287,7 +445,7 @@ export default function AdminDashboard() {
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">🟡 中频 (5-49次/日)</span>
+                <span className="text-slate-600">中频 (5-49次/日)</span>
                 <span className="font-semibold text-slate-800">
                   {s.calls.today.total > 0
                     ? Math.round(s.calls.today.success * 0.48).toLocaleString()
@@ -295,7 +453,7 @@ export default function AdminDashboard() {
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">🔵 低频 (&lt;5次/日)</span>
+                <span className="text-slate-600">低频 (&lt;5次/日)</span>
                 <span className="font-semibold text-slate-800">
                   {s.calls.today.total > 0
                     ? Math.round(s.calls.today.success * 0.30).toLocaleString()
@@ -310,8 +468,8 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">
           <div className="px-5 py-4 border-b border-slate-100">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-800">✅ 实名认证漏斗</h3>
-              <a href="/admin/real-name-review" className="text-xs text-blue-500 cursor-pointer">批量审核 →</a>
+              <h3 className="text-sm font-semibold text-slate-800">实名认证漏斗</h3>
+              <a href="/console/admin/real-name-review" className="text-xs text-blue-500 cursor-pointer">批量审核 →</a>
             </div>
           </div>
           <div className="p-5">
@@ -346,19 +504,19 @@ export default function AdminDashboard() {
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">⏳ 待审核</span>
+                <span className="text-slate-600">待审核</span>
                 <span className="font-semibold text-amber-600">
                   {(s.realNameFunnel?.pending_review || 0).toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">✅ 已通过</span>
+                <span className="text-slate-600">已通过</span>
                 <span className="font-semibold text-emerald-600">
                   {(s.realNameFunnel?.approved || 0).toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">❌ 已驳回</span>
+                <span className="text-slate-600">已驳回</span>
                 <span className="font-semibold text-red-500">
                   {(s.realNameFunnel?.rejected || 0).toLocaleString()}
                 </span>
@@ -371,8 +529,8 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">
           <div className="px-5 py-4 border-b border-slate-100">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-800">🚨 安全风控</h3>
-              <a href="/admin/security" className="text-xs text-blue-500 cursor-pointer">全部事件 →</a>
+              <h3 className="text-sm font-semibold text-slate-800">安全风控</h3>
+              <a href="/console/admin/security" className="text-xs text-blue-500 cursor-pointer">全部事件 →</a>
             </div>
           </div>
           <div className="p-5 space-y-3">
@@ -383,17 +541,17 @@ export default function AdminDashboard() {
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-slate-600">🔴 熔断事件</span>
+              <span className="text-slate-600">熔断事件</span>
               <span className={`font-semibold ${s.security.activeCircuits > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                 {s.security.activeCircuits} 个
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-slate-600">🔒 封禁 IP</span>
+              <span className="text-slate-600">封禁 IP</span>
               <span className="font-semibold text-slate-700">{s.security.bannedIps} 个</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-slate-600">🚫 封禁用户</span>
+              <span className="text-slate-600">封禁用户</span>
               <span className="font-semibold text-slate-700">{s.security.bannedUsers} 个</span>
             </div>
           </div>
@@ -406,11 +564,11 @@ export default function AdminDashboard() {
         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200">
           <div className="px-5 py-4 border-b border-slate-100">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-800">🏦 财务对账 · 今日</h3>
+              <h3 className="text-sm font-semibold text-slate-800">财务对账 · 今日</h3>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 <span className="text-xs text-slate-500">已平衡</span>
-                <a href="/admin/finance/reconciliation" className="text-xs text-blue-500 ml-2">对账明细 →</a>
+                <a href="/console/admin/finance/reconciliation" className="text-xs text-blue-500 ml-2">对账明细 →</a>
               </span>
             </div>
           </div>
@@ -426,19 +584,19 @@ export default function AdminDashboard() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 <tr>
-                  <td className="py-2.5 text-slate-700">💰 充值收入</td>
+                  <td className="py-2.5 text-slate-700">充值收入</td>
                   <td className="py-2.5 text-right font-mono text-xs font-semibold">¥{fmtMoney(s.revenue.todayRecharge)}</td>
                   <td className="py-2.5 text-right text-slate-600">{s.revenue.todayRechargeCount}</td>
                   <td className="py-2.5"><span className="inline-flex px-1.5 py-0.5 rounded text-xs bg-green-50 text-green-600">正常</span></td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 text-slate-700">📉 调用消耗</td>
+                  <td className="py-2.5 text-slate-700">调用消耗</td>
                   <td className="py-2.5 text-right font-mono text-xs font-semibold">-¥{fmtMoney(s.calls.today.totalCost)}</td>
                   <td className="py-2.5 text-right text-slate-600">{s.calls.today.total.toLocaleString()}</td>
                   <td className="py-2.5"><span className="inline-flex px-1.5 py-0.5 rounded text-xs bg-green-50 text-green-600">正常</span></td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 text-slate-700">⏳ 待处理充值</td>
+                  <td className="py-2.5 text-slate-700">待处理充值</td>
                   <td className="py-2.5 text-right font-mono text-xs font-semibold text-amber-600">¥{fmtMoney(s.revenue.pendingRecharge)}</td>
                   <td className="py-2.5 text-right text-slate-600">{s.revenue.pendingRechargeCount}</td>
                   <td className="py-2.5"><span className="inline-flex px-1.5 py-0.5 rounded text-xs bg-amber-50 text-amber-600">待处理</span></td>
@@ -446,7 +604,7 @@ export default function AdminDashboard() {
               </tbody>
             </table>
             <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between text-sm">
-              <span className="text-slate-500">💰 平台总余额</span>
+              <span className="text-slate-500">平台总余额</span>
               <span className="font-bold text-slate-800">¥{fmtMoney(s.platformBalance)}</span>
             </div>
           </div>
@@ -456,8 +614,8 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">
           <div className="px-5 py-4 border-b border-slate-100">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-800">🤝 代理商运营</h3>
-              <a href="/admin/agents" className="text-xs text-blue-500 cursor-pointer">代理后台 →</a>
+              <h3 className="text-sm font-semibold text-slate-800">代理商运营</h3>
+              <a href="/console/admin/agents" className="text-xs text-blue-500 cursor-pointer">代理后台 →</a>
             </div>
           </div>
           <div className="p-5 space-y-3">
@@ -474,7 +632,7 @@ export default function AdminDashboard() {
               <span className="font-semibold">¥{fmtMoney(s.agents.totalCommission)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-slate-600">⏳ 待提现</span>
+              <span className="text-slate-600">待提现</span>
               <span className="font-semibold text-red-500">¥{fmtMoney(s.agents.pendingWithdraw)}</span>
             </div>
           </div>
@@ -493,8 +651,8 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">
           <div className="px-5 py-4 border-b border-slate-100">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-800">⚙️ 系统运行监控</h3>
-              <a href="/admin/configs" className="text-xs text-blue-500 cursor-pointer">运维控制台</a>
+              <h3 className="text-sm font-semibold text-slate-800">系统运行监控</h3>
+              <a href="/console/admin/configs" className="text-xs text-blue-500 cursor-pointer">运维控制台</a>
             </div>
           </div>
           <div className="p-5">
@@ -544,14 +702,13 @@ export default function AdminDashboard() {
             </div>
             {health?.recentFailures && health.recentFailures.errorRate > 5 && (
               <div className="mt-4 p-2.5 bg-orange-50 rounded-lg text-xs text-orange-700">
-                ⚠️ 过去1小时错误率 {health.recentFailures.errorRate}% (失败 {health.recentFailures.failed} · 超时 {health.recentFailures.timeout})
+                过去1小时错误率 {health.recentFailures.errorRate}% (失败 {health.recentFailures.failed} · 超时 {health.recentFailures.timeout})
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* ── Recent Activity section (reuse from existing) ── */}
       {/* ── Row 6: Model Scheduling Realtime ── */}
       <ModelSchedulingRealtime />
 

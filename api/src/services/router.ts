@@ -1,9 +1,64 @@
 // ============================================================
-//  3cloud (3C) — Token 代理路由引擎
-//  智能路由：自动最低价 / 加权动态 / 手动指定
-//  故障切换 + 多 Key 分摊
-//  健康过滤 + AES 解密
+//  3cloud (3C) — Token 代理路由引擎 (Business Logic)
 // ============================================================
+//
+// ── 路由全流程 ──
+//
+// 【入口 → 出口 完整链路】
+//   1. 鉴权: Bearer Token → SHA-256 hash → api_keys 表查询 → 提取 userId
+//   2. 余额检查: users.balance > alert_stop_balance (otherwise 402)
+//   3. 模型解析: model name → models 表 (status=true) → 获取 modelId (内存 Map 缓存)
+//   4. 限流检查: Redis 滑动窗口 (Key级 → 用户级 → 全局级)
+//      - 超限 → 429 + Retry-After header + call_logs(status=rate_limited)
+//   5. 路由策略选择 (selectRoute):
+//      - lowest_price (默认): queryAvailableRoutes() 按 sellPriceInput ASC 排序, 取第一个
+//      - weighted_random: candidates.reduce 总 weight, Math.random() * totalWeight 加权选择
+//      - manual: 按 preferredVendorId 精确匹配
+//   6. 上游转发:
+//      - 非流式 (forwardRequest): POST → vendor endpoint, model name → upstreamModelName, auth → vendor API Key (AES解密)
+//      - 流式 (forwardStreamRequest): POST → SSE pipe through TransformStream, 捕获 usage, body.stream=true 强制设置
+//   7. 计费: billing.charge() → 见 billing.ts
+//
+// 【路由候选查询 (queryAvailableRoutes)】
+//   - JOIN vendor_models + vendors
+//   - 过滤: vendorModels.status=true, isDown=false, vendors.status='active'
+//   - 排序: ASC sellPriceInput
+//   - apiKeyEncrypted → decryptApiKey() AES-256-GCM 解密
+//
+// 【熔断检查 (circuit-breaker)】
+//   - selectRoute 内调用 shouldSkipVendor(vendorModelId) 过滤熔断候选
+//   - 如果全部被熔断 → 放宽限制, 保留原 candidates (降级, 避免全不可用)
+//   - 熔断服务异常 → catch 降级, 不阻塞请求
+//
+// 【健康检测 (独立于路由, vendor_models 表字段)】
+//   - 被动检测: 每次调用后更新 healthScore (近50次滚动窗口)
+//     success < 70% → degraded (权重降至 50%)
+//     success < 30% → down (isDown=true)
+//   - 主动检测: cron 每 5 分钟对 isDown 厂商发轻量探测请求
+//     连续成功 3 次 → 恢复 active (isDown=false)
+//
+// 【降级策略】
+//   - 首选厂商不可用 (isDown=true) → queryAvailableRoutes 自动排除
+//   - circuit-breaker 全局熔断时 → 放行全部 candidates
+//   - 所有厂商不可用 → NO_ROUTE error (503)
+//
+// 【流式处理 (forwardStreamRequest)】
+//   - request body: stream=true 强制覆盖, model → upstreamModelName 替换
+//   - TransformStream 逐块处理: 检查 "usage": 正则匹配 SSE data 行
+//   - usagePromise: 流结束后 resolve usage (promptTokens, completionTokens, totalTokens)
+//   - pipeTo 失败 → resolve usage 已有的数据 (防止泄漏)
+//   - stream disconnect → proxy route 不调用 charge(), call_logs status=cancelled
+//
+// 【仿真模式 (SIMULATION)】
+//   - 环境变量 SIMULATION=true 激活
+//   - mockVendorResponse: 随机生成 promptTokens/completionTokens, 返回模拟 JSON
+//   - mockStreamResponse: 分块 SSE 流, "好的/让我/想想/这个/问题。" + [DONE]
+//   - 不发起真实 HTTP 请求
+//
+// 【超时与容错】
+//   - fetch() 无显式 timeout → 由 proxy route 层 AbortController 控制
+//   - upstream HTTP 4xx/5xx → 返回原始状态码 + body, 不切备用
+//   - stream timeout/disconnect → TransformStream pipeTo catch → resolve usage
 
 import { eq, and, asc } from "drizzle-orm";
 import { getDb } from "../db/index.js";

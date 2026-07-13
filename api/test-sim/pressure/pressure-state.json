@@ -1,0 +1,1219 @@
+{
+  "startTime": 1783122988802,
+  "adminToken": "***",
+  "personalUsers": [
+    {
+      "userId": 85,
+      "email": "pressure-user-01@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 89,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA5EB_DBFE21A0",
+      "rechargeAmount": 67,
+      "callWindowStart": 13796165.558954505,
+      "callWindowEnd": 17396165.558954507
+    },
+    {
+      "userId": 86,
+      "email": "pressure-user-02@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 90,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA5FL_23FF7677",
+      "rechargeAmount": 245,
+      "callWindowStart": 22178672.221257545,
+      "callWindowEnd": 25778672.221257545
+    },
+    {
+      "userId": 87,
+      "email": "pressure-user-03@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 91,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "BANK_MR5MA5G1_17A23C1D",
+      "rechargeAmount": 80,
+      "callWindowStart": 25125747.5884827,
+      "callWindowEnd": 28725747.5884827
+    },
+    {
+      "userId": 88,
+      "email": "pressure-user-04@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 92,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA5G8_F7E6466C",
+      "rechargeAmount": 278,
+      "callWindowStart": 6375596.135206944,
+      "callWindowEnd": 9975596.135206945
+    },
+    {
+      "userId": 89,
+      "email": "pressure-user-05@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 93,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "BANK_MR5MA5GI_3530BDEE",
+      "rechargeAmount": 54,
+      "callWindowStart": 7335718.51113612,
+      "callWindowEnd": 10935718.51113612
+    },
+    {
+      "userId": 90,
+      "email": "pressure-user-06@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 94,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA5V1_DF4402F3",
+      "rechargeAmount": 136,
+      "callWindowStart": 12446904.730012372,
+      "callWindowEnd": 16046904.730012372
+    },
+    {
+      "userId": 91,
+      "email": "pressure-user-07@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 95,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA5VM_65819058",
+      "rechargeAmount": 31,
+      "callWindowStart": 5659202.271367907,
+      "callWindowEnd": 9259202.271367908
+    },
+    {
+      "userId": 92,
+      "email": "pressure-user-08@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 96,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA5W1_7FF43BE6",
+      "rechargeAmount": 49,
+      "callWindowStart": 11072230.429733578,
+      "callWindowEnd": 14672230.429733578
+    },
+    {
+      "userId": 93,
+      "email": "pressure-user-09@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 97,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA5WF_C46BF2C2",
+      "rechargeAmount": 3,
+      "callWindowStart": 17644735.828905825,
+      "callWindowEnd": 21244735.828905825
+    },
+    {
+      "userId": 94,
+      "email": "pressure-user-10@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 98,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA5WQ_203FD0A3",
+      "rechargeAmount": 16,
+      "callWindowStart": 22488658.36151195,
+      "callWindowEnd": 26088658.36151195
+    }
+  ],
+  "enterpriseUsers": [
+    {
+      "userId": 95,
+      "email": "pressure-company-11@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 99,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "BANK_MR5MA6B1_72AB1386",
+      "rechargeAmount": 168,
+      "callWindowStart": 15862774.31878784,
+      "callWindowEnd": 19462774.31878784
+    },
+    {
+      "userId": 96,
+      "email": "pressure-company-12@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 100,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "BANK_MR5MA6BE_2F595C70",
+      "rechargeAmount": 36,
+      "callWindowStart": 4894963.368438967,
+      "callWindowEnd": 8494963.368438967
+    },
+    {
+      "userId": 97,
+      "email": "pressure-company-13@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 101,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "BANK_MR5MA6BI_5602A928",
+      "rechargeAmount": 169,
+      "callWindowStart": 16480650.094823167,
+      "callWindowEnd": 20080650.094823167
+    },
+    {
+      "userId": 98,
+      "email": "pressure-company-14@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 102,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA6BN_5188EC33",
+      "rechargeAmount": 21,
+      "callWindowStart": 9463523.006762117,
+      "callWindowEnd": 13063523.006762117
+    },
+    {
+      "userId": 99,
+      "email": "pressure-company-15@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 103,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "BANK_MR5MA6C0_2371FAC5",
+      "rechargeAmount": 1,
+      "callWindowStart": 25064997.338077463,
+      "callWindowEnd": 28664997.338077463
+    },
+    {
+      "userId": 100,
+      "email": "pressure-company-16@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 104,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "BANK_MR5MA6Q9_C81BEF05",
+      "rechargeAmount": 146,
+      "callWindowStart": 20297577.57571886,
+      "callWindowEnd": 23897577.57571886
+    },
+    {
+      "userId": 101,
+      "email": "pressure-company-17@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 105,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA6QK_DFCFC80B",
+      "rechargeAmount": 37,
+      "callWindowStart": 4382680.800346702,
+      "callWindowEnd": 7982680.800346702
+    },
+    {
+      "userId": 102,
+      "email": "pressure-company-18@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 106,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "BANK_MR5MA6QV_4185E5CA",
+      "rechargeAmount": 194,
+      "callWindowStart": 19682283.123434216,
+      "callWindowEnd": 23282283.123434216
+    },
+    {
+      "userId": 103,
+      "email": "pressure-company-19@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 107,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA6QZ_BA00141E",
+      "rechargeAmount": 65,
+      "callWindowStart": 12481193.008473393,
+      "callWindowEnd": 16081193.008473393
+    },
+    {
+      "userId": 104,
+      "email": "pressure-company-20@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 108,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA6RD_07328AB9",
+      "rechargeAmount": 168,
+      "callWindowStart": 5156351.564271214,
+      "callWindowEnd": 8756351.564271215
+    }
+  ],
+  "allUsers": [
+    {
+      "userId": 85,
+      "email": "pressure-user-01@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 89,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA5EB_DBFE21A0",
+      "rechargeAmount": 67,
+      "callWindowStart": 13796165.558954505,
+      "callWindowEnd": 17396165.558954507
+    },
+    {
+      "userId": 86,
+      "email": "pressure-user-02@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 90,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA5FL_23FF7677",
+      "rechargeAmount": 245,
+      "callWindowStart": 22178672.221257545,
+      "callWindowEnd": 25778672.221257545
+    },
+    {
+      "userId": 87,
+      "email": "pressure-user-03@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 91,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "BANK_MR5MA5G1_17A23C1D",
+      "rechargeAmount": 80,
+      "callWindowStart": 25125747.5884827,
+      "callWindowEnd": 28725747.5884827
+    },
+    {
+      "userId": 88,
+      "email": "pressure-user-04@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 92,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA5G8_F7E6466C",
+      "rechargeAmount": 278,
+      "callWindowStart": 6375596.135206944,
+      "callWindowEnd": 9975596.135206945
+    },
+    {
+      "userId": 89,
+      "email": "pressure-user-05@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 93,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "BANK_MR5MA5GI_3530BDEE",
+      "rechargeAmount": 54,
+      "callWindowStart": 7335718.51113612,
+      "callWindowEnd": 10935718.51113612
+    },
+    {
+      "userId": 90,
+      "email": "pressure-user-06@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 94,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA5V1_DF4402F3",
+      "rechargeAmount": 136,
+      "callWindowStart": 12446904.730012372,
+      "callWindowEnd": 16046904.730012372
+    },
+    {
+      "userId": 91,
+      "email": "pressure-user-07@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 95,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA5VM_65819058",
+      "rechargeAmount": 31,
+      "callWindowStart": 5659202.271367907,
+      "callWindowEnd": 9259202.271367908
+    },
+    {
+      "userId": 92,
+      "email": "pressure-user-08@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 96,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA5W1_7FF43BE6",
+      "rechargeAmount": 49,
+      "callWindowStart": 11072230.429733578,
+      "callWindowEnd": 14672230.429733578
+    },
+    {
+      "userId": 93,
+      "email": "pressure-user-09@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 97,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA5WF_C46BF2C2",
+      "rechargeAmount": 3,
+      "callWindowStart": 17644735.828905825,
+      "callWindowEnd": 21244735.828905825
+    },
+    {
+      "userId": 94,
+      "email": "pressure-user-10@test.local",
+      "userType": "personal",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 98,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA5WQ_203FD0A3",
+      "rechargeAmount": 16,
+      "callWindowStart": 22488658.36151195,
+      "callWindowEnd": 26088658.36151195
+    },
+    {
+      "userId": 95,
+      "email": "pressure-company-11@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 99,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "BANK_MR5MA6B1_72AB1386",
+      "rechargeAmount": 168,
+      "callWindowStart": 15862774.31878784,
+      "callWindowEnd": 19462774.31878784
+    },
+    {
+      "userId": 96,
+      "email": "pressure-company-12@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 100,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "BANK_MR5MA6BE_2F595C70",
+      "rechargeAmount": 36,
+      "callWindowStart": 4894963.368438967,
+      "callWindowEnd": 8494963.368438967
+    },
+    {
+      "userId": 97,
+      "email": "pressure-company-13@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 101,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "BANK_MR5MA6BI_5602A928",
+      "rechargeAmount": 169,
+      "callWindowStart": 16480650.094823167,
+      "callWindowEnd": 20080650.094823167
+    },
+    {
+      "userId": 98,
+      "email": "pressure-company-14@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 102,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA6BN_5188EC33",
+      "rechargeAmount": 21,
+      "callWindowStart": 9463523.006762117,
+      "callWindowEnd": 13063523.006762117
+    },
+    {
+      "userId": 99,
+      "email": "pressure-company-15@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 103,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "BANK_MR5MA6C0_2371FAC5",
+      "rechargeAmount": 1,
+      "callWindowStart": 25064997.338077463,
+      "callWindowEnd": 28664997.338077463
+    },
+    {
+      "userId": 100,
+      "email": "pressure-company-16@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 104,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "BANK_MR5MA6Q9_C81BEF05",
+      "rechargeAmount": 146,
+      "callWindowStart": 20297577.57571886,
+      "callWindowEnd": 23897577.57571886
+    },
+    {
+      "userId": 101,
+      "email": "pressure-company-17@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 105,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA6QK_DFCFC80B",
+      "rechargeAmount": 37,
+      "callWindowStart": 4382680.800346702,
+      "callWindowEnd": 7982680.800346702
+    },
+    {
+      "userId": 102,
+      "email": "pressure-company-18@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 106,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "BANK_MR5MA6QV_4185E5CA",
+      "rechargeAmount": 194,
+      "callWindowStart": 19682283.123434216,
+      "callWindowEnd": 23282283.123434216
+    },
+    {
+      "userId": 103,
+      "email": "pressure-company-19@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 107,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA6QZ_BA00141E",
+      "rechargeAmount": 65,
+      "callWindowStart": 12481193.008473393,
+      "callWindowEnd": 16081193.008473393
+    },
+    {
+      "userId": 104,
+      "email": "pressure-company-20@test.local",
+      "userType": "enterprise",
+      "role": "user",
+      "realNameStatus": "unverified",
+      "accessToken": "***",
+      "apiKey": "***",
+      "apiKeyId": 108,
+      "recharged": true,
+      "realNameResolved": false,
+      "rechargeOrderNo": "RECHARGE_MR5MA6RD_07328AB9",
+      "rechargeAmount": 168,
+      "callWindowStart": 5156351.564271214,
+      "callWindowEnd": 8756351.564271215
+    }
+  ],
+  "agents": [],
+  "totalRecharges": 20,
+  "totalRechargeApproved": 0,
+  "totalTokenCalls": 14964,
+  "totalTokenCallsFailed": 14780,
+  "totalTokenCallsSucceeded": 184,
+  "totalAutoReviewed": 0,
+  "totalUnverifiedDetected": 14406,
+  "totalCommissionWithdrawals": 0,
+  "totalCommissionWithdrawalAmount": 0,
+  "phaseRechargeDone": true,
+  "phaseTokenCallsInProgress": true,
+  "phaseAgentTasksDone": false,
+  "errors": [
+    {
+      "time": "2h 21m 37s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 37s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 38s",
+      "phase": "实名自动审核",
+      "user": "pressure-company-20@test.local",
+      "error": "[POST /api/v1/auth/real-name/enterprise] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 38s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-07@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 38s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 38s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 40s",
+      "phase": "实名自动审核",
+      "user": "pressure-company-20@test.local",
+      "error": "[POST /api/v1/auth/real-name/enterprise] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 40s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-07@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 40s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 40s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 41s",
+      "phase": "实名自动审核",
+      "user": "pressure-company-20@test.local",
+      "error": "[POST /api/v1/auth/real-name/enterprise] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 41s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-07@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 41s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 41s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 42s",
+      "phase": "实名自动审核",
+      "user": "pressure-company-20@test.local",
+      "error": "[POST /api/v1/auth/real-name/enterprise] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 42s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-07@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 42s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 42s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 44s",
+      "phase": "实名自动审核",
+      "user": "pressure-company-20@test.local",
+      "error": "[POST /api/v1/auth/real-name/enterprise] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 44s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-07@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 44s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 44s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 45s",
+      "phase": "实名自动审核",
+      "user": "pressure-company-20@test.local",
+      "error": "[POST /api/v1/auth/real-name/enterprise] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 45s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-07@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 45s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 45s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 46s",
+      "phase": "实名自动审核",
+      "user": "pressure-company-20@test.local",
+      "error": "[POST /api/v1/auth/real-name/enterprise] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 46s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-07@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 46s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 46s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 47s",
+      "phase": "实名自动审核",
+      "user": "pressure-company-20@test.local",
+      "error": "[POST /api/v1/auth/real-name/enterprise] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 47s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-07@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 47s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 47s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 49s",
+      "phase": "实名自动审核",
+      "user": "pressure-company-20@test.local",
+      "error": "[POST /api/v1/auth/real-name/enterprise] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 49s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-07@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 49s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 49s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 50s",
+      "phase": "实名自动审核",
+      "user": "pressure-company-20@test.local",
+      "error": "[POST /api/v1/auth/real-name/enterprise] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 50s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-07@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 50s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 50s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 51s",
+      "phase": "实名自动审核",
+      "user": "pressure-company-20@test.local",
+      "error": "[POST /api/v1/auth/real-name/enterprise] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 51s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-07@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 51s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 51s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 52s",
+      "phase": "实名自动审核",
+      "user": "pressure-company-20@test.local",
+      "error": "[POST /api/v1/auth/real-name/enterprise] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 52s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-07@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 52s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 52s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 54s",
+      "phase": "实名自动审核",
+      "user": "pressure-company-20@test.local",
+      "error": "[POST /api/v1/auth/real-name/enterprise] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 54s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-07@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 54s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 54s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 55s",
+      "phase": "实名自动审核",
+      "user": "pressure-company-20@test.local",
+      "error": "[POST /api/v1/auth/real-name/enterprise] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 55s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-07@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 55s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 55s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 56s",
+      "phase": "实名自动审核",
+      "user": "pressure-company-20@test.local",
+      "error": "[POST /api/v1/auth/real-name/enterprise] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 56s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-07@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 56s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 56s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 57s",
+      "phase": "实名自动审核",
+      "user": "pressure-company-20@test.local",
+      "error": "[POST /api/v1/auth/real-name/enterprise] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 57s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-07@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 57s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 57s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 59s",
+      "phase": "实名自动审核",
+      "user": "pressure-company-20@test.local",
+      "error": "[POST /api/v1/auth/real-name/enterprise] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 59s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-07@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 59s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 21m 59s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 22m 00s",
+      "phase": "实名自动审核",
+      "user": "pressure-company-20@test.local",
+      "error": "[POST /api/v1/auth/real-name/enterprise] 401: Token 已过期"
+    },
+    {
+      "time": "2h 22m 00s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-07@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 22m 00s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-04@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 22m 00s",
+      "phase": "实名自动审核",
+      "user": "pressure-user-05@test.local",
+      "error": "[POST /api/v1/auth/real-name/personal] 401: Token 已过期"
+    },
+    {
+      "time": "2h 22m 14s",
+      "phase": "Token调用",
+      "user": "pressure-user-04@test.local",
+      "error": "429: "
+    },
+    {
+      "time": "2h 22m 23s",
+      "phase": "Token调用",
+      "user": "pressure-company-20@test.local",
+      "error": "429: "
+    },
+    {
+      "time": "2h 22m 32s",
+      "phase": "Token调用",
+      "user": "pressure-company-20@test.local",
+      "error": "429: "
+    },
+    {
+      "time": "2h 22m 41s",
+      "phase": "Token调用",
+      "user": "pressure-company-20@test.local",
+      "error": "429: "
+    },
+    {
+      "time": "2h 22m 50s",
+      "phase": "Token调用",
+      "user": "pressure-user-05@test.local",
+      "error": "429: "
+    },
+    {
+      "time": "2h 22m 59s",
+      "phase": "Token调用",
+      "user": "pressure-company-20@test.local",
+      "error": "429: "
+    },
+    {
+      "time": "2h 23m 07s",
+      "phase": "Token调用",
+      "user": "pressure-company-20@test.local",
+      "error": "429: "
+    },
+    {
+      "time": "2h 23m 17s",
+      "phase": "Token调用",
+      "user": "pressure-user-04@test.local",
+      "error": "429: "
+    },
+    {
+      "time": "2h 23m 26s",
+      "phase": "Token调用",
+      "user": "pressure-user-07@test.local",
+      "error": "429: "
+    },
+    {
+      "time": "2h 23m 35s",
+      "phase": "Token调用",
+      "user": "pressure-company-20@test.local",
+      "error": "429: "
+    },
+    {
+      "time": "2h 23m 44s",
+      "phase": "Token调用",
+      "user": "pressure-user-04@test.local",
+      "error": "429: "
+    },
+    {
+      "time": "2h 23m 53s",
+      "phase": "Token调用",
+      "user": "pressure-company-20@test.local",
+      "error": "429: "
+    },
+    {
+      "time": "2h 24m 40s",
+      "phase": "Token调用",
+      "user": "pressure-user-07@test.local",
+      "error": "502: upstream temporarily unavailable"
+    },
+    {
+      "time": "2h 25m 10s",
+      "phase": "Token调用",
+      "user": "pressure-user-07@test.local",
+      "error": "429: "
+    },
+    {
+      "time": "2h 25m 19s",
+      "phase": "Token调用",
+      "user": "pressure-user-07@test.local",
+      "error": "429: "
+    },
+    {
+      "time": "2h 25m 28s",
+      "phase": "Token调用",
+      "user": "pressure-user-04@test.local",
+      "error": "429: "
+    },
+    {
+      "time": "2h 25m 37s",
+      "phase": "Token调用",
+      "user": "pressure-user-04@test.local",
+      "error": "429: "
+    },
+    {
+      "time": "2h 25m 45s",
+      "phase": "Token调用",
+      "user": "pressure-user-04@test.local",
+      "error": "429: "
+    }
+  ],
+  "financeToken": "***",
+  "auditorToken": "***"
+}

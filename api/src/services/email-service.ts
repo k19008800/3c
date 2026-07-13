@@ -4,6 +4,7 @@
 // ============================================================
 
 import nodemailer from "nodemailer";
+import { logger } from "../logger.js";
 import { config } from "../config.js";
 import { getDb } from "../db/index.js";
 import { emailTemplates, systemConfigs } from "../db/schema.js";
@@ -156,7 +157,7 @@ export async function sendEmail(params: SendEmailParams): Promise<boolean> {
   const t = await getTransporter();
   if (!t) {
     // 开发环境：打印日志
-    console.log(`[Email] (dev) 邮件已记录:\n  To: ${params.to}\n  Subject: ${params.subject}\n  Body length: ${params.html.length}`);
+    logger.info({ to: params.to, subject: params.subject, bodyLength: params.html.length }, "[Email] (dev) 邮件已记录");
     return true;
   }
 
@@ -169,7 +170,7 @@ export async function sendEmail(params: SendEmailParams): Promise<boolean> {
     });
     return true;
   } catch (err) {
-    console.error(`[Email] 发送失败 (to=${params.to}):`, err);
+    logger.error({ err, to: params.to }, "[Email] 发送失败");
     return false;
   }
 }
@@ -190,7 +191,7 @@ export async function sendRealNameResultEmail(
 ): Promise<boolean> {
   const template = await loadTemplate("real_name_result");
   if (!template) {
-    console.warn(`[Email] 未找到实名结果邮件模板 "real_name_result"`);
+    logger.warn({ template: "real_name_result" }, "[Email] 未找到实名结果邮件模板");
     return false;
   }
 
@@ -236,7 +237,7 @@ export async function sendLoginAlertEmail(
 ): Promise<boolean> {
   const template = await loadTemplate("login_alert");
   if (!template) {
-    console.warn(`[Email] 未找到登录提醒模板 "login_alert"`);
+    logger.warn({ template: "login_alert" }, "[Email] 未找到登录提醒模板");
     return false;
   }
 
@@ -276,7 +277,7 @@ export async function sendAccountBannedEmail(
 ): Promise<boolean> {
   const template = await loadTemplate("account_banned");
   if (!template) {
-    console.warn(`[Email] 未找到账号封禁模板 "account_banned"`);
+    logger.warn({ template: "account_banned" }, "[Email] 未找到账号封禁模板");
     return false;
   }
 

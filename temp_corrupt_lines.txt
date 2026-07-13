@@ -1,0 +1,114 @@
+--- Line 73 ---
+// V2.0 鑱氬悎鏌ヨ绫诲瀷
+
+--- Line 207 ---
+  // 鈹€鈹€ 鑱氬悎鏌ヨ鐘舵€?鈹€鈹€
+
+--- Line 243 ---
+      setError(err.message || '鑾峰彇缁熻鏁版嵁澶辫触')
+
+--- Line 257 ---
+  // 鈹€鈹€ 鑱氬悎鏌ヨ 鈹€鈹€
+
+--- Line 281 ---
+      console.error('鑱氬悎鏌ヨ澶辫触:', err)
+
+--- Line 334 ---
+            <StatCard icon={Activity} label="鎬昏皟鐢ㄦ鏁? value={overview.totalCalls.toLocaleString()}
+
+--- Line 335 ---
+              sub={`鎴愬姛 ${overview.successCalls} | 澶辫触 ${overview.failedCalls}`} color="bg-blue-500" />
+
+--- Line 336 ---
+            <StatCard icon={Cpu} label="鎬?Token 娑堣€? value={(Number(overview.totalTokens) / 10000).toFixed(2) + '涓?}
+
+--- Line 338 ---
+            <StatCard icon={DollarSign} label="鎬昏姳璐? value={'楼' + Number(overview.totalCost).toFixed(2)}
+
+--- Line 339 ---
+              sub={`鎴愬姛鐜?${overview.successRate}%`} color="bg-green-500" />
+
+--- Line 341 ---
+              sub={`${overview.uniqueUsers} 鐢ㄦ埛`} color="bg-orange-500" />
+
+--- Line 374 ---
+                    tickFormatter={(v) => v >= 10000 ? `${(v / 10000).toFixed(0)}涓嘸 : v} />
+
+--- Line 381 ---
+                    fill="url(#colorCost)" name="鑺辫垂" strokeWidth={2} />
+
+--- Line 386 ---
+            <div className="py-8 text-center text-sm text-slate-400">鏆傛棤瓒嬪娍鏁版嵁</div>
+
+--- Line 397 ---
+              鎸夋ā鍨嬬粺璁℃帓琛?            </CardTitle>
+
+--- Line 408 ---
+                      tickFormatter={(v) => v >= 10000 ? `${(v / 10000).toFixed(0)}涓嘸 : v} />
+
+--- Line 411 ---
+                    <Bar dataKey="totalCalls" fill="#3B82F6" name="璋冪敤娆℃暟" radius={[0, 4, 4, 0]} />
+
+--- Line 416 ---
+              <div className="py-8 text-center text-sm text-slate-400">鏆傛棤鏁版嵁</div>
+
+--- Line 426 ---
+              鎸変緵搴斿晢缁熻鎺掕
+
+--- Line 441 ---
+                    <Bar dataKey="totalCost" fill="#10B981" name="鑺辫垂" radius={[0, 4, 4, 0]} />
+
+--- Line 446 ---
+              <div className="py-8 text-center text-sm text-slate-400">鏆傛棤鏁版嵁</div>
+
+--- Line 457 ---
+            鎸夊皬鏃跺垎甯冿紙浠婃棩锛?          </CardTitle>
+
+--- Line 470 ---
+                    tickFormatter={(v) => v >= 10000 ? `${(v / 10000).toFixed(0)}涓嘸 : v} />
+
+--- Line 473 ---
+                    dot={false} name="璋冪敤娆℃暟" />
+
+--- Line 480 ---
+            <div className="py-8 text-center text-sm text-slate-400">鏆傛棤灏忔椂鍒嗗竷鏁版嵁</div>
+
+--- Line 486 ---
+      {/*  V2.0 鑱氬悎鏌ヨ锛堢鐞嗗悗鍙板寮猴級       */}
+
+--- Line 494 ---
+              鑱氬悎鏌ヨ
+
+--- Line 495 ---
+              <span className="text-xs text-slate-400 font-normal">澶氱淮搴﹁仛鍚?+ 妯″瀷/渚涘簲鍟嗙粏鍒?/span>
+
+--- Line 541 ---
+                鏌ヨ
+
+--- Line 550 ---
+                  <div className="text-[10px] text-slate-500">鎬昏皟鐢?/div>
+
+--- Line 555 ---
+                </div>
+
+--- Line 561 ---
+                  <div className="text-lg font-bold text-orange-700">{aggSummary.avgDuration}ms</div>
+
+--- Line 571 ---
+              <div className="h-64 mb-4">
+
+--- Line 576 ---
+                        <stop offset="5%" stopColor="#6366F1" stopOpacity={0.2} />
+
+--- Line 582 ---
+                    <YAxis tick={{ fontSize: 11 }} tickLine={false}
+
+--- Line 587 ---
+                    <Area type="monotone" dataKey="totalCalls" stroke="#3B82F6"
+
+--- Line 593 ---
+
+
+--- Line 648 ---
+                        <tr key={i} className="hover:bg-slate-50">
+

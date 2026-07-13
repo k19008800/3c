@@ -1,9 +1,71 @@
 // ============================================================
-//  3cloud (3C) — 计费引擎
-//  扣费：usage × 售价 × pricingMultiplier × 折扣
-//  余额耗尽允许走完（微超机制）
-//  支持流式断连回补、代理商分佣
+//  3cloud (3C) — 计费引擎 (Business Logic)
 // ============================================================
+//
+// ── 业务闭环 ──
+//
+// 【扣费公式】
+//   rawCost = (promptTokens x sellPriceInput + completionTokens x sellPriceOutput)
+//   discountedCost = rawCost x pricingMultiplier x discountRate
+//   - precision: DECIMAL(18,6), toFixed(6) truncation
+//   - all amounts in CNY (元)
+//   - sellPriceInput/sellPriceOutput 来自 vendor_models 表，per vendorModelId 缓存 60s
+//
+// 【状态流转】
+//   stream=false: request → charge() (事务内) → call_logs(status=success) + balance_logs(type=consumption) + users.balance -= cost
+//   stream=true: request → SSE chunks → [DONE] → charge() → call_logs + balance_logs
+//   stream disconnect: request → SSE → client disconnect → call_logs(status=cancelled, cost=0) — 不计费
+//   balance exhausted mid-stream: 允许完成 → 余额可负 → 下次充值先回补负数
+//
+// 【定价层级 (getDiscountRate)】
+//   1. user_discounts 表 (priority 最高, effectiveFrom <= NOW() < effectiveUntil)
+//   2. users.discountRate (per-user default, nullable)
+//   3. enterprise 用户默认 95% (system_configs key: enterprise_discount_rate, default 0.95)
+//   4. 普通用户 100% (no discount, returns 1.0)
+//   pricingMultiplier 来自 system_configs key: pricing_multiplier，默认 1.01（后台价格管理页可维护）
+//
+// 【缓存策略】
+//   - getPricingMultiplier: 60s TTL 单值缓存 (key: pricing_multiplier)
+//   - clearPricingMultiplierCache(): 管理员修改 system_configs 后调用
+//   - getDiscountRate: 60s TTL per userId (Map<userId>)
+//   - getSellPrices: 60s TTL per vendorModelId (Map<vendorModelId>)
+//
+// 【余额不足处理 (charge 事务内)】
+//   - pre-check: users.balance (FOR UPDATE 行锁) > alert_stop_balance (system_configs, default 10)
+//   - balance <= 0 且超过阈值 → 抛出 BALANCE_EXHAUSTED (code 402)
+//   - balance 略负 (在阈值内) → 允许通过 (微超机制)
+//   - 充值: applyRechargeBalance() → 先回补负数 → negative_repay log → 剩余记 recharge log
+//   - 负数余额用户 CANNOT 发起新请求 (balance <= 0 被拦截)
+//
+// 【代理商分佣 (processCommission, 事务内)】
+//   - trigger: call_logs created + user 在 agent_clients 表中
+//   - sale 佣金: commission = callCost x commissionRules.rate (ruleType='sale', isEnabled=true, 时间窗口内)
+//   - maxCap 封顶: Math.min(commissionAmount, maxCap)
+//   - 写 commission_logs (status=pending, commissionType='sale')
+//   - upsert agent_customer_consumption (ON CONFLICT ... DO UPDATE 累加)
+//   - processTeamCommission: 向上级逐级剥离团队佣金 (maxDepth=10, ruleType='team')
+//   - refreshRollupForAgentDate: 实时刷新 commission_daily_rollup
+//
+// 【续费佣金 (processRenewalCommission)】
+//   - 充值确认时调用 (recharge-service.ts), 与计费事务分离
+//   - commissionType='renewal', 支持 fixedAmount 固定金额或 rate 比例
+//
+// 【活动佣金 (processActivityCommission)】
+//   - 注册奖励 (register_bonus), 首充奖励 (first_recharge)
+//   - 支持 fixedAmount 固定金额或 rate 比例 + maxCap 封顶
+//
+// 【额度扣减 (deductQuotaAfterCharge)】
+//   - 事务外异步执行, 不阻塞计费主流程
+//   - 仅 success 状态调用 deductUserQuota (quota-service.ts)
+//   - api_keys.quota_balance 在事务内同步扣减 (Key 独立额度)
+//
+// 【低余额告警】
+//   - 阈值: system_configs key=alert_low_balance (default 50 元)
+//   - 去重: Redis key alert:low_balance:{userId}, TTL 3600s
+//   - 触发: notifyBalanceLow (notification-service.ts)
+//
+// 【调用链路】
+//   proxy route → calculateCost() → charge() [事务] → call_logs + balance_logs + commission_logs + agent_customer_consumption
 
 import { eq, and, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
@@ -20,9 +82,10 @@ import {
   agentCustomerConsumption,
   userDiscounts,
   systemConfigs,
+  apiKeys,
 } from "../db/schema.js";
 import { AppError } from "./auth-service.js";
-import { refreshRollupForAgentDate } from "./agent-service.js";
+import { deductUserQuota } from "./quota-service.js";
 
 // ── 常量 ──
 
@@ -72,7 +135,7 @@ async function getPricingMultiplier(): Promise<number> {
     .where(eq(systemConfigs.key, "pricing_multiplier"))
     .limit(1);
 
-  const value = cfg ? parseFloat(cfg.value) : 1.33;
+  const value = cfg ? parseFloat(cfg.value) : 1.01;
   pricingMultiplierCache = { value, expiresAt: now + 60_000 };
   return value;
 }
@@ -82,9 +145,17 @@ export function clearPricingMultiplierCache() {
   pricingMultiplierCache = null;
 }
 
-// ── 获取用户折扣率 ──
+// ── 获取用户折扣率（缓存 60 秒，按用户） ──
+
+const discountRateCache = new Map<number, { value: number; expiresAt: number }>();
 
 async function getDiscountRate(userId: number): Promise<number> {
+  const now = Date.now();
+  const cached = discountRateCache.get(userId);
+  if (cached && now < cached.expiresAt) {
+    return cached.value;
+  }
+
   const db = getDb();
 
   // 1. 查 user_discounts 表（优先级最高）
@@ -92,14 +163,16 @@ async function getDiscountRate(userId: number): Promise<number> {
     .select({ discountRate: userDiscounts.discountRate })
     .from(userDiscounts)
     .where(
-      sql`${eq(userDiscounts.userId, userId)} 
-          AND ${userDiscounts.effectiveFrom} <= NOW() 
+      sql`${eq(userDiscounts.userId, userId)}
+          AND ${userDiscounts.effectiveFrom} <= NOW()
           AND (${userDiscounts.effectiveUntil} IS NULL OR ${userDiscounts.effectiveUntil} > NOW())`
     )
     .limit(1);
 
   if (discount) {
-    return Number(discount.discountRate);
+    const value = Number(discount.discountRate);
+    discountRateCache.set(userId, { value, expiresAt: now + 60_000 });
+    return value;
   }
 
   // 2. 查 users.discountRate
@@ -109,10 +182,15 @@ async function getDiscountRate(userId: number): Promise<number> {
     .where(eq(users.id, userId))
     .limit(1);
 
-  if (!user) return 1.0;
+  if (!user) {
+    discountRateCache.set(userId, { value: 1.0, expiresAt: now + 60_000 });
+    return 1.0;
+  }
 
   if (user.discountRate) {
-    return Number(user.discountRate);
+    const value = Number(user.discountRate);
+    discountRateCache.set(userId, { value, expiresAt: now + 60_000 });
+    return value;
   }
 
   // 3. 企业用户默认折扣
@@ -122,18 +200,38 @@ async function getDiscountRate(userId: number): Promise<number> {
       .from(systemConfigs)
       .where(eq(systemConfigs.key, "enterprise_discount_rate"))
       .limit(1);
-    return cfg ? parseFloat(cfg.value) : 0.95;
+    const value = cfg ? parseFloat(cfg.value) : 0.95;
+    discountRateCache.set(userId, { value, expiresAt: now + 60_000 });
+    return value;
   }
 
+  discountRateCache.set(userId, { value: 1.0, expiresAt: now + 60_000 });
   return 1.0;
 }
 
-// ── 获取售价 ──
+/** 清除用户折扣缓存 */
+export function clearDiscountRateCache(userId?: number) {
+  if (userId !== undefined) {
+    discountRateCache.delete(userId);
+  } else {
+    discountRateCache.clear();
+  }
+}
+
+// ── 获取售价（缓存 60 秒，按 vendorModelId）──
+
+const sellPriceCache = new Map<number, { value: { sellPriceInput: number; sellPriceOutput: number }; expiresAt: number }>();
 
 async function getSellPrices(vendorModelId: number): Promise<{
   sellPriceInput: number;
   sellPriceOutput: number;
 }> {
+  const now = Date.now();
+  const cached = sellPriceCache.get(vendorModelId);
+  if (cached && now < cached.expiresAt) {
+    return cached.value;
+  }
+
   const db = getDb();
 
   const [vm] = await db
@@ -149,10 +247,22 @@ async function getSellPrices(vendorModelId: number): Promise<{
     throw new AppError("VENDOR_MODEL_NOT_FOUND", `厂商模型关联 (ID ${vendorModelId}) 不存在`, 404);
   }
 
-  return {
+  const value = {
     sellPriceInput: Number(vm.sellPriceInput),
     sellPriceOutput: Number(vm.sellPriceOutput),
   };
+
+  sellPriceCache.set(vendorModelId, { value, expiresAt: now + 60_000 });
+  return value;
+}
+
+/** 清除售价缓存（管理员修改 vendor_models 后调用） */
+export function clearSellPriceCache(vendorModelId?: number) {
+  if (vendorModelId !== undefined) {
+    sellPriceCache.delete(vendorModelId);
+  } else {
+    sellPriceCache.clear();
+  }
 }
 
 // ── 获取用户余额 ──
@@ -208,13 +318,13 @@ export async function calculateCost(
   };
 }
 
-// ── 执行扣费 ──
+// ── 执行扣费（含额度扣减） ──
 
 export async function charge(input: BillingInput): Promise<BillingResult> {
   const db = getDb();
   const redis = getRedis();
 
-  return await db.transaction(async (tx) => {
+  const billingResult = await db.transaction(async (tx) => {
     // 1. 获取售价
     const prices = await getSellPrices(input.vendorModelId);
     const multiplier = await getPricingMultiplier();
@@ -262,9 +372,7 @@ export async function charge(input: BillingInput): Promise<BillingResult> {
     const balanceBefore = Number(user.balance);
     const balanceAfter = Math.max(0, balanceBefore - discountedCost);
 
-    // 4. 检查余额是否足够（允许微超：余额 > 0 即可，走完再扣到负数）
-    //    如果余额已 <= 0 且还被调用了，说明是微超还债场景
-    //    如果大幅欠费，则拒绝
+    // 4. 检查余额是否足够（允许微超）
     const alertStopBalance = parseFloat(
       (await tx
         .select({ value: systemConfigs.value })
@@ -273,11 +381,7 @@ export async function charge(input: BillingInput): Promise<BillingResult> {
         .limit(1))?.[0]?.value ?? "10",
     );
 
-    // 余额已经为 0 且成本大于 0，检查是否需要禁止
     if (balanceBefore <= 0 && discountedCost > 0) {
-      // 如果是微超回补场景（balanceBefore 已经为负数），仍然允许
-      // 但如果用户是正余额用完为负，允许欠费一次
-      // 大幅欠费（低于 alert_stop_balance 且未在还款）则拒绝
       if (balanceBefore < -alertStopBalance) {
         throw new AppError("BALANCE_EXHAUSTED", "余额已耗尽，请充值", 402);
       }
@@ -314,6 +418,23 @@ export async function charge(input: BillingInput): Promise<BillingResult> {
       .set({ balance: balanceAfter.toFixed(6) })
       .where(eq(users.id, input.userId));
 
+    // 6.5. UPDATE api_keys.quota_balance（Key 独立额度扣减）
+    if (input.apiKeyId && input.status === "success") {
+      const [keyRow] = await tx
+        .select({ quotaBalance: apiKeys.quotaBalance })
+        .from(apiKeys)
+        .where(eq(apiKeys.id, input.apiKeyId))
+        .limit(1);
+
+      if (keyRow?.quotaBalance !== null && keyRow?.quotaBalance !== undefined) {
+        const keyBalanceAfter = Number(keyRow.quotaBalance) - Number(costStr);
+        await tx
+          .update(apiKeys)
+          .set({ quotaBalance: keyBalanceAfter.toFixed(6) })
+          .where(eq(apiKeys.id, input.apiKeyId));
+      }
+    }
+
     // 7. INSERT balance_logs
     await tx.insert(balanceLogs).values({
       userId: input.userId,
@@ -325,10 +446,10 @@ export async function charge(input: BillingInput): Promise<BillingResult> {
       description: `${input.modelName} / ${input.vendorName} (輸入:${input.promptTokens} 輸出:${input.completionTokens} 耗時:${input.durationMs}ms${input.isStreaming ? " 流式" : ""})`,
     });
 
-    // 8. 如归属代理商，计算分佣（基于实际扣费金额）
+    // 8. 如归属代理商，计算分佣
     await processCommission(tx, input.userId, callLogId, costStr);
 
-    // 9. 余额不足告警（Redis 去重，1 小时内同用户只发一次）
+    // 9. 余额不足告警（Redis 去重）
     const lowBalanceThreshold = parseFloat(
       (await tx
         .select({ value: systemConfigs.value })
@@ -337,19 +458,20 @@ export async function charge(input: BillingInput): Promise<BillingResult> {
         .limit(1))?.[0]?.value ?? "50",
     );
 
-    const userBalanceStr = balanceAfter.toFixed(6);
     const userBalanceNum = balanceAfter;
+    const userBalanceStr = balanceAfter.toFixed(6);
 
-    // 设置低余额标记，让管理员查看
     if (userBalanceNum > 0 && userBalanceNum < lowBalanceThreshold) {
       const alertKey = `alert:low_balance:${input.userId}`;
       const exists = await redis.get(alertKey);
       if (!exists) {
         await redis.setex(alertKey, ALERT_LOW_BALANCE_COOLDOWN, "1");
-        // 异步记录到日志（实际邮件发送待后续接入）
-        requestLog(
-          `低余额告警: 用户 ${input.userId}, 余额 ${userBalanceStr}, 阈值 ${lowBalanceThreshold}`,
-        );
+        try {
+          const { notifyBalanceLow } = await import("./notification-service.js");
+          await notifyBalanceLow(input.userId, userBalanceStr, lowBalanceThreshold.toFixed(6));
+        } catch (e) {
+          console.error(`[Billing] balance_low 通知发送失败 (userId=${input.userId}):`, e);
+        }
       }
     }
 
@@ -360,6 +482,29 @@ export async function charge(input: BillingInput): Promise<BillingResult> {
       callLogId,
     };
   });
+
+  // ── 用户维度周期额度扣减（事务外执行，不阻塞计费主流程） ──
+  // 仅成功调用才扣减额度
+  if (input.status === "success") {
+    deductQuotaAfterCharge(input.userId, billingResult.cost).catch((err) => {
+      console.error(`[Billing] 额度扣减失败 (userId=${input.userId}):`, err);
+    });
+  }
+
+  return billingResult;
+}
+
+// ── 额度扣减辅助函数 ──
+
+async function deductQuotaAfterCharge(
+  userId: number,
+  cost: string,
+): Promise<void> {
+  try {
+    await deductUserQuota(userId, cost);
+  } catch (err) {
+    console.warn(`[Billing] deductQuotaAfterCharge error:`, err);
+  }
 }
 
 // ── 代理商分佣处理 ──
@@ -461,15 +606,6 @@ async function processCommission(
 
 // ── 向上级代理商分发团队佣金（逐级剥皮） ──
 
-/**
- * 从当前代理商逐级向上，按团队规则抽成
- * @param tx - 复用上层事务
- * @param agentId - 直接代理商的 agentId
- * @param customerUserId - 消费客户
- * @param callLogId - 调用日志ID
- * @param callCost - 调用成本
- * @param saleCommission - 直接代理商获得的销售佣金金额
- */
 async function processTeamCommission(
   tx: any,
   agentId: number,
@@ -480,13 +616,11 @@ async function processTeamCommission(
   reportDate: string,
 ) {
   let currentAgentId = agentId;
-  const maxDepth = 10; // 安全限制
+  const maxDepth = 10;
   let depth = 0;
 
   while (currentAgentId && depth < maxDepth) {
     depth++;
-
-    // 查当前代理商的上级
     const [agent] = await tx
       .select({ parentAgentId: agents.parentAgentId })
       .from(agents)
@@ -494,10 +628,8 @@ async function processTeamCommission(
       .limit(1);
 
     if (!agent || !agent.parentAgentId) break;
-
     const parentId = agent.parentAgentId;
 
-    // 查上级的团队佣金规则
     const [rule] = await tx
       .select({
         rate: commissionRules.rate,
@@ -524,17 +656,14 @@ async function processTeamCommission(
     const teamRate = Number(rule.rate);
     const baseAmount = Number(saleCommission);
     let teamAmount = baseAmount * teamRate;
-
     if (rule.maxCap) {
       teamAmount = Math.min(teamAmount, Number(rule.maxCap));
     }
-
     if (teamAmount <= 0) {
       currentAgentId = parentId;
       continue;
     }
 
-    // 写入团队佣金
     await tx.insert(commissionLogs).values({
       agentId: parentId,
       clientCallLogId: callLogId,
@@ -557,24 +686,13 @@ async function processTeamCommission(
       status: "pending",
     });
 
-    // 刷新上级代理商的 rollup 汇总（使用与销售佣金一致的日期）
     await refreshRollupForAgentDate(parentId, reportDate, tx);
-
-    // 继续向上走
     currentAgentId = parentId;
   }
 }
 
-// ── 续费佣金处理（充值到账时调用） ──
+// ── 续费佣金处理 ──
 
-/**
- * 处理续费佣金
- * @param tx - 复用上层事务
- * @param userId - 充值用户ID
- * @param rechargeOrderId - 充值订单ID
- * @param rechargeAmount - 充值金额
- * @param orderNo - 订单号
- */
 export async function processRenewalCommission(
   tx: any,
   userId: number,
@@ -582,18 +700,14 @@ export async function processRenewalCommission(
   rechargeAmount: string,
   orderNo: string,
 ): Promise<void> {
-  // 1. 查客户归属的代理商
   const [client] = await tx
-    .select({
-      agentId: agentClients.agentId,
-    })
+    .select({ agentId: agentClients.agentId })
     .from(agentClients)
     .where(eq(agentClients.clientUserId, userId))
     .limit(1);
 
-  if (!client) return; // 无代理商归属
+  if (!client) return;
 
-  // 2. 查续费规则（仅从 commission_rules 读取）
   const [rule] = await tx
     .select({
       rate: commissionRules.rate,
@@ -615,13 +729,9 @@ export async function processRenewalCommission(
 
   if (!rule) return;
 
-  let rate: number;
-  let isFixedAmount = false;
-  let maxCap: number | null = null;
-
-  rate = Number(rule.rate);
-  isFixedAmount = rule.fixedAmount ? true : false;
-  maxCap = rule.maxCap ? Number(rule.maxCap) : null;
+  let rate = Number(rule.rate);
+  let isFixedAmount = !!rule.fixedAmount;
+  let maxCap = rule.maxCap ? Number(rule.maxCap) : null;
 
   if (rate <= 0 && !rule?.fixedAmount) return;
 
@@ -630,14 +740,11 @@ export async function processRenewalCommission(
     ? Number(rule.fixedAmount)
     : amountNum * rate;
 
-  // 封顶
   if (maxCap) {
     commissionAmount = Math.min(commissionAmount, maxCap);
   }
-
   if (commissionAmount <= 0) return;
 
-  // 3. 记录续费佣金（不更新 agent_customer_consumption，续费不触发消费汇总）
   await tx.insert(commissionLogs).values({
     agentId: client.agentId,
     clientCallLogId: null,
@@ -657,22 +764,12 @@ export async function processRenewalCommission(
     status: "pending",
   });
 
-  // 刷新 rollup 汇总（使用实际佣金发生日期）
   const now = new Date();
   await refreshRollupForAgentDate(client.agentId, now.toISOString().slice(0, 10), tx);
 }
 
-// ── 活动奖励佣金处理（注册/首充等触点调用） ──
+// ── 活动奖励佣金处理 ──
 
-/**
- * 处理活动奖励佣金
- * @param tx - 复用上层事务（若无事务可传 null，内部自己创建）
- * @param agentId - 代理商ID
- * @param customerUserId - 客户用户ID
- * @param activityType - 活动类型
- * @param triggerAmount - 触发金额（如充值金额），可选
- * @param refId - 关联ID（订单号等）
- */
 export async function processActivityCommission(
   tx: any,
   agentId: number,
@@ -683,7 +780,6 @@ export async function processActivityCommission(
 ): Promise<void> {
   const db = tx ?? getDb();
 
-  // 查活动规则
   const [rule] = await db
     .select({
       rate: commissionRules.rate,
@@ -714,7 +810,6 @@ export async function processActivityCommission(
   if (rule.maxCap) {
     amount = Math.min(amount, Number(rule.maxCap));
   }
-
   if (amount <= 0) return;
 
   await db.insert(commissionLogs).values({
@@ -736,13 +831,21 @@ export async function processActivityCommission(
     status: "pending",
   });
 
-  // 刷新 rollup 汇总（使用实际佣金发生日期）
   const now = new Date();
   await refreshRollupForAgentDate(agentId, now.toISOString().slice(0, 10), tx);
 }
 
-// ── 简单日志输出（生产应替换为正式 logger） ──
+// ── 刷新代理商日汇总 ──
 
-function requestLog(msg: string) {
-  console.log(`[Billing] ${msg}`);
+async function refreshRollupForAgentDate(
+  agentId: number,
+  reportDate: string,
+  tx: any,
+): Promise<void> {
+  try {
+    const { refreshRollupForAgentDate: refreshFn } = await import("./agent-finance.js");
+    await refreshFn(agentId, reportDate, tx);
+  } catch (err) {
+    console.warn(`[Billing] refreshRollupForAgentDate error (agent=${agentId}):`, err);
+  }
 }

@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { get, patch } from '@/lib/api'
 import type { SecurityConfig } from '@/types'
 import { Loader2, AlertCircle, Save, Settings, RotateCcw, History, Clock, ArrowRight } from 'lucide-react'
+import FeatureDescription from '@/components/admin/FeatureDescription'
+import PaginationBar from '@/components/ui/PaginationBar'
 
 // ── 默认值映射（与 seed.ts 一致） ──
 const DEFAULT_VALUES: Record<string, any> = {
@@ -41,6 +43,7 @@ export default function AdminSecurityConfig() {
   const [history, setHistory] = useState<any[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
   const [historyPage, setHistoryPage] = useState(1)
+  const [historyPageSize, setHistoryPageSize] = useState(20)
   const [historyTotal, setHistoryTotal] = useState(0)
 
   const fetchConfigs = useCallback(async () => {
@@ -140,6 +143,7 @@ export default function AdminSecurityConfig() {
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <Settings size={24} /> 安全配置
         </h1>
+        <FeatureDescription page="admin/security/config" className="ml-2" />
         <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
           <button
             onClick={() => setTab('config')}

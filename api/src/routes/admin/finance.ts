@@ -17,13 +17,20 @@ import {
   getFinanceDashboard,
   getReconciliationReport,
   exportReconCsv,
+  computeDailyReconSummary,
+} from "../../services/agent-finance.js";
+import {
   // 佣金
   listAllCommissions,
   listAllCommissionsDetail,
+} from "../../services/agent-commission.js";
+import {
   settleCommissions,
   batchSettleCommissions,
   batchCancelCommissions,
   settleCommissionsByFilters,
+} from "../../services/agent-settlement.js";
+import {
   // 提现
   listAllWithdraws,
   firstReviewWithdraw,
@@ -31,7 +38,7 @@ import {
   markWithdrawAsPaid,
   batchReviewWithdraws,
   exportWithdrawsCsv,
-} from "../../services/agent-service.js";
+} from "../../services/agent-withdraw.js";
 import { confirmBankTransfer, parseBankTransferRemark } from "../../services/recharge-service.js";
 import { generateVoucherNo } from "../../services/voucher-service.js";
 import { firstConfirmRechargeSchema, secondConfirmRechargeSchema } from "../../schemas.js";
@@ -43,6 +50,7 @@ import {
   agents,
   balanceLogs,
   auditLogs,
+  dailyReconSummary,
 } from "../../db/schema.js";
 
 export async function adminFinanceRoutes(app: FastifyInstance) {
@@ -227,6 +235,44 @@ export async function adminFinanceRoutes(app: FastifyInstance) {
       reply.header('Content-Type', 'text/csv; charset=utf-8');
       reply.header('Content-Disposition', `attachment; filename="reconciliation_${query.startDate || 'report'}.csv"`);
       reply.status(200).send(csv);
+    } catch (err: any) {
+      if (err instanceof AppError) {
+        reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // ──────────────────────────────────────────────
+  //  GET /api/v1/admin/finance/agent-integrity — 代理商财务完整性校验
+  //  交叉验证每个代理商的缓存字段与实际子表数据
+  //  params: agentId?, agentSearch?, page?, pageSize?
+  // ──────────────────────────────────────────────
+
+  app.get("/api/v1/admin/finance/agent-integrity", {
+    preHandler: [requirePerm(Perm.RECONCILIATION_VIEW)],
+  }, async (request, reply) => {
+    try {
+      const query = request.query as {
+        agentId?: string;
+        agentSearch?: string;
+        page?: string;
+        pageSize?: string;
+      };
+      const { getAgentIntegrity } = await import("../../services/agent-service.js");
+      const result = await getAgentIntegrity({
+        agentId: query.agentId ? parseInt(query.agentId, 10) : undefined,
+        agentSearch: query.agentSearch,
+        page: query.page ? parseInt(query.page, 10) : undefined,
+        pageSize: query.pageSize ? parseInt(query.pageSize, 10) : undefined,
+      });
+
+      reply.status(200).send({
+        code: 0,
+        data: result,
+        message: "ok",
+      });
     } catch (err: any) {
       if (err instanceof AppError) {
         reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });

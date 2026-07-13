@@ -10,6 +10,7 @@
 import { FastifyInstance } from "fastify";
 import { authenticateJWT, guardNotImpersonating, guardNotImpersonatingWrite } from "../middleware/auth.js";
 import { AppError } from "../services/auth-service.js";
+import { logOperation } from "../services/operation-log.js";
 import {
   createRechargeOrder,
   submitBankTransfer,
@@ -41,6 +42,18 @@ export async function rechargeRoutes(app: FastifyInstance) {
           userId: request.user!.userId,
           amount: parsed.amount,
           channel: parsed.channel,
+        });
+
+        logOperation({
+          userId: request.user!.userId,
+          userRole: request.user!.role,
+          category: "finance",
+          action: "recharge_submit",
+          targetType: "order",
+          resourceName: result.orderNo,
+          summary: `充值下单 ¥${parsed.amount}，渠道: ${parsed.channel}`,
+          ip: request.ip,
+          userAgent: request.headers["user-agent"] as string | undefined,
         });
 
         reply.status(200).send({

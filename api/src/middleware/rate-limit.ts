@@ -102,9 +102,7 @@ async function getTokenSum(redisKey: string): Promise<number> {
   // 移除过期条目
   await redis.zremrangebyscore(redisKey, 0, cutoff);
 
-  // 聚合分数（tokens 存为 score）
-  const sum = await redis.zcard(redisKey);
-  // 注: zcard 不能聚合 score 总和，改用 zrange + 手动求和
+  // 聚合分数（tokens 存为 score），用 zrange + 手动求和
   const members = await redis.zrange(redisKey, 0, -1, "WITHSCORES");
   let total = 0;
   for (let i = 1; i < members.length; i += 2) {
@@ -160,6 +158,8 @@ export async function checkRateLimit(
   userType: "personal" | "enterprise",
   rpmOverride: number | null,
   tpmOverride: number | null,
+  quotaRpmLimit?: number | null,
+  quotaTpmLimit?: number | null,
 ): Promise<RateLimitResult | null> {
   const cfg = await loadConfig();
   const now = Date.now();
@@ -180,11 +180,11 @@ export async function checkRateLimit(
     }
   }
 
-  // ② 用户级（含 override）
+  // ② 用户级（含 override 和 quota TPM/RPM 覆盖）
   {
     const key = rpmKey("user", String(userId));
     const count = await getCount(key);
-    const limit = rpmOverride ?? (
+    const limit = quotaRpmLimit ?? rpmOverride ?? (
       userType === "enterprise" ? cfg.enterpriseRpm : cfg.personalRpm
     );
     if (count >= limit) {
@@ -203,11 +203,11 @@ export async function checkRateLimit(
 
   // ── 按级别顺序检查 TPM ──
 
-  // ① 用户级 TPM（含 override）
+  // ① 用户级 TPM（含 override 和 quota TPM/RPM 覆盖）
   {
     const key = tpmKey("user", String(userId));
     const sum = await getTokenSum(key);
-    const limit = tpmOverride ?? (
+    const limit = quotaTpmLimit ?? tpmOverride ?? (
       userType === "enterprise" ? cfg.enterpriseTpm : cfg.personalTpm
     );
     if (sum >= limit) {

@@ -4,10 +4,12 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 interface PaginationBarProps {
   page: number
   onPageChange: (page: number) => void
-  pageSize: number
-  onPageSizeChange: (pageSize: number) => void
   total: number
   totalPages: number
+  /** 可选：每页条数，默认 20 */
+  pageSize?: number
+  /** 可选：每页条数变更回调，默认 no-op */
+  onPageSizeChange?: (pageSize: number) => void
   /** 可选：每页选项，默认 [20, 50, 100] */
   pageSizeOptions?: number[]
 }
@@ -15,8 +17,8 @@ interface PaginationBarProps {
 export default function PaginationBar({
   page,
   onPageChange,
-  pageSize,
-  onPageSizeChange,
+  pageSize = 20,
+  onPageSizeChange = () => {},
   total,
   totalPages,
   pageSizeOptions = [20, 50, 100],

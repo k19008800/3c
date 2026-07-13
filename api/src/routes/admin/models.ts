@@ -7,9 +7,9 @@
 // ============================================================
 
 import { FastifyInstance } from "fastify";
-import { eq, asc, sql } from "drizzle-orm";
+import { eq, asc, sql, gte, and, desc } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
-import { models, vendorModels, auditLogs } from "../../db/schema.js";
+import { models, vendorModels, auditLogs, callLogs } from "../../db/schema.js";
 import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
 
 const MODEL_TYPES = ["chat", "embedding", "image", "audio"] as const;
@@ -22,10 +22,11 @@ export async function adminModelRoutes(app: FastifyInstance) {
     preHandler: [requirePerm(Perm.MODEL_MANAGE)],
   }, async (request, reply) => {
     const db = getDb();
-    const { name, displayName, type } = request.body as {
+    const { name, displayName, type, description } = request.body as {
       name: string;
       displayName?: string;
       type?: string;
+      description?: string;
     };
 
     if (!name) {
@@ -39,7 +40,7 @@ export async function adminModelRoutes(app: FastifyInstance) {
     try {
       const [model] = await db
         .insert(models)
-        .values({ name, displayName, type: modelType as any })
+        .values({ name, displayName, type: modelType as any, description })
         .returning();
 
       await db.insert(auditLogs).values({
@@ -47,7 +48,7 @@ export async function adminModelRoutes(app: FastifyInstance) {
         action: "model_create",
         targetType: "model",
         targetId: model.id,
-        after: { name, displayName, type: modelType },
+        after: { name, displayName, type: modelType, description },
         ip: request.ip,
         description: `创建模型: ${name}`,
       });
@@ -120,6 +121,7 @@ export async function adminModelRoutes(app: FastifyInstance) {
 
     const updates: Record<string, any> = {};
     if (body.displayName !== undefined) updates.displayName = body.displayName;
+    if (body.description !== undefined) updates.description = body.description || null;
     if (body.status !== undefined) updates.status = body.status;
     if (body.type && MODEL_TYPES.includes(body.type)) updates.type = body.type;
 
@@ -211,5 +213,115 @@ export async function adminModelRoutes(app: FastifyInstance) {
     });
 
     reply.status(200).send({ code: 0, data: null, message: "ok" });
+  });
+
+  // ── 单个模型深度用量分析 ──
+  // GET /api/v1/admin/models/:id/usage
+  // 返回: 概览(今日/本月/累计) + 按用户分布 + 按Key分布 + 按状态分布 + 趋势
+
+  app.get("/api/v1/admin/models/:id/usage", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
+    const db = getDb();
+    const modelId = parseInt((request.params as any).id);
+
+    if (isNaN(modelId)) {
+      reply.status(400).send({ code: 400, data: null, message: "无效的模型 ID" });
+      return;
+    }
+
+    const [model] = await db.select({ id: models.id, name: models.name, displayName: models.displayName, type: models.type, status: models.status })
+      .from(models).where(eq(models.id, modelId)).limit(1);
+
+    if (!model) {
+      reply.status(404).send({ code: 404, data: null, message: "模型不存在" });
+      return;
+    }
+
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // 今日统计
+    const [today] = await db.select({
+      calls: sql<number>`count(*)::int`,
+      tokens: sql<number>`coalesce(sum(${callLogs.totalTokens}), 0)::bigint`,
+      cost: sql<string>`coalesce(sum(${callLogs.cost}), '0')`,
+      successCount: sql<number>`count(*) filter (where ${callLogs.status} = 'success')::int`,
+      failedCount: sql<number>`count(*) filter (where ${callLogs.status} = 'failed')::int`,
+      avgDurationMs: sql<number>`coalesce(avg(${callLogs.durationMs}), 0)::int`,
+    }).from(callLogs).where(and(eq(callLogs.modelName, model.name), gte(callLogs.createdAt, todayStart)));
+
+    // 本月
+    const [month] = await db.select({
+      calls: sql<number>`count(*)::int`,
+      tokens: sql<number>`coalesce(sum(${callLogs.totalTokens}), 0)::bigint`,
+      cost: sql<string>`coalesce(sum(${callLogs.cost}), '0')`,
+    }).from(callLogs).where(and(eq(callLogs.modelName, model.name), gte(callLogs.createdAt, monthStart)));
+
+    // 累计
+    const [allTime] = await db.select({
+      calls: sql<number>`count(*)::int`,
+      tokens: sql<number>`coalesce(sum(${callLogs.totalTokens}), 0)::bigint`,
+      cost: sql<string>`coalesce(sum(${callLogs.cost}), '0')`,
+    }).from(callLogs).where(eq(callLogs.modelName, model.name));
+
+    // 按用户分布 (Top 20)
+    const userBreakdown = await db.select({
+      userId: callLogs.userId,
+      calls: sql<number>`count(*)::int`,
+      tokens: sql<number>`coalesce(sum(${callLogs.totalTokens}), 0)::bigint`,
+      cost: sql<string>`coalesce(sum(${callLogs.cost}), '0')`,
+      successCount: sql<number>`count(*) filter (where ${callLogs.status} = 'success')::int`,
+      failedCount: sql<number>`count(*) filter (where ${callLogs.status} = 'failed')::int`,
+      lastUsedAt: sql<Date>`max(${callLogs.createdAt})`,
+    }).from(callLogs).where(eq(callLogs.modelName, model.name))
+      .groupBy(callLogs.userId).orderBy(desc(sql`coalesce(sum(${callLogs.totalTokens}), 0)`)).limit(20);
+
+    // 按API Key分布 (Top 20)
+    const keyBreakdown = await db.select({
+      apiKeyId: callLogs.apiKeyId,
+      calls: sql<number>`count(*)::int`,
+      tokens: sql<number>`coalesce(sum(${callLogs.totalTokens}), 0)::bigint`,
+      cost: sql<string>`coalesce(sum(${callLogs.cost}), '0')`,
+    }).from(callLogs).where(eq(callLogs.modelName, model.name))
+      .groupBy(callLogs.apiKeyId).orderBy(desc(sql`coalesce(sum(${callLogs.totalTokens}), 0)`)).limit(20);
+
+    // 7天趋势
+    const trends = await db.select({
+      date: sql<string>`to_char(${callLogs.createdAt}, 'MM-DD')`,
+      calls: sql<number>`count(*)::int`,
+      tokens: sql<number>`coalesce(sum(${callLogs.totalTokens}), 0)::bigint`,
+      cost: sql<string>`coalesce(sum(${callLogs.cost}), '0')`,
+    }).from(callLogs).where(and(eq(callLogs.modelName, model.name), gte(callLogs.createdAt, sevenDaysAgo)))
+      .groupBy(sql`to_char(${callLogs.createdAt}, 'MM-DD')`).orderBy(sql`to_char(${callLogs.createdAt}, 'MM-DD')`);
+
+    // 按厂商分布 (from vendor_models where this model is mapped)
+    const vendorMappings = await db.select({
+      vendorName: vendorModels.vendorName,
+      calls: sql<number>`coalesce(count(${callLogs.id}) filter (where ${callLogs.vendorModelId} = ${vendorModels.id}), 0)::int`,
+      tokens: sql<number>`coalesce(sum(${callLogs.totalTokens}) filter (where ${callLogs.vendorModelId} = ${vendorModels.id}), 0)::bigint`,
+      cost: sql<string>`coalesce(sum(${callLogs.cost}) filter (where ${callLogs.vendorModelId} = ${vendorModels.id}), '0')`,
+    }).from(vendorModels)
+      .leftJoin(callLogs, eq(callLogs.vendorModelId, vendorModels.id))
+      .where(eq(vendorModels.modelName, model.name))
+      .groupBy(vendorModels.vendorName, vendorModels.id)
+      .orderBy(desc(sql`coalesce(sum(${callLogs.totalTokens}) filter (where ${callLogs.vendorModelId} = ${vendorModels.id}), 0)`));
+
+    reply.status(200).send({
+      code: 0,
+      data: {
+        model: { id: model.id, name: model.name, displayName: model.displayName, type: model.type, status: model.status },
+        today: { calls: today?.calls ?? 0, tokens: Number(today?.tokens ?? 0), cost: today?.cost ?? '0', successCount: today?.successCount ?? 0, failedCount: today?.failedCount ?? 0, avgDurationMs: today?.avgDurationMs ?? 0 },
+        month: { calls: month?.calls ?? 0, tokens: Number(month?.tokens ?? 0), cost: month?.cost ?? '0' },
+        allTime: { calls: allTime?.calls ?? 0, tokens: Number(allTime?.tokens ?? 0), cost: allTime?.cost ?? '0' },
+        userBreakdown: userBreakdown.map(u => ({ ...u, tokens: Number(u.tokens) })),
+        keyBreakdown: keyBreakdown.map(k => ({ ...k, tokens: Number(k.tokens) })),
+        vendorBreakdown: vendorMappings.map(v => ({ ...v, tokens: Number(v.tokens) })),
+        trends,
+      },
+      message: "ok",
+    });
   });
 }

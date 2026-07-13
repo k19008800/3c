@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { get } from '@/lib/api'
 import type { AuditLog, AuditLogDetail, PaginatedData } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
   Loader2,
   AlertCircle,
@@ -457,6 +458,7 @@ export default function AdminAuditLogs() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">审计日志</h1>
+        <FeatureDescription page="admin/audit-logs" className="ml-2" />
         <div className="flex items-center gap-3">
           <span className="text-sm text-slate-500">共 {total} 条记录</span>
           <button
@@ -662,7 +664,7 @@ export default function AdminAuditLogs() {
       </div>
 
       {/* Detail dialog */}
-      {detailLog && <DetailDialog log={detailLog} onClose={closeDetail} />}
+      {detailLog && <DetailDialog log={detailLog as any} onClose={closeDetail} />}
     </div>
   )
 }

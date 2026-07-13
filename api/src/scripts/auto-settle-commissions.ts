@@ -6,7 +6,7 @@
 // ============================================================
 
 import { createDb, getDb, closeDb } from "../db/index.js";
-import { settleCommissionsByFilters } from "../services/agent-service.js";
+import { settleCommissionsByFilters } from "../services/agent-settlement.js";
 
 async function main() {
   // 初始化数据库连接

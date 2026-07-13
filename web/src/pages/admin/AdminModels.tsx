@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { get, post, patch, del } from '@/lib/api'
 import type { AdminModel, PaginatedData } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
   Loader2,
   AlertCircle,
@@ -82,6 +83,7 @@ export default function AdminModels() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">模型管理</h1>
+        <FeatureDescription page="admin/models" className="ml-2" />
         <button
           onClick={() => { setEditingModel(null); setShowFormModal(true) }}
           className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
@@ -150,6 +152,7 @@ export default function AdminModels() {
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">ID</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">模型名称</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">显示名称</th>
+                <th className="px-4 py-3 text-sm font-medium text-slate-500">简介</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">类型</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">状态</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">创建时间</th>
@@ -159,13 +162,13 @@ export default function AdminModels() {
             <tbody className="divide-y divide-slate-200">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12">
+                  <td colSpan={8} className="text-center py-12">
                     <Loader2 className="animate-spin inline-block" size={24} />
                   </td>
                 </tr>
               ) : models.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-slate-400">
+                  <td colSpan={8} className="text-center py-12 text-slate-400">
                     暂无模型数据
                   </td>
                 </tr>
@@ -177,6 +180,9 @@ export default function AdminModels() {
                       <td className="px-4 py-3 text-sm text-slate-600">{m.id}</td>
                       <td className="px-4 py-3 text-sm text-slate-900 font-mono">{m.name}</td>
                       <td className="px-4 py-3 text-sm text-slate-600">{m.displayName || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-slate-500 max-w-[200px] truncate" title={m.description || ''}>
+                        {m.description || '-'}
+                      </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${typeInfo?.color || 'bg-slate-100 text-slate-700'}`}>
                           {typeInfo?.label || m.type}
@@ -289,6 +295,7 @@ function ModelFormModal({
   const isEdit = !!model
   const [name, setName] = useState(model?.name || '')
   const [displayName, setDisplayName] = useState(model?.displayName || '')
+  const [description, setDescription] = useState(model?.description || '')
   const [type, setType] = useState(model?.type || 'chat')
   const [status, setStatus] = useState(model?.status ?? true)
   const [message, setMessage] = useState('')
@@ -309,6 +316,7 @@ function ModelFormModal({
         const body: any = {}
         if (name !== model.name) body.name = name
         if (displayName !== (model.displayName || '')) body.displayName = displayName || undefined
+        if (description !== (model.description || '')) body.description = description || undefined
         if (type !== model.type) body.type = type
         if (status !== model.status) body.status = status
         await patch(`/api/v1/admin/models/${model.id}`, body)
@@ -317,6 +325,7 @@ function ModelFormModal({
         await post('/api/v1/admin/models', {
           name: name.trim(),
           displayName: displayName.trim() || undefined,
+          description: description.trim() || undefined,
           type,
         })
         setMessage('模型已创建')
@@ -380,6 +389,17 @@ function ModelFormModal({
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="例如：GPT-4o"
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-slate-500 mb-1">简介</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="模型的用途和特性简介"
+                rows={3}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />
             </div>
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { get, post, patch, del } from '@/lib/api'
 import type { Agent, WithdrawOrder, PaginatedData } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
   Loader2,
   AlertCircle,
@@ -23,6 +24,7 @@ export default function AdminAgents() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-slate-900">代理管理</h1>
+      <FeatureDescription page="admin/agents" className="ml-2" />
 
       {/* Tabs */}
       <div className="flex gap-1 bg-slate-100 p-1 rounded-lg w-fit">

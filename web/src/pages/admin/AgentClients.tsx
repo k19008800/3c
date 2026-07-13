@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   UserPlus,
 } from 'lucide-react'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 
 export default function AdminAgentClients() {
   const { agentId } = useParams<{ agentId: string }>()
@@ -90,6 +91,7 @@ export default function AdminAgentClients() {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-slate-900">代理商客户管理</h1>
+            <FeatureDescription page="admin/agents/clients" className="ml-2" />
             {data && (
               <p className="text-sm text-slate-500 mt-0.5">
                 {data.agent.nickname || data.agent.email || `代理商 #${data.agent.id}`}

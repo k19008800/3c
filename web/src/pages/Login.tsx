@@ -14,7 +14,7 @@ export default function Login() {
   const [captchaLoading, setCaptchaLoading] = useState(false)
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/console" replace />
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

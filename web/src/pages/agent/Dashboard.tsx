@@ -93,6 +93,15 @@ function GrowthBadge({ rate }: { rate: number }) {
 //  Main Dashboard
 // ══════════════════════════════════════════════
 
+// ── 代理商仪表盘─-
+//
+// 【业务说明】
+//   代理商专属仪表盘，展示名下客户数、累计佣金、可提现余额、分佣比例等 KPI 卡片。
+//   收入趋势图支持 7/30/90 天切换，收入结构饼图展示各类型佣金占比。
+//
+// 【权限要求】角色=agent
+// 【数据来源】GET /api/v1/agent/dashboard, GET /api/v1/agent/dashboard/income-trend, GET /api/v1/agent/dashboard/income-structure
+
 export default function AgentDashboard() {
   // 基础面板数据
   const [data, setData] = useState<AgentDashboard | null>(null)
@@ -210,16 +219,16 @@ export default function AgentDashboard() {
   ]
 
   // ── 图表数据构造 ──
-  const trendChartData = trendData?.trend.map((t) => ({
+  const trendChartData = (trendData?.trend ?? []).map((t: { date: string; totalAmount: string; settledAmount: string }) => ({
     date: t.date.slice(5), // MM-DD
     fullDate: t.date,
     总收入: parseFloat(t.totalAmount),
     已结算: parseFloat(t.settledAmount),
   })) ?? []
 
-  const pieData = structureData?.byType
-    .filter((t) => t.percentage > 0)
-    .map((t) => ({
+  const pieData = (structureData?.byType ?? [])
+    .filter((t: { type: string; label: string; amount: string; count: number; percentage: number }) => t.percentage > 0)
+    .map((t: { type: string; label: string; amount: string; count: number; percentage: number }) => ({
       name: t.type,
       label: t.label,
       value: t.percentage,
@@ -416,7 +425,7 @@ export default function AgentDashboard() {
                       paddingAngle={3}
                       dataKey="value"
                     >
-                      {pieData.map((entry, idx) => (
+                      {pieData.map((entry: { name: string; value: number }, idx: number) => (
                         <Cell
                           key={entry.name}
                           fill={PIE_COLORS[idx % PIE_COLORS.length]}
@@ -432,8 +441,8 @@ export default function AgentDashboard() {
               {/* 图例列表 */}
               <div className="flex-1 space-y-2.5 self-start pt-2 w-full">
                 {structureData?.byType
-                  .filter((t) => t.percentage > 0)
-                  .map((t, idx) => (
+                  .filter((t: { type: string; label: string; amount: string; count: number; percentage: number }) => t.percentage > 0)
+                  .map((t: { type: string; label: string; amount: string; count: number; percentage: number }, idx: number) => (
                     <div key={t.type} className="flex items-center justify-between px-2">
                       <div className="flex items-center gap-2">
                         <span
@@ -482,7 +491,7 @@ export default function AgentDashboard() {
           <div className="text-center py-10 text-sm text-slate-400">暂无客户数据</div>
         ) : (
           <div className="divide-y divide-slate-100">
-            {structureData!.topClients.map((client, idx) => (
+            {(structureData?.topClients ?? []).map((client: { customerUserId: number; customerName: string; customerEmail: string; totalAmount: string; commissionAmount: string; orderCount: number; lastOrderAt: string | null }, idx: number) => (
               <div
                 key={client.customerUserId}
                 className="px-5 py-3 flex items-center justify-between hover:bg-slate-50 transition"

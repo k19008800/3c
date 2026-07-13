@@ -8,6 +8,13 @@
       "when": 1782636031518,
       "tag": "0000_ambiguous_korvac",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1782644400000,
+      "tag": "0001_add_rate_limited_status",
+      "breakpoints": true
     }
   ]
 }

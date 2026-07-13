@@ -1,0 +1,36 @@
+﻿3cloud 全链路验证 — 测试数据清单
+生成时间: 2026-07-02 00:45:21
+数据库: threecloud (PostgreSQL 17)
+
+--- 用户统计 ---
+super_admin: admin@3cloud.ai
+admin: admin@3cloud.dev
+agent: 13819008800@163.com, factory-normal@3cloud.ai
+finance_ops: finance@3cloud.ai
+ops: ops@3cloud.ai
+support: support@3cloud.ai
+auditor: auditor@3cloud.ai
+普通用户 (active): 17 个
+待审核用户: 1 个
+总计: 28 个
+
+--- 数据总量 ---
+调用日志: 246 条 (全成功)
+余额流水: 14,220 条
+充值订单: 19 笔
+提现订单: 11 笔
+佣金流水: 10,011 条
+安全事件: 12 条
+审计日志: 125 条
+实名审核: 22 条
+系统配置: 35 条
+
+--- 厂商/模型 ---
+厂商: OpenAI, Anthropic, DeepSeek, 天翼云 (4个)
+模型: gpt-4o, gpt-4o-mini, claude-3.5-sonnet, deepseek-chat, text-embedding-3-small, DeepSeek-V4-Pro (6个)
+映射: 8 条
+
+--- 代理商 ---
+代理商: 3 个
+客户: 14 个
+佣金规则: 6 条

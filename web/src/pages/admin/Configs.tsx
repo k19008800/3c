@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { get, patch } from '@/lib/api'
 import type { AdminConfig, PaginatedData } from '@/types'
 import { Loader2, AlertCircle, CheckCircle2, Edit2, Save } from 'lucide-react'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 
 export default function AdminConfigs() {
   const [configs, setConfigs] = useState<AdminConfig[]>([])
@@ -55,6 +56,7 @@ export default function AdminConfigs() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-slate-900">系统配置</h1>
+      <FeatureDescription page="admin/configs" className="ml-2" />
 
       {msg && (
         <div className="flex items-center gap-2 text-green-700 bg-green-50 p-3 rounded-lg text-sm">

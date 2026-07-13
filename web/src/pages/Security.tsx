@@ -1,7 +1,21 @@
 import { useEffect, useState, useCallback } from 'react'
 import { get, post } from '@/lib/api'
 import type { LoginHistoryItem, ActiveSession } from '@/types'
-import { Loader2, Shield, LogOut, Smartphone, Globe, Monitor, Clock, CheckCircle2, XCircle } from 'lucide-react'
+import { Loader2, Shield, LogOut, Smartphone, Globe, Monitor, Clock, CheckCircle2, XCircle, ShieldCheck, AlertTriangle, MapPin } from 'lucide-react'
+
+// ── 账号安全（用户端）─-
+//
+// 【业务说明】
+//   用户安全状态总览，包含三部分：
+//   1. 安全评分：基于活跃会话数、失败登录率自动评估风险等级（安全/注意/风险）
+//   2. 活跃会话：列出所有登录设备，支持单个下线或一键下线其他设备
+//   3. 登录历史：展示最近登录记录（成功/失败、IP、地理位置、设备UA）
+//   登录城市分布：在地图上汇总成功登录的城市频次
+//
+// 【安全评分逻辑】activeCount=0 & failRate<10% → 安全(绿)；activeCount≤2 & failRate<30% → 注意(黄)；其他 → 风险(红)
+// 【权限要求】登录即可访问
+// 【数据来源】GET /api/v1/auth/security/login-history, GET /api/v1/auth/security/sessions
+// 【操作】POST /api/v1/auth/security/logout-session/:id, POST /api/v1/auth/security/logout-all
 
 export default function Security() {
   const [loginHistory, setLoginHistory] = useState<LoginHistoryItem[]>([])
@@ -23,9 +37,7 @@ export default function Security() {
       setSessions(sessionsData.list)
     } catch (err: any) {
       setError(err.message || '获取安全信息失败')
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }, [])
 
   useEffect(() => { fetchData() }, [fetchData])
@@ -72,6 +84,57 @@ export default function Security() {
       {error && (
         <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">{error}</div>
       )}
+
+      {/* 安全评分 */}
+      {(() => {
+        const activeCount = sessions.filter(s => !s.isCurrent).length
+        const failedLogins = loginHistory.filter(h => !h.success).length
+        const totalLogins = loginHistory.length || 1
+        const failRate = failedLogins / totalLogins
+        const score = activeCount === 0 && failRate < 0.1 ? 'high' : activeCount <= 2 && failRate < 0.3 ? 'medium' : 'low'
+        const scoreConfig = {
+          high: { label: '安全', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', icon: ShieldCheck },
+          medium: { label: '注意', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', icon: AlertTriangle },
+          low: { label: '风险', color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', icon: AlertTriangle },
+        }[score]
+        const Icon = scoreConfig.icon
+        return (
+          <div className={`rounded-xl border p-4 ${scoreConfig.bg} ${scoreConfig.border}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Icon size={22} className={scoreConfig.color} />
+                <div>
+                  <p className={`text-sm font-semibold ${scoreConfig.color}`}>安全状态 — {scoreConfig.label}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {sessions.length} 个活跃会话 · {activeCount} 个其他设备
+                    {failedLogins > 0 && <> · {failedLogins} 次失败登录</>}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right text-xs text-slate-400">
+                <button onClick={fetchData} className="text-blue-500 hover:text-blue-700">刷新</button>
+              </div>
+            </div>
+            {/* Geo summary */}
+            {(() => {
+              const cities = new Map<string, number>()
+              loginHistory.filter(h => h.success && h.city).forEach(h => { cities.set(h.city!, (cities.get(h.city!) || 0) + 1) })
+              const sorted = [...cities.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
+              if (sorted.length === 0) return null
+              return (
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
+                  <MapPin size={12} className="text-slate-400" />
+                  {sorted.map(([city, cnt]) => (
+                    <span key={city} className="text-[11px] text-slate-600 bg-white/70 px-2 py-0.5 rounded-full border border-slate-200">
+                      {city} ({cnt})
+                    </span>
+                  ))}
+                </div>
+              )
+            })()}
+          </div>
+        )
+      })()}
 
       {/* 活跃会话 */}
       <section className="bg-white rounded-xl shadow-sm border border-slate-200">

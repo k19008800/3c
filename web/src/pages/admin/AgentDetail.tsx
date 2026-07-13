@@ -25,6 +25,7 @@ import {
   X,
   CheckCircle2,
 } from 'lucide-react'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 
 type DetailTab = 'rules' | 'parent' | 'clients'
 
@@ -113,6 +114,7 @@ export default function AdminAgentDetail() {
           </button>
           <div>
             <h1 className="text-2xl font-bold text-slate-900">代理商详情</h1>
+            <FeatureDescription page="admin/agents/detail" className="ml-2" />
             <p className="text-sm text-slate-500 mt-0.5">
               #{agent.id} · {agent.nickname || '-'} · {agent.email || '-'}
               {' · '}

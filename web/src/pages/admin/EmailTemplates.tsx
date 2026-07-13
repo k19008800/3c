@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { get, put } from '@/lib/api'
 import { Loader2, AlertCircle, CheckCircle2, Eye, EyeOff, Mail, Save, Edit3, Plus } from 'lucide-react'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 
 interface EmailTemplate {
   id: number
@@ -115,6 +116,7 @@ export default function AdminEmailTemplates() {
       <div className="flex items-center gap-3">
         <Mail size={28} className="text-blue-600" />
         <h1 className="text-2xl font-bold text-slate-900">邮件模板管理</h1>
+        <FeatureDescription page="admin/email-templates" className="ml-2" />
       </div>
 
       {msg && (

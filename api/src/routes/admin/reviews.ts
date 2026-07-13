@@ -466,4 +466,101 @@ export async function adminReviewRoutes(app: FastifyInstance) {
       message: "ok",
     });
   });
+
+  // ──────────────────────────────────────────────
+  //  POST /api/v1/admin/real-name-reviews/batch-review — 批量审核
+  // ──────────────────────────────────────────────
+  app.post("/api/v1/admin/real-name-reviews/batch-review", {
+    preHandler: [requirePerm(Perm.REVIEW_ACTION)]
+  }, async (request, reply) => {
+    try {
+      const db = getDb();
+      const operatorId = request.user!.userId;
+      const body = request.body as {
+        ids?: number[];
+        action?: string;
+        rejectReason?: string;
+      };
+
+      if (!body.ids || !Array.isArray(body.ids) || body.ids.length === 0) {
+        reply.status(400).send({ code: 400, data: null, message: "请提供要审核的记录 ID 列表" });
+        return;
+      }
+      if (!body.action || !["approve", "reject"].includes(body.action)) {
+        reply.status(400).send({ code: 400, data: null, message: "action 必须为 approve 或 reject" });
+        return;
+      }
+      if (body.action === "reject" && !body.rejectReason) {
+        reply.status(400).send({ code: 400, data: null, message: "拒绝时必须填写原因" });
+        return;
+      }
+
+      const ids = body.ids.filter(id => !isNaN(id) && id > 0);
+      if (ids.length === 0) {
+        reply.status(400).send({ code: 400, data: null, message: "无效的用户 ID" });
+        return;
+      }
+
+      const reviewStatus = body.action === "approve" ? "approved" : "rejected";
+      const now = new Date();
+
+      await db.transaction(async (tx) => {
+        for (const userId of ids) {
+          // 更新 users 表
+          if (body.action === "approve") {
+            await tx
+              .update(users)
+              .set({ realNameStatus: "approved", rejectReason: null })
+              .where(eq(users.id, userId));
+          } else {
+            await tx
+              .update(users)
+              .set({
+                realNameStatus: "rejected",
+                rejectReason: body.rejectReason || "信息不符",
+              })
+              .where(eq(users.id, userId));
+          }
+
+          // 同步 user_real_name_reviews
+          await tx
+            .update(userRealNameReviews)
+            .set({
+              status: reviewStatus,
+              reviewerId: operatorId,
+              rejectReason: body.action === "reject" ? (body.rejectReason || "信息不符") : null,
+              reviewedAt: now,
+            })
+            .where(
+              and(
+                eq(userRealNameReviews.userId, userId),
+                eq(userRealNameReviews.status, "pending_review"),
+              )
+            );
+
+          // 审计日志
+          await tx.insert(auditLogs).values({
+            operatorId,
+            action: body.action === "approve" ? "real_name_approve" : "real_name_reject",
+            targetType: "user",
+            targetId: userId,
+            ip: request.ip,
+            description: `${body.action === "approve" ? "通过" : "拒绝"}用户 #${userId} 实名认证${body.rejectReason ? ": " + body.rejectReason : ""} (批量)`,
+          });
+        }
+      });
+
+      reply.status(200).send({
+        code: 0,
+        data: { processedCount: ids.length },
+        message: `批量${body.action === "approve" ? "通过" : "拒绝"}完成，处理 ${ids.length} 条`,
+      });
+    } catch (err: any) {
+      if (err?.name === "ZodError") {
+        reply.status(400).send({ code: 400, data: null, message: err.errors?.[0]?.message || "参数校验失败" });
+        return;
+      }
+      throw err;
+    }
+  });
 }

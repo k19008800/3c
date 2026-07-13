@@ -117,6 +117,7 @@ export default function RealName() {
 
   const [myInfo, setMyInfo] = useState<any>(null)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [ocrStates, setOcrStates] = useState<Record<string, string>>({})
 
   const autoFillRef = useRef(false)
 
@@ -479,7 +480,7 @@ export default function RealName() {
                     accept="image/*"
                     state={pIdFront}
                     disabled={currentStatus === 'pending_review'}
-                    onSelect={(e) => handleFileSelect(e, 'id_front', setPIdFront, 'pIdFront')}
+                    onSelect={(e) => handleFileSelect(e, 'id_front', setPIdFront)}
                     onRemove={() => removeFile(setPIdFront)}
                   />
                   <FileUploadBlock
@@ -488,7 +489,7 @@ export default function RealName() {
                     accept="image/*"
                     state={pIdBack}
                     disabled={currentStatus === 'pending_review'}
-                    onSelect={(e) => handleFileSelect(e, 'id_back', setPIdBack, 'pIdBack')}
+                    onSelect={(e) => handleFileSelect(e, 'id_back', setPIdBack)}
                     onRemove={() => removeFile(setPIdBack)}
                   />
                 </div>
@@ -568,15 +569,15 @@ export default function RealName() {
                       accept="image/*"
                       state={eIdFront}
                       disabled={currentStatus === 'pending_review'}
-                      onSelect={(e) => handleFileSelect(e, 'id_front', setEIdFront, 'eIdFront')}
+                      onSelect={(e) => handleFileSelect(e, 'id_front', setEIdFront)}
                       onRemove={() => removeFile(setEIdFront)}
                     />
-                    {ocrStates.eIdFront === 'recognizing' && (
+                    {ocrStates?.eIdFront === 'recognizing' && (
                       <div className="flex items-center gap-1 text-xs text-blue-600 mt-1">
                         <Loader2 size={10} className="animate-spin" /> 识别中
                       </div>
                     )}
-                    {ocrStates.eIdFront === 'done' && (
+                    {ocrStates?.eIdFront === 'done' && (
                       <div className="text-xs text-green-600 mt-1">✅ 已自动填写</div>
                     )}
                   </div>
@@ -587,15 +588,15 @@ export default function RealName() {
                       accept="image/*"
                       state={eIdBack}
                       disabled={currentStatus === 'pending_review'}
-                      onSelect={(e) => handleFileSelect(e, 'id_back', setEIdBack, 'eIdBack')}
+                      onSelect={(e) => handleFileSelect(e, 'id_back', setEIdBack)}
                       onRemove={() => removeFile(setEIdBack)}
                     />
-                    {ocrStates.eIdBack === 'recognizing' && (
+                    {ocrStates?.eIdBack === 'recognizing' && (
                       <div className="flex items-center gap-1 text-xs text-blue-600 mt-1">
                         <Loader2 size={10} className="animate-spin" /> 识别中
                       </div>
                     )}
-                    {ocrStates.eIdBack === 'done' && (
+                    {ocrStates?.eIdBack === 'done' && (
                       <div className="text-xs text-green-600 mt-1">✅ 已识别</div>
                     )}
                   </div>
@@ -606,18 +607,18 @@ export default function RealName() {
                       accept="image/*"
                       state={eBizLicense}
                       disabled={currentStatus === 'pending_review'}
-                      onSelect={(e) => handleFileSelect(e, 'business_license', setEBizLicense, 'eBizLicense')}
+                      onSelect={(e) => handleFileSelect(e, 'business_license', setEBizLicense)}
                       onRemove={() => removeFile(setEBizLicense)}
                     />
-                    {ocrStates.eBizLicense === 'recognizing' && (
+                    {ocrStates?.eBizLicense === 'recognizing' && (
                       <div className="flex items-center gap-1 text-xs text-blue-600 mt-1">
                         <Loader2 size={10} className="animate-spin" /> 识别中
                       </div>
                     )}
-                    {ocrStates.eBizLicense === 'done' && (
+                    {ocrStates?.eBizLicense === 'done' && (
                       <div className="text-xs text-green-600 mt-1">✅ 已自动填写企业信息</div>
                     )}
-                    {ocrStates.eBizLicense === 'error' && (
+                    {ocrStates?.eBizLicense === 'error' && (
                       <div className="text-xs text-amber-600 mt-1">⚠️ 识别失败</div>
                     )}
                   </div>

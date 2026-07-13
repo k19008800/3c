@@ -9,7 +9,7 @@
 // ============================================================
 
 import { FastifyInstance } from "fastify";
-import { eq, and, asc, sql } from "drizzle-orm";
+import { eq, and, asc, desc, sql } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { vendorModels, vendors, models, auditLogs } from "../../db/schema.js";
 import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
@@ -18,9 +18,58 @@ import {
   createVendorModelSchema,
   updateVendorModelSchema,
 } from "../../schemas.js";
+import { getAllCircuitStatuses } from "../../services/circuit-breaker.js";
 
 export async function adminVendorModelRoutes(app: FastifyInstance) {
   app.addHook("preHandler", authenticateJWT);
+
+  // ── 按供应商查询所有映射明细（用于行内展开面板）──
+  app.get("/api/v1/admin/vendor-models/by-vendor/:vendorId", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
+    const db = getDb();
+    const vendorId = parseInt((request.params as any).vendorId, 10);
+    if (isNaN(vendorId)) {
+      reply.status(400).send({ code: 400, data: null, message: "无效的供应商 ID" });
+      return;
+    }
+
+    const rows = await db
+      .select({
+        id: vendorModels.id,
+        vendorId: vendorModels.vendorId,
+        modelId: vendorModels.modelId,
+        modelName: models.name,
+        modelType: models.type,
+        upstreamModelName: vendorModels.upstreamModelName,
+        apiEndpoint: vendorModels.apiEndpoint,
+        costPriceInput: vendorModels.costPriceInput,
+        costPriceOutput: vendorModels.costPriceOutput,
+        sellPriceInput: vendorModels.sellPriceInput,
+        sellPriceOutput: vendorModels.sellPriceOutput,
+        weight: vendorModels.weight,
+        rpmLimit: vendorModels.rpmLimit,
+        tpmLimit: vendorModels.tpmLimit,
+        status: vendorModels.status,
+        healthScore: vendorModels.healthScore,
+        isDown: vendorModels.isDown,
+        circuitState: vendorModels.circuitState,
+        circuitOpenedAt: vendorModels.circuitOpenedAt,
+        circuitRetryAfter: vendorModels.circuitRetryAfter,
+        createdAt: vendorModels.createdAt,
+        updatedAt: vendorModels.updatedAt,
+      })
+      .from(vendorModels)
+      .innerJoin(models, eq(vendorModels.modelId, models.id))
+      .where(eq(vendorModels.vendorId, vendorId))
+      .orderBy(asc(vendorModels.id));
+
+    reply.status(200).send({
+      code: 0,
+      data: rows,
+      message: "ok",
+    });
+  });
 
   // ── 创建关联 ──
   app.post("/api/v1/admin/vendor-models", {

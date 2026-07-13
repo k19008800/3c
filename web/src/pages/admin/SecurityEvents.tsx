@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { get, post } from '@/lib/api'
 import type { SecurityEvent, PaginatedData } from '@/types'
 import RiskBadge from '@/components/security/RiskBadge'
+import PaginationBar from '@/components/ui/PaginationBar'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
   Loader2, AlertCircle, ChevronLeft, ChevronRight, CheckCircle2,
   AlertTriangle, ShieldAlert, X, Download, CheckSquare, Square,
@@ -21,7 +23,7 @@ export default function AdminSecurityEvents() {
   const [events, setEvents] = useState<SecurityEvent[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [pageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filter, setFilter] = useState({ eventType: '', riskLevel: '', acknowledged: '' })
@@ -117,7 +119,7 @@ export default function AdminSecurityEvents() {
 
     const csv = [
       headers.join(','),
-      ...rows.map(r => r.map(c => `"${(c || '').replace(/"/g, '""')}"`).join(',')),
+      ...rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')),
     ].join('\n')
 
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
@@ -219,6 +221,7 @@ export default function AdminSecurityEvents() {
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <ShieldAlert size={24} /> 安全事件
         </h1>
+        <FeatureDescription page="admin/security/events" className="ml-2" />
         <div className="flex items-center gap-2">
           <button
             onClick={handleExportCsv}

@@ -35,6 +35,9 @@ export async function authenticateJWT(
   // 跳过 CORS 预检请求
   if (request.method === "OPTIONS") return;
 
+  // 如果 adminKey 中间件已验证通过，跳过 JWT
+  if (request.user) return;
+
   const authHeader = request.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     reply.status(401).send({
@@ -298,43 +301,60 @@ export const Perm = {
   LOG_VIEW:             1n << 24n,
   OPS_READ:             1n << 25n,
   RECONCILIATION_VIEW:  1n << 26n,
+  SECURITY_EDIT:        1n << 27n,
 } as const;
 
 // Role -> Permission map
 export const ROLE_PERMISSIONS: Record<string, bigint> = {
   super_admin: ~0n,
 
+  // admin: 日常运营管理员 — 能动用户/资源/安全/审计，不能碰钱和系统配置
   admin: 
-    Perm.DASHBOARD_VIEW | Perm.USER_LIST | Perm.USER_VIEW | Perm.USER_EDIT |
-    Perm.USER_CREATE | Perm.USER_RESET_PWD | Perm.USER_DELETE |
+    Perm.DASHBOARD_VIEW |
+    Perm.USER_LIST | Perm.USER_VIEW | Perm.USER_EDIT | Perm.USER_CREATE |
+    Perm.USER_RESET_PWD | Perm.USER_DELETE |
     Perm.USER_CHANGE_ROLE | Perm.USER_IMPERSONATE | Perm.USER_BALANCE |
     Perm.REVIEW_LIST | Perm.REVIEW_ACTION |
     Perm.MODEL_MANAGE | Perm.AGENT_LIST | Perm.AGENT_MANAGE |
+    Perm.SECURITY_VIEW | Perm.SECURITY_ACTION |
+    Perm.CONFIG_VIEW |
+    Perm.LOG_VIEW | Perm.AUDIT_VIEW |
+    Perm.FINANCE_VIEW | Perm.FINANCE_COMMISSION |
+    Perm.FINANCE_WITHDRAW | Perm.FINANCE_RECHARGE |
+    Perm.RECONCILIATION_VIEW,
+
+  // finance_ops: 财务专员 — 仪表盘 + 全部财务功能 + 用户查看(充值审核需要看到用户信息)
+  finance_ops:
+    Perm.DASHBOARD_VIEW |
+    Perm.USER_LIST | Perm.USER_VIEW | Perm.USER_BALANCE |
     Perm.FINANCE_VIEW | Perm.FINANCE_COMMISSION |
     Perm.FINANCE_WITHDRAW | Perm.FINANCE_RECHARGE |
     Perm.RECONCILIATION_VIEW |
-    Perm.SECURITY_VIEW | Perm.SECURITY_ACTION |
-    Perm.CONFIG_VIEW | Perm.CONFIG_EDIT |
-    Perm.LOG_VIEW | Perm.AUDIT_VIEW,
+    Perm.LOG_VIEW |
+    Perm.AGENT_LIST,
 
-  finance_ops:
-    Perm.DASHBOARD_VIEW | Perm.FINANCE_VIEW | Perm.FINANCE_COMMISSION |
-    Perm.FINANCE_WITHDRAW | Perm.FINANCE_RECHARGE |
-    Perm.AGENT_LIST | Perm.USER_LIST | Perm.USER_VIEW |
-    Perm.RECONCILIATION_VIEW,
-
+  // ops: 运维工程师 — 看板 + 安全查看 + 配置读写 + 用户/实名查看 + 日志 + 模型管理 + 限流
   ops:
     Perm.DASHBOARD_VIEW | Perm.OPS_READ |
     Perm.USER_LIST | Perm.USER_VIEW |
-    Perm.REVIEW_LIST | Perm.LOG_VIEW |
-    Perm.MODEL_MANAGE | Perm.AGENT_LIST,
+    Perm.REVIEW_LIST |
+    Perm.MODEL_MANAGE |
+    Perm.SECURITY_VIEW | Perm.SECURITY_ACTION |
+    Perm.CONFIG_VIEW | Perm.CONFIG_EDIT |
+    Perm.LOG_VIEW | Perm.AUDIT_VIEW |
+    Perm.AGENT_LIST,
 
+  // support: 客服/审核 — 用户管理(不含删除/改角色/模拟) + 实名审核 + 日志
   support:
     Perm.USER_LIST | Perm.USER_VIEW | Perm.USER_RESET_PWD |
-    Perm.REVIEW_LIST | Perm.REVIEW_ACTION | Perm.LOG_VIEW,
+    Perm.REVIEW_LIST | Perm.REVIEW_ACTION |
+    Perm.LOG_VIEW,
 
+  // auditor: 审计员 — 审计日志 + 对账 + 用户查看 + 日志 + 代理商查看
   auditor:
-    Perm.AUDIT_VIEW | Perm.RECONCILIATION_VIEW,
+    Perm.AUDIT_VIEW | Perm.RECONCILIATION_VIEW |
+    Perm.USER_LIST | Perm.USER_VIEW |
+    Perm.LOG_VIEW | Perm.AGENT_LIST,
 
   // Non-admin roles get minimal default
   user: Perm.NONE,

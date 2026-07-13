@@ -12,6 +12,7 @@ import {
   Download, ChevronDown, ChevronRight, Search, AlertTriangle, CheckCircle2,
   BarChart3, XCircle, ArrowUpDown,
 } from 'lucide-react'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 
 // ── 格式化工具 ──
 
@@ -195,6 +196,7 @@ export default function AdminFinanceReconciliation() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">对账报表</h1>
+        <FeatureDescription page="admin/finance/reconciliation" className="ml-2" />
         {report && (
           <button onClick={handleExportCsv}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition">

@@ -9,13 +9,14 @@ import type {
   UserRealNameHistoryRecord
 } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
   Loader2, AlertCircle, ChevronDown,
   Search, UserPlus, Download, FileJson, LogIn,
   CheckCircle2, XCircle, Plus, Trash2, RefreshCw,
   Ban, User, Key, History, Shield, FileText,
   Wallet, Activity, Globe, MessageSquare, BarChart3,
-  Lock,
+  Lock, TrendingUp, PieChart, Clock, Zap, Cpu,
 } from 'lucide-react'
 
 // ──────────────────────────────────────────────
@@ -133,6 +134,7 @@ export default function AdminUsers() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">用户管理</h1>
+        <FeatureDescription page="admin/users" className="ml-2" />
         <div className="flex items-center gap-2">
           <button onClick={handleExportCSV} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 transition">
             <Download size={15} /> 导出CSV
@@ -727,7 +729,7 @@ function RealNameAdminSection({ user, onMsg }: { user: AdminUser; onMsg: (s: str
       <div className="border-t pt-4 space-y-3">
         <h3 className="text-sm font-medium text-slate-700">实名管理</h3>
         <div className="flex items-center gap-2 mb-2">
-          <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${statusStyle[user.realNameStatus] || statusStyle.unverified}`}>
+          <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${statusStyle[user.realNameStatus ?? 'unverified']}`}>
             {realNameLabel[user.realNameStatus || 'unverified']}
           </span>
           {user.rejectReason && isRejected && (
@@ -837,170 +839,314 @@ function LoginHistoryTab({ userId }: { userId: number }) {
 
 function CallStatsTab({ userId }: { userId: number }) {
   const [data, setData] = useState<UserCallStats | null>(null)
-  const [trends, setTrends] = useState<UserCallTrends | null>(null)
-  const [logs, setLogs] = useState<AdminCallLogItem[]>([])
-  const [logTotal, setLogTotal] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [days, setDays] = useState(7)
-  const [granularity, setGranularity] = useState<'day' | 'hour'>('day')
-  const [logPage, setLogPage] = useState(1)
-  const [logPageSize, setLogPageSize] = useState(20)
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() - 7)
+    return d.toISOString().substring(0, 10)
+  })
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().substring(0, 10))
+  const [tab, setTab] = useState<'overview' | 'models' | 'trends' | 'keys'>('overview')
 
-  const fetchAll = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
-    const end = new Date(); const start = new Date(); start.setDate(start.getDate() - days)
-    const startStr = start.toISOString().substring(0, 10)
-    const endStr = end.toISOString().substring(0, 10)
     try {
-      const [s, t, l] = await Promise.all([
-        get<UserCallStats>(`/api/v1/admin/users/${userId}/call-stats`, { startDate: startStr, endDate: endStr }),
-        get<UserCallTrends>(`/api/v1/admin/users/${userId}/call-trends`, { days, granularity }),
-        get<PaginatedData<AdminCallLogItem>>(`/api/v1/admin/users/${userId}/call-logs`, { page: logPage, pageSize: logPageSize, startDate: startStr, endDate: endStr }),
-      ])
-      setData(s); setTrends(t); setLogs(l.list); setLogTotal(l.total)
+      const s = await get<UserCallStats>(`/api/v1/admin/users/${userId}/call-stats`, { startDate, endDate })
+      setData(s)
     } catch { }
     finally { setLoading(false) }
-  }, [userId, days, granularity, logPage])
+  }, [userId, startDate, endDate])
 
-  useEffect(() => { fetchAll() }, [fetchAll])
+  useEffect(() => { fetchData() }, [fetchData])
 
   if (loading && !data) return <div className="text-center py-8"><Loader2 className="animate-spin inline-block" size={24} /></div>
   if (!data) return <p className="text-slate-400 text-sm text-center py-8">暂无数据</p>
-  const s = data.summary
-  const trendData = (trends?.series ?? []).map(p => ({ label: p.date, value: p.calls.total }))
-  const tokenTrendData = (trends?.series ?? []).map(p => ({ label: p.date, value: p.tokens.total }))
-  const costTrendData = (trends?.series ?? []).map(p => ({ label: p.date, value: parseFloat(p.cost) }))
 
-  const logTotalPages = Math.ceil(logTotal / logPageSize)
+  const s = data.summary
+  const t = data.today
+  const successRate = s.totalCalls > 0 ? ((s.successCalls / s.totalCalls) * 100).toFixed(1) : '0.0'
+
+  const handleExport = (type: string) => {
+    const csvRows: string[] = []
+    if (type === 'models' && data.byModel.length > 0) {
+      csvRows.push('模型,调用次数,Token,费用')
+      data.byModel.forEach(m => csvRows.push(`${m.modelName},${m.calls},${m.tokens},${m.cost}`))
+    } else if (type === 'trends' && data.trends.length > 0) {
+      csvRows.push('日期,调用次数,Token,费用')
+      data.trends.forEach(d => csvRows.push(`${d.date},${d.calls},${d.tokens},${d.cost}`))
+    } else if (type === 'keys' && data.byKey.length > 0) {
+      csvRows.push('KeyID,调用次数,Token,费用')
+      data.byKey.forEach(k => csvRows.push(`${k.apiKeyId},${k.calls},${k.tokens},${k.cost}`))
+    } else if (type === 'summary') {
+      csvRows.push('指标,数值')
+      csvRows.push(`总调用,${s.totalCalls}`)
+      csvRows.push(`成功调用,${s.successCalls}`)
+      csvRows.push(`失败调用,${s.failedCalls}`)
+      csvRows.push(`总Token,${s.totalTokens}`)
+      csvRows.push(`总费用,${s.totalCost}`)
+      csvRows.push(`平均耗时,${s.avgDuration}ms`)
+      csvRows.push(`成功率,${successRate}%`)
+    }
+    if (csvRows.length > 0) {
+      const blob = new Blob(['﻿' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8' })
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `user_${userId}_callstats_${type}_${startDate}_${endDate}.csv`
+      a.click()
+      URL.revokeObjectURL(a.href)
+    }
+  }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      {/* Date range inputs */}
+      <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">时间范围：</span>
-          <select value={days} onChange={e => { setDays(Number(e.target.value)); setLogPage(1) }} className="px-2 py-1 border border-slate-300 rounded text-sm">
-            <option value={1}>最近1天</option><option value={7}>最近7天</option>
-            <option value={30}>最近30天</option><option value={90}>最近90天</option>
-          </select>
+          <span className="text-xs text-slate-500">起始：</span>
+          <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+            className="px-2.5 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
-        <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5 text-xs">
-          <button onClick={() => { setGranularity('day'); setLogPage(1) }} className={`px-2 py-1 rounded-md transition ${granularity === 'day' ? 'bg-white shadow-sm font-medium' : 'text-slate-500'}`}>按天</button>
-          <button onClick={() => { setGranularity('hour'); setLogPage(1) }} className={`px-2 py-1 rounded-md transition ${granularity === 'hour' ? 'bg-white shadow-sm font-medium' : 'text-slate-500'}`}>按小时</button>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500">结束：</span>
+          <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+            className="px-2.5 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
+        <button onClick={fetchData} className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-1">
+          <RefreshCw size={12} /> 查询
+        </button>
+        <span className="text-[10px] text-slate-400 ml-auto">{startDate} ~ {endDate}</span>
       </div>
 
-      <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatCard label="总调用" value={s.totalCalls.toLocaleString()} />
-        <StatCard label="成功" value={s.successCalls.toLocaleString()} color="text-green-600" />
-        <StatCard label="失败" value={s.failedCalls.toLocaleString()} color="text-red-600" />
-        <StatCard label="平均耗时" value={`${s.avgDuration}ms`} />
-        <StatCard label="总Token" value={s.totalTokens.toLocaleString()} />
-        <StatCard label="总费用" value={'¥' + Number(s.totalCost).toFixed(4)} />
+      {/* Tab bar */}
+      <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+        {([
+          { k: 'overview' as const, label: '概览', icon: BarChart3 },
+          { k: 'models' as const, label: '按模型', icon: PieChart },
+          { k: 'trends' as const, label: '趋势', icon: TrendingUp },
+          { k: 'keys' as const, label: '按Key', icon: Key },
+        ]).map(tabItem => (
+          <button key={tabItem.k} onClick={() => setTab(tabItem.k)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition ${tab === tabItem.k ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+            <tabItem.icon size={13} /> {tabItem.label}
+          </button>
+        ))}
       </div>
 
-      {trendData.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
-            <h4 className="text-xs text-slate-500 mb-1">调用量趋势</h4>
-            <MiniBarChart data={trendData} barColor="fill-violet-400" height={100} />
+      {/* ── Tab: 概览 ── */}
+      {tab === 'overview' && (
+        <div className="space-y-3">
+          {/* 4 colored stat cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {([
+              { label: '今日调用', v: t ? t.calls.toLocaleString() : '—', sub: t ? `${t.successCount} 成功 / ${t.failedCount} 失败` : '', color: 'border-blue-200 bg-blue-50' },
+              { label: '总调用', v: s.totalCalls.toLocaleString(), sub: `Token ${s.totalTokens.toLocaleString()}`, color: 'border-purple-200 bg-purple-50' },
+              { label: '成功率', v: `${successRate}%`, sub: `总消费 ¥${Number(s.totalCost).toFixed(4)}`, color: 'border-green-200 bg-green-50' },
+              { label: '平均耗时', v: `${s.avgDuration}ms`, sub: `成功 ${s.successCalls} / 失败 ${s.failedCalls}`, color: 'border-amber-200 bg-amber-50' },
+            ] as const).map(c => (
+              <div key={c.label} className={`rounded-lg border p-3 ${c.color}`}>
+                <p className="text-xs text-slate-500 mb-1">{c.label}</p>
+                <p className="text-lg font-bold text-slate-800">{c.v}</p>
+                <p className="text-[10px] text-slate-500 mt-0.5">{c.sub}</p>
+              </div>
+            ))}
           </div>
-          <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
-            <h4 className="text-xs text-slate-500 mb-1">Token趋势</h4>
-            <MiniBarChart data={tokenTrendData} barColor="fill-blue-400" height={100} formatValue={v => v >= 10000 ? (v/10000).toFixed(1)+'w' : v.toLocaleString()} />
-          </div>
-          <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
-            <h4 className="text-xs text-slate-500 mb-1">费用趋势</h4>
-            <MiniBarChart data={costTrendData} barColor="fill-emerald-400" height={100} formatValue={v => '¥' + v.toFixed(2)} />
+
+          {/* Success rate bar */}
+          {s.totalCalls > 0 && (
+            <div className="bg-white rounded-lg border border-slate-200 p-3">
+              <div className="flex justify-between text-xs mb-2">
+                <span className="text-slate-500">成功率</span>
+                <span className="font-mono font-bold text-slate-700">{successRate}%</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                <div className="bg-emerald-500 h-3 rounded-full transition-all"
+                  style={{ width: `${Math.min(100, Number(successRate))}%` }} />
+              </div>
+              <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                <span>成功 {s.successCalls}</span>
+                <span>失败 {s.failedCalls}</span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end">
+            <button onClick={() => handleExport('summary')}
+              className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition">
+              <Download size={12} /> 导出概览
+            </button>
           </div>
         </div>
       )}
 
-      <div>
-        <h4 className="text-sm font-medium text-slate-700 mb-2">调用明细 {logTotal > 0 && <span className="text-xs text-slate-400 font-normal">（共 {logTotal} 条）</span>}</h4>
-        {logs.length === 0 ? (
-          <p className="text-slate-400 text-sm text-center py-4">暂无调用记录</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="bg-slate-50 text-left text-slate-500">
-                  <th className="px-2 py-1.5">时间</th>
-                  <th className="px-2 py-1.5">模型</th>
-                  <th className="px-2 py-1.5">厂商</th>
-                  <th className="px-2 py-1.5 text-right">输入Token</th>
-                  <th className="px-2 py-1.5 text-right">输出Token</th>
-                  <th className="px-2 py-1.5 text-right">总Token</th>
-                  <th className="px-2 py-1.5 text-right">费用</th>
-                  <th className="px-2 py-1.5 text-right">耗时</th>
-                  <th className="px-2 py-1.5 text-center">状态</th>
-                  <th className="px-2 py-1.5">IP</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {logs.map(r => (
-                  <tr key={r.id} className="hover:bg-slate-50">
-                    <td className="px-2 py-1.5 whitespace-nowrap text-slate-500">{fmtDate(r.createdAt)}</td>
-                    <td className="px-2 py-1.5 font-medium">{r.modelName || '-'}</td>
-                    <td className="px-2 py-1.5 text-slate-500">{r.vendorName || '-'}</td>
-                    <td className="px-2 py-1.5 text-right">{r.promptTokens.toLocaleString()}</td>
-                    <td className="px-2 py-1.5 text-right">{r.completionTokens.toLocaleString()}</td>
-                    <td className="px-2 py-1.5 text-right font-medium">{r.totalTokens.toLocaleString()}</td>
-                    <td className="px-2 py-1.5 text-right">{'¥' + Number(r.cost).toFixed(4)}</td>
-                    <td className="px-2 py-1.5 text-right text-slate-500">{r.durationMs != null ? r.durationMs + 'ms' : '-'}</td>
-                    <td className="px-2 py-1.5 text-center">
-                      {r.status === 'success' ? <span className="text-green-600">Ok</span>
-                        : r.status === 'failed' ? <span className="text-red-600" title={r.errorMessage || ''}>No</span>
-                        : r.status === 'timeout' ? <span className="text-yellow-600">T</span>
-                        : <span className="text-slate-400">-</span>}
-                    </td>
-                    <td className="px-2 py-1.5 font-mono text-[10px] text-slate-400">{r.ip || '-'}</td>
+      {/* ── Tab: 按模型 ── */}
+      {tab === 'models' && (
+        <div className="space-y-3">
+          <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+            {data.byModel.length === 0 ? (
+              <p className="p-6 text-center text-sm text-slate-400">暂无模型用量数据</p>
+            ) : (
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-slate-50 text-left">
+                    <th className="px-4 py-2.5 font-medium text-slate-500">模型</th>
+                    <th className="px-4 py-2.5 font-medium text-slate-500 text-right">调用</th>
+                    <th className="px-4 py-2.5 font-medium text-slate-500 text-right">Token</th>
+                    <th className="px-4 py-2.5 font-medium text-slate-500 text-right">费用</th>
+                    <th className="px-4 py-2.5 font-medium text-slate-500 text-right">成功率</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {data.byModel.map(m => {
+                    const total = (m.successCount ?? 0) + (m.failedCount ?? 0)
+                    const sRate = total > 0 ? ((m.successCount ?? 0) / total * 100).toFixed(1) : '—'
+                    return (
+                      <tr key={m.modelName} className="hover:bg-slate-50">
+                        <td className="px-4 py-2.5 font-medium text-slate-700 font-mono">{m.modelName}</td>
+                        <td className="px-4 py-2.5 text-right text-slate-600">{m.calls.toLocaleString()}</td>
+                        <td className="px-4 py-2.5 text-right text-slate-600 font-mono">{m.tokens.toLocaleString()}</td>
+                        <td className="px-4 py-2.5 text-right text-slate-900 font-mono font-medium">{'¥' + Number(m.cost).toFixed(4)}</td>
+                        <td className="px-4 py-2.5 text-right">
+                          <span className={`font-mono ${typeof sRate === 'string' ? 'text-slate-400' : Number(sRate) < 90 ? 'text-red-600' : Number(sRate) < 99 ? 'text-amber-600' : 'text-slate-600'}`}>
+                            {sRate}{typeof sRate !== 'string' && '%'}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
-        )}
-        {logTotalPages > 0 && (
-          <PaginationBar
-            page={logPage}
-            onPageChange={setLogPage}
-            pageSize={logPageSize}
-            onPageSizeChange={setLogPageSize}
-            total={logTotal}
-            totalPages={logTotalPages}
-          />
-        )}
-      </div>
-
-      {data.byModel.length > 0 && (
-        <div>
-          <h4 className="text-sm font-medium text-slate-700 mb-2">按模型统计</h4>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="bg-slate-50 text-left"><th className="px-3 py-2 text-slate-500">模型</th><th className="px-3 py-2 text-slate-500">调用次数</th><th className="px-3 py-2 text-slate-500">Tokens</th><th className="px-3 py-2 text-slate-500">费用</th></tr></thead>
-              <tbody className="divide-y divide-slate-100">
-                {data.byModel.map(m => (
-                  <tr key={m.modelName} className="hover:bg-slate-50">
-                    <td className="px-3 py-2">{m.modelName}</td>
-                    <td className="px-3 py-2">{m.calls.toLocaleString()}</td>
-                    <td className="px-3 py-2">{m.tokens.toLocaleString()}</td>
-                    <td className="px-3 py-2">{'¥' + Number(m.cost).toFixed(4)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {data.byModel.length > 0 && (
+            <div className="flex justify-end">
+              <button onClick={() => handleExport('models')}
+                className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition">
+                <Download size={12} /> 导出模型数据
+              </button>
+            </div>
+          )}
         </div>
       )}
-    </div>
-  )
-}
 
-function StatCard({ label, value, color }: { label: string; value: string; color?: string }) {
-  return (
-    <div className="bg-slate-50 rounded-lg p-3">
-      <div className="text-xs text-slate-400 mb-1">{label}</div>
-      <div className={`text-lg font-bold ${color || 'text-slate-800'}`}>{value}</div>
+      {/* ── Tab: 趋势 ── */}
+      {tab === 'trends' && (
+        <div className="space-y-3">
+          {/* 7-day bar chart */}
+          <div className="bg-white rounded-lg border border-slate-200 p-4">
+            <p className="text-xs font-medium text-slate-500 mb-3">
+              <TrendingUp size={12} className="inline mr-1" />每日 Token 消耗趋势
+            </p>
+            {data.trends.length === 0 ? (
+              <p className="text-sm text-slate-400 py-8 text-center">暂无数据</p>
+            ) : (() => {
+              const maxTokens = Math.max(1, ...data.trends.map(d => d.tokens))
+              return (
+                <div className="flex items-end gap-2 h-28">
+                  {data.trends.map(d => (
+                    <div key={d.date} className="flex-1 flex flex-col items-center gap-1"
+                      title={`${d.date}: ${d.calls}次 / ${d.tokens.toLocaleString()} / ¥${Number(d.cost).toFixed(4)}`}>
+                      <span className="text-[10px] text-slate-400 font-mono">{d.calls}</span>
+                      <div className="w-full bg-blue-400 rounded-t transition-all hover:bg-blue-500"
+                        style={{ height: `${Math.max(3, (d.tokens / maxTokens) * 100)}%`, minHeight: 3 }} />
+                      <span className="text-[10px] text-slate-400">{d.date.slice(5)}</span>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+          </div>
+
+          {/* 24h hourly heatmap */}
+          <div className="bg-white rounded-lg border border-slate-200 p-4">
+            <p className="text-xs font-medium text-slate-500 mb-3">
+              <Clock size={12} className="inline mr-1" />24 小时调用分布
+            </p>
+            {data.hourly.length === 0 ? (
+              <p className="text-sm text-slate-400 py-4 text-center">暂无数据</p>
+            ) : (() => {
+              const maxCalls = Math.max(1, ...data.hourly.map(h => h.calls))
+              const hours = Array.from({ length: 24 }, (_, i) => {
+                const found = data.hourly.find(h => h.hour === i)
+                return found || { hour: i, calls: 0, tokens: 0 }
+              })
+              return (
+                <div className="grid grid-cols-24 gap-px bg-slate-100 rounded-lg overflow-hidden">
+                  {hours.map(h => {
+                    const intensity = h.calls / Math.max(1, maxCalls)
+                    let bg = 'bg-slate-50'
+                    if (intensity > 0.7) bg = 'bg-blue-500'
+                    else if (intensity > 0.4) bg = 'bg-blue-400'
+                    else if (intensity > 0.1) bg = 'bg-blue-200'
+                    return (
+                      <div key={h.hour} className={`${bg} p-2 text-center transition-colors`}
+                        title={`${h.hour}:00 - ${h.calls}次 / ${h.tokens.toLocaleString()}`}>
+                        <span className="text-[9px] text-slate-600 font-mono">{h.hour}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
+          </div>
+
+          {data.trends.length > 0 && (
+            <div className="flex justify-end">
+              <button onClick={() => handleExport('trends')}
+                className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition">
+                <Download size={12} /> 导出趋势数据
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Tab: 按Key ── */}
+      {tab === 'keys' && (
+        <div className="space-y-3">
+          <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+            {data.byKey.length === 0 ? (
+              <p className="p-6 text-center text-sm text-slate-400">暂无 Key 用量数据</p>
+            ) : (
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-slate-50 text-left">
+                    <th className="px-4 py-2.5 font-medium text-slate-500">Key ID</th>
+                    <th className="px-4 py-2.5 font-medium text-slate-500 text-right">调用次数</th>
+                    <th className="px-4 py-2.5 font-medium text-slate-500 text-right">Token</th>
+                    <th className="px-4 py-2.5 font-medium text-slate-500 text-right">费用</th>
+                    <th className="px-4 py-2.5 font-medium text-slate-500 text-right">占比</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {(() => {
+                    const totalTokens = data.byKey.reduce((a, b) => a + b.tokens, 0)
+                    const totalCalls = data.byKey.reduce((a, b) => a + b.calls, 0)
+                    const totalCost = data.byKey.reduce((a, b) => a + parseFloat(b.cost), 0)
+                    return data.byKey.map(k => (
+                      <tr key={k.apiKeyId} className="hover:bg-slate-50">
+                        <td className="px-4 py-2.5 font-medium text-slate-700 font-mono">#{k.apiKeyId}</td>
+                        <td className="px-4 py-2.5 text-right text-slate-600">{k.calls.toLocaleString()}</td>
+                        <td className="px-4 py-2.5 text-right text-slate-600 font-mono">{k.tokens.toLocaleString()}</td>
+                        <td className="px-4 py-2.5 text-right text-slate-900 font-mono font-medium">{'¥' + Number(k.cost).toFixed(4)}</td>
+                        <td className="px-4 py-2.5 text-right text-slate-500">
+                          {totalCalls > 0 ? `${((k.calls / totalCalls) * 100).toFixed(0)}%` : '—'}
+                        </td>
+                      </tr>
+                    ))
+                  })()}
+                </tbody>
+              </table>
+            )}
+          </div>
+          {data.byKey.length > 0 && (
+            <div className="flex justify-end">
+              <button onClick={() => handleExport('keys')}
+                className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition">
+                <Download size={12} /> 导出 Key 数据
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -1248,6 +1394,10 @@ function MiniBarChart({
 //  ApiKeyStatsPanel (expanded per-key stats)
 // ──────────────────────────────────────────────
 
+interface ApiKeyCallStats { summary: { totalCalls: number; successCalls: number; failedCalls: number; totalTokens: number; totalCost: string; avgDuration: number; lastUsedAt?: string } }
+interface ApiKeyCallTrends { series: { date: string; calls: number }[] }
+interface AdminCallLogItem { id: number; createdAt: string; modelName?: string; totalTokens: number; cost: string; durationMs?: number; status: string; errorMessage?: string }
+
 function ApiKeyStatsPanel({ userId, keyId, keyName }: { userId: number; keyId: number; keyName: string }) {
   const [stats, setStats] = useState<ApiKeyCallStats | null>(null)
   const [trends, setTrends] = useState<ApiKeyCallTrends | null>(null)
@@ -1279,7 +1429,7 @@ function ApiKeyStatsPanel({ userId, keyId, keyName }: { userId: number; keyId: n
   if (loading) return <Loader2 className="animate-spin inline-block" size={16} />
 
   const s = stats?.summary
-  const trendData = (trends?.series ?? []).map(p => ({ label: p.date, value: p.calls }))
+  const trendData = (trends?.series ?? []).map((p: { date: string; calls: number }) => ({ label: p.date, value: p.calls }))
   const logTotalPages = Math.ceil(logTotal / logPageSize)
 
   return (

@@ -9,6 +9,7 @@ import {
   DollarSign, Zap, BarChart3, TrendingDown, Clock, PieChart as PieIcon,
   Landmark, MapPin,
 } from 'lucide-react'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 
 /* ── Types ── */
 interface EnterpriseUser {
@@ -666,10 +667,10 @@ export default function EnterpriseAnalysis() {
               ) : (
                 <ResponsiveContainer width="100%" height={240}>
                   <PieChart>
-                    <Pie data={statusPieData} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                    <Pie data={statusPieData} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}>
                       {statusPieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                     </Pie>
-                    <Tooltip formatter={(v: number) => v.toLocaleString()} />
+                    <Tooltip formatter={(value: any) => Number(value).toLocaleString()} />
                   </PieChart>
                 </ResponsiveContainer>
               )}
@@ -694,7 +695,7 @@ export default function EnterpriseAnalysis() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 11 }} stroke="#bbb" />
                     <YAxis type="category" dataKey="displayName" tick={{ fontSize: 11 }} stroke="#bbb" width={140} />
-                    <Tooltip contentStyle={CHART_TOOLTIP_STYLE} formatter={(v: number) => v.toLocaleString()} />
+                    <Tooltip contentStyle={CHART_TOOLTIP_STYLE} formatter={(value: any) => Number(value).toLocaleString()} />
                     <Bar dataKey="totalCalls" fill="#0984e3" radius={[0, 4, 4, 0]} name="调用量" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -799,10 +800,10 @@ export default function EnterpriseAnalysis() {
               ) : (
                 <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
-                    <Pie data={topTokenModels} cx="50%" cy="50%" innerRadius={50} outerRadius={95} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} paddingAngle={1}>
+                    <Pie data={topTokenModels} cx="50%" cy="50%" innerRadius={50} outerRadius={95} dataKey="value" label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} paddingAngle={1}>
                       {topTokenModels.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                     </Pie>
-                    <Tooltip formatter={(v: number) => `${(v / 10000).toFixed(1)}万`} />
+                    <Tooltip formatter={(v: any) => `${((v as number) / 10000).toFixed(1)}万`} />
                   </PieChart>
                 </ResponsiveContainer>
               )}
@@ -827,7 +828,7 @@ export default function EnterpriseAnalysis() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 11 }} stroke="#bbb" tickFormatter={(v: number) => `¥${v}`} />
                     <YAxis type="category" dataKey="displayName" tick={{ fontSize: 11 }} stroke="#bbb" width={140} />
-                    <Tooltip contentStyle={CHART_TOOLTIP_STYLE} formatter={(v: number) => `¥${v.toFixed(2)}`} />
+                    <Tooltip contentStyle={CHART_TOOLTIP_STYLE} formatter={(value: any) => `¥${Number(value).toFixed(2)}`} />
                     <Bar dataKey="totalCost" fill="#00b894" radius={[0, 4, 4, 0]} name="消费" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -848,10 +849,10 @@ export default function EnterpriseAnalysis() {
               <div className="p-4 flex items-center justify-center h-[240px]">
                 <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
-                    <Pie data={typePieData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                    <Pie data={typePieData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}>
                       {typePieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                     </Pie>
-                    <Tooltip formatter={(v: number) => `${(v / 10000).toFixed(1)}万`} />
+                    <Tooltip formatter={(v: any) => `${((v as number) / 10000).toFixed(1)}万`} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -988,7 +989,7 @@ export default function EnterpriseAnalysis() {
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="day" tick={{ fontSize: 11 }} stroke="#bbb" />
                         <YAxis tick={{ fontSize: 11 }} stroke="#bbb" tickFormatter={(v: number) => `¥${v}`} />
-                        <Tooltip contentStyle={CHART_TOOLTIP_STYLE} formatter={(v: number) => `¥${v.toFixed(2)}`} />
+                        <Tooltip contentStyle={CHART_TOOLTIP_STYLE} formatter={(v: any) => `¥${(v as number).toFixed(2)}`} />
                         <Line type="monotone" dataKey="balance" stroke="#0984e3" strokeWidth={2.5} dot={false} name="余额" />
                       </LineChart>
                     </ResponsiveContainer>
@@ -1449,6 +1450,7 @@ export default function EnterpriseAnalysis() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">企业数据分析</h1>
+        <FeatureDescription page="admin/enterprise-analysis" className="ml-2" />
         <p className="text-sm text-slate-500 mt-1">
           {selected ? `查看「${selected.companyName || selected.email}」的详细分析数据` : '搜索企业查看详细分析，或浏览全局企业数据概览'}
         </p>

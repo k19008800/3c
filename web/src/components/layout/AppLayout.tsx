@@ -31,7 +31,7 @@ export default function AppLayout() {
 
   const handleStop = () => {
     stopImpersonate()
-    window.location.href = '/admin/users'
+    window.location.href = '/console/admin/users'
   }
 
   if (isLoading) {

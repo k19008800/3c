@@ -15,6 +15,7 @@ import {
   Clock,
   TrendingUp,
 } from 'lucide-react'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 
 /* ── helpers ── */
 
@@ -99,6 +100,7 @@ export default function SystemHealthPanel() {
         <div className="flex items-center gap-2">
           <Activity size={20} className="text-slate-700" />
           <h2 className="text-lg font-semibold text-slate-800">系统健康</h2>
+          <FeatureDescription page="admin/system-health" className="ml-2" />
         </div>
         <button
           onClick={fetchHealth}

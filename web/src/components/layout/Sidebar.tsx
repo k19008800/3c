@@ -3,60 +3,171 @@ import { Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Cpu, Key, FileText, Wallet,
   Users, Settings, ClipboardList, ShieldCheck, FileSearch,
-  ChevronLeft, ChevronRight, LogOut, Menu, X,
+  ChevronLeft, ChevronRight, LogOut, Menu, X, ChevronDown,
   Building2, GitBranch, Handshake, ScrollText, BarChart3, DollarSign,
-  AlertTriangle, Lock, Bell, Settings2, Mail, ShieldAlert, PieChart,
+  AlertTriangle, Lock, Bell, Settings2, Mail, ShieldAlert, PieChart, Megaphone,
+  Zap, TrendingUp, Gift, Gauge, Newspaper, Activity, RotateCcw, Heart,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useImpersonate } from '@/hooks/use-impersonate'
 import { cn } from '@/lib/utils'
 import { get, post } from '@/lib/api'
+import { Perm, hasPerm, hasAnyPerm, isAdminRole } from '@/lib/permissions'
 import type { NotificationItem } from '@/types'
 
-const navItems = [
-  { to: '/', icon: LayoutDashboard, label: '仪表盘', roles: ['user', 'admin', 'super_admin', 'agent'] },
-  { to: '/models', icon: Cpu, label: '模型列表', roles: ['user', 'admin', 'super_admin', 'agent'] },
-  { to: '/api-keys', icon: Key, label: 'API 密钥', roles: ['user', 'admin', 'super_admin', 'agent'] },
-  { to: '/logs', icon: FileText, label: '调用日志', roles: ['user', 'admin', 'super_admin', 'agent'] },
-  { to: '/recharge', icon: Wallet, label: '充值', roles: ['user', 'admin', 'super_admin', 'agent'] },
-  { to: '/real-name', icon: ShieldCheck, label: '实名认证', roles: ['user', 'admin', 'super_admin', 'agent'] },
-  { to: '/team', icon: Users, label: '团队管理', roles: ['user', 'admin', 'super_admin', 'agent'] },
-  { to: '/security', icon: Lock, label: '账号安全', roles: ['user', 'admin', 'super_admin', 'agent'] },
-  { to: '/notifications', icon: Bell, label: '通知中心', roles: ['user', 'admin', 'super_admin', 'agent'] },
-  { to: '/settings', icon: Settings2, label: '个人设置', roles: ['user', 'admin', 'super_admin', 'agent'] },
-  { to: '/docs', icon: FileText, label: 'API 文档', roles: ['user', 'admin', 'super_admin', 'agent'] },
+type NavItem = {
+  to: string
+  icon: React.ComponentType<{ size?: number }>
+  label: string
+  /** 显示条件：用户需同时满足所有权限位（AND 语义） */
+  requiredPerms?: bigint[]
+  /** 显示条件：用户需满足任意一个权限位（OR 语义），仅 agent role 回退使用 */
+  anyPerms?: bigint[]
+}
+
+// ── 用户端导航（agent 也可见，因为 agent 也是用户）──
+const navGroups: { label: string; items: NavItem[] }[] = [
+  {
+    label: '总览',
+    items: [
+      { to: '/console', icon: LayoutDashboard, label: '仪表盘' },
+    ],
+  },
+  {
+    label: '资源与服务',
+    items: [
+      { to: '/console/models', icon: Cpu, label: '模型列表' },
+      { to: '/console/api-keys', icon: Key, label: 'API 密钥' },
+      { to: '/console/docs', icon: FileText, label: 'API 文档' },
+    ],
+  },
+  {
+    label: '数据与分析',
+    items: [
+      { to: '/console/logs', icon: FileText, label: '调用日志' },
+      { to: '/console/operation-logs', icon: ScrollText, label: '操作日志' },
+      { to: '/console/stats', icon: TrendingUp, label: '用量统计' },
+    ],
+  },
+  {
+    label: '财务与消费',
+    items: [
+      { to: '/console/recharge', icon: Wallet, label: '充值' },
+      { to: '/console/redemption', icon: Gift, label: '兑换码' },
+      { to: '/console/invoices', icon: FileText, label: '发票管理' },
+      { to: '/console/refunds', icon: RotateCcw, label: '退款申请' },
+    ],
+  },
+  {
+    label: '账户',
+    items: [
+      { to: '/console/real-name', icon: ShieldCheck, label: '实名认证' },
+      { to: '/console/security', icon: Lock, label: '账号安全' },
+      { to: '/console/settings', icon: Settings2, label: '个人设置' },
+    ],
+  },
+  {
+    label: '消息',
+    items: [
+      { to: '/console/announcements', icon: Newspaper, label: '全站公告' },
+      { to: '/console/notifications', icon: Bell, label: '通知中心' },
+    ],
+  },
 ]
 
-const adminItems = [
-  { to: '/admin', icon: BarChart3, label: '管理仪表盘', roles: ['admin', 'super_admin'] },
-  { to: '/admin/enterprise-analysis', icon: PieChart, label: '企业数据分析', roles: ['admin', 'super_admin'] },
-  { to: '/admin/users', icon: Users, label: '用户管理', roles: ['admin', 'super_admin'] },
-  { to: '/admin/models', icon: Cpu, label: '模型管理', roles: ['admin', 'super_admin'] },
-  { to: '/admin/vendors', icon: Building2, label: '供应商管理', roles: ['admin', 'super_admin'] },
-  { to: '/admin/vendor-models', icon: GitBranch, label: '模型映射', roles: ['admin', 'super_admin'] },
-  { to: '/admin/agents', icon: Handshake, label: '代理商管理', roles: ['admin', 'super_admin'] },
-  { to: '/admin/logs', icon: ScrollText, label: '调用日志', roles: ['admin', 'super_admin'] },
-  { to: '/admin/recharge-orders', icon: ClipboardList, label: '充值订单', roles: ['admin', 'super_admin'] },
-  { to: '/admin/real-name-review', icon: ShieldCheck, label: '实名审核', roles: ['admin', 'super_admin'] },
-  { to: '/admin/configs', icon: Settings, label: '系统配置', roles: ['admin', 'super_admin'] },
-  { to: '/admin/audit-logs', icon: FileSearch, label: '审计日志', roles: ['admin', 'super_admin'] },
-  { to: '/admin/finance/dashboard', icon: BarChart3, label: '财务工作台', roles: ['admin', 'super_admin'] },
-  { to: '/admin/finance/commissions', icon: DollarSign, label: '佣金流水', roles: ['admin', 'super_admin'] },
-  { to: '/admin/finance/reconciliation', icon: ScrollText, label: '对账报表', roles: ['admin', 'super_admin'] },
-  { to: '/admin/withdraws', icon: Wallet, label: '提现管理', roles: ['admin', 'super_admin'] },
-  { to: '/admin/email-templates', icon: Mail, label: '邮件模板', roles: ['admin', 'super_admin'] },
-  { to: '/admin/security', icon: ShieldAlert, label: '安全总览', roles: ['admin', 'super_admin'] },
-  { to: '/admin/security/events', icon: AlertTriangle, label: '安全事件', roles: ['admin', 'super_admin'] },
-  { to: '/admin/security/config', icon: Settings, label: '安全配置', roles: ['admin', 'super_admin'] },
-  { to: '/admin/security/bans', icon: Lock, label: '封禁管理', roles: ['admin', 'super_admin'] },
-  { to: '/admin/security/alerts', icon: Bell, label: '告警通知', roles: ['admin', 'super_admin'] },
+type AdminGroup = { label: string; items: NavItem[] }
+
+const adminGroups: AdminGroup[] = [
+  {
+    label: '📊 总览看板',
+    items: [
+      { to: '/console/admin', icon: BarChart3, label: '管理仪表盘', requiredPerms: [Perm.DASHBOARD_VIEW] },
+      { to: '/console/admin/enterprise-analysis', icon: PieChart, label: '企业数据分析', requiredPerms: [Perm.DASHBOARD_VIEW] },
+      { to: '/console/admin/stats', icon: TrendingUp, label: '聚合统计', requiredPerms: [Perm.DASHBOARD_VIEW] },
+      { to: '/console/admin/circuit-breakers', icon: Zap, label: '熔断看板', requiredPerms: [Perm.DASHBOARD_VIEW] },
+      { to: '/console/admin/system-health', icon: Heart, label: '系统健康', requiredPerms: [Perm.DASHBOARD_VIEW, Perm.OPS_READ] },
+    ],
+  },
+  {
+    label: '👤 用户运营',
+    items: [
+      { to: '/console/admin/users', icon: Users, label: '用户管理', requiredPerms: [Perm.USER_LIST] },
+      { to: '/console/admin/real-name-review', icon: ShieldCheck, label: '实名审核', requiredPerms: [Perm.REVIEW_LIST] },
+      { to: '/console/admin/quotas', icon: Gauge, label: '额度管理', requiredPerms: [Perm.USER_LIST, Perm.USER_BALANCE] },
+      { to: '/console/admin/admin-api-keys', icon: Key, label: '管理 API Key', requiredPerms: [Perm.USER_LIST] },
+      { to: '/console/admin/roles', icon: ShieldCheck, label: '角色权限', requiredPerms: [Perm.USER_CHANGE_ROLE] },
+    ],
+  },
+  {
+    label: '🤖 资源管理',
+    items: [
+      { to: '/console/admin/models', icon: Cpu, label: '模型管理', requiredPerms: [Perm.MODEL_MANAGE] },
+      { to: '/console/admin/vendors', icon: Building2, label: '供应商管理', requiredPerms: [Perm.MODEL_MANAGE] },
+      { to: '/console/admin/vendor-models', icon: GitBranch, label: '模型映射', requiredPerms: [Perm.MODEL_MANAGE] },
+      { to: '/console/admin/vendor-self', icon: Key, label: '供应商自助', requiredPerms: [Perm.MODEL_MANAGE] },
+      { to: '/console/admin/agents', icon: Handshake, label: '代理商管理', requiredPerms: [Perm.AGENT_LIST] },
+    ],
+  },
+  {
+    label: '💰 财务结算',
+    items: [
+      { to: '/console/admin/finance/dashboard', icon: BarChart3, label: '财务工作台', requiredPerms: [Perm.FINANCE_VIEW] },
+      { to: '/console/admin/finance/commissions', icon: DollarSign, label: '佣金流水', requiredPerms: [Perm.FINANCE_COMMISSION] },
+      { to: '/console/admin/finance/reconciliation', icon: ScrollText, label: '对账报表', requiredPerms: [Perm.RECONCILIATION_VIEW] },
+      { to: '/console/admin/finance/code-cost', icon: BarChart3, label: '成本看板', requiredPerms: [Perm.FINANCE_VIEW] },
+      { to: '/console/admin/finance/agent-cost', icon: TrendingUp, label: 'Agent成本', requiredPerms: [Perm.FINANCE_VIEW] },
+      { to: '/console/admin/finance/admin-cost', icon: ShieldCheck, label: 'Admin成本', requiredPerms: [Perm.FINANCE_VIEW] },
+      { to: '/console/admin/finance/settlement', icon: DollarSign, label: '结算对账', requiredPerms: [Perm.FINANCE_VIEW] },
+      { to: '/console/admin/finance/profit-analysis', icon: PieChart, label: '利润分析', requiredPerms: [Perm.FINANCE_VIEW] },
+      { to: '/console/admin/finance/prices', icon: DollarSign, label: '价格管理', requiredPerms: [Perm.FINANCE_VIEW] },
+      { to: '/console/admin/finance/invoices', icon: FileText, label: '发票审核', requiredPerms: [Perm.FINANCE_VIEW] },
+      { to: '/console/admin/finance/refunds', icon: RotateCcw, label: '退款审核', requiredPerms: [Perm.FINANCE_VIEW] },
+      { to: '/console/admin/withdraws', icon: Wallet, label: '提现管理', requiredPerms: [Perm.FINANCE_WITHDRAW] },
+      { to: '/console/admin/recharge-orders', icon: ClipboardList, label: '充值订单', requiredPerms: [Perm.FINANCE_RECHARGE] },
+      { to: '/console/admin/redemption-codes', icon: Gift, label: '兑换码管理', requiredPerms: [Perm.MODEL_MANAGE] },
+    ],
+  },
+  {
+    label: '🛡️ 安全风控',
+    items: [
+      { to: '/console/admin/security', icon: ShieldAlert, label: '安全总览', requiredPerms: [Perm.SECURITY_VIEW] },
+      { to: '/console/admin/security/events', icon: AlertTriangle, label: '安全事件', requiredPerms: [Perm.SECURITY_VIEW] },
+      { to: '/console/admin/security/config', icon: Settings, label: '安全配置', requiredPerms: [Perm.SECURITY_ACTION] },
+      { to: '/console/admin/security/bans', icon: Lock, label: '封禁管理', requiredPerms: [Perm.SECURITY_ACTION] },
+      { to: '/console/admin/security/alerts', icon: Bell, label: '告警通知', requiredPerms: [Perm.SECURITY_VIEW] },
+    ],
+  },
+  {
+    label: '⚙️ 运维配置',
+    items: [
+      { to: '/console/admin/configs', icon: Settings, label: '系统配置', requiredPerms: [Perm.CONFIG_VIEW] },
+      { to: '/console/admin/rate-limits', icon: Activity, label: '限流管理', requiredPerms: [Perm.OPS_READ] },
+      { to: '/console/admin/email-templates', icon: Mail, label: '邮件模板', requiredPerms: [Perm.CONFIG_VIEW] },
+      { to: '/console/admin/page-contents', icon: FileText, label: '内容管理', requiredPerms: [Perm.CONFIG_VIEW] },
+    ],
+  },
+  {
+    label: '📋 审计合规',
+    items: [
+      { to: '/console/admin/audit-logs', icon: FileSearch, label: '审计日志', requiredPerms: [Perm.AUDIT_VIEW] },
+      { to: '/console/admin/operation-logs', icon: Activity, label: '操作日志', requiredPerms: [Perm.AUDIT_VIEW] },
+      { to: '/console/admin/logs', icon: ScrollText, label: '调用日志', requiredPerms: [Perm.LOG_VIEW] },
+      { to: '/console/admin/announcements', icon: Megaphone, label: '全站公告', requiredPerms: [Perm.MODEL_MANAGE] },
+      { to: '/console/admin/campaigns', icon: Megaphone, label: '营销活动', requiredPerms: [Perm.MODEL_MANAGE] },
+    ],
+  },
 ]
 
-const agentItems = [
-  { to: '/agent/dashboard', icon: BarChart3, label: '代理商面板', roles: ['agent'] },
-  { to: '/agent/clients', icon: Users, label: '我的客户', roles: ['agent'] },
-  { to: '/agent/commissions', icon: DollarSign, label: '分佣记录', roles: ['agent'] },
-  { to: '/agent/withdraw', icon: Wallet, label: '提现', roles: ['agent'] },
+// ── 代理商导航 ──
+const agentItems: NavItem[] = [
+  { to: '/console/agent/dashboard', icon: BarChart3, label: '代理商面板' },
+  { to: '/console/agent/clients', icon: Users, label: '我的客户' },
+  { to: '/console/agent/commissions', icon: TrendingUp, label: '佣金历史' },
+  { to: '/console/agent/withdraw', icon: Wallet, label: '提现' },
+  { to: '/console/agent/finance', icon: DollarSign, label: '财务管理' },
+  { to: '/console/agent/redemption', icon: Gift, label: '兑换码管理' },
+  { to: '/console/agent/reconciliation', icon: BarChart3, label: '财务对账' },
+  { to: '/console/agent/notifications', icon: Bell, label: '消息通知' },
 ]
 
 // ── Notification dropdown ──
@@ -69,10 +180,15 @@ function NotificationDropdown({ collapsed }: { collapsed: boolean }) {
 
   const fetchUnreadCount = useCallback(async () => {
     try {
-      const res = await get<{ total: number }>('/api/v1/auth/notifications', { unreadOnly: true, pageSize: 1 })
+      const res = await get<{ total: number }>('/api/v1/me/notifications/unread-count')
       setUnreadCount(res.total)
     } catch {
-      // ignore
+      try {
+        const res = await get<{ total: number }>('/api/v1/auth/notifications', { unreadOnly: true, pageSize: 1 })
+        setUnreadCount(res.total)
+      } catch {
+        // ignore
+      }
     }
   }, [])
 
@@ -90,7 +206,7 @@ function NotificationDropdown({ collapsed }: { collapsed: boolean }) {
 
   useEffect(() => {
     fetchUnreadCount()
-    const interval = setInterval(fetchUnreadCount, 60000) // poll every 60s
+    const interval = setInterval(fetchUnreadCount, 60000)
     return () => clearInterval(interval)
   }, [fetchUnreadCount])
 
@@ -151,7 +267,7 @@ function NotificationDropdown({ collapsed }: { collapsed: boolean }) {
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
             <span className="text-sm font-semibold text-slate-800">通知</span>
             <Link
-              to="/notifications"
+              to="/console/notifications"
               onClick={() => setOpen(false)}
               className="text-xs text-blue-600 hover:text-blue-800"
             >
@@ -212,7 +328,7 @@ function NotificationDropdown({ collapsed }: { collapsed: boolean }) {
           {/* Footer */}
           <div className="px-4 py-2.5 border-t border-slate-100 bg-slate-50">
             <Link
-              to="/notifications"
+              to="/console/notifications"
               onClick={() => setOpen(false)}
               className="block text-center text-xs text-blue-600 hover:text-blue-800 font-medium"
             >
@@ -225,34 +341,69 @@ function NotificationDropdown({ collapsed }: { collapsed: boolean }) {
   )
 }
 
+/**
+ * 检查 NavItem 是否对当前用户可见
+ */
+function isNavItemVisible(item: NavItem, perms: string | undefined, role: string): boolean {
+  // agent 角色特殊处理：agentItems 不需要权限位，直接按角色显示
+  // 用户端 navGroups 对所有人都可见
+  if (!item.requiredPerms && !item.anyPerms) return true
+
+  // 按 requiredPerms 检查（AND 语义）
+  if (item.requiredPerms && item.requiredPerms.length > 0) {
+    return hasPerm(perms, ...item.requiredPerms)
+  }
+
+  // 按 anyPerms 检查（OR 语义）
+  if (item.anyPerms && item.anyPerms.length > 0) {
+    return hasAnyPerm(perms, ...item.anyPerms)
+  }
+
+  return true
+}
+
 export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const location = useLocation()
   const { user, logout } = useAuth()
   const { isImpersonating, stopImpersonate } = useImpersonate()
   const [mobileOpen, setMobileOpen] = useState(false)
   const role = user?.role || 'user'
+  const perms = user?.permissions
 
   const isActive = (path: string) => {
-    if (path === '/') return location.pathname === '/'
-    if (path === '/admin') return location.pathname === '/admin'
+    if (path === '/console') return location.pathname === '/console'
+    if (path === '/console/admin') return location.pathname === '/console/admin'
     return location.pathname.startsWith(path)
   }
 
-  const renderLinks = (items: typeof navItems) =>
-    items.filter(item => item.roles.includes(role)).map((item) => (
-      <Link
-        key={item.to} to={item.to}
-        className={cn(
-          'flex items-center gap-3 px-3 py-2 rounded-md mb-1 transition-colors',
-          isActive(item.to) ? 'bg-slate-700 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white',
-          collapsed && 'justify-center'
-        )}
-        title={collapsed ? item.label : undefined}
-      >
-        <item.icon size={20} />
-        {!collapsed && <span className="text-sm">{item.label}</span>}
-      </Link>
-    ))
+  const renderNavItem = (item: NavItem) => (
+    <Link
+      key={item.to}
+      to={item.to}
+      className={cn(
+        'flex items-center gap-3 px-3 py-1.5 rounded-md mb-0.5 transition-colors',
+        isActive(item.to) ? 'bg-slate-700 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white',
+        collapsed && 'justify-center'
+      )}
+      title={collapsed ? item.label : undefined}
+    >
+      <item.icon size={20} />
+      {!collapsed && <span className="text-sm">{item.label}</span>}
+    </Link>
+  )
+
+  const adminSectionVisible = isAdminRole(perms)
+  // Track which admin groups are expanded (default all open)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(adminGroups.map(g => g.label)))
+
+  const toggleGroup = (label: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(label)) next.delete(label)
+      else next.add(label)
+      return next
+    })
+  }
 
   const sidebar = (
     <div className={cn('flex flex-col h-full bg-slate-900 text-white transition-all duration-300', collapsed ? 'w-16' : 'w-60')}>
@@ -263,20 +414,53 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
         </button>
       </div>
       <nav className="flex-1 overflow-y-auto py-2">
-        <div className="px-3 py-2">
-          {!collapsed && <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">👤 用户功能</p>}
-          {renderLinks(navItems)}
-        </div>
-        {(role === 'admin' || role === 'super_admin') && (
+        {/* 用户端导航 — 所有角色均可见 */}
+        {navGroups.map((group) => {
+          const visibleItems = group.items.filter(item => isNavItemVisible(item, perms, role))
+          if (visibleItems.length === 0) return null
+          return (
+            <div key={group.label} className="px-3 py-1">
+              {!collapsed && (
+                <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">{group.label}</p>
+              )}
+              {visibleItems.map(renderNavItem)}
+            </div>
+          )
+        })}
+
+        {/* 管理后台导航 — 基于权限位过滤，管理员可见，分组可折叠 */}
+        {adminSectionVisible && (
           <div className="px-3 py-2 border-t border-slate-700">
-            {!collapsed && <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">⚙️ 管理</p>}
-            {renderLinks(adminItems)}
+            {!collapsed && (
+              <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">⚙️ 管理</p>
+            )}
+            {adminGroups.map((group) => {
+              const visibleItems = group.items.filter(item => isNavItemVisible(item, perms, role))
+              if (visibleItems.length === 0) return null
+              const isExpanded = expandedGroups.has(group.label)
+              return (
+                <div key={group.label} className="mb-0.5">
+                  {!collapsed ? (
+                    <button
+                      onClick={() => toggleGroup(group.label)}
+                      className="flex items-center justify-between w-full px-3 py-1 text-xs text-slate-400 hover:text-slate-200 transition-colors"
+                    >
+                      <span>{group.label}</span>
+                      <ChevronDown size={12} className={cn('transition-transform', isExpanded ? 'rotate-0' : '-rotate-90')} />
+                    </button>
+                  ) : null}
+                  {(collapsed || isExpanded) && visibleItems.map(renderNavItem)}
+                </div>
+              )
+            })}
           </div>
         )}
+
+        {/* 代理商导航 — agent 角色专用 */}
         {role === 'agent' && (
-          <div className="px-3 py-2 border-t border-slate-700">
+          <div className={cn('px-3 py-2', adminSectionVisible ? '' : 'border-t border-slate-700')}>
             {!collapsed && <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">🏪 代理商功能</p>}
-            {renderLinks(agentItems)}
+            {agentItems.map(renderNavItem)}
           </div>
         )}
       </nav>
@@ -286,7 +470,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
             <NotificationDropdown collapsed={collapsed} />
             <div className="text-xs text-slate-400 truncate flex-1">{user.email}</div>
             <Link
-              to="/settings"
+              to="/console/settings"
               className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition"
               title="个人设置"
             >
@@ -299,7 +483,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
         )}
         {isImpersonating ? (
           <button
-            onClick={() => { stopImpersonate(); window.location.href = '/admin/users' }}
+            onClick={() => { stopImpersonate(); window.location.href = '/console/admin/users' }}
             className={cn('flex items-center gap-2 text-red-300 hover:text-red-100 transition-colors w-full', collapsed ? 'justify-center' : 'px-3 py-2')}
             title="退出模拟"
           >

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { get, post } from '@/lib/api'
 import type { WithdrawRecord, PaginatedData } from '@/types'
 import { usePagePreferences } from '@/hooks/use-page-preferences'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 import { Loader2, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Download, CheckSquare } from 'lucide-react'
 
 const REJECT_REASONS = [
@@ -165,7 +166,7 @@ export default function AdminWithdraws() {
   const doFirstReview = async (id: number, action: 'approve' | 'reject') => {
     let reason: string | undefined
     if (action === 'reject') {
-      reason = promptRejectReason()
+      reason = promptRejectReason() ?? undefined
       if (!reason) return
     }
     try {
@@ -180,7 +181,7 @@ export default function AdminWithdraws() {
   const doSecondReview = async (id: number, action: 'approve' | 'reject') => {
     let reason: string | undefined
     if (action === 'reject') {
-      reason = promptRejectReason()
+      reason = promptRejectReason() ?? undefined
       if (!reason) return
     }
     const voucher = action === 'approve' ? (prompt('请输入打款凭证 URL（可选）：') || undefined) : undefined
@@ -232,6 +233,7 @@ export default function AdminWithdraws() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">提现管理</h1>
+        <FeatureDescription page="admin/withdraws" className="ml-2" />
         <div className="flex items-center gap-2">
           <button
             onClick={() => { setBatchMode(!batchMode); setSelectedIds(new Set()) }}

@@ -30,15 +30,17 @@ node_modules/
 *.swp
 *.swo
 
-# 临时/调试文件
+# 涓存椂/璋冭瘯鏂囦欢
 api/__*
-api/_reset_pw.mjs
-api/_test_db.mjs
-api/_test_query.mjs
-api/_todo.md
-api/check-fk.ts
-api/test-drop-fk.mjs
-api/test-roles.ps1
-api/test-sim/
-tools/
-tests/
+api/_*
+api/*_backup*
+api/*tmp*
+api/grep_result.txt
+api/tsc_output.txt
+api/verify.mjs
+api/README-*.md
+api/migrations/
+
+# 閲嶆瀯娈嬬暀鑴氭湰
+api/src/services/re-split*.cjs
+api/src/services/fix-*.cjs

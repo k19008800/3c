@@ -177,10 +177,10 @@ export default function Docs() {
                         <td className="px-4 py-3 text-sm font-medium text-slate-900">{model.name}</td>
                         <td className="px-4 py-3 text-sm text-slate-600">{v.vendorName}</td>
                         <td className="px-4 py-3 text-sm text-slate-600">
-                          ¥{Number(v.sellPriceInput || v.inputPrice || 0).toFixed(6)}
+                          ¥{Number(v.inputPrice || 0).toFixed(6)}
                         </td>
                         <td className="px-4 py-3 text-sm text-slate-600">
-                          ¥{Number(v.sellPriceOutput || v.outputPrice || 0).toFixed(6)}
+                          ¥{Number(v.outputPrice || 0).toFixed(6)}
                         </td>
                       </tr>
                     ))

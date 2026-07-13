@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { get, post } from '@/lib/api'
 import type { RealNameReviewRecord, PaginatedData } from '@/types'
 import { usePagePreferences } from '@/hooks/use-page-preferences'
@@ -11,10 +11,11 @@ function buildAdminFileUrl(userId: number, relativePath: string | null): string 
   return `/api/v1/admin/real-name/file/${userId}/${filename}`
 }
 import PaginationBar from '@/components/ui/PaginationBar'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
   Loader2, AlertCircle, CheckCircle2, XCircle,
   Search, Eye, ExternalLink,
-  Ban, Building2, User, FileImage,
+  Ban, Building2, User, FileImage, CheckSquare,
 } from 'lucide-react'
 
 const REJECT_REASONS = [
@@ -54,6 +55,13 @@ export default function AdminRealNameReview() {
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({})
 
+  // 批量选择
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [batchMode, setBatchMode] = useState(false)
+  const [batchRejectReason, setBatchRejectReason] = useState('')
+  const [batchReviewing, setBatchReviewing] = useState(false)
+  const selectAllRef = useRef<HTMLInputElement>(null)
+
   const { filters, loaded: prefsLoaded, updateFilter } = usePagePreferences('admin_real_name_review')
 
   // 恢复筛选条件
@@ -65,6 +73,26 @@ export default function AdminRealNameReview() {
   }, [prefsLoaded])
 
   const totalPages = Math.ceil(total / pageSize)
+
+  // 翻页或切tab时清空选择
+  useEffect(() => { setSelectedIds(new Set()) }, [page, activeTab])
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === records.length && records.length > 0) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(records.map(r => r.id)))
+    }
+  }
 
   const fetchRecords = useCallback(async () => {
     setLoading(true)
@@ -89,7 +117,7 @@ export default function AdminRealNameReview() {
         action,
         rejectReason: action === 'reject' ? rejectReason : undefined,
       })
-      setMsg(action === 'approve' ? '✅ 已通过' : '✅ 已拒绝')
+      setMsg(action === 'approve' ? '已通过' : '已拒绝')
       setShowDetail(false)
       setSelected(null)
       setRejectReason('')
@@ -97,9 +125,57 @@ export default function AdminRealNameReview() {
     } catch (err: any) { setError(err.message || '操作失败') }
   }
 
+  // 批量审核
+  const doBatchReview = async (action: 'approve' | 'reject') => {
+    const ids = Array.from(selectedIds)
+    if (!ids.length) {
+      setError('请先选择要审核的记录')
+      return
+    }
+    if (action === 'reject' && !batchRejectReason.trim()) {
+      setError('请填写拒绝原因')
+      return
+    }
+    setBatchReviewing(true)
+    setError('')
+    try {
+      await post('/api/v1/admin/real-name-reviews/batch-review', {
+        ids,
+        action,
+        rejectReason: action === 'reject' ? batchRejectReason : undefined,
+      })
+      setMsg(`批量${action === 'approve' ? '通过' : '拒绝'}：成功处理 ${ids.length} 条`)
+      setSelectedIds(new Set())
+      setBatchRejectReason('')
+      fetchRecords()
+    } catch (err: any) {
+      setError(err.message || '批量操作失败')
+    } finally {
+      setBatchReviewing(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">实名审核</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-900">实名审核</h1>
+          <FeatureDescription page="admin/real-name-review" className="ml-2" />
+        </div>
+        {activeTab === 'pending_review' && (
+          <button
+            onClick={() => { setBatchMode(!batchMode); setSelectedIds(new Set()); setBatchRejectReason('') }}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition ${
+              batchMode
+                ? 'bg-blue-50 border-blue-300 text-blue-700'
+                : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <CheckSquare size={16} />
+            {batchMode ? '退出批量' : '批量审核'}
+          </button>
+        )}
+      </div>
 
       {msg && (
         <div className="flex items-center gap-2 text-green-700 bg-green-50 p-3 rounded-lg text-sm">
@@ -130,12 +206,72 @@ export default function AdminRealNameReview() {
         <span className="text-sm text-slate-400">共 {total} 条</span>
       </div>
 
+      {/* Batch action bar */}
+      {batchMode && selectedIds.size > 0 && (
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-blue-200 space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-slate-600">已选 <strong>{selectedIds.size}</strong> 条</span>
+            <button
+              onClick={() => doBatchReview('approve')}
+              disabled={batchReviewing}
+              className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 transition disabled:opacity-50"
+            >
+              <CheckCircle2 size={16} /> 批量通过
+            </button>
+            <button
+              onClick={() => doBatchReview('reject')}
+              disabled={batchReviewing}
+              className="flex items-center gap-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition disabled:opacity-50"
+            >
+              <XCircle size={16} /> 批量拒绝
+            </button>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">拒绝原因（批量拒绝时填写）</label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {REJECT_REASONS.map((reason) => (
+                <button
+                  key={reason}
+                  type="button"
+                  onClick={() => setBatchRejectReason(reason)}
+                  className={`text-xs px-2 py-1 rounded border transition ${
+                    batchRejectReason === reason
+                      ? 'border-red-400 bg-red-50 text-red-700'
+                      : 'border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-600'
+                  }`}
+                >
+                  {reason.length > 12 ? reason.slice(0, 12) + '…' : reason}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={batchRejectReason}
+              onChange={e => setBatchRejectReason(e.target.value)}
+              placeholder="输入拒绝原因（批量拒绝时必填），用户将收到此信息"
+              rows={2}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 text-left">
+                {batchMode && (
+                  <th className="px-4 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      ref={selectAllRef}
+                      checked={records.length > 0 && selectedIds.size === records.length}
+                      onChange={toggleSelectAll}
+                      className="rounded border-slate-300"
+                    />
+                  </th>
+                )}
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">ID</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">用户ID</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">邮箱</th>
@@ -152,12 +288,22 @@ export default function AdminRealNameReview() {
             </thead>
             <tbody className="divide-y divide-slate-200">
               {loading ? (
-                <tr><td colSpan={12} className="text-center py-12"><Loader2 className="animate-spin inline-block" size={24} /></td></tr>
+                <tr><td colSpan={batchMode ? 13 : 12} className="text-center py-12"><Loader2 className="animate-spin inline-block" size={24} /></td></tr>
               ) : records.length === 0 ? (
-                <tr><td colSpan={12} className="text-center py-12 text-slate-400">暂无记录</td></tr>
+                <tr><td colSpan={batchMode ? 13 : 12} className="text-center py-12 text-slate-400">暂无记录</td></tr>
               ) : (
                 records.map(r => (
-                  <tr key={r.id} className="hover:bg-slate-50 transition">
+                  <tr key={r.id} className={`hover:bg-slate-50 transition ${selectedIds.has(r.id) ? 'bg-blue-50' : ''}`}>
+                    {batchMode && (
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(r.id)}
+                          onChange={() => toggleSelect(r.id)}
+                          className="rounded border-slate-300"
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-sm text-slate-500">{r.id}</td>
                     <td className="px-4 py-3 text-sm text-slate-600">{r.userId}</td>
                     <td className="px-4 py-3 text-sm text-slate-900">{r.email}</td>

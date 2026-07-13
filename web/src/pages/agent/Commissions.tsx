@@ -240,6 +240,16 @@ function DetailDrawer({
 //  Main Page
 // ══════════════════════════════════════════════
 
+// ── 佣金记录（代理商）─-
+//
+// 【业务说明】
+//   代理商佣金明细，支持按类型（销售/团队/活动/续费）、状态（待结算/已结算/已取消）、
+//   日期范围和客户名称筛选。顶部汇总卡片展示累计/待结算/已结算金额。
+//   点击行可打开详情抽屉查看该笔佣金的完整信息（来源客户、关联订单、结算时间）。
+//
+// 【权限要求】角色=agent
+// 【数据来源】GET /api/v1/agent/commissions, GET /api/v1/agent/commissions/summary
+
 export default function AgentCommissions() {
   const [rows, setRows] = useState<AgentCommission[]>([])
   const [total, setTotal] = useState(0)

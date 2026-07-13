@@ -7,7 +7,7 @@
 import { FastifyInstance } from "fastify";
 import { eq, and, desc, like, sql, inArray } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
-import { systemConfigs, auditLogs, users, rechargeOrders, emailTemplates } from "../../db/schema.js";
+import { systemConfigs, auditLogs, users, rechargeOrders, emailTemplates, pageContents } from "../../db/schema.js";
 import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
 import crypto from "node:crypto";
 
@@ -117,6 +117,14 @@ export async function adminSystemRoutes(app: FastifyInstance) {
         clearPricingMultiplierCache();
       }
     } catch { /* 非必需 */ }
+
+    // 限流配置变更：清限流缓存
+    if (key.startsWith("rate_limit_")) {
+      try {
+        const { clearRateLimitCache } = await import("../../middleware/rate-limit.js");
+        clearRateLimitCache();
+      } catch { /* 非必需 */ }
+    }
 
     reply.status(200).send({
       code: 0,
@@ -429,6 +437,35 @@ export async function adminSystemRoutes(app: FastifyInstance) {
       data: {
         ...updated,
         updatedAt: updated.updatedAt?.toISOString() ?? null,
+      },
+      message: "ok",
+    });
+  });
+
+  // ── 页面内容管理 ──
+  app.get("/api/v1/admin/page-contents", {
+    preHandler: [authenticateJWT, requirePerm(Perm.CONFIG_VIEW)],
+  }, async (request, reply) => {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(pageContents)
+      .orderBy(pageContents.slug);
+
+    reply.status(200).send({
+      code: 0,
+      data: {
+        list: rows.map((r) => ({
+          id: r.id,
+          slug: r.slug,
+          title_zh: r.titleZh,
+          title_en: r.titleEn,
+          content_markdown_zh: r.contentMarkdownZh,
+          content_markdown_en: r.contentMarkdownEn,
+          status: r.status,
+          updated_at: r.updatedAt?.toISOString() ?? null,
+        })),
+        total: rows.length,
       },
       message: "ok",
     });

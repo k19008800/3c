@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { get, patch, post } from '@/lib/api'
 import type { SecurityConfig, PaginatedData } from '@/types'
-import { Loader2, AlertCircle, Save, Bell, Mail, Globe, Clock, RefreshCw } from 'lucide-react'
+import { Loader2, AlertCircle, Save, Bell, Mail, Globe, Clock, RefreshCw, Send } from 'lucide-react'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 
 export default function AdminSecurityAlerts() {
   const [configs, setConfigs] = useState<SecurityConfig[]>([])
@@ -9,12 +10,6 @@ export default function AdminSecurityAlerts() {
   const [saving, setSaving] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [editValues, setEditValues] = useState<Record<string, string>>({})
-
-  // 告警记录
-  const [alertHistory, setAlertHistory] = useState<any[]>([])
-  const [historyLoading, setHistoryLoading] = useState(false)
-  const [historyPage, setHistoryPage] = useState(1)
-  const [historyTotal, setHistoryTotal] = useState(0)
 
   const alertConfigKeys = [
     'alert_admin_email',
@@ -46,6 +41,8 @@ export default function AdminSecurityAlerts() {
 
   // 获取未确认高危事件作为"待处理告警"
   const [pendingAlerts, setPendingAlerts] = useState(0)
+  const [testSending, setTestSending] = useState(false)
+  const [testResult, setTestResult] = useState<string | null>(null)
   const fetchPendingAlerts = useCallback(async () => {
     try {
       const data = await get<any>('/api/v1/admin/security/events', {
@@ -56,6 +53,19 @@ export default function AdminSecurityAlerts() {
       setPendingAlerts(data.total)
     } catch { /* ignore */ }
   }, [])
+
+  const handleSendTestAlert = async () => {
+    setTestSending(true)
+    setTestResult(null)
+    try {
+      const data = await post<{ ok: boolean; message?: string }>('/api/v1/admin/security/test-alert')
+      setTestResult(data.message || '测试告警已发送')
+    } catch (err: any) {
+      setTestResult(err.message || '发送测试告警失败')
+    } finally {
+      setTestSending(false)
+    }
+  }
 
   useEffect(() => {
     fetchConfigs()
@@ -97,7 +107,7 @@ export default function AdminSecurityAlerts() {
 
   const renderToggle = (key: string, label: string, desc: string) => {
     const val = editValues[key]
-    const isOn = val === 'true' || val === true
+    const isOn = val === 'true'
     return (
       <div key={key} className="flex items-center justify-between px-4 py-3 hover:bg-slate-50">
         <div className="flex-1 min-w-0">
@@ -162,6 +172,7 @@ export default function AdminSecurityAlerts() {
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <Bell size={24} /> 告警通知
         </h1>
+        <FeatureDescription page="admin/security/alerts" className="ml-2" />
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-500">
             待处理告警: <span className={`font-semibold ${pendingAlerts > 0 ? 'text-red-600' : 'text-green-600'}`}>{pendingAlerts}</span>
@@ -169,12 +180,29 @@ export default function AdminSecurityAlerts() {
           <button onClick={fetchPendingAlerts} className="p-1.5 text-slate-400 hover:text-slate-600 rounded">
             <RefreshCw size={14} />
           </button>
+          <button
+            onClick={handleSendTestAlert}
+            disabled={testSending}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition disabled:opacity-50"
+          >
+            {testSending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+            发送测试告警
+          </button>
         </div>
       </div>
 
       {error && (
         <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 rounded-lg">
           <AlertCircle size={16} /> {error}
+        </div>
+      )}
+
+      {testResult && (
+        <div className={`flex items-center gap-2 p-3 text-sm rounded-lg ${
+          testResult.includes('失败') ? 'text-red-600 bg-red-50' : 'text-green-600 bg-green-50'
+        }`}>
+          <AlertCircle size={16} /> {testResult}
+          <button onClick={() => setTestResult(null)} className="ml-auto text-current opacity-50 hover:opacity-100">&times;</button>
         </div>
       )}
 

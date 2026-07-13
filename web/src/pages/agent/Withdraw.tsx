@@ -5,6 +5,17 @@ import { usePagePreferences } from '@/hooks/use-page-preferences'
 import PaginationBar from '@/components/ui/PaginationBar'
 import { Loader2, AlertCircle, CheckCircle2, Wallet, History } from 'lucide-react'
 
+// ── 提现管理（代理商）─-
+//
+// 【业务说明】
+//   代理商佣金提现，填写金额、银行卡号、银行名称提交申请。
+//   系统自动记住上次银行信息方便复用。
+//   提现记录列表支持按状态筛选，状态流转：待初审 → 待复审 → 已通过 → 已到账 / 已拒绝。
+//
+// 【状态流转】pending_first_review → pending_second_review → approved → paid | rejected
+// 【权限要求】角色=agent
+// 【数据来源】GET /api/v1/agent/withdraws, POST /api/v1/agent/withdraw, GET /api/v1/agent/bank-info
+
 export default function AgentWithdraw() {
   const [rows, setRows] = useState<AgentWithdrawOrder[]>([])
   const [total, setTotal] = useState(0)

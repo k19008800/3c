@@ -1,0 +1,3380 @@
+
+ RUN  v4.1.10 C:/Users/ZH/.openclaw/workspace/3cloud/api
+
+stdout | src/__tests__/agent-finance.test.ts
+[AutoSettle] Cron scheduled: 02:00 and 14:00 daily
+
+[11:43:36.271] [32mINFO[39m (10020): [36m[Cron] Commission auto-settlement scheduled: daily at 3:00[39m
+[11:43:36.272] [32mINFO[39m (10020): [36m[Cron] Daily recon summary scheduled: daily at 4:00[39m
+[11:43:36.272] [32mINFO[39m (10020): [36m[Cron] Daily security summary scheduled: daily at 9:00[39m
+[11:43:36.273] [32mINFO[39m (10020): [36m[Cron] Commission daily rollup scheduled: daily at 00:30[39m
+[11:43:36.273] [32mINFO[39m (10020): [36m[Cron] Audit log archival scheduled: daily at 02:00 (purge >90d)[39m
+[11:43:36.273] [32mINFO[39m (10020): [36m[Cron] Code expiry check scheduled: every 1 hour, first run in 30s[39m
+[11:43:36.292] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-1"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/login",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:36.292] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-1"
+    [35murl[39m: "/api/v1/auth/login"
+    [35mmethod[39m: "POST"
+stdout | src/__tests__/agent-finance.test.ts
+[DailyRecon] 定时任务已注册: 每天 03:00
+
+stdout | src/__tests__/agent-finance.test.ts
+[Redis] Connected
+
+[11:43:36.781] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-1"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 489.2039999961853
+[11:43:36.782] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-2"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/register",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:36.782] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-2"
+    [35murl[39m: "/api/v1/auth/register"
+    [35mmethod[39m: "POST"
+[11:43:37.090] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-2"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 307.49599999189377
+[11:43:37.091] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-3"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/agents",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.092] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-3"
+    [35murl[39m: "/api/v1/admin/agents"
+    [35mmethod[39m: "GET"
+[11:43:37.102] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-3"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 10.048000007867813
+[11:43:37.103] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-4"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/agents",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.103] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-4"
+    [35murl[39m: "/api/v1/admin/agents"
+    [35mmethod[39m: "POST"
+[11:43:37.108] [31mERROR[39m (10020): [36mUnhandled error[39m
+    [35mreqId[39m: "req-4"
+    err: {
+      "type": "DrizzleQueryError",
+      "message": "Failed query: insert into \"agents\" (\"id\", \"user_id\", \"total_commission\", \"settled_commission\", \"pending_withdraw\", \"frozen_amount\", \"redemption_locked\", \"settlement_cycle\", \"next_settlement_at\", \"last_settlement_at\", \"min_withdraw_amount\", \"status\", \"parent_agent_id\", \"team_depth\", \"created_at\", \"updated_at\") values (default, $1, default, default, default, default, default, default, default, default, default, default, default, default, default, default) returning \"id\", \"user_id\", \"total_commission\", \"settled_commission\", \"pending_withdraw\", \"frozen_amount\", \"redemption_locked\", \"settlement_cycle\", \"next_settlement_at\", \"last_settlement_at\", \"min_withdraw_amount\", \"status\", \"parent_agent_id\", \"team_depth\", \"created_at\", \"updated_at\"\nparams: 250: 关系 \"agents\" 的 \"settlement_cycle\" 字段不存在",
+      "stack":
+          Error: Failed query: insert into "agents" ("id", "user_id", "total_commission", "settled_commission", "pending_withdraw", "frozen_amount", "redemption_locked", "settlement_cycle", "next_settlement_at", "last_settlement_at", "min_withdraw_amount", "status", "parent_agent_id", "team_depth", "created_at", "updated_at") values (default, $1, default, default, default, default, default, default, default, default, default, default, default, default, default, default) returning "id", "user_id", "total_commission", "settled_commission", "pending_withdraw", "frozen_amount", "redemption_locked", "settlement_cycle", "next_settlement_at", "last_settlement_at", "min_withdraw_amount", "status", "parent_agent_id", "team_depth", "created_at", "updated_at"
+          params: 250
+              at NodePgPreparedQuery.queryWithCache (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/pg-core/session.js:41:15)
+              at processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/node-postgres/session.js:117:22
+              at C:/Users/ZH/.openclaw/workspace/3cloud/api/src/services/agent-core.ts:695:24
+              at NodePgSession.transaction (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+              at createAgent (C:/Users/ZH/.openclaw/workspace/3cloud/api/src/services/agent-core.ts:694:19)
+              at Object.<anonymous> (C:/Users/ZH/.openclaw/workspace/3cloud/api/src/routes/admin/agents.ts:132:22)
+          caused by: error: 关系 "agents" 的 "settlement_cycle" 字段不存在
+              at C:\Users\ZH\.openclaw\workspace\3cloud\api\node_modules\pg\lib\client.js:652:17
+              at processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/node-postgres/session.js:124:18
+              at NodePgPreparedQuery.queryWithCache (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/pg-core/session.js:39:16)
+              at file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/node-postgres/session.js:117:22
+              at C:/Users/ZH/.openclaw/workspace/3cloud/api/src/services/agent-core.ts:695:24
+              at NodePgSession.transaction (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+              at createAgent (C:/Users/ZH/.openclaw/workspace/3cloud/api/src/services/agent-core.ts:694:19)
+              at Object.<anonymous> (C:/Users/ZH/.openclaw/workspace/3cloud/api/src/routes/admin/agents.ts:132:22)
+      "query": "insert into \"agents\" (\"id\", \"user_id\", \"total_commission\", \"settled_commission\", \"pending_withdraw\", \"frozen_amount\", \"redemption_locked\", \"settlement_cycle\", \"next_settlement_at\", \"last_settlement_at\", \"min_withdraw_amount\", \"status\", \"parent_agent_id\", \"team_depth\", \"created_at\", \"updated_at\") values (default, $1, default, default, default, default, default, default, default, default, default, default, default, default, default, default) returning \"id\", \"user_id\", \"total_commission\", \"settled_commission\", \"pending_withdraw\", \"frozen_amount\", \"redemption_locked\", \"settlement_cycle\", \"next_settlement_at\", \"last_settlement_at\", \"min_withdraw_amount\", \"status\", \"parent_agent_id\", \"team_depth\", \"created_at\", \"updated_at\"",
+      "params": [
+        250
+      ]
+    }
+[11:43:37.113] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-4"
+    [35mres[39m: {
+      "statusCode": 500
+    }
+    [35mresponseTime[39m: 9.901699990034103
+[11:43:37.118] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-5"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/agents/abc",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.118] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-5"
+    [35murl[39m: "/api/v1/admin/agents/abc"
+    [35mmethod[39m: "GET"
+[11:43:37.119] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-5"
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 0.9059000015258789
+[11:43:37.119] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-6"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/finance/dashboard",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.119] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-6"
+    [35murl[39m: "/api/v1/admin/finance/dashboard"
+    [35mmethod[39m: "GET"
+[11:43:37.121] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-6"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1.3007999956607819
+[11:43:37.121] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-7"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/finance/commissions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.121] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-7"
+    [35murl[39m: "/api/v1/admin/finance/commissions"
+    [35mmethod[39m: "GET"
+[11:43:37.127] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-7"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 5.520999997854233
+[11:43:37.127] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-8"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/finance/reconciliation",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.127] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-8"
+    [35murl[39m: "/api/v1/admin/finance/reconciliation"
+    [35mmethod[39m: "GET"
+[11:43:37.246] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-8"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 118.66180002689362
+[11:43:37.246] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-9"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/finance/invoices",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.246] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-9"
+    [35murl[39m: "/api/v1/admin/finance/invoices"
+    [35mmethod[39m: "GET"
+[11:43:37.250] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-9"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3.345099985599518
+[11:43:37.250] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-a"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/recharge-orders",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.250] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-a"
+    [35murl[39m: "/api/v1/admin/recharge-orders"
+    [35mmethod[39m: "GET"
+[11:43:37.257] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-a"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 6.365600019693375
+[11:43:37.257] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-b"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/withdraws",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.257] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-b"
+    [35murl[39m: "/api/v1/admin/withdraws"
+    [35mmethod[39m: "GET"
+[11:43:37.263] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-b"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 5.986700028181076
+[11:43:37.264] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-c"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/finance/codes/agent-settlement",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.264] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-c"
+    [35murl[39m: "/api/v1/admin/finance/codes/agent-settlement"
+    [35mmethod[39m: "GET"
+[11:43:37.276] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-c"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 11.617799997329712
+[11:43:37.276] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-d"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/finance/codes/cost-overview",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.276] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-d"
+    [35murl[39m: "/api/v1/admin/finance/codes/cost-overview"
+    [35mmethod[39m: "GET"
+[11:43:37.286] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-d"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 10.452399998903275
+[11:43:37.287] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-e"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/campaigns",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.287] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-e"
+    [35murl[39m: "/api/v1/admin/campaigns"
+    [35mmethod[39m: "GET"
+[11:43:37.291] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-e"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3.386900007724762
+[11:43:37.291] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-f"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/announcements",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.291] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-f"
+    [35murl[39m: "/api/v1/admin/announcements"
+    [35mmethod[39m: "GET"
+[11:43:37.295] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-f"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3.4375
+[11:43:37.295] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-g"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/announcements",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.295] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-g"
+    [35murl[39m: "/api/v1/admin/announcements"
+    [35mmethod[39m: "POST"
+ ❯ src/__tests__/agent-finance.test.ts (19 tests | 3 failed) 1287ms
+     ✓ GET /api/v1/admin/agents — should list agents (200) 12ms
+     × POST /api/v1/admin/agents — should create an agent (200) 14ms
+     × GET /api/v1/admin/agents/:id — should get agent detail (200) 1ms
+     ✓ GET /api/v1/admin/agents/:id — should return 400 for non-numeric ID 2ms
+     ✓ GET /api/v1/admin/finance/dashboard — should list financial overview (200) 2ms
+     ✓ GET /api/v1/admin/finance/commissions — should list commissions (200) 6ms
+     ✓ GET /api/v1/admin/finance/reconciliation — should list reconciliation report (200) 119ms
+     ✓ GET /api/v1/admin/finance/invoices — should list invoices (200) 4ms
+     ✓ GET /api/v1/admin/recharge-orders — should list recharge orders (200) 7ms
+     ✓ GET /api/v1/admin/withdraws — should list withdraw requests (200) 7ms
+     ✓ GET /api/v1/admin/finance/codes/agent-settlement — should list agent settlements (200) 12ms
+     ✓ GET /api/v1/admin/finance/codes/cost-overview — should list cost overview (200) 11ms
+     ✓ GET /api/v1/admin/campaigns — should list campaigns (200) 4ms
+     ✓ GET /api/v1/admin/announcements — should list announcements (200) 4ms
+     ✓ POST /api/v1/admin/announcements — should create an announcement (200) 9ms
+     ✓ POST /api/v1/admin/announcements — should return 400 for empty title 1ms
+     × GET /api/v1/announcements — public list should return published announcements (200) 1ms
+     ✓ should return 401 without JWT token 0ms
+     ✓ should return 401 with invalid JWT token 0ms
+[11:43:37.304] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-g"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8.819099992513657
+[11:43:37.304] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-h"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/announcements",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.304] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-h"
+    [35murl[39m: "/api/v1/admin/announcements"
+    [35mmethod[39m: "POST"
+[11:43:37.305] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-h"
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 0.7513999938964844
+[11:43:37.306] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-i"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/announcements",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.306] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-i"
+    [35murl[39m: "/api/v1/announcements"
+    [35mmethod[39m: "GET"
+[11:43:37.306] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-i"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.10490000247955322
+[11:43:37.306] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-j"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/agents",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.306] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-j"
+    [35murl[39m: "/api/v1/admin/agents"
+    [35mmethod[39m: "GET"
+[11:43:37.306] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-j"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.10620000958442688
+[11:43:37.307] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-k"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/agents",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.307] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-k"
+    [35murl[39m: "/api/v1/admin/agents"
+    [35mmethod[39m: "GET"
+[11:43:37.307] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-k"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.15869998931884766
+[11:43:37.307] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-l"
+    [35mreq[39m: {
+      "method": "DELETE",
+      "url": "/api/v1/admin/announcements/14",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:37.307] [32mINFO[39m (10020): [36mincoming request[39m
+    [35mreqId[39m: "req-l"
+    [35murl[39m: "/api/v1/admin/announcements/14"
+    [35mmethod[39m: "DELETE"
+[11:43:37.309] [32mINFO[39m (10020): [36mrequest completed[39m
+    [35mreqId[39m: "req-l"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2.2899999916553497
+stdout | src/__tests__/proxy-billing.test.ts
+[AutoSettle] Cron scheduled: 02:00 and 14:00 daily
+
+stdout | src/__tests__/proxy-billing.test.ts
+[DailyRecon] 定时任务已注册: 每天 03:00
+
+stdout | src/__tests__/proxy-billing.test.ts
+[Redis] Connected
+
+[11:43:38.788] [32mINFO[39m (23272): [36m[Cron] Commission auto-settlement scheduled: daily at 3:00[39m
+[11:43:38.789] [32mINFO[39m (23272): [36m[Cron] Daily recon summary scheduled: daily at 4:00[39m
+[11:43:38.789] [32mINFO[39m (23272): [36m[Cron] Daily security summary scheduled: daily at 9:00[39m
+[11:43:38.790] [32mINFO[39m (23272): [36m[Cron] Commission daily rollup scheduled: daily at 00:30[39m
+[11:43:38.790] [32mINFO[39m (23272): [36m[Cron] Audit log archival scheduled: daily at 02:00 (purge >90d)[39m
+[11:43:38.790] [32mINFO[39m (23272): [36m[Cron] Code expiry check scheduled: every 1 hour, first run in 30s[39m
+[11:43:38.808] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/login",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:38.808] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1"
+    [35murl[39m: "/api/v1/auth/login"
+    [35mmethod[39m: "POST"
+[11:43:39.189] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-1"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 381.29090002179146
+[11:43:39.190] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-2"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/auth/me",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.190] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-2"
+    [35murl[39m: "/api/v1/auth/me"
+    [35mmethod[39m: "GET"
+[11:43:39.245] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-2"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 54.44920000433922
+[11:43:39.245] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-3"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/api-keys",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.245] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-3"
+    [35murl[39m: "/api/v1/api-keys"
+    [35mmethod[39m: "POST"
+[11:43:39.249] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-3"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4.199200004339218
+[11:43:39.251] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-4"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/health",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.251] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-4"
+    [35murl[39m: "/health"
+    [35mmethod[39m: "GET"
+[11:43:39.251] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-4"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 0.2111000120639801
+[11:43:39.252] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-5"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/v1/models",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.252] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-5"
+    [35murl[39m: "/v1/models"
+    [35mmethod[39m: "GET"
+[11:43:39.262] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-5"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9.69750002026558
+[11:43:39.263] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-6"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/models",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.263] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-6"
+    [35murl[39m: "/api/v1/models"
+    [35mmethod[39m: "GET"
+[11:43:39.266] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-6"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2.6798000037670135
+[11:43:39.266] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-7"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.266] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-7"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.267] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-7"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.429500013589859
+[11:43:39.267] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-8"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.267] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-8"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.271] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-8"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 3.6432999968528748
+[11:43:39.271] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-9"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.271] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-9"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.285] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-9"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 13.764899998903275
+[11:43:39.291] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-a"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.292] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-a"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.298] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-a"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 6.164099991321564
+[11:43:39.299] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-b"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.299] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-b"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.303] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-b"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 4.783699989318848
+[11:43:39.305] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-c"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.305] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-c"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.308] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-c"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 3.4393999874591827
+[11:43:39.321] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-d"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.321] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-d"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.324] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-d"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 3.3519999980926514
+[11:43:39.327] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-e"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.327] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-e"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-f"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-f"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-g"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-g"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-h"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-h"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-i"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-i"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-j"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-j"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-k"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-k"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-l"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-l"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-m"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-m"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-n"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-n"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-o"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-o"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-p"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-p"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-q"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-q"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-r"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-r"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-s"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-s"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-t"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-t"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-u"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-u"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-v"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-v"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-w"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-w"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-x"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-x"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-y"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-y"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-z"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-z"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-10"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-10"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-11"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-11"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-12"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.328] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-12"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-13"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-13"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-14"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-14"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-15"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-15"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-16"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-16"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-17"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-17"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-18"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-18"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-19"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-19"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1a"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1a"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1b"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1b"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1c"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1c"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1d"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1d"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1e"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1e"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1f"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1f"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1g"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1g"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1h"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.329] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1h"
+    [35murl[39m: "/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.384] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-e"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 56.89039999246597
+[11:43:39.385] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-10"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 56.51579999923706
+[11:43:39.385] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-z"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 56.86649999022484
+[11:43:39.386] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-11"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 57.25649997591972
+[11:43:39.386] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-y"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 57.71160000562668
+[11:43:39.386] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-14"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 57.81420001387596
+[11:43:39.387] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-12"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 58.26960000395775
+[11:43:39.387] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-13"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 58.54050001502037
+[11:43:39.387] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-15"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 58.703400015830994
+[11:43:39.388] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-16"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 58.96790000796318
+[11:43:39.388] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-f"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 60.31310001015663
+[11:43:39.388] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-g"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 60.541300028562546
+[11:43:39.388] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-17"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 59.70339998602867
+[11:43:39.389] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-19"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 59.81579998135567
+[11:43:39.389] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-1a"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 60.009200006723404
+[11:43:39.389] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-1b"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 60.182199984788895
+[11:43:39.389] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-1c"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 60.24770000576973
+[11:43:39.390] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-1d"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 60.46349999308586
+[11:43:39.390] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-18"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 61.19760000705719
+[11:43:39.390] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-1e"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 61.053299993276596
+[11:43:39.391] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-1f"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 61.192900002002716
+[11:43:39.391] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-1h"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 61.47850000858307
+[11:43:39.391] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-1g"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 61.67369997501373
+[11:43:39.500] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-i"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 172.41249999403954
+[11:43:39.532] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-h"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 204.7733999788761
+[11:43:39.533] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-o"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 205.33630001544952
+[11:43:39.557] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-q"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 228.80770000815392
+[11:43:39.596] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-j"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 268.22560000419617
+[11:43:39.596] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-x"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 268.0083000063896
+[11:43:39.596] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-k"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 268.6638000011444
+[11:43:39.600] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-m"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 272.3847000002861
+[11:43:39.601] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-t"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 272.6865999996662
+[11:43:39.601] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-u"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 272.9800000190735
+[11:43:39.602] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-p"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 273.626599997282
+[11:43:39.602] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-v"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 273.88499999046326
+[11:43:39.606] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-w"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 277.40330001711845
+[11:43:39.607] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-r"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 278.53079998493195
+[11:43:39.607] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-n"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 279.1423999965191
+[11:43:39.621] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-l"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 293.36279997229576
+[11:43:39.628] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-s"
+    [35mres[39m: {
+      "statusCode": 429
+    }
+    [35mresponseTime[39m: 300.2198000252247
+[11:43:39.649] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1i"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/ready",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.649] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1i"
+    [35murl[39m: "/ready"
+    [35mmethod[39m: "GET"
+[11:43:39.650] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-1i"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 0.7049999833106995
+[11:43:39.651] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1j"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/chat/completions",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:39.651] [32mINFO[39m (23272): [36mincoming request[39m
+    [35mreqId[39m: "req-1j"
+    [35murl[39m: "/api/v1/chat/completions"
+    [35mmethod[39m: "POST"
+[11:43:39.651] [32mINFO[39m (23272): [36mrequest completed[39m
+    [35mreqId[39m: "req-1j"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.26460000872612
+ ❯ src/__tests__/proxy-billing.test.ts (14 tests | 5 failed) 1122ms
+     ✓ returns 200 with status ok 1ms
+     ✓ returns 200 with model list on /v1/models 10ms
+     ✓ returns 200 with model list on /api/v1/models 3ms
+     ✓ returns 401 without API key 1ms
+     ✓ returns 401 with invalid API key 4ms
+     × returns 400 when model is missing 20ms
+     × returns 404 for unknown model 7ms
+     × returns 502 when upstream is unreachable (expected in dev/test) 6ms
+     × writes call_logs for the request attempt 16ms
+     × returns SSE or error depending on upstream availability 4ms
+     ✓ consumption type balance_logs have expected fields 2ms
+     ✓ returns 429 or handles rapid requests without server errors  322ms
+     ✓ returns ready or degraded status 2ms
+     ✓ also requires API key 1ms
+stdout | src/__tests__/admin-vendors-models.test.ts
+[AutoSettle] Cron scheduled: 02:00 and 14:00 daily
+
+stdout | src/__tests__/admin-vendors-models.test.ts
+[DailyRecon] 定时任务已注册: 每天 03:00
+
+stdout | src/__tests__/admin-vendors-models.test.ts
+[Redis] Connected
+
+[11:43:41.435] [32mINFO[39m (12460): [36m[Cron] Commission auto-settlement scheduled: daily at 3:00[39m
+[11:43:41.437] [32mINFO[39m (12460): [36m[Cron] Daily recon summary scheduled: daily at 4:00[39m
+[11:43:41.437] [32mINFO[39m (12460): [36m[Cron] Daily security summary scheduled: daily at 9:00[39m
+[11:43:41.437] [32mINFO[39m (12460): [36m[Cron] Commission daily rollup scheduled: daily at 00:30[39m
+[11:43:41.438] [32mINFO[39m (12460): [36m[Cron] Audit log archival scheduled: daily at 02:00 (purge >90d)[39m
+[11:43:41.438] [32mINFO[39m (12460): [36m[Cron] Code expiry check scheduled: every 1 hour, first run in 30s[39m
+[11:43:41.459] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/login",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:41.459] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1"
+    [35murl[39m: "/api/v1/auth/login"
+    [35mmethod[39m: "POST"
+[11:43:41.937] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-1"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 477.9539999961853
+[11:43:41.940] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-2"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/vendors",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:41.940] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-2"
+    [35murl[39m: "/api/v1/admin/vendors"
+    [35mmethod[39m: "POST"
+[11:43:41.947] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-2"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 6.6951999962329865
+[11:43:41.948] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-3"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/vendors",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:41.948] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-3"
+    [35murl[39m: "/api/v1/admin/vendors"
+    [35mmethod[39m: "POST"
+[11:43:41.949] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-3"
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 0.9458000063896179
+[11:43:41.949] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-4"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/vendors",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:41.949] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-4"
+    [35murl[39m: "/api/v1/admin/vendors"
+    [35mmethod[39m: "POST"
+[11:43:41.954] [31mERROR[39m (12460): [36mUnhandled error[39m
+    [35mreqId[39m: "req-4"
+    err: {
+      "type": "DrizzleQueryError",
+      "message": "Failed query: insert into \"vendors\" (\"id\", \"name\", \"base_url\", \"status\", \"description\", \"user_id\", \"company_name\", \"contact_name\", \"contact_phone\", \"contact_email\", \"created_at\", \"updated_at\") values (default, $1, $2, default, default, default, default, default, default, default, default, default) returning \"id\", \"name\", \"base_url\", \"status\", \"description\", \"user_id\", \"company_name\", \"contact_name\", \"contact_phone\", \"contact_email\", \"created_at\", \"updated_at\"\nparams: test-vendor-1783827821160,https://dupe.example.com/v1: 重复键违反唯一约束\"vendors_name_unique\"",
+      "stack":
+          Error: Failed query: insert into "vendors" ("id", "name", "base_url", "status", "description", "user_id", "company_name", "contact_name", "contact_phone", "contact_email", "created_at", "updated_at") values (default, $1, $2, default, default, default, default, default, default, default, default, default) returning "id", "name", "base_url", "status", "description", "user_id", "company_name", "contact_name", "contact_phone", "contact_email", "created_at", "updated_at"
+          params: test-vendor-1783827821160,https://dupe.example.com/v1
+              at NodePgPreparedQuery.queryWithCache (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/pg-core/session.js:41:15)
+              at processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/node-postgres/session.js:117:22
+              at Object.<anonymous> (C:/Users/ZH/.openclaw/workspace/3cloud/api/src/routes/admin/vendors.ts:40:24)
+          caused by: error: 重复键违反唯一约束"vendors_name_unique"
+              at C:\Users\ZH\.openclaw\workspace\3cloud\api\node_modules\pg-pool\index.js:45:11
+              at processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/node-postgres/session.js:124:18
+              at NodePgPreparedQuery.queryWithCache (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/pg-core/session.js:39:16)
+              at file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/node-postgres/session.js:117:22
+              at Object.<anonymous> (C:/Users/ZH/.openclaw/workspace/3cloud/api/src/routes/admin/vendors.ts:40:24)
+      "query": "insert into \"vendors\" (\"id\", \"name\", \"base_url\", \"status\", \"description\", \"user_id\", \"company_name\", \"contact_name\", \"contact_phone\", \"contact_email\", \"created_at\", \"updated_at\") values (default, $1, $2, default, default, default, default, default, default, default, default, default) returning \"id\", \"name\", \"base_url\", \"status\", \"description\", \"user_id\", \"company_name\", \"contact_name\", \"contact_phone\", \"contact_email\", \"created_at\", \"updated_at\"",
+      "params": [
+        "test-vendor-1783827821160",
+        "https://dupe.example.com/v1"
+      ]
+    }
+[11:43:41.958] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-4"
+    [35mres[39m: {
+      "statusCode": 500
+    }
+    [35mresponseTime[39m: 8.31690001487732
+[11:43:41.964] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-5"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/vendors",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:41.964] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-5"
+    [35murl[39m: "/api/v1/admin/vendors"
+    [35mmethod[39m: "GET"
+[11:43:41.973] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-5"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 9.51910001039505
+[11:43:41.974] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-6"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/vendors?page=1&pageSize=5",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:41.974] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-6"
+    [35murl[39m: "/api/v1/admin/vendors?page=1&pageSize=5"
+    [35mmethod[39m: "GET"
+[11:43:41.977] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-6"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2.473600000143051
+[11:43:41.977] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-7"
+    [35mreq[39m: {
+      "method": "PATCH",
+      "url": "/api/v1/admin/vendors/12",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:41.977] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-7"
+    [35murl[39m: "/api/v1/admin/vendors/12"
+    [35mmethod[39m: "PATCH"
+[11:43:41.982] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-7"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4.4417000114917755
+[11:43:41.983] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-8"
+    [35mreq[39m: {
+      "method": "PATCH",
+      "url": "/api/v1/admin/vendors/invalid",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:41.983] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-8"
+    [35murl[39m: "/api/v1/admin/vendors/invalid"
+    [35mmethod[39m: "PATCH"
+[11:43:41.985] [31mERROR[39m (12460): [36mUnhandled error[39m
+    [35mreqId[39m: "req-8"
+    err: {
+      "type": "DrizzleQueryError",
+      "message": "Failed query: select \"name\", \"status\" from \"vendors\" where \"vendors\".\"id\" = $1 limit $2\nparams: NaN,1: 无效的类型 integer 输入语法: \"NaN\"",
+      "stack":
+          Error: Failed query: select "name", "status" from "vendors" where "vendors"."id" = $1 limit $2
+          params: NaN,1
+              at NodePgPreparedQuery.queryWithCache (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/pg-core/session.js:41:15)
+              at processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/node-postgres/session.js:117:22
+              at Object.<anonymous> (C:/Users/ZH/.openclaw/workspace/3cloud/api/src/routes/admin/vendors.ts:233:22)
+          caused by: error: 无效的类型 integer 输入语法: "NaN"
+              at C:\Users\ZH\.openclaw\workspace\3cloud\api\node_modules\pg-pool\index.js:45:11
+              at processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/node-postgres/session.js:124:18
+              at NodePgPreparedQuery.queryWithCache (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/pg-core/session.js:39:16)
+              at file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/node-postgres/session.js:117:22
+              at Object.<anonymous> (C:/Users/ZH/.openclaw/workspace/3cloud/api/src/routes/admin/vendors.ts:233:22)
+      "query": "select \"name\", \"status\" from \"vendors\" where \"vendors\".\"id\" = $1 limit $2",
+      "params": [
+        null,
+        1
+      ]
+    }
+[11:43:41.986] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-8"
+    [35mres[39m: {
+      "statusCode": 500
+    }
+    [35mresponseTime[39m: 3.453700006008148
+[11:43:41.987] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-9"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/vendors/12",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:41.987] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-9"
+    [35murl[39m: "/api/v1/admin/vendors/12"
+    [35mmethod[39m: "GET"
+[11:43:42.043] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-9"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 55.675999999046326
+[11:43:42.044] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-a"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/vendors/99999999",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.044] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-a"
+    [35murl[39m: "/api/v1/admin/vendors/99999999"
+    [35mmethod[39m: "GET"
+[11:43:42.045] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-a"
+    [35mres[39m: {
+      "statusCode": 404
+    }
+    [35mresponseTime[39m: 1.6579999923706055
+[11:43:42.047] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-b"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/models",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.047] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-b"
+    [35murl[39m: "/api/v1/admin/models"
+    [35mmethod[39m: "POST"
+[11:43:42.054] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-b"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 6.979099988937378
+[11:43:42.054] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-c"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/models",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.054] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-c"
+    [35murl[39m: "/api/v1/admin/models"
+    [35mmethod[39m: "POST"
+[11:43:42.055] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-c"
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 0.8010999858379364
+[11:43:42.055] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-d"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/models",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.055] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-d"
+    [35murl[39m: "/api/v1/admin/models"
+    [35mmethod[39m: "POST"
+[11:43:42.058] [31mERROR[39m (12460): [36mUnhandled error[39m
+    [35mreqId[39m: "req-d"
+    err: {
+      "type": "DrizzleQueryError",
+      "message": "Failed query: insert into \"models\" (\"id\", \"name\", \"display_name\", \"type\", \"status\", \"created_at\", \"updated_at\") values (default, $1, default, $2, default, default, default) returning \"id\", \"name\", \"display_name\", \"type\", \"status\", \"created_at\", \"updated_at\"\nparams: test-model-1783827821160,chat: 重复键违反唯一约束\"models_name_unique\"",
+      "stack":
+          Error: Failed query: insert into "models" ("id", "name", "display_name", "type", "status", "created_at", "updated_at") values (default, $1, default, $2, default, default, default) returning "id", "name", "display_name", "type", "status", "created_at", "updated_at"
+          params: test-model-1783827821160,chat
+              at NodePgPreparedQuery.queryWithCache (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/pg-core/session.js:41:15)
+              at processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/node-postgres/session.js:117:22
+              at Object.<anonymous> (C:/Users/ZH/.openclaw/workspace/3cloud/api/src/routes/admin/models.ts:40:23)
+          caused by: error: 重复键违反唯一约束"models_name_unique"
+              at C:\Users\ZH\.openclaw\workspace\3cloud\api\node_modules\pg-pool\index.js:45:11
+              at processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/node-postgres/session.js:124:18
+              at NodePgPreparedQuery.queryWithCache (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/pg-core/session.js:39:16)
+              at file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/node-postgres/session.js:117:22
+              at Object.<anonymous> (C:/Users/ZH/.openclaw/workspace/3cloud/api/src/routes/admin/models.ts:40:23)
+      "query": "insert into \"models\" (\"id\", \"name\", \"display_name\", \"type\", \"status\", \"created_at\", \"updated_at\") values (default, $1, default, $2, default, default, default) returning \"id\", \"name\", \"display_name\", \"type\", \"status\", \"created_at\", \"updated_at\"",
+      "params": [
+        "test-model-1783827821160",
+        "chat"
+      ]
+    }
+[11:43:42.059] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-d"
+    [35mres[39m: {
+      "statusCode": 500
+    }
+    [35mresponseTime[39m: 3.1389999985694885
+[11:43:42.059] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-e"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/models",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.059] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-e"
+    [35murl[39m: "/api/v1/admin/models"
+    [35mmethod[39m: "GET"
+[11:43:42.109] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-e"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 49.23469999432564
+[11:43:42.109] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-f"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/models?type=chat",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.109] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-f"
+    [35murl[39m: "/api/v1/admin/models?type=chat"
+    [35mmethod[39m: "GET"
+[11:43:42.112] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-f"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2.528200000524521
+[11:43:42.113] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-g"
+    [35mreq[39m: {
+      "method": "PATCH",
+      "url": "/api/v1/admin/models/98",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.113] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-g"
+    [35murl[39m: "/api/v1/admin/models/98"
+    [35mmethod[39m: "PATCH"
+[11:43:42.121] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-g"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8.033300012350082
+[11:43:42.121] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-h"
+    [35mreq[39m: {
+      "method": "PATCH",
+      "url": "/api/v1/admin/models/99999999",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.121] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-h"
+    [35murl[39m: "/api/v1/admin/models/99999999"
+    [35mmethod[39m: "PATCH"
+[11:43:42.123] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-h"
+    [35mres[39m: {
+      "statusCode": 404
+    }
+    [35mresponseTime[39m: 1.9930999875068665
+[11:43:42.124] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-i"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/vendor-models",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.124] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-i"
+    [35murl[39m: "/api/v1/admin/vendor-models"
+    [35mmethod[39m: "POST"
+[11:43:42.131] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-i"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7.505400002002716
+[11:43:42.132] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-j"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/vendor-models",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.132] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-j"
+    [35murl[39m: "/api/v1/admin/vendor-models"
+    [35mmethod[39m: "POST"
+[11:43:42.135] [31mERROR[39m (12460): [36mUnhandled error[39m
+    [35mreqId[39m: "req-j"
+    err: {
+      "type": "DrizzleQueryError",
+      "message": "Failed query: insert into \"vendor_models\" (\"id\", \"vendor_id\", \"model_id\", \"upstream_model_name\", \"api_endpoint\", \"api_key_encrypted\", \"cost_price_input\", \"cost_price_output\", \"sell_price_input\", \"sell_price_output\", \"weight\", \"rpm_limit\", \"tpm_limit\", \"status\", \"health_score\", \"health_samples\", \"consecutive_success\", \"last_health_check_at\", \"is_down\", \"circuit_state\", \"circuit_opened_at\", \"circuit_retry_after\", \"circuit_fail_count\", \"created_at\", \"updated_at\") values (default, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, default, default, default, default, default, default, default, default, default, default, default, default) returning \"id\", \"vendor_id\", \"model_id\", \"upstream_model_name\", \"api_endpoint\", \"api_key_encrypted\", \"cost_price_input\", \"cost_price_output\", \"sell_price_input\", \"sell_price_output\", \"weight\", \"rpm_limit\", \"tpm_limit\", \"status\", \"health_score\", \"health_samples\", \"consecutive_success\", \"last_health_check_at\", \"is_down\", \"circuit_state\", \"circuit_opened_at\", \"circuit_retry_after\", \"circuit_fail_count\", \"created_at\", \"updated_at\"\nparams: 12,98,upstream-1783827821160,https://api.test-vendor-1783827821160.com/v1/chat/completions,jVwy5iSP/EoLnmkG:TPNiI6NY9Fp2982BwMrgHw==:aOIv0J55RyZ+7KtrIjO1C4o=,0.000001,0.000002,0.000003,0.000004,100,,: 重复键违反唯一约束\"vendor_models_vendor_model_idx\"",
+      "stack":
+          Error: Failed query: insert into "vendor_models" ("id", "vendor_id", "model_id", "upstream_model_name", "api_endpoint", "api_key_encrypted", "cost_price_input", "cost_price_output", "sell_price_input", "sell_price_output", "weight", "rpm_limit", "tpm_limit", "status", "health_score", "health_samples", "consecutive_success", "last_health_check_at", "is_down", "circuit_state", "circuit_opened_at", "circuit_retry_after", "circuit_fail_count", "created_at", "updated_at") values (default, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, default, default, default, default, default, default, default, default, default, default, default, default) returning "id", "vendor_id", "model_id", "upstream_model_name", "api_endpoint", "api_key_encrypted", "cost_price_input", "cost_price_output", "sell_price_input", "sell_price_output", "weight", "rpm_limit", "tpm_limit", "status", "health_score", "health_samples", "consecutive_success", "last_health_check_at", "is_down", "circuit_state", "circuit_opened_at", "circuit_retry_after", "circuit_fail_count", "created_at", "updated_at"
+          params: 12,98,upstream-1783827821160,https://api.test-vendor-1783827821160.com/v1/chat/completions,jVwy5iSP/EoLnmkG:TPNiI6NY9Fp2982BwMrgHw==:aOIv0J55RyZ+7KtrIjO1C4o=,0.000001,0.000002,0.000003,0.000004,100,,
+              at NodePgPreparedQuery.queryWithCache (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/pg-core/session.js:41:15)
+              at processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/node-postgres/session.js:117:22
+              at Object.<anonymous> (C:/Users/ZH/.openclaw/workspace/3cloud/api/src/routes/admin/vendor-models.ts:85:20)
+          caused by: error: 重复键违反唯一约束"vendor_models_vendor_model_idx"
+              at C:\Users\ZH\.openclaw\workspace\3cloud\api\node_modules\pg-pool\index.js:45:11
+              at processTicksAndRejections (node:internal/process/task_queues:104:5)
+              at file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/node-postgres/session.js:124:18
+              at NodePgPreparedQuery.queryWithCache (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/pg-core/session.js:39:16)
+              at file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/drizzle-orm/node-postgres/session.js:117:22
+              at Object.<anonymous> (C:/Users/ZH/.openclaw/workspace/3cloud/api/src/routes/admin/vendor-models.ts:85:20)
+      "query": "insert into \"vendor_models\" (\"id\", \"vendor_id\", \"model_id\", \"upstream_model_name\", \"api_endpoint\", \"api_key_encrypted\", \"cost_price_input\", \"cost_price_output\", \"sell_price_input\", \"sell_price_output\", \"weight\", \"rpm_limit\", \"tpm_limit\", \"status\", \"health_score\", \"health_samples\", \"consecutive_success\", \"last_health_check_at\", \"is_down\", \"circuit_state\", \"circuit_opened_at\", \"circuit_retry_after\", \"circuit_fail_count\", \"created_at\", \"updated_at\") values (default, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, default, default, default, default, default, default, default, default, default, default, default, default) returning \"id\", \"vendor_id\", \"model_id\", \"upstream_model_name\", \"api_endpoint\", \"api_key_encrypted\", \"cost_price_input\", \"cost_price_output\", \"sell_price_input\", \"sell_price_output\", \"weight\", \"rpm_limit\", \"tpm_limit\", \"status\", \"health_score\", \"health_samples\", \"consecutive_success\", \"last_health_check_at\", \"is_down\", \"circuit_state\", \"circuit_opened_at\", \"circuit_retry_after\", \"circuit_fail_count\", \"created_at\", \"updated_at\"",
+      "params": [
+        12,
+        98,
+        "upstream-1783827821160",
+        "https://api.test-vendor-1783827821160.com/v1/chat/completions",
+        "jVwy5iSP/EoLnmkG:TPNiI6NY9Fp2982BwMrgHw==:aOIv0J55RyZ+7KtrIjO1C4o=",
+        "0.000001",
+        "0.000002",
+        "0.000003",
+        "0.000004",
+        100,
+        null,
+        null
+      ]
+    }
+[11:43:42.136] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-j"
+    [35mres[39m: {
+      "statusCode": 500
+    }
+    [35mresponseTime[39m: 4.221799999475479
+[11:43:42.137] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-k"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/vendor-models",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.137] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-k"
+    [35murl[39m: "/api/v1/admin/vendor-models"
+    [35mmethod[39m: "POST"
+[11:43:42.138] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-k"
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 1.473800003528595
+[11:43:42.139] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-l"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/vendor-models",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.139] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-l"
+    [35murl[39m: "/api/v1/admin/vendor-models"
+    [35mmethod[39m: "GET"
+[11:43:42.195] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-l"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 55.93090000748634
+[11:43:42.195] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-m"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/vendor-models?vendorId=12",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.195] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-m"
+    [35murl[39m: "/api/v1/admin/vendor-models?vendorId=12"
+    [35mmethod[39m: "GET"
+[11:43:42.199] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-m"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3.071399986743927
+[11:43:42.199] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-n"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/vendor-models/96",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.199] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-n"
+    [35murl[39m: "/api/v1/admin/vendor-models/96"
+    [35mmethod[39m: "GET"
+[11:43:42.201] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-n"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1.8885999917984009
+[11:43:42.201] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-o"
+    [35mreq[39m: {
+      "method": "PATCH",
+      "url": "/api/v1/admin/vendor-models/96",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.201] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-o"
+    [35murl[39m: "/api/v1/admin/vendor-models/96"
+    [35mmethod[39m: "PATCH"
+[11:43:42.210] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-o"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8.865000009536743
+[11:43:42.211] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-p"
+    [35mreq[39m: {
+      "method": "PATCH",
+      "url": "/api/v1/admin/vendor-models/96",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.211] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-p"
+    [35murl[39m: "/api/v1/admin/vendor-models/96"
+    [35mmethod[39m: "PATCH"
+[11:43:42.214] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-p"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3.579800009727478
+[11:43:42.215] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-q"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/vendors/12/models",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.215] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-q"
+    [35murl[39m: "/api/v1/admin/vendors/12/models"
+    [35mmethod[39m: "GET"
+[11:43:42.217] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-q"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1.9403999745845795
+[11:43:42.217] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-r"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/configs",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.217] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-r"
+    [35murl[39m: "/api/v1/admin/configs"
+    [35mmethod[39m: "GET"
+[11:43:42.221] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-r"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3.863400012254715
+[11:43:42.222] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-s"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/configs?group=pricing",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.222] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-s"
+    [35murl[39m: "/api/v1/admin/configs?group=pricing"
+    [35mmethod[39m: "GET"
+[11:43:42.223] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-s"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1.4296999871730804
+[11:43:42.224] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-t"
+    [35mreq[39m: {
+      "method": "PATCH",
+      "url": "/api/v1/admin/configs/admin_notify_email",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.224] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-t"
+    [35murl[39m: "/api/v1/admin/configs/admin_notify_email"
+    [35mmethod[39m: "PATCH"
+[11:43:42.228] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-t"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4.298200011253357
+[11:43:42.228] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-u"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/configs",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.228] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-u"
+    [35murl[39m: "/api/v1/admin/configs"
+    [35mmethod[39m: "GET"
+[11:43:42.230] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-u"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1.5392999947071075
+[11:43:42.230] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-v"
+    [35mreq[39m: {
+      "method": "PATCH",
+      "url": "/api/v1/admin/configs/nonexistent-key-1783827821160",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.230] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-v"
+    [35murl[39m: "/api/v1/admin/configs/nonexistent-key-1783827821160"
+    [35mmethod[39m: "PATCH"
+[11:43:42.232] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-v"
+    [35mres[39m: {
+      "statusCode": 404
+    }
+    [35mresponseTime[39m: 1.4796000123023987
+[11:43:42.232] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-w"
+    [35mreq[39m: {
+      "method": "PATCH",
+      "url": "/api/v1/admin/configs/admin_notify_email",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.232] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-w"
+    [35murl[39m: "/api/v1/admin/configs/admin_notify_email"
+    [35mmethod[39m: "PATCH"
+[11:43:42.233] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-w"
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 0.6671000123023987
+[11:43:42.233] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-x"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/roles",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.233] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-x"
+    [35murl[39m: "/api/v1/admin/roles"
+    [35mmethod[39m: "GET"
+[11:43:42.237] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-x"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3.8307999968528748
+[11:43:42.238] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-y"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/roles/permissions/list",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.238] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-y"
+    [35murl[39m: "/api/v1/admin/roles/permissions/list"
+    [35mmethod[39m: "GET"
+[11:43:42.239] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-y"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 0.8412000238895416
+[11:43:42.239] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-z"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/roles",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.239] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-z"
+    [35murl[39m: "/api/v1/admin/roles"
+    [35mmethod[39m: "POST"
+[11:43:42.242] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-z"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3.4277999997138977
+[11:43:42.243] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-10"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/roles",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.243] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-10"
+    [35murl[39m: "/api/v1/admin/roles"
+    [35mmethod[39m: "POST"
+[11:43:42.244] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-10"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1.169400006532669
+[11:43:42.244] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-11"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/roles",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.244] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-11"
+    [35murl[39m: "/api/v1/admin/roles"
+    [35mmethod[39m: "POST"
+[11:43:42.245] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-11"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 0.6333999931812286
+[11:43:42.245] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-12"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/roles",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.245] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-12"
+    [35murl[39m: "/api/v1/admin/roles"
+    [35mmethod[39m: "POST"
+[11:43:42.246] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-12"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1.1633999943733215
+[11:43:42.247] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-13"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/roles",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.247] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-13"
+    [35murl[39m: "/api/v1/admin/roles"
+    [35mmethod[39m: "GET"
+[11:43:42.248] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-13"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1.227099984884262
+[11:43:42.248] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-14"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/roles/15",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.248] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-14"
+    [35murl[39m: "/api/v1/admin/roles/15"
+    [35mmethod[39m: "GET"
+[11:43:42.253] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-14"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4.75900000333786
+[11:43:42.254] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-15"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/roles/99999999",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.254] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-15"
+    [35murl[39m: "/api/v1/admin/roles/99999999"
+    [35mmethod[39m: "GET"
+[11:43:42.255] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-15"
+    [35mres[39m: {
+      "statusCode": 404
+    }
+    [35mresponseTime[39m: 1.3005000054836273
+[11:43:42.256] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-16"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/vendors",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.256] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-16"
+    [35murl[39m: "/api/v1/admin/vendors"
+    [35mmethod[39m: "GET"
+[11:43:42.256] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-16"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.10129997134208679
+[11:43:42.256] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-17"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/vendors",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.256] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-17"
+    [35murl[39m: "/api/v1/admin/vendors"
+    [35mmethod[39m: "POST"
+[11:43:42.256] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-17"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.08100000023841858
+[11:43:42.256] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-18"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/models",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.256] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-18"
+    [35murl[39m: "/api/v1/admin/models"
+    [35mmethod[39m: "GET"
+[11:43:42.256] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-18"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.0731000006198883
+[11:43:42.256] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-19"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/models",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.256] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-19"
+    [35murl[39m: "/api/v1/admin/models"
+    [35mmethod[39m: "POST"
+[11:43:42.256] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-19"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.0640999972820282
+[11:43:42.257] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1a"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/vendor-models",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.257] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1a"
+    [35murl[39m: "/api/v1/admin/vendor-models"
+    [35mmethod[39m: "GET"
+[11:43:42.257] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-1a"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.06130000948905945
+[11:43:42.257] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1b"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/vendor-models",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.257] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1b"
+    [35murl[39m: "/api/v1/admin/vendor-models"
+    [35mmethod[39m: "POST"
+[11:43:42.257] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-1b"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.07780000567436218
+[11:43:42.257] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1c"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/configs",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.257] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1c"
+    [35murl[39m: "/api/v1/admin/configs"
+    [35mmethod[39m: "GET"
+[11:43:42.257] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-1c"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.06880000233650208
+[11:43:42.257] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1d"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/admin/roles",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.257] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1d"
+    [35murl[39m: "/api/v1/admin/roles"
+    [35mmethod[39m: "GET"
+[11:43:42.257] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-1d"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.0640999972820282
+[11:43:42.257] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1e"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/admin/roles",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.258] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1e"
+    [35murl[39m: "/api/v1/admin/roles"
+    [35mmethod[39m: "POST"
+[11:43:42.258] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-1e"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.0788000226020813
+[11:43:42.258] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1f"
+    [35mreq[39m: {
+      "method": "DELETE",
+      "url": "/api/v1/admin/vendor-models/96",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.258] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1f"
+    [35murl[39m: "/api/v1/admin/vendor-models/96"
+    [35mmethod[39m: "DELETE"
+[11:43:42.260] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-1f"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1.7293999791145325
+[11:43:42.260] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1g"
+    [35mreq[39m: {
+      "method": "DELETE",
+      "url": "/api/v1/admin/vendors/12",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.260] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1g"
+    [35murl[39m: "/api/v1/admin/vendors/12"
+    [35mmethod[39m: "DELETE"
+[11:43:42.261] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-1g"
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 1.2732999920845032
+[11:43:42.261] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1h"
+    [35mreq[39m: {
+      "method": "DELETE",
+      "url": "/api/v1/admin/models/98",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.261] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1h"
+    [35murl[39m: "/api/v1/admin/models/98"
+    [35mmethod[39m: "DELETE"
+[11:43:42.263] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-1h"
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 1.2040000259876251
+[11:43:42.263] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1i"
+    [35mreq[39m: {
+      "method": "DELETE",
+      "url": "/api/v1/admin/roles/15",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:42.263] [32mINFO[39m (12460): [36mincoming request[39m
+    [35mreqId[39m: "req-1i"
+    [35murl[39m: "/api/v1/admin/roles/15"
+    [35mmethod[39m: "DELETE"
+ ❯ src/__tests__/admin-vendors-models.test.ts (48 tests | 6 failed) 1102ms
+     ✓ POST /api/v1/admin/vendors — create vendor (201) 9ms
+     ✓ POST /api/v1/admin/vendors — rejects missing required fields (400) 2ms
+     × POST /api/v1/admin/vendors — rejects duplicate name (409) 14ms
+     ✓ GET /api/v1/admin/vendors — list vendors (200) 11ms
+     ✓ GET /api/v1/admin/vendors — supports pagination (200) 3ms
+     ✓ PATCH /api/v1/admin/vendors/:id — update vendor (200) 5ms
+     × PATCH /api/v1/admin/vendors/:id — rejects invalid id (400) 4ms
+     ✓ GET /api/v1/admin/vendors/:id — get vendor detail (200) 56ms
+     ✓ GET /api/v1/admin/vendors/:id — 404 for non-existent vendor 2ms
+     ✓ POST /api/v1/admin/models — create model (201) 8ms
+     ✓ POST /api/v1/admin/models — rejects missing name (400) 1ms
+     × POST /api/v1/admin/models — rejects duplicate name (409) 4ms
+     × GET /api/v1/admin/models — list models (200) 50ms
+     ✓ GET /api/v1/admin/models — filters by type (200) 3ms
+     ✓ PATCH /api/v1/admin/models/:id — update model (200) 8ms
+     ✓ PATCH /api/v1/admin/models/:id — 404 for non-existent model 2ms
+     ✓ POST /api/v1/admin/vendor-models — create mapping (201) 8ms
+     × POST /api/v1/admin/vendor-models — rejects duplicate (409) 5ms
+     ✓ POST /api/v1/admin/vendor-models — rejects missing fields (400) 2ms
+     × GET /api/v1/admin/vendor-models — list mappings (200) 57ms
+     ✓ GET /api/v1/admin/vendor-models — filters by vendorId (200) 4ms
+     ✓ GET /api/v1/admin/vendor-models/:id — get mapping detail (200) 2ms
+       ✓ updates sell prices and status 9ms
+       ✓ restores status to true 4ms
+     ✓ GET /api/v1/admin/vendors/:id/models — list vendor's models (200) 2ms
+     ✓ GET /api/v1/admin/configs — list system configs (200) 4ms
+     ✓ GET /api/v1/admin/configs?group= — filter by group (200) 2ms
+       ✓ updates the value of an existing config 7ms
+     ✓ PATCH /api/v1/admin/configs/:key — 404 for non-existent config 2ms
+     ✓ PATCH /api/v1/admin/configs/:key — rejects missing value (400) 1ms
+     ✓ GET /api/v1/admin/roles — list roles (200) 4ms
+     ✓ GET /api/v1/admin/roles/permissions/list — list permission bits (200) 1ms
+     ✓ POST /api/v1/admin/roles — create role (201) 4ms
+     ✓ POST /api/v1/admin/roles — rejects duplicate name (400) 2ms
+     ✓ POST /api/v1/admin/roles — rejects missing name/label (400) 1ms
+     ✓ POST /api/v1/admin/roles — rejects invalid permissions string (400) 2ms
+     ✓ GET /api/v1/admin/roles — newly created role appears in list 2ms
+     ✓ GET /api/v1/admin/roles/:id — get role detail (200) 5ms
+     ✓ GET /api/v1/admin/roles/:id — 404 for non-existent role 2ms
+     ✓ GET /api/v1/admin/vendors — returns 401 without token 0ms
+     ✓ POST /api/v1/admin/vendors — returns 401 without token 0ms
+     ✓ GET /api/v1/admin/models — returns 401 without token 0ms
+     ✓ POST /api/v1/admin/models — returns 401 without token 0ms
+     ✓ GET /api/v1/admin/vendor-models — returns 401 without token 0ms
+     ✓ POST /api/v1/admin/vendor-models — returns 401 without token 0ms
+     ✓ GET /api/v1/admin/configs — returns 401 without token 0ms
+     ✓ GET /api/v1/admin/roles — returns 401 without token 0ms
+     ✓ POST /api/v1/admin/roles — returns 401 without token 0ms
+[11:43:42.266] [32mINFO[39m (12460): [36mrequest completed[39m
+    [35mreqId[39m: "req-1i"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3.3057000041007996
+stdout | src/__tests__/auth.test.ts > Auth API
+[AutoSettle] Cron scheduled: 02:00 and 14:00 daily
+
+stdout | src/__tests__/auth.test.ts > Auth API > POST /api/v1/auth/register > should register a new user successfully
+[DailyRecon] 定时任务已注册: 每天 03:00
+
+[11:43:44.117] [32mINFO[39m (22648): [36m[Cron] Commission auto-settlement scheduled: daily at 3:00[39m
+[11:43:44.118] [32mINFO[39m (22648): [36m[Cron] Daily recon summary scheduled: daily at 4:00[39m
+[11:43:44.119] [32mINFO[39m (22648): [36m[Cron] Daily security summary scheduled: daily at 9:00[39m
+[11:43:44.119] [32mINFO[39m (22648): [36m[Cron] Commission daily rollup scheduled: daily at 00:30[39m
+[11:43:44.119] [32mINFO[39m (22648): [36m[Cron] Audit log archival scheduled: daily at 02:00 (purge >90d)[39m
+[11:43:44.119] [32mINFO[39m (22648): [36m[Cron] Code expiry check scheduled: every 1 hour, first run in 30s[39m
+[11:43:44.140] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-1"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/register",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:44.141] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-1"
+    [35murl[39m: "/api/v1/auth/register"
+    [35mmethod[39m: "POST"
+stdout | src/__tests__/auth.test.ts > Auth API > POST /api/v1/auth/register > should register a new user successfully
+[Redis] Connected
+
+[11:43:44.564] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-1"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 423.09710001945496
+[11:43:44.565] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-2"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/register",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:44.565] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-2"
+    [35murl[39m: "/api/v1/auth/register"
+    [35mmethod[39m: "POST"
+[11:43:44.613] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-2"
+    [35mres[39m: {
+      "statusCode": 409
+    }
+    [35mresponseTime[39m: 47.39800000190735
+[11:43:44.613] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-3"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/register",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:44.613] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-3"
+    [35murl[39m: "/api/v1/auth/register"
+    [35mmethod[39m: "POST"
+[11:43:44.614] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-3"
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 0.7834999859333038
+[11:43:44.614] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-4"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/register",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:44.615] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-4"
+    [35murl[39m: "/api/v1/auth/register"
+    [35mmethod[39m: "POST"
+[11:43:44.615] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-4"
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 0.43879997730255127
+[11:43:44.615] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-5"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/register",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:44.615] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-5"
+    [35murl[39m: "/api/v1/auth/register"
+    [35mmethod[39m: "POST"
+[11:43:44.616] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-5"
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 0.5821999907493591
+[11:43:44.617] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-6"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/register",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:44.617] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-6"
+    [35murl[39m: "/api/v1/auth/register"
+    [35mmethod[39m: "POST"
+[11:43:44.923] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-6"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 306.43860000371933
+[11:43:44.924] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-7"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/login",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:44.924] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-7"
+    [35murl[39m: "/api/v1/auth/login"
+    [35mmethod[39m: "POST"
+[11:43:45.213] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-7"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 288.6647999882698
+[11:43:45.213] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-8"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/login",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:45.214] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-8"
+    [35murl[39m: "/api/v1/auth/login"
+    [35mmethod[39m: "POST"
+[11:43:45.533] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-8"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 319.8434000015259
+[11:43:45.534] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-9"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/login",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:45.534] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-9"
+    [35murl[39m: "/api/v1/auth/login"
+    [35mmethod[39m: "POST"
+[11:43:45.536] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-9"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 2.35520002245903
+[11:43:45.537] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-a"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/login",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:45.537] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-a"
+    [35murl[39m: "/api/v1/auth/login"
+    [35mmethod[39m: "POST"
+[11:43:45.537] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-a"
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 0.3734000027179718
+[11:43:45.537] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-b"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/login",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:45.537] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-b"
+    [35murl[39m: "/api/v1/auth/login"
+    [35mmethod[39m: "POST"
+[11:43:45.538] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-b"
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 0.23820000886917114
+[11:43:45.538] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-c"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/register",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:45.538] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-c"
+    [35murl[39m: "/api/v1/auth/register"
+    [35mmethod[39m: "POST"
+[11:43:45.822] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-c"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 283.9466000199318
+[11:43:45.823] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-d"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/auth/me",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:45.823] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-d"
+    [35murl[39m: "/api/v1/auth/me"
+    [35mmethod[39m: "GET"
+[11:43:45.836] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-d"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 13.575199991464615
+[11:43:45.837] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-e"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/auth/me",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:45.837] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-e"
+    [35murl[39m: "/api/v1/auth/me"
+    [35mmethod[39m: "GET"
+[11:43:45.837] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-e"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.11160001158714294
+[11:43:45.837] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-f"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/auth/me",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:45.837] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-f"
+    [35murl[39m: "/api/v1/auth/me"
+    [35mmethod[39m: "GET"
+[11:43:45.837] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-f"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.22209998965263367
+[11:43:45.838] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-g"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/auth/me",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:45.838] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-g"
+    [35murl[39m: "/api/v1/auth/me"
+    [35mmethod[39m: "GET"
+[11:43:45.838] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-g"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.06779998540878296
+[11:43:45.838] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-h"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/register",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:45.838] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-h"
+    [35murl[39m: "/api/v1/auth/register"
+    [35mmethod[39m: "POST"
+[11:43:46.123] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-h"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 284.7854000031948
+[11:43:46.123] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-i"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/refresh",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.124] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-i"
+    [35murl[39m: "/api/v1/auth/refresh"
+    [35mmethod[39m: "POST"
+[11:43:46.124] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-i"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 0.6588999927043915
+[11:43:46.124] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-j"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/refresh",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.124] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-j"
+    [35murl[39m: "/api/v1/auth/refresh"
+    [35mmethod[39m: "POST"
+[11:43:46.125] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-j"
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 0.350600004196167
+[11:43:46.125] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-k"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/refresh",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.125] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-k"
+    [35murl[39m: "/api/v1/auth/refresh"
+    [35mmethod[39m: "POST"
+stdout | src/__tests__/auth.test.ts > API Keys
+[AutoSettle] Cron scheduled: 02:00 and 14:00 daily
+
+stdout | src/__tests__/auth.test.ts > API Keys
+[DailyRecon] 定时任务已注册: 每天 03:00
+
+[11:43:46.126] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-k"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.4810999929904938
+[11:43:46.178] [32mINFO[39m (22648): [36m[Cron] Commission auto-settlement scheduled: daily at 3:00[39m
+[11:43:46.179] [32mINFO[39m (22648): [36m[Cron] Daily recon summary scheduled: daily at 4:00[39m
+[11:43:46.179] [32mINFO[39m (22648): [36m[Cron] Daily security summary scheduled: daily at 9:00[39m
+[11:43:46.179] [32mINFO[39m (22648): [36m[Cron] Commission daily rollup scheduled: daily at 00:30[39m
+[11:43:46.179] [32mINFO[39m (22648): [36m[Cron] Audit log archival scheduled: daily at 02:00 (purge >90d)[39m
+[11:43:46.179] [32mINFO[39m (22648): [36m[Cron] Code expiry check scheduled: every 1 hour, first run in 30s[39m
+[11:43:46.186] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-1"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/register",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.186] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-1"
+    [35murl[39m: "/api/v1/auth/register"
+    [35mmethod[39m: "POST"
+[11:43:46.515] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-1"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 329.1312000155449
+[11:43:46.516] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-2"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/api-keys",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.516] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-2"
+    [35murl[39m: "/api/v1/api-keys"
+    [35mmethod[39m: "POST"
+[11:43:46.520] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-2"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 3.9272000193595886
+[11:43:46.521] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-3"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/api-keys",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.521] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-3"
+    [35murl[39m: "/api/v1/api-keys"
+    [35mmethod[39m: "POST"
+[11:43:46.523] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-3"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2.1675000190734863
+[11:43:46.524] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-4"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/api-keys",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.524] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-4"
+    [35murl[39m: "/api/v1/api-keys"
+    [35mmethod[39m: "POST"
+[11:43:46.524] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-4"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.20179998874664307
+[11:43:46.524] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-5"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/api-keys",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.524] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-5"
+    [35murl[39m: "/api/v1/api-keys"
+    [35mmethod[39m: "POST"
+[11:43:46.525] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-5"
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 0.7448000013828278
+[11:43:46.525] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-6"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/api-keys",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.525] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-6"
+    [35murl[39m: "/api/v1/api-keys"
+    [35mmethod[39m: "POST"
+[11:43:46.526] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-6"
+    [35mres[39m: {
+      "statusCode": 400
+    }
+    [35mresponseTime[39m: 0.7991999983787537
+[11:43:46.526] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-7"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/api-keys",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.526] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-7"
+    [35murl[39m: "/api/v1/api-keys"
+    [35mmethod[39m: "POST"
+[11:43:46.528] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-7"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1.656800001859665
+[11:43:46.528] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-8"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/api-keys",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.528] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-8"
+    [35murl[39m: "/api/v1/api-keys"
+    [35mmethod[39m: "GET"
+[11:43:46.533] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-8"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4.691900014877319
+[11:43:46.534] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-9"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/api-keys",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.534] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-9"
+    [35murl[39m: "/api/v1/api-keys"
+    [35mmethod[39m: "GET"
+[11:43:46.534] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-9"
+    [35mres[39m: {
+      "statusCode": 401
+    }
+    [35mresponseTime[39m: 0.09600001573562622
+[11:43:46.534] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-a"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/api-keys",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.534] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-a"
+    [35murl[39m: "/api/v1/api-keys"
+    [35mmethod[39m: "POST"
+[11:43:46.536] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-a"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1.9303999841213226
+[11:43:46.537] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-b"
+    [35mreq[39m: {
+      "method": "PATCH",
+      "url": "/api/v1/api-keys/374",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.537] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-b"
+    [35murl[39m: "/api/v1/api-keys/374"
+    [35mmethod[39m: "PATCH"
+[11:43:46.539] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-b"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2.1083000004291534
+[11:43:46.539] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-c"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/api-keys",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.539] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-c"
+    [35murl[39m: "/api/v1/api-keys"
+    [35mmethod[39m: "GET"
+[11:43:46.541] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-c"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1.6709000170230865
+[11:43:46.541] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-d"
+    [35mreq[39m: {
+      "method": "PATCH",
+      "url": "/api/v1/api-keys/374",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.541] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-d"
+    [35murl[39m: "/api/v1/api-keys/374"
+    [35mmethod[39m: "PATCH"
+[11:43:46.543] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-d"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2.150899976491928
+[11:43:46.543] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-e"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/api-keys",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.543] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-e"
+    [35murl[39m: "/api/v1/api-keys"
+    [35mmethod[39m: "GET"
+[11:43:46.545] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-e"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1.6495999991893768
+[11:43:46.545] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-f"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/register",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.545] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-f"
+    [35murl[39m: "/api/v1/auth/register"
+    [35mmethod[39m: "POST"
+[11:43:46.831] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-f"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 285.4738999903202
+[11:43:46.831] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-g"
+    [35mreq[39m: {
+      "method": "PATCH",
+      "url": "/api/v1/api-keys/374",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.831] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-g"
+    [35murl[39m: "/api/v1/api-keys/374"
+    [35mmethod[39m: "PATCH"
+[11:43:46.833] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-g"
+    [35mres[39m: {
+      "statusCode": 404
+    }
+    [35mresponseTime[39m: 1.9170999825000763
+[11:43:46.834] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-h"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/api-keys",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.834] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-h"
+    [35murl[39m: "/api/v1/api-keys"
+    [35mmethod[39m: "POST"
+[11:43:46.836] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-h"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 1.9575999975204468
+[11:43:46.836] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-i"
+    [35mreq[39m: {
+      "method": "DELETE",
+      "url": "/api/v1/api-keys/375",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.836] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-i"
+    [35murl[39m: "/api/v1/api-keys/375"
+    [35mmethod[39m: "DELETE"
+[11:43:46.859] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-i"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 22.488099992275238
+[11:43:46.860] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-j"
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/api-keys",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.860] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-j"
+    [35murl[39m: "/api/v1/api-keys"
+    [35mmethod[39m: "GET"
+[11:43:46.862] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-j"
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 2.039900004863739
+[11:43:46.862] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-k"
+    [35mreq[39m: {
+      "method": "DELETE",
+      "url": "/api/v1/api-keys/375",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.862] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-k"
+    [35murl[39m: "/api/v1/api-keys/375"
+    [35mmethod[39m: "DELETE"
+[11:43:46.863] [32mINFO[39m (22648): [36mrequest completed[39m
+    [35mreqId[39m: "req-k"
+    [35mres[39m: {
+      "statusCode": 404
+    }
+    [35mresponseTime[39m: 0.9950999915599823
+[11:43:46.863] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-l"
+    [35mreq[39m: {
+      "method": "POST",
+      "url": "/api/v1/auth/register",
+      "host": "localhost:80",
+      "remoteAddress": "127.0.0.1"
+    }
+[11:43:46.863] [32mINFO[39m (22648): [36mincoming request[39m
+    [35mreqId[39m: "req-l"
+    [35murl[39m: "/api/v1/auth/register"
+    [35mmethod[39m: "POST"
+ ✓ src/__tests__/auth.test.ts (32 tests) 3348ms
+       ✓ should register a new user successfully  438ms
+       ✓ should reject invalid password with 401  320ms
+
+ Test Files  3 failed | 1 passed (4)
+      Tests  14 failed | 99 passed (113)
+   Start at  11:43:33
+   Duration  13.45s (transform 1.20s, setup 0ms, import 5.65s, tests 6.86s, environment 0ms)
+

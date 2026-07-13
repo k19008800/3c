@@ -118,7 +118,7 @@ export function downloadUrl(url: string, filename: string) {
   if (token) headers['Authorization'] = `Bearer ${token}`
   return api.get(url, { responseType: 'blob', headers })
     .then((res) => {
-      const blob = new Blob([res.data], { type: res.headers['content-type'] || 'text/csv' })
+      const blob = new Blob([res.data], { type: (res.headers['content-type'] as string) || 'text/csv' })
       const link = document.createElement('a')
       link.href = URL.createObjectURL(blob)
       link.download = filename

@@ -38,6 +38,7 @@ export async function adminApiKeyRoutes(app: FastifyInstance) {
         name: apiKeys.name,
         keyPrefix: apiKeys.keyPrefix,
         status: apiKeys.status,
+        quotaBalance: apiKeys.quotaBalance,
         expiresAt: apiKeys.expiresAt,
         lastUsedAt: apiKeys.lastUsedAt,
         createdAt: apiKeys.createdAt,

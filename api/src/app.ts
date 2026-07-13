@@ -4,9 +4,8 @@
 
 import Fastify from "fastify";
 import { config } from "./config.js";
-import { createDb, closeDb } from "./db/index.js";
-import { createRedis, getRedis, checkRedisConnection } from "./redis.js";
-import { checkDbConnection } from "./db/index.js";
+import { createDb, closeDb, checkDbConnection } from "./db/index.js";
+import { createRedis, checkRedisConnection } from "./redis.js";
 import { healthRoutes } from "./routes/health.js";
 import { authRoutes } from "./routes/auth.js";
 import { apiKeyRoutes } from "./routes/api-keys.js";
@@ -17,29 +16,65 @@ import { proxyRoutes } from "./routes/proxy.js";
 import { rechargeRoutes } from "./routes/recharge.js";
 import { modelListRoutes } from "./routes/models.js";
 import { logRoutes } from "./routes/logs.js";
-import { adminUserRoutes } from "./routes/admin/users.js";
+import { adminUserRoutes } from "./routes/admin/users/index.js";
 import { adminReviewRoutes } from "./routes/admin/reviews.js";
 import { adminApiKeyRoutes as adminApiKeyMgmtRoutes } from "./routes/admin/api-keys.js";
 import { adminSystemRoutes } from "./routes/admin/system.js";
-import { teamRoutes } from "./routes/team.js";
-import { agentRoutes } from "./routes/agent.js";
+
+import { agentRoutes } from "./routes/agent/index.js";
 import { adminAgentRoutes } from "./routes/admin/agents.js";
-import { adminDashboardRoutes } from "./routes/admin/dashboard.js";
+import { adminCampaignRoutes } from "./routes/admin/campaigns.js";
+import { adminDashboardRoutes } from "./routes/admin/dashboard/index.js";
 import { adminLogRoutes } from "./routes/admin/logs.js";
 import { adminFinanceRoutes } from "./routes/admin/finance.js";
 import { adminAuditLogRoutes } from "./routes/admin/audit-logs.js";
+import { adminOperationLogRoutes } from "./routes/admin/operation-logs.js";
+import { userOperationLogRoutes } from "./routes/operation-logs.js";
+import { adminQuotaRoutes } from "./routes/admin/quotas.js";
+import { adminRateLimitRoutes } from "./routes/admin/rate-limits.js";
+import { adminCircuitRoutes } from "./routes/admin/circuits.js";
+import { adminStatsRoutes } from "./routes/admin/stats.js";
+import { adminStatsUsageRoutes } from "./routes/admin/stats-usage.js";
+import { meStatsRoutes } from "./routes/stats.js";
+import { statsUsageRoutes } from "./routes/stats-usage.js";
+import { agentStatsUsageRoutes } from "./routes/agent/stats-usage.js";
+import { redemptionRoutes } from "./routes/redemption.js";
+import { redemptionGiftRoutes } from "./routes/redemption-gift.js";
+import { adminAgentRedemptionRoutes } from "./routes/admin/agent-redemption.js";
+import { adminRedemptionFraudRoutes } from "./routes/admin/redemption-fraud.js";
+import { adminFinanceCodeRoutes } from "./routes/admin/finance/codes.js";
+import { vendorSelfRoutes } from "./routes/vendor-self.js";
+import { adminKeyManagementRoutes } from "./routes/admin/admin-keys.js";
+import { adminRoleRoutes } from "./routes/admin/roles.js";
+import { authenticateAdminKey } from "./middleware/adminKeyAuth.js";
+import { registerErrorHandler } from "./middleware/response.js";
 
 import cron from "node-cron";
 import { getDb } from "./db/index.js";
 import { systemConfigs, auditLogs } from "./db/schema.js";
 import { eq, sql, lt } from "drizzle-orm";
-import { settleCommissions, computeDailyReconSummary, computeDailyCommissionRollup } from "./services/agent-service.js";
+import { settleCommissions } from "./services/agent-settlement.js";
+import { computeDailyReconSummary, computeDailyCommissionRollup } from "./services/agent-finance.js";
 import { realNameFileRoutes } from "./routes/real-name-file.js";
 import { notificationRoutes } from "./routes/notifications.js";
 import { authSecurityRoutes } from "./routes/auth-security.js";
 import { adminSecurityRoutes } from "./routes/admin/security.js";
+import { scheduleAutoSettle } from "./cron/auto-settle.js";
+import { registerRedemptionScheduler } from "./services/redemption-scheduler.js";
+import { adminAnnouncementRoutes } from "./routes/admin/announcements.js";
+import { announcementRoutes } from "./routes/announcements.js";
 import { preferenceRoutes } from "./routes/preferences.js";
 import { realNameOcrRoutes } from "./routes/real-name-ocr.js";
+import { invoiceRoutes } from "./routes/invoices.js";
+import { refundRoutes } from "./routes/refunds.js";
+import { adminInvoiceRoutes } from "./routes/admin/invoices.js";
+import { adminRefundRoutes } from "./routes/admin/refunds.js";
+import { profitRoutes } from "./routes/admin/profit.js";
+import { priceRoutes } from "./routes/admin/prices.js";
+import { adminRedemptionEnhancedRoutes } from "./routes/admin/redemption-enhanced.js";
+import { redemptionUserRoutes } from "./routes/redemption-user.js";
+import { agentRedemptionRoutes } from "./routes/agent/redemption.js";
+import { agentFinanceRoutes } from "./routes/agent/finance.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -50,6 +85,9 @@ export async function buildApp() {
         : undefined,
     },
   });
+
+  // ── 全局错误处理（在所有路由之前注册）──
+  registerErrorHandler(app);
 
   // ── 允许空 body 的 application/json ──
   // ── JSON body 解析：空 body 解析为 null，无效 JSON 返回 400 ──
@@ -90,6 +128,10 @@ export async function buildApp() {
     },
   });
 
+  // ── DB & Redis Decorate ──
+  const { default: dbPlugin } = await import("./plugins/db.js");
+  await app.register(dbPlugin, {});
+
   // ── 健康检查 ──
   await app.register(healthRoutes, { prefix: "" });
 
@@ -97,6 +139,10 @@ export async function buildApp() {
   app.addHook("onRequest", async (request) => {
     request.log.info({ url: request.url, method: request.method }, "incoming request");
   });
+
+  // ── 管理 API Key 全局鉴权（优先于 JWT）──
+  // 如果 X-Admin-Key 存在则跳过 JWT，否则降级到 JWT
+  app.addHook("onRequest", authenticateAdminKey);
 
   // ── Auth 路由 ──
   await app.register(authRoutes, { prefix: "" });
@@ -146,20 +192,32 @@ export async function buildApp() {
   // ── 用户端安全 ──
   await app.register(authSecurityRoutes, { prefix: "" });
 
+  // ── Admin 公告管理 ──
+  await app.register(adminAnnouncementRoutes, { prefix: "" });
+
+  // ── 用户端公告 ──
+  await app.register(announcementRoutes, { prefix: "" });
+
+  // ── 发票管理（用户端）──
+  await app.register(invoiceRoutes, { prefix: "" });
+
+  // ── 退款申请（用户端）──
+  await app.register(refundRoutes, { prefix: "" });
+
   // ── Admin 安全风控 ──
   await app.register(adminSecurityRoutes, { prefix: "" });
 
   // ── 用户偏好（筛选条件持久化）──
   await app.register(preferenceRoutes, { prefix: "" });
 
-  // ── 团队管理 ──
-  await app.register(teamRoutes, { prefix: "" });
-
   // ── 代理商 ──
   await app.register(agentRoutes, { prefix: "" });
 
   // ── Admin 代理商管理 ──
   await app.register(adminAgentRoutes, { prefix: "" });
+
+  // ── Admin 营销活动管理 ──
+  await app.register(adminCampaignRoutes, { prefix: "" });
 
   // ── Admin Dashboard ──
   await app.register(adminDashboardRoutes, { prefix: "" });
@@ -170,10 +228,84 @@ export async function buildApp() {
   // ── Admin 财务管理 ──
   await app.register(adminFinanceRoutes, { prefix: "" });
 
+  // ── Admin 财务成本核算 ──
+  await app.register(adminFinanceCodeRoutes, { prefix: "" });
+
+  // ── Admin 利润分析 ──
+  await app.register(profitRoutes, { prefix: "" });
+
+  // ── Admin 价格管理 ──
+  await app.register(priceRoutes, { prefix: "" });
+
+  // ── Admin 发票管理 ──
+  await app.register(adminInvoiceRoutes, { prefix: "" });
+
+  // ── Admin 退款管理 ──
+  await app.register(adminRefundRoutes, { prefix: "" });
+
   // ── Admin 审计日志 ──
   await app.register(adminAuditLogRoutes, { prefix: "" });
 
+  // ── 操作日志（用户端 + 管理端）──
+  await app.register(userOperationLogRoutes, { prefix: "" });
+  await app.register(adminOperationLogRoutes, { prefix: "" });
 
+  // ── 管理 API Key 管理（admin_api_keys 表）──
+  await app.register(adminKeyManagementRoutes, { prefix: "" });
+
+  // ── 角色权限管理 ──
+  await app.register(adminRoleRoutes, { prefix: "" });
+
+  // ── 兑换码系统 ──
+  await app.register(redemptionRoutes, { prefix: "" });
+
+  // ── 用户端兑换码增强（未激活权益/活动列表）──
+  await app.register(redemptionUserRoutes, { prefix: "" });
+
+  // ── 兑换码转赠 ──
+  await app.register(redemptionGiftRoutes, { prefix: "" });
+
+  // ── Admin 代理钻取管理（兑换码）──
+  await app.register(adminAgentRedemptionRoutes, { prefix: "" });
+
+  // ── Admin 兑换码风控管理 ──
+  await app.register(adminRedemptionFraudRoutes, { prefix: "" });
+
+  // ── Admin 兑换码增强（批量操作/导出/风控/审计/报表）──
+  await app.register(adminRedemptionEnhancedRoutes, { prefix: "" });
+
+  // ── 供应商自助管理 ──
+  await app.register(vendorSelfRoutes, { prefix: "" });
+
+  // ── Admin 额度管理 ──
+  await app.register(adminQuotaRoutes, { prefix: "" });
+
+  // ── Admin TPM/RPM 限流管理 ──
+  await app.register(adminRateLimitRoutes, { prefix: "" });
+
+  // ── Admin 熔断器管理 ──
+  await app.register(adminCircuitRoutes, { prefix: "" });
+
+  // ── Admin 聚合统计 ──
+  await app.register(adminStatsRoutes, { prefix: "" });
+
+  // ── Admin 用量聚合统计（V2.0 新增）──
+  await app.register(adminStatsUsageRoutes, { prefix: "" });
+
+  // ── 用户端统计 & 额度 ──
+  await app.register(meStatsRoutes, { prefix: "" });
+
+  // ── 用户端用量聚合统计（V2.0 新增）──
+  await app.register(statsUsageRoutes, { prefix: "" });
+
+  // ── 代理端用量聚合统计（V2.0 新增）──
+  await app.register(agentStatsUsageRoutes, { prefix: "" });
+
+  // ── 代理端兑换码增强（模板/批量操作/导出/成本分析）──
+  await app.register(agentRedemptionRoutes, { prefix: "" });
+
+  // ── 代理端财务（结算单/资金流水）──
+  await app.register(agentFinanceRoutes, { prefix: "" });
 
   // ── Token 代理 ──
   await app.register(proxyRoutes, { prefix: "" });
@@ -195,7 +327,7 @@ export async function buildApp() {
         if (config.isProd) {
           throw new Error(message);
         }
-        console.warn(message);
+        app.log.warn(message);
       }
     }
   }
@@ -216,17 +348,33 @@ export async function buildApp() {
         .limit(1);
       if (config?.value === "auto") {
         const count = await settleCommissions();
-        console.log(`[Cron] Auto-settlement completed: ${count} commissions settled`);
+        app.log.info(`[Cron] Auto-settlement completed: ${count} commissions settled`);
       }
     } catch (err) {
-      console.error("[Cron] Auto-settlement error:", err);
+      app.log.error({ err }, "[Cron] Auto-settlement error");
     }
   }
 
   // Schedule: read settle hour from config, default 3 AM
   const settleHour = parseInt(process.env.COMMISSION_SETTLE_HOUR || "3", 10);
   cron.schedule(`0 ${settleHour} * * *`, tryAutoSettle);
-  console.log(`[Cron] Commission auto-settlement scheduled: daily at ${settleHour}:00`);
+  app.log.info(`[Cron] Commission auto-settlement scheduled: daily at ${settleHour}:00`);
+
+  // ══════════════════════════════════════════════
+  //  对账自动化 (03:00)
+  // ══════════════════════════════════════════════
+
+  import('./cron/daily-recon.js').then(({ scheduleDailyRecon }) => {
+    scheduleDailyRecon();
+  }).catch((err) => {
+    app.log.error({ err }, '[App] 加载对账自动化失败');
+  });
+
+  // ══════════════════════════════════════════════
+  //  Settlement cycle auto-settlement (02:00 + 14:00)
+  // ══════════════════════════════════════════════
+
+  scheduleAutoSettle();
 
   // ══════════════════════════════════════════════
   //  Daily reconciliation pre-computation (04:00)
@@ -235,12 +383,12 @@ export async function buildApp() {
   cron.schedule("0 4 * * *", async () => {
     try {
       const count = await computeDailyReconSummary();
-      console.log(`[Cron] Daily recon summary computed: ${count} records aggregated`);
+      app.log.info(`[Cron] Daily recon summary computed: ${count} records aggregated`);
     } catch (err) {
-      console.error("[Cron] Daily recon summary error:", err);
+      app.log.error({ err }, "[Cron] Daily recon summary error");
     }
   });
-  console.log("[Cron] Daily recon summary scheduled: daily at 4:00");
+  app.log.info("[Cron] Daily recon summary scheduled: daily at 4:00");
 
   // ══════════════════════════════════════════════
   //  Daily security summary email (09:00)
@@ -251,24 +399,24 @@ export async function buildApp() {
       const { sendDailySecuritySummary } = await import("./services/daily-summary.js");
       const result = await sendDailySecuritySummary();
       if (result) {
-        console.log("[Cron] Daily security summary sent successfully");
+        app.log.info("[Cron] Daily security summary sent successfully");
       }
     } catch (err) {
-      console.error("[Cron] Daily security summary error:", err);
+      app.log.error({ err }, "[Cron] Daily security summary error");
     }
   });
-  console.log("[Cron] Daily security summary scheduled: daily at 9:00");
+  app.log.info("[Cron] Daily security summary scheduled: daily at 9:00");
 
   // ── 佣金日汇总聚合（00:30 每天）──
   cron.schedule("30 0 * * *", async () => {
     try {
       const count = await computeDailyCommissionRollup();
-      console.log(`[Cron] Commission daily rollup computed: ${count} agents`);
+      app.log.info(`[Cron] Commission daily rollup computed: ${count} agents`);
     } catch (err) {
-      console.error("[Cron] Commission daily rollup error:", err);
+      app.log.error({ err }, "[Cron] Commission daily rollup error");
     }
   });
-  console.log("[Cron] Commission daily rollup scheduled: daily at 00:30");
+  app.log.info("[Cron] Commission daily rollup scheduled: daily at 00:30");
 
   // ══════════════════════════════════════════════
   //  Audit log archival: purge logs older than 90 days (02:00 daily)
@@ -286,13 +434,64 @@ export async function buildApp() {
         .returning({ id: auditLogs.id });
 
       if (result.length > 0) {
-        console.log(`[Cron] Audit log archival: purged ${result.length} records older than 90 days`);
+        app.log.info(`[Cron] Audit log archival: purged ${result.length} records older than 90 days`);
       }
     } catch (err) {
-      console.error("[Cron] Audit log archival error:", err);
+      app.log.error({ err }, "[Cron] Audit log archival error");
     }
   });
-  console.log("[Cron] Audit log archival scheduled: daily at 02:00 (purge >90d)");
+  app.log.info("[Cron] Audit log archival scheduled: daily at 02:00 (purge >90d)");
+
+  // ══════════════════════════════════════════════
+  //  兑换码过期检查（每小时）
+  // ══════════════════════════════════════════════
+
+  // 立即延迟 30 秒执行一次（冷启动后快速清理已过期数据）
+  setTimeout(async () => {
+    const { runCodeExpiryCheck } = await import("./cron/code-expiry.js");
+    await runCodeExpiryCheck();
+  }, 30_000);
+
+  // 每小时执行一次
+  setInterval(async () => {
+    const { runCodeExpiryCheck } = await import("./cron/code-expiry.js");
+    await runCodeExpiryCheck();
+  }, 60 * 60 * 1000);
+
+  app.log.info("[Cron] Code expiry check scheduled: every 1 hour, first run in 30s");
+
+  // ══════════════════════════════════════════════
+  //  月度额度重置（每月 1 日 00:05）
+  // ══════════════════════════════════════════════
+
+  cron.schedule("5 0 1 * *", async () => {
+    try {
+      const { resetMonthlyQuotas } = await import("./cron/quota-reset.js");
+      const result = await resetMonthlyQuotas();
+      app.log.info(`[Cron] Monthly quota reset: ${result.userQuotas} user quotas, ${result.keyQuotas} key quotas reset`);
+    } catch (err) {
+      app.log.error({ err }, "[Cron] Monthly quota reset error");
+    }
+  });
+  app.log.info("[Cron] Monthly quota reset scheduled: 1st day of month at 00:05");
+
+  // ══════════════════════════════════════════════
+  //  供应商模型/价格自动同步（每 6 小时）
+  // ══════════════════════════════════════════════
+
+  cron.schedule("0 */6 * * *", async () => {
+    try {
+      const { syncAllVendors } = await import("./services/vendor-sync.js");
+      const results = await syncAllVendors();
+      const total = results.reduce((s, r) => s + r.newMappings.length + r.updatedPrices.length, 0);
+      if (total > 0) {
+        app.log.info(`[Cron] Vendor sync: ${results.length} vendors, ${total} updates (models+prices)`);
+      }
+    } catch (err) {
+      app.log.error({ err }, "[Cron] Vendor sync error");
+    }
+  });
+  app.log.info("[Cron] Vendor model sync scheduled: every 6 hours");
 
   return app;
 }
@@ -301,7 +500,7 @@ export async function buildApp() {
 //  call_logs 分区就绪检查
 // ══════════════════════════════════════════════
 
-async function checkCallLogsPartition() {
+async function checkCallLogsPartition(log: Fastify.FastifyBaseLogger) {
   try {
     const db = getDb();
     const result = await db.execute(
@@ -309,20 +508,20 @@ async function checkCallLogsPartition() {
     );
     const isPartitioned = result?.rows?.[0]?.relkind === "p";
     if (!isPartitioned) {
-      console.warn("⚠️ call_logs 表不是分区表！大数据量下性能会严重下降");
-      console.warn("   执行: npx tsx src/db/migrations/setup-call-logs-partitions.ts");
+      log.warn("⚠️ call_logs 表不是分区表！大数据量下性能会严重下降");
+      log.warn("   执行: npx tsx src/db/migrations/setup-call-logs-partitions.ts");
     } else {
-      console.log("✅ call_logs 表已启用分区");
+      log.info("✅ call_logs 表已启用分区");
     }
   } catch (err) {
-    console.warn("[Partition] call_logs 分区检查失败:", err);
+    log.warn({ err }, "[Partition] call_logs 分区检查失败");
   }
 }
 
 /**
  * commission_logs 分区就绪检查
  */
-async function checkCommissionLogsPartition() {
+async function checkCommissionLogsPartition(log: Fastify.FastifyBaseLogger) {
   try {
     const db = getDb();
     const result = await db.execute(
@@ -330,34 +529,36 @@ async function checkCommissionLogsPartition() {
     );
     const isPartitioned = result?.rows?.[0]?.relkind === "p";
     if (!isPartitioned) {
-      console.warn("⚠️ commission_logs 表不是分区表！大数据量下性能会严重下降");
-      console.warn("   执行: npx tsx src/db/migrations/setup-commission-logs-partitions.ts");
+      log.warn("⚠️ commission_logs 表不是分区表！大数据量下性能会严重下降");
+      log.warn("   执行: npx tsx src/db/migrations/setup-commission-logs-partitions.ts");
     } else {
-      console.log("✅ commission_logs 表已启用分区");
+      log.info("✅ commission_logs 表已启用分区");
     }
   } catch (err) {
-    console.warn("[Partition] commission_logs 分区检查失败:", err);
+    log.warn({ err }, "[Partition] commission_logs 分区检查失败");
   }
 }
 
 export async function startServer() {
-  const app = await buildApp();
-
-  // 初始化数据库
+  // 初始化数据库（必须在 buildApp 之前，因为 dbPlugin 需要 db 实例）
   createDb();
   createRedis();
 
-  // 检测分区表
-  await checkCallLogsPartition();
-  await checkCommissionLogsPartition();
+  const app = await buildApp();
 
-  // 启动
+  // 检测分区表
+  await checkCallLogsPartition(app.log);
+  await checkCommissionLogsPartition(app.log);
+
+  // ── 兑换码批次过期提醒调度器 ──
+  registerRedemptionScheduler(app);
+
   try {
     await app.listen({ port: config.server.port, host: config.server.host });
-    console.log(`\n  🚀 3cloud API 已启动`);
-    console.log(`  📡 http://${config.server.host}:${config.server.port}`);
-    console.log(`  🏥 http://localhost:${config.server.port}/health`);
-    console.log(`  ✅ http://localhost:${config.server.port}/ready\n`);
+    app.log.info(`\n  🚀 3cloud API 已启动`);
+    app.log.info(`  📡 http://${config.server.host}:${config.server.port}`);
+    app.log.info(`  🏥 http://localhost:${config.server.port}/health`);
+    app.log.info(`  ✅ http://localhost:${config.server.port}/ready\n`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);

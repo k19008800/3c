@@ -1,7 +1,75 @@
 // ============================================================
-//  3cloud (3C) — 充值服务
-//  功能：在线支付下单、对公转账提交、订单查询、支付回调处理
+//  3cloud (3C) — 充值服务 (Business Logic)
 // ============================================================
+//
+// ── 业务逻辑 ──
+//
+// 【充值状态机】
+//   pending ──用户取消──> cancelled (仅 pending 可取消)
+//   pending ──支付回调──> paid (在线支付, 余额入账)
+//   pending ──管理员确认──> confirmed (对公转账, 余额入账)
+//   paid/confirmed: 终态
+//   expired: 超时未支付 (在线支付 30 分钟)
+//
+// 【在线支付充值 (createRechargeOrder)】
+//   - Channel: wechat_scan, wechat_jsapi, alipay_scan, alipay_jsapi
+//   - 金额校验: > 0, >= system_configs key=min_recharge_amount (default 1 元)
+//   - 订单号: RECHARGE_{base36(timestamp)}_{randomHex8}, 重试 5 次防碰撞
+//   - 过期: ORDER_EXPIRE_MINUTES = 30 分钟
+//   - 支付参数: createPaymentProvider(channel).createOrder() — adapter 模式
+//     - Provider 失败 → 不阻断订单创建 (仅不返回支付参数)
+//     - 返回: payUrl / payParams
+//
+// 【对公转账 (submitBankTransfer)】
+//   - 订单号前缀: BANK_ (区别于 RECHARGE_)
+//   - remark 格式化: "银行:{bankName} 账号:{accountNumber} 转账日期:{YYYY-MM-DD} [{userRemark}]"
+//   - 独立字段: payerAccountName, payerAccountNo, transferRemark (便于审核展示)
+//   - 不设过期 (由后台人工审核)
+//   - voucherImage: 凭证图片 URL (可选)
+//
+// 【付款方信息预填 (getSavedPayerInfo)】
+//   - 查询上次 confirmed/paid 的对公转账记录
+//   - 优先: payerAccountName + payerAccountNo (新字段)
+//   - 降级: 从 remark 正则解析 (兼容旧数据)
+//
+// 【余额入账 (applyRechargeBalance) — 事务内辅助函数】
+//   - 逻辑: 先检查当前余额
+//     1. currentBalance < 0: 先回补到 0
+//        - Math.min(|balance|, rechargeAmount) → negative_repay log
+//        - 剩余金额 → recharge log
+//        - 刚好抵完 → 余额置 0, 只有 repay 记录
+//     2. currentBalance >= 0: 直接增加
+//        - UPDATE balance = balance + amount
+//        - INSERT balance_logs (type='recharge')
+//
+// 【支付回调 (handlePaymentNotify) — 事务】
+//   1. 订单查找: orderNo
+//   2. 状态校验: 非 pending → 拒绝 (cancelled/paid/confirmed/expired 分别报错)
+//   3. 金额验证: Math.abs(orderAmount - notifyAmount) > 0.000001 → AMOUNT_MISMATCH
+//   4. UPDATE rechargeOrders: status='paid', channelOrderNo, paidAt
+//   5. UPDATE users.balance += amount
+//   6. applyRechargeBalance: 负余额回补 + 余额日志
+//   7. 首充检测: 查询之前是否有 paid/confirmed 订单
+//      - 是首充 + 有代理商归属 → processActivityCommission(first_recharge)
+//   8. 续费佣金: processRenewalCommission (所有充值)
+//
+// 【对公转账确认 (confirmBankTransfer) — 事务】
+//   - 前置: channel='bank_transfer', status='pending'
+//   - UPDATE rechargeOrders: status='confirmed', confirmedBy, confirmedAt
+//   - UPDATE users.balance += amount
+//   - applyRechargeBalance + processRenewalCommission (同支付回调)
+//
+// 【取消订单 (cancelOrder)】
+//   - 用户+订单双重验证 (userId + orderId)
+//   - 仅 pending 可取消 → status='cancelled'
+//   - 不操作余额 (未入账)
+//
+// 【集成点】
+//   - payment-adapter.ts: createPaymentProvider 适配器 (多支付通道)
+//   - billing.ts: processRenewalCommission, processActivityCommission
+//   - balance_logs: type='recharge' / type='negative_repay'
+//   - agentClients: 首充活动检测
+//   - system_configs: min_recharge_amount
 
 import { eq, desc, and, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
