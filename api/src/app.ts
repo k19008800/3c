@@ -75,6 +75,8 @@ import { adminRedemptionEnhancedRoutes } from "./routes/admin/redemption-enhance
 import { redemptionUserRoutes } from "./routes/redemption-user.js";
 import { agentRedemptionRoutes } from "./routes/agent/redemption.js";
 import { agentFinanceRoutes } from "./routes/agent/finance.js";
+import { adminPageContentRoutes } from "./routes/admin/page-contents.js";
+import { adminEmailTemplateRoutes } from "./routes/admin/email-templates.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -194,6 +196,12 @@ export async function buildApp() {
 
   // ── Admin 公告管理 ──
   await app.register(adminAnnouncementRoutes, { prefix: "" });
+
+  // ── Admin 页面内容管理 ──
+  await app.register(adminPageContentRoutes, { prefix: "" });
+
+  // ── Admin 邮件模板管理 ──
+  await app.register(adminEmailTemplateRoutes, { prefix: "" });
 
   // ── 用户端公告 ──
   await app.register(announcementRoutes, { prefix: "" });

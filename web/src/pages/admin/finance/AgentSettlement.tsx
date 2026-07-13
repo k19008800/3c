@@ -184,7 +184,7 @@ const AgentSettlement: React.FC = () => {
           {/* Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {([
-              { label: '代理数', value: data.summary.totalAgents, unit: '个', icon: Wallet, color: 'bg-blue-50 text-blue-600 border-blue-200' },
+              { label: '代理数', value: data.summary.totalAgents, unit: '个', icon: Wallet, color: 'bg-blue-50 text-blue-600 border-blue-200', fmt: false },
               { label: '期初可用', value: data.summary.totalOpeningAvailable, unit: '', icon: TrendingUp, color: 'bg-emerald-50 text-emerald-600 border-emerald-200', fmt: true },
               { label: '本月消耗', value: data.summary.totalConsumption, unit: '', icon: TrendingDown, color: 'bg-rose-50 text-rose-600 border-rose-200', fmt: true },
               { label: '期末可用', value: data.summary.totalClosingAvailable, unit: '', icon: Wallet, color: 'bg-indigo-50 text-indigo-600 border-indigo-200', fmt: true },

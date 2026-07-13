@@ -165,6 +165,12 @@ export const auditActionEnum = pgEnum("audit_action", [
   "fraud_ban_ip",
   "fraud_unban_ip",
   "fraud_config_update",
+  "page_content_create",
+  "page_content_update",
+  "page_content_delete",
+  "email_template_create",
+  "email_template_update",
+  "email_template_delete",
 ]);
 
 // ── 通知 ──
