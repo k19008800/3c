@@ -9,7 +9,7 @@
 import { FastifyInstance } from "fastify";
 import { eq, asc, sql, gte, and, desc } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
-import { models, vendorModels, auditLogs, callLogs } from "../../db/schema.js";
+import { models, vendors, vendorModels, auditLogs, callLogs } from "../../db/schema.js";
 import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
 
 const MODEL_TYPES = ["chat", "embedding", "image", "audio", "video", "rerank", "moderation", "realtime"] as const;
@@ -299,14 +299,15 @@ export async function adminModelRoutes(app: FastifyInstance) {
 
     // 按厂商分布 (from vendor_models where this model is mapped)
     const vendorMappings = await db.select({
-      vendorName: vendorModels.vendorName,
+      vendorName: vendors.name,
       calls: sql<number>`coalesce(count(${callLogs.id}) filter (where ${callLogs.vendorModelId} = ${vendorModels.id}), 0)::int`,
       tokens: sql<number>`coalesce(sum(${callLogs.totalTokens}) filter (where ${callLogs.vendorModelId} = ${vendorModels.id}), 0)::bigint`,
       cost: sql<string>`coalesce(sum(${callLogs.cost}) filter (where ${callLogs.vendorModelId} = ${vendorModels.id}), '0')`,
     }).from(vendorModels)
       .leftJoin(callLogs, eq(callLogs.vendorModelId, vendorModels.id))
-      .where(eq(vendorModels.modelName, model.name))
-      .groupBy(vendorModels.vendorName, vendorModels.id)
+      .leftJoin(vendors, eq(vendorModels.vendorId, vendors.id))
+      .where(eq(vendorModels.modelId, model.id))
+      .groupBy(vendors.name, vendorModels.id)
       .orderBy(desc(sql`coalesce(sum(${callLogs.totalTokens}) filter (where ${callLogs.vendorModelId} = ${vendorModels.id}), 0)`));
 
     reply.status(200).send({

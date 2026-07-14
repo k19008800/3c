@@ -675,6 +675,7 @@ export async function adminSecurityRoutes(app: FastifyInstance) {
       await recordSecurityEvent({
         eventType: "test_alert",
         riskLevel: "low",
+        userId: request.user!.userId,
         detail: { operatorId, message: "管理员手动触发测试告警" },
       });
 

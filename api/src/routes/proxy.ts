@@ -591,6 +591,245 @@ export async function proxyRoutes(app: FastifyInstance) {
         return handleProxyError(reply, err);
       }
     });
+
+    // ── 视频生成代理（Seedance / 火山引擎）──
+    app.post(prefix + "/video/generations", async (request, reply) => {
+      try {
+        return await handleVideoGeneration(request, reply);
+      } catch (err: any) {
+        return handleProxyError(reply, err);
+      }
+    });
+
+    // ── 视频任务状态查询 ──
+    app.post(prefix + "/video/generations/:taskId/query", async (request, reply) => {
+      try {
+        return await handleVideoQuery(request, reply);
+      } catch (err: any) {
+        return handleProxyError(reply, err);
+      }
+    });
+  }
+
+  // ══════════════════════════════════════════════
+  //  视频生成代理 (Seedance / 火山引擎)
+  //  使用非标准 dance-create / dance-query 协议
+  //  计费方式：虚拟 Token（视频任务创建时计费）
+  // ══════════════════════════════════════════════
+
+  async function fetchSeedanceApi(
+    apiKey: string,
+    endpoint: string,
+    body: Record<string, unknown>,
+    signal?: AbortSignal,
+  ) {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+      signal,
+    });
+    const data = await res.json() as any;
+    return { status: res.status, data };
+  }
+
+  async function handleVideoGeneration(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ) {
+    const body = request.body as Record<string, unknown>;
+    const modelName = body?.model as string | undefined;
+    if (!modelName) {
+      reply.status(400);
+      return openaiError(400, "model 必填", "invalid_request_error", "missing_model");
+    }
+
+    const model = await resolveModel(modelName);
+    const userId = request.user!.userId;
+    const apiKeyId = request.apiKey?.id ?? null;
+
+    // 记录请求到限流窗口
+    await recordRequestForLimit(userId, apiKeyId);
+
+    // 路由选择 — 找到该 video model 对应的供应商
+    const route = await selectRoute({ modelName: model.name, userId });
+
+    const startTime = Date.now();
+    try {
+      // 构造 Seedance dance-create 请求体
+      const seedanceBody: Record<string, unknown> = {
+        model_name: route.upstreamModelName,
+        content: body.content ?? {},
+        user_id: body.user_id ?? String(userId),
+      };
+
+      // 如果前端传了 additional 参数（如 prompt_type、duration 等），一并转发
+      for (const key of Object.keys(body as Record<string, unknown>)) {
+        if (!["model", "content", "user_id"].includes(key)) {
+          seedanceBody[key] = (body as Record<string, unknown>)[key];
+        }
+      }
+
+      // 调用 dance-create（实际 endpoint 从供应商 baseUrl 推导）
+      const createEndpoint = route.apiEndpoint; // 已在 vendor_models 中设为 dance-create
+      const result = await fetchSeedanceApi(route.apiKeyPlain, createEndpoint, seedanceBody);
+      const durationMs = Date.now() - startTime;
+
+      // 更新健康状态
+      await updateHealthAfterCall(route.vendorModelId, result.status < 400, durationMs);
+
+      // 上游错误处理
+      if (result.status >= 400 || result.data?.code !== 0) {
+        await updateHealthAfterCall(route.vendorModelId, false, durationMs);
+        try {
+          const { recordVendorModelFailure } = await import("../services/circuit-breaker.js");
+          await recordVendorModelFailure(route.vendorModelId, result.data?.message ?? `HTTP ${result.status}`);
+        } catch {}
+
+        // 仍然计费（失败调用）
+        await charge({
+          userId, apiKeyId, modelId: model.id,
+          vendorModelId: route.vendorModelId, vendorName: route.vendorName,
+          modelName: model.name,
+          promptTokens: 0, completionTokens: 0, totalTokens: 0,
+          durationMs, isStreaming: false, status: "failed",
+          errorMessage: result.data?.message ?? `上游返回 ${result.status}`,
+          ip: request.ip, userAgent: request.headers["user-agent"] as string,
+        }).catch(() => {});
+
+        reply.status(result.status >= 400 ? result.status : 502);
+        return {
+          error: {
+            message: result.data?.message ?? "视频生成任务创建失败",
+            type: "upstream_error",
+            code: "video_task_create_failed",
+          },
+          seedance: result.data,
+        };
+      }
+
+      // 成功：计费（视频任务每个 1000 虚拟 Token）
+      const virtualTokens = 1000;
+      await charge({
+        userId, apiKeyId, modelId: model.id,
+        vendorModelId: route.vendorModelId, vendorName: route.vendorName,
+        modelName: model.name,
+        promptTokens: virtualTokens,
+        completionTokens: 0,
+        totalTokens: virtualTokens,
+        durationMs, isStreaming: false, status: "success",
+        ip: request.ip, userAgent: request.headers["user-agent"] as string,
+      }).catch((err) => request.log.error({ err }, "视频计费失败"));
+
+      await recordTokensForLimit(userId, virtualTokens);
+
+      // 记录调度实时指标
+      try {
+        const { recordSchedulingStats } = await import("../services/scheduling-stats.js");
+        recordSchedulingStats(route.vendorName, model.name, virtualTokens, durationMs).catch(() => {});
+      } catch {}
+
+      // 返回兼容格式
+      return {
+        code: 0,
+        data: {
+          task_id: result.data?.data?.task_id ?? result.data?.data?.id,
+          task: result.data?.data?.task ?? result.data?.data,
+          vendor: route.vendorName,
+          model: model.name,
+        },
+        message: result.data?.message ?? "ok",
+      };
+    } catch (err: any) {
+      const durationMs = Date.now() - startTime;
+      await updateHealthAfterCall(route.vendorModelId, false, durationMs);
+      try {
+        const { recordVendorModelFailure } = await import("../services/circuit-breaker.js");
+        await recordVendorModelFailure(route.vendorModelId, `网络错误: ${err.message}`);
+      } catch {}
+      await charge({
+        userId, apiKeyId, modelId: model.id,
+        vendorModelId: route.vendorModelId, vendorName: route.vendorName,
+        modelName: model.name,
+        promptTokens: 0, completionTokens: 0, totalTokens: 0,
+        durationMs, isStreaming: false, status: "failed",
+        errorMessage: `网络错误: ${err.message}`,
+        ip: request.ip, userAgent: request.headers["user-agent"] as string,
+      }).catch(() => {});
+      reply.status(502);
+      return openaiError(502, `上游连接失败: ${err.message}`, "upstream_error", "upstream_unreachable");
+    }
+  }
+
+  async function handleVideoQuery(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ) {
+    const body = request.body as Record<string, unknown>;
+    const modelName = body?.model as string | undefined;
+    if (!modelName) {
+      reply.status(400);
+      return openaiError(400, "model 必填", "invalid_request_error", "missing_model");
+    }
+    const taskId = (request.params as any).taskId;
+    if (!taskId) {
+      reply.status(400);
+      return openaiError(400, "taskId 必填", "invalid_request_error", "missing_task_id");
+    }
+
+    const model = await resolveModel(modelName);
+    const userId = request.user!.userId;
+    const apiKeyId = request.apiKey?.id ?? null;
+
+    // 路由选择
+    const route = await selectRoute({ modelName: model.name, userId });
+
+    const startTime = Date.now();
+    try {
+      // 从 apiEndpoint 推导 dance-query URL（替换末尾的 dance-create 为 dance-query）
+      let queryEndpoint = route.apiEndpoint;
+      if (queryEndpoint.endsWith("/dance-create")) {
+        queryEndpoint = queryEndpoint.replace(/\/dance-create$/, "/dance-query");
+      } else {
+        // 降级：在 base URL 后追加
+        queryEndpoint = queryEndpoint.replace(/\/+$/, "") + "/dance-query";
+      }
+
+      const result = await fetchSeedanceApi(route.apiKeyPlain, queryEndpoint, {
+        task_id: taskId,
+      });
+
+      const durationMs = Date.now() - startTime;
+      await updateHealthAfterCall(route.vendorModelId, result.status < 400, durationMs);
+
+      if (result.status >= 400) {
+        await updateHealthAfterCall(route.vendorModelId, false, durationMs);
+        reply.status(result.status);
+        return {
+          error: {
+            message: result.data?.message ?? "查询任务失败",
+            type: "upstream_error",
+            code: "video_task_query_failed",
+          },
+          seedance: result.data,
+        };
+      }
+
+      // 查询不计费，直接返回上游结果
+      return {
+        code: 0,
+        data: result.data?.data ?? result.data,
+        message: result.data?.message ?? "ok",
+      };
+    } catch (err: any) {
+      const durationMs = Date.now() - startTime;
+      await updateHealthAfterCall(route.vendorModelId, false, durationMs);
+      reply.status(502);
+      return openaiError(502, `查询上游失败: ${err.message}`, "upstream_error", "upstream_unreachable");
+    }
   }
 
   // ── 流式处理核心 ──

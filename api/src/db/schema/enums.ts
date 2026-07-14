@@ -216,6 +216,7 @@ export const securityEventTypeEnum = pgEnum("security_event_type", [
   "circuit_trip",
   "circuit_recovery",
   "vendor_failure",
+  "test_alert",
 ]);
 
 // ── 兑换码 ──

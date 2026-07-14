@@ -275,7 +275,7 @@ export async function syncVendorModels(
           } else {
             // Create new mapping (without API key — admin sets it later)
             await db.insert(vendorModels).values({
-              vendorId, modelId, modelName, upstreamModelName: modelName,
+              vendorId, modelId, upstreamModelName: modelName,
               apiEndpoint: vendor.baseUrl.replace(/\/+$/, '') + '/v1/chat/completions',
               apiKeyEncrypted: '', // Must be set by admin separately
               costPriceInput: String(prices.input), costPriceOutput: String(prices.output),
@@ -291,7 +291,7 @@ export async function syncVendorModels(
 
       // 6. Mark removed models as down
       const existingMappings = await db
-        .select({ modelName: vendorModels.modelName, status: vendorModels.status })
+        .select({ modelName: vendorModels.upstreamModelName, status: vendorModels.status })
         .from(vendorModels)
         .where(eq(vendorModels.vendorId, vendorId));
 
@@ -299,7 +299,7 @@ export async function syncVendorModels(
         if (!upstreamIds.includes(mm.modelName) && mm.status) {
           await db.update(vendorModels)
             .set({ status: false, isDown: true })
-            .where(and(eq(vendorModels.vendorId, vendorId), eq(vendorModels.modelName, mm.modelName)));
+            .where(and(eq(vendorModels.vendorId, vendorId), eq(vendorModels.upstreamModelName, mm.modelName)));
           report.removedModels.push(mm.modelName);
         }
       }
