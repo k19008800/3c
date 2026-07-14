@@ -12,7 +12,7 @@ import { getDb } from "../../db/index.js";
 import { models, vendorModels, auditLogs, callLogs } from "../../db/schema.js";
 import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
 
-const MODEL_TYPES = ["chat", "embedding", "image", "audio"] as const;
+const MODEL_TYPES = ["chat", "embedding", "image", "audio", "video", "rerank", "moderation", "realtime"] as const;
 
 export async function adminModelRoutes(app: FastifyInstance) {
   app.addHook("preHandler", authenticateJWT);

@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { eq, and, desc, sql, lt } from "drizzle-orm";
+import { eq, and, desc, sql, lt, gte } from "drizzle-orm";
 import { getDb } from "../../../db/index.js";
 import {
   users,

@@ -18,7 +18,8 @@ export type SecurityEventType =
   | "user_captcha"
   | "circuit_trip"
   | "circuit_recovery"
-  | "vendor_failure";
+  | "vendor_failure"
+  | "test_alert";
 
 export type RiskLevel = "low" | "medium" | "high" | "critical";
 
