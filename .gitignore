@@ -36,3 +36,12 @@ web/fix-oxlint.py
 测试文档/
 Thumbs.db
 .DS_Store
+
+# Vite cache
+.vite/
+
+# Temp debug files
+api/__add_column.cjs
+api/_db_verify.mjs
+api/null
+
