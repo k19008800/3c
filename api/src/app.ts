@@ -94,6 +94,7 @@ import { userQuotaRoutes } from "./routes/user-quota.js";
 
 export async function buildApp() {
   const app = Fastify({
+    trustProxy: true,
     logger: {
       level: config.log.level,
       transport: config.isDev
