@@ -343,8 +343,12 @@ export async function buildApp() {
   // ── Token 代理 ──
   await app.register(userTransactionRoutes, { prefix: "" });
 
-  // -- Token 代理 --
+    // -- Token 代理 --
   await app.register(proxyRoutes, { prefix: "" });
+
+  // ── WebSocket 限流水位 ──
+  const { rateLimitWsRoutes } = await import("./routes/rate-limit-ws.js");
+  await app.register(rateLimitWsRoutes, { prefix: "" });
 
   // ══════════════════════════════════════════════
   //  安全配置检查
@@ -495,6 +499,16 @@ export async function buildApp() {
   }, 60 * 60 * 1000);
 
   app.log.info("[Cron] Code expiry check scheduled: every 1 hour, first run in 30s");
+
+  // ══════════════════════════════════════════════
+  //  安全自动规则检查（每 60 秒）
+  // ══════════════════════════════════════════════
+
+  import('./cron/auto-rule-check.js').then(({ scheduleAutoRuleCheck }) => {
+    scheduleAutoRuleCheck();
+  }).catch((err) => {
+    app.log.error({ err }, '[App] 加载安全自动规则检查失败');
+  });
 
   // ══════════════════════════════════════════════
   //  月度额度重置（每月 1 日 00:05）

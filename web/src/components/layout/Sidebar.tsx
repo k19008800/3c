@@ -184,8 +184,8 @@ function NotificationDropdown({ collapsed }: { collapsed: boolean }) {
 
   const fetchUnreadCount = useCallback(async () => {
     try {
-      const res = await get<{ total: number }>('/api/v1/me/notifications/unread-count')
-      setUnreadCount(res.total)
+      const res = await get<{ unreadCount: number }>('/api/v1/me/notifications/unread-count')
+      setUnreadCount(res.unreadCount)
     } catch {
       try {
         const res = await get<{ total: number }>('/api/v1/auth/notifications', { unreadOnly: true, pageSize: 1 })

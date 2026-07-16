@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "prebuild": "node ../scripts/check-encoding.js",
+    "predev": "node ../scripts/check-encoding.js",
     "lint": "oxlint",
     "preview": "vite preview"
   },

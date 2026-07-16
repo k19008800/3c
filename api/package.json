@@ -31,6 +31,7 @@
     "@fastify/multipart": "^9.0.3",
     "@fastify/rate-limit": "^10.2.1",
     "@fastify/static": "^10.1.0",
+    "@fastify/websocket": "^11.3.0",
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.45.2",

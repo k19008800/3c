@@ -2,6 +2,7 @@
 //  3cloud (3C) — 统一响应格式 & 全局错误处理
 // ============================================================
 import { FastifyInstance, FastifyError, FastifyReply, FastifyRequest } from "fastify";
+import { ZodError } from "zod";
 
 // ── 统一成功响应 ──
 export interface ApiResponse<T = unknown> {
@@ -14,6 +15,14 @@ export interface ApiResponse<T = unknown> {
 export interface ApiError {
   ok: false;
   code: string;
+  message: string;
+  details?: unknown;
+}
+
+// ── 兼容旧格式 { code, data, message } 错误响应 ──
+export interface LegacyErrorResponse {
+  code: number;
+  data: null;
   message: string;
   details?: unknown;
 }
@@ -101,9 +110,29 @@ export function fail(reply: FastifyReply, statusCode: number, message: string, c
   return reply.status(statusCode).send({ code, data: null, message });
 }
 
+// ── ZodError 格式化工具：提取可读的错误消息 ──
+function formatZodError(err: ZodError): string {
+  const msgs = err.issues.map((issue) => {
+    const path = issue.path.length > 0 ? issue.path.join(".") : "(根对象)";
+    return `${path}: ${issue.message}`;
+  });
+  return msgs.join("; ");
+}
+
 // ── 全局错误处理注册 ──
 export function registerErrorHandler(app: FastifyInstance) {
   app.setErrorHandler((error: FastifyError | AppError | Error, request: FastifyRequest, reply: FastifyReply) => {
+    // ── ZodError：数据校验失败 ──
+    if (error instanceof ZodError) {
+      const msg = formatZodError(error);
+      request.log.warn({ err: error }, "[ZodError] 数据校验失败");
+      return reply.status(400).send({
+        code: 400,
+        data: null,
+        message: msg || "请求参数校验失败",
+      } satisfies LegacyErrorResponse);
+    }
+
     // Fastify 内置验证错误
     if ("validation" in error && error.validation) {
       const msg = error.validation.map((v: any) => v.message ?? `${v.keyword} error`).join("; ");
@@ -143,14 +172,14 @@ export function registerErrorHandler(app: FastifyInstance) {
       } satisfies ApiError);
     }
 
-    // 未知错误
+    // 未知错误——统一降级为 500，不暴露内部细节
     request.log.error({ err: error }, "Unhandled error");
-    const isDev = process.env.NODE_ENV !== "production";
+    const isDev = process.env.NODE_ENV === "development";
     return reply.status(500).send({
-      ok: false,
-      code: "INTERNAL_ERROR",
-      message: isDev ? `服务器内部错误: ${error.message}` : "服务器内部错误",
-      ...(isDev ? { details: error.stack } : {}),
-    } satisfies ApiError);
+      code: 500,
+      data: null,
+      message: "服务器内部错误",
+      ...(isDev ? { details: error.message, stack: error.stack } : {}),
+    } satisfies LegacyErrorResponse);
   });
 }
