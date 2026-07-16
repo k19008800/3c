@@ -34,6 +34,7 @@ type LogType =
 const typeConfig: Record<string, { label: string; icon: any; color: string }> = {
   recharge: { label: '充值', icon: ArrowUpRight, color: 'text-green-600 bg-green-50 border-green-200' },
   deduction: { label: '扣费', icon: ArrowDownLeft, color: 'text-red-600 bg-red-50 border-red-200' },
+  consumption: { label: '扣费', icon: ArrowDownLeft, color: 'text-red-600 bg-red-50 border-red-200' },
   refund: { label: '退款', icon: RotateCcw, color: 'text-blue-600 bg-blue-50 border-blue-200' },
   commission: { label: '佣金', icon: TrendingUp, color: 'text-purple-600 bg-purple-50 border-purple-200' },
   redemption: { label: '兑换', icon: Gift, color: 'text-pink-600 bg-pink-50 border-pink-200' },
@@ -96,7 +97,7 @@ export default function Transactions() {
       if (startDate) params.startDate = startDate
       if (endDate) params.endDate = endDate
 
-      const res = await get<PaginatedData<BalanceLog>>('/api/v1/balance-logs', params)
+      const res = await get<PaginatedData<BalanceLog>>('/api/v1/user/transactions', { ...params })
       setLogs(res.list)
       setTotal(res.total)
     } catch (err: any) {

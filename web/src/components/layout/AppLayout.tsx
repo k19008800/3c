@@ -31,6 +31,19 @@ export default function AppLayout() {
     return () => clearInterval(id)
   }, [isImpersonating, expiresAt])
 
+  // Ctrl+K / ⌘K 全局搜索快捷键（放 early return 前确保 hooks 顺序一致）
+  useEffect(() => {
+    if (isLoading) return // 只绑定键盘事件，不依赖渲染
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen((v) => !v)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isLoading])
+
   const handleStop = () => {
     stopImpersonate()
     window.location.href = '/console/admin/users'
@@ -47,18 +60,6 @@ export default function AppLayout() {
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
-
-  // Ctrl+K / ⌘K 全局搜索快捷键
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault()
-        setSearchOpen((v) => !v)
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [])
 
   return (
     <div className="flex h-screen overflow-hidden">
