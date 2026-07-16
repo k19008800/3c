@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useSiteConfig } from '@/hooks/use-site-config'
 
 const FOOTER_LINKS = [
   {
@@ -33,7 +34,22 @@ const FOOTER_LINKS = [
   },
 ]
 
+const YEAR = new Date().getFullYear()
+
+function buildCopyrightText(config: Record<string, string> | null): string {
+  // 优先使用完整的 copyright 字段
+  if (config?.site_copyright) {
+    return config.site_copyright.replace(/\(c\)|{year}|%year%/gi, String(YEAR))
+  }
+
+  const company = config?.site_company_name || '衢州云务网络科技有限公司'
+  const icp = config?.site_icp || '浙ICP备XXXXXXXX号'
+  return `© ${YEAR} ${company} | ${icp}`
+}
+
 export default function PortalFooter() {
+  const { config } = useSiteConfig()
+
   return (
     <footer className="bg-slate-900 text-slate-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -65,7 +81,7 @@ export default function PortalFooter() {
             <span className="text-sm text-slate-400">3Cloud — AI Token 聚合平台</span>
           </div>
           <div className="text-sm text-slate-500">
-            © {new Date().getFullYear()} 衢州云务网络科技有限公司 | 浙ICP备XXXXXXXX号
+            {buildCopyrightText(config)}
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+
 import { RefreshCw } from 'lucide-react'
 
 interface Props {

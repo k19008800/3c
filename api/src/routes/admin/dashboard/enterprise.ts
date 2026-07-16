@@ -109,7 +109,12 @@ export async function enterpriseRoutes(app: FastifyInstance) {
     const [activeEnterprises] = await db
       .select({ count: sql<number>`count(DISTINCT ${callLogs.userId})::int` })
       .from(callLogs)
-      .where(gte(callLogs.createdAt, monthStart));
+      .where(
+        and(
+          gte(callLogs.createdAt, monthStart),
+          sql`${callLogs.userId} IN (SELECT id FROM ${users} WHERE user_type = 'enterprise' AND deleted_at IS NULL)`
+        )
+      );
 
     const [monthConsumption] = await db
       .select({

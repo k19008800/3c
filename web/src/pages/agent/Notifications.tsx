@@ -3,7 +3,7 @@ import { get, put } from '@/lib/api'
 import type { NotificationItem } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
 import {
-  Loader2, Bell, CheckCircle2, AlertCircle, Info, AlertTriangle,
+  Loader2, Bell, CheckCircle2, Info, AlertTriangle,
   CreditCard, Gift, TrendingDown, HandCoins, UserPlus, Wallet,
 } from 'lucide-react'
 

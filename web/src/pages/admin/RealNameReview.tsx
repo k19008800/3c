@@ -14,8 +14,7 @@ import PaginationBar from '@/components/ui/PaginationBar'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
   Loader2, AlertCircle, CheckCircle2, XCircle,
-  Search, Eye, ExternalLink,
-  Ban, Building2, User, FileImage, CheckSquare,
+  Search, Eye, Ban, Building2, User, FileImage, CheckSquare,
 } from 'lucide-react'
 
 const REJECT_REASONS = [

@@ -230,6 +230,13 @@ export async function adminVendorRoutes(app: FastifyInstance) {
       return;
     }
 
+    // 校验 status 必须是有效的供应商状态枚举值
+    const VALID_VENDOR_STATUSES = ["pending", "active", "down", "degraded", "disabled", "rejected"];
+    if (updates.status !== undefined && !VALID_VENDOR_STATUSES.includes(updates.status)) {
+      reply.status(400).send({ code: 400, data: null, message: `无效的状态值: ${updates.status}，有效值: ${VALID_VENDOR_STATUSES.join(", ")}` });
+      return;
+    }
+
     const operatorId = request.user!.userId;
 
     // 获取变更前快照
@@ -343,25 +350,37 @@ export async function adminVendorRoutes(app: FastifyInstance) {
     }
 
     const operatorId = request.user!.userId;
+    const now = new Date();
 
     const [updated] = await db
       .update(vendors)
-      .set({ status: "active" })
+      .set({ status: "active", approvedAt: now, approvedBy: operatorId })
       .where(eq(vendors.id, id))
       .returning();
 
-    // Generate a vendor API key automatically upon approval
-    const rawKey = `v_${randomBytes(24).toString("hex")}`;
-    const keyHash = createHash("sha256").update(rawKey).digest("hex");
-    const keyPrefix = rawKey.slice(0, 8);
+    // Generate a vendor API key automatically upon approval (if not exists)
+    const [existingKey] = await db
+      .select({ id: vendorApiKeys.id })
+      .from(vendorApiKeys)
+      .where(eq(vendorApiKeys.vendorId, id))
+      .limit(1);
 
-    await db.insert(vendorApiKeys).values({
-      vendorId: id,
-      keyHash,
-      keyPrefix,
-      permissions: ["vendor:*"],
-      status: true,
-    });
+    let rawKey: string | null = null;
+    let keyPrefix: string | null = null;
+
+    if (!existingKey) {
+      rawKey = `v_${randomBytes(24).toString("hex")}`;
+      keyPrefix = rawKey.slice(0, 8);
+      const keyHash = createHash("sha256").update(rawKey).digest("hex");
+
+      await db.insert(vendorApiKeys).values({
+        vendorId: id,
+        keyHash,
+        keyPrefix,
+        permissions: ["vendor:*"],
+        status: true,
+      });
+    }
 
     await db.insert(auditLogs).values({
       operatorId,
@@ -369,7 +388,7 @@ export async function adminVendorRoutes(app: FastifyInstance) {
       targetType: "vendor",
       targetId: id,
       before: { status: "pending" },
-      after: { status: "active" },
+      after: { status: "active", approvedAt: now.toISOString(), approvedBy: operatorId },
       ip: request.ip,
       description: `审核通过供应商: ${vendor.name}`,
     });
@@ -381,7 +400,63 @@ export async function adminVendorRoutes(app: FastifyInstance) {
         vendorKey: rawKey,
         vendorKeyPrefix: keyPrefix,
       },
-      message: "供应商已审核通过，以下为 Vendor Key（请妥善保管）：" + rawKey.slice(0, 8) + "..."
+      message: existingKey
+        ? "供应商已审核通过"
+        : "供应商已审核通过，以下为 Vendor Key（请妥善保管）：" + rawKey!.slice(0, 8) + "..."
+    });
+  });
+
+  // ── PATCH /api/v1/admin/vendors/:id/reject — 拒绝供应商注册 ──
+  app.patch("/api/v1/admin/vendors/:id/reject", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
+    const db = getDb();
+    const id = parseInt((request.params as any).id, 10);
+    if (isNaN(id)) {
+      reply.status(400).send({ code: 400, data: null, message: "无效的厂商 ID" });
+      return;
+    }
+
+    const body = request.body as { reason?: string } | null;
+    const reason = body?.reason?.trim();
+
+    if (!reason) {
+      reply.status(400).send({ code: 400, data: null, message: "请填写拒绝原因" });
+      return;
+    }
+
+    const [vendor] = await db.select().from(vendors).where(eq(vendors.id, id)).limit(1);
+    if (!vendor) {
+      reply.status(404).send({ code: 404, data: null, message: "厂商不存在" });
+      return;
+    }
+
+    const operatorId = request.user!.userId;
+
+    const [updated] = await db
+      .update(vendors)
+      .set({
+        status: "rejected" as any,
+        rejectReason: reason,
+      })
+      .where(eq(vendors.id, id))
+      .returning();
+
+    await db.insert(auditLogs).values({
+      operatorId,
+      action: "vendor_reject" as any,
+      targetType: "vendor",
+      targetId: id,
+      before: { status: vendor.status },
+      after: { status: "rejected", rejectReason: reason },
+      ip: request.ip,
+      description: `拒绝供应商: ${vendor.name}，原因: ${reason}`,
+    });
+
+    reply.status(200).send({
+      code: 0,
+      data: updated,
+      message: `供应商 ${vendor.name} 已被拒绝`,
     });
   });
 

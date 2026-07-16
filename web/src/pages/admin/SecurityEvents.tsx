@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { get, post } from '@/lib/api'
 import type { SecurityEvent, PaginatedData } from '@/types'
@@ -6,9 +6,9 @@ import RiskBadge from '@/components/security/RiskBadge'
 import PaginationBar from '@/components/ui/PaginationBar'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
-  Loader2, AlertCircle, ChevronLeft, ChevronRight, CheckCircle2,
-  AlertTriangle, ShieldAlert, X, Download, CheckSquare, Square,
-  Search, ExternalLink, Clock, Globe, Monitor, Info
+  Loader2, AlertCircle, ChevronRight, CheckCircle2,
+  ShieldAlert, X, Download, CheckSquare, Square,
+  ExternalLink, Clock, Globe, Monitor, Info
 } from 'lucide-react'
 
 const eventTypeLabels: Record<string, string> = {

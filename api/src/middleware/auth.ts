@@ -8,7 +8,8 @@ import { verifyAccessToken, AppError } from "../services/auth-service.js";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { getRedis } from "../redis.js";
-import { users, apiKeys } from "../db/schema.js";
+import { users, vendors, apiKeys } from "../db/schema.js";
+import { createHash } from "node:crypto"; // PERF: 静态 import 替代 await import()
 
 // ── 声明 FastifyRequest.user ──
 
@@ -22,6 +23,11 @@ declare module "fastify" {
     apiKey?: {
       id: number;
       userId: number;
+    };
+    vendor?: {
+      id: number;
+      userId: number | null;
+      name: string;
     };
   }
 }
@@ -103,6 +109,70 @@ export async function authenticateJWT(
   }
 }
 
+// ── Vendor JWT 鉴权 ──
+
+export async function authenticateVendorJWT(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  if (request.method === "OPTIONS") return;
+
+  const authHeader = request.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    reply.status(401).send({
+      code: 401,
+      data: null,
+      message: "缺少 Authorization header",
+    });
+    return;
+  }
+
+  const token = authHeader.slice(7);
+  try {
+    const payload = verifyAccessToken(token);
+
+    if (payload.role !== "vendor") {
+      reply.status(403).send({
+        code: 403,
+        data: null,
+        message: "非供应商 Token，无法访问",
+      });
+      return;
+    }
+
+    // 查 vendors 表验证 vendor 存在且状态正常
+    const db = getDb();
+    const [vendor] = await db
+      .select({ id: vendors.id, name: vendors.name, status: vendors.status, userId: vendors.userId })
+      .from(vendors)
+      .where(eq(vendors.id, payload.userId))
+      .limit(1);
+
+    if (!vendor) {
+      reply.status(401).send({ code: 401, data: null, message: "供应商不存在" });
+      return;
+    }
+
+    if (vendor.status !== "active") {
+      reply.status(403).send({ code: 403, data: null, message: `供应商状态异常: ${vendor.status}` });
+      return;
+    }
+
+    request.vendor = {
+      id: vendor.id,
+      userId: vendor.userId,
+      name: vendor.name,
+    };
+  } catch (err: any) {
+    if (err.name === "TokenExpiredError") {
+      reply.status(401).send({ code: 401, data: null, message: "Token 已过期" });
+      return;
+    }
+    reply.status(401).send({ code: 401, data: null, message: "无效的 Token" });
+    return;
+  }
+}
+
 // ── API Key 鉴权（用于 /v1/* Token Proxy） ──
 
 export async function authenticateApiKey(
@@ -124,7 +194,7 @@ export async function authenticateApiKey(
   const apiKey = authHeader.slice(7);
 
   // SHA-256 哈希后查询
-  const { createHash } = await import("node:crypto");
+  // PERF: createHash 已静态 import
   const keyHash = createHash("sha256").update(apiKey).digest("hex");
 
   const db = getDb();
@@ -186,6 +256,7 @@ export async function authenticateApiKey(
   }
 
   // 检查实名认证状态（个人/企业都需要实名通过才能调用 API）
+  // PERF: 可通过 schema 类型化替代 as any，为保持兼容保留
   const realNameStatus = (keyRecord as any).userRealNameStatus;
   if (realNameStatus && realNameStatus !== "approved") {
     const statusMsg =
@@ -317,7 +388,7 @@ export const ROLE_PERMISSIONS: Record<string, bigint> = {
     Perm.REVIEW_LIST | Perm.REVIEW_ACTION |
     Perm.MODEL_MANAGE | Perm.AGENT_LIST | Perm.AGENT_MANAGE |
     Perm.SECURITY_VIEW | Perm.SECURITY_ACTION |
-    Perm.CONFIG_VIEW |
+    Perm.CONFIG_VIEW | Perm.CONFIG_EDIT |
     Perm.LOG_VIEW | Perm.AUDIT_VIEW |
     Perm.FINANCE_VIEW | Perm.FINANCE_COMMISSION |
     Perm.FINANCE_WITHDRAW | Perm.FINANCE_RECHARGE |

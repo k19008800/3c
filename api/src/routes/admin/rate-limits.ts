@@ -534,14 +534,15 @@ export async function adminRateLimitRoutes(app: FastifyInstance) {
       return;
     }
 
-    // 检查是否有已有覆盖记录（取最近一条有 rpmLimit/tpmLimit 的）
+    // 检查该用户是否已有 monthly 额度记录（无论是否有 rpm/tpm）
+    // 避免 `(userId, quota_type)` 唯一键冲突
     const [existing] = await db
       .select({ id: userQuotas.id, rpmLimit: userQuotas.rpmLimit, tpmLimit: userQuotas.tpmLimit })
       .from(userQuotas)
       .where(
         and(
           eq(userQuotas.userId, body.userId),
-          sql`${userQuotas.rpmLimit} IS NOT NULL OR ${userQuotas.tpmLimit} IS NOT NULL`,
+          eq(userQuotas.quotaType, 'monthly'),
         ),
       )
       .orderBy(desc(userQuotas.updatedAt))

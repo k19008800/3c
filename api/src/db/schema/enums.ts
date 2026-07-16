@@ -55,6 +55,7 @@ export const vendorStatusEnum = pgEnum("vendor_status", [
   "down",    // 宕机（被动检测）
   "degraded",// 降级
   "disabled",
+  "rejected", // 审核未通过
 ]);
 export const callStatusEnum = pgEnum("call_status", ["success", "failed", "timeout", "cancelled", "rate_limited"]);
 

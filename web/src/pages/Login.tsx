@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
+import { useSiteConfig } from '@/hooks/use-site-config'
 import { Loader2, AlertCircle } from 'lucide-react'
 import CaptchaDialog from '@/components/ui/CaptchaDialog'
 
 export default function Login() {
   const { login, isAuthenticated } = useAuth()
+  const { config: siteConfig } = useSiteConfig()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -53,7 +55,14 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
       <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-2xl">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">3Cloud</h1>
+          {siteConfig?.site_logo_url ? (
+            <img
+              src={siteConfig.site_logo_url}
+              alt={siteConfig.site_name || 'Logo'}
+              className="h-10 mx-auto object-contain mb-3"
+            />
+          ) : null}
+          <h1 className="text-3xl font-bold text-slate-900">{siteConfig?.site_name || '3Cloud'}</h1>
           <p className="text-slate-500 mt-2">AI Token 聚合平台</p>
         </div>
 

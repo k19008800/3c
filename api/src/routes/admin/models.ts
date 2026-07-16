@@ -111,6 +111,27 @@ export async function adminModelRoutes(app: FastifyInstance) {
     });
   });
 
+  // ── 单个模型详情 ──
+  app.get("/api/v1/admin/models/:id", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
+    const db = getDb();
+    const id = parseInt((request.params as any).id);
+
+    const [model] = await db
+      .select()
+      .from(models)
+      .where(eq(models.id, id))
+      .limit(1);
+
+    if (!model) {
+      reply.status(404).send({ code: 404, data: null, message: "模型不存在" });
+      return;
+    }
+
+    reply.status(200).send({ code: 0, data: model, message: "ok" });
+  });
+
   // ── 更新 ──
   app.patch("/api/v1/admin/models/:id", {
     preHandler: [requirePerm(Perm.MODEL_MANAGE)],

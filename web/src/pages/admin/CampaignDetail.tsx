@@ -11,7 +11,6 @@ import {
   DollarSign,
   Users,
   CheckCircle2,
-  X,
   Gift,
   BarChart3,
 } from 'lucide-react'

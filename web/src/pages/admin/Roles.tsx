@@ -160,7 +160,7 @@ export default function AdminRoles() {
     try {
       const data = await get<{ list: PermItem[] }>('/api/v1/admin/roles/permissions/list')
       setPermItems(data.list)
-    } catch (_err) {
+    } catch  {
       // silent
     } finally {
       setPermLoading(false)
@@ -209,7 +209,7 @@ export default function AdminRoles() {
           .filter((u) => !existingIds.has(u.id))
           .map((u) => ({ id: u.id, email: u.email, nickname: u.nickname }))
       )
-    } catch (_err) {
+    } catch  {
       setCandidates([])
     } finally {
       setCandidatesLoading(false)

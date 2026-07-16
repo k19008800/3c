@@ -3,7 +3,7 @@ import { get, post } from '@/lib/api'
 import PaginationBar from '@/components/ui/PaginationBar'
 import {
   Loader2, Gift, CheckCircle2, AlertCircle, Clock, Send, Inbox, MessageSquare, X,
-  Zap, Megaphone, Calendar, Eye, TrendingUp, User, Info, History, DollarSign,
+  Zap, Megaphone, Calendar, Eye, User, Info, History,
 } from 'lucide-react'
 
 interface RedemptionLog {

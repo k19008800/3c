@@ -12,8 +12,8 @@ import LogAnomaliesPanel from '@/components/logs/LogAnomaliesPanel'
 import PaginationBar from '@/components/ui/PaginationBar'
 import {
   Loader2, AlertCircle, RefreshCw,
-  Search, Key, Settings2, Eye, EyeOff, ArrowUpDown, Clock, Zap,
-  Gauge, TrendingUp, BarChart3, GitCompare,
+  Search, Key, Eye, EyeOff, ArrowUpDown, Clock, Zap,
+  Gauge, BarChart3, GitCompare,
 } from 'lucide-react'
 
 const STATUS_OPTIONS = [

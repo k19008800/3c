@@ -3,7 +3,7 @@ import { get, post, del, patch } from '@/lib/api'
 import type { ApiKey, PaginatedData } from '@/types'
 import {
   Loader2, AlertCircle, Plus, Copy, CheckCircle2, Trash2, Key, Power, PowerOff,
-  BarChart3, ChevronDown, ChevronRight, TrendingUp, Zap, Clock, Download,
+  BarChart3, ChevronDown, ChevronRight, TrendingUp, Clock, Download,
   PieChart, Activity, X,
 } from 'lucide-react'
 

@@ -247,8 +247,8 @@ export async function approveRefund(refundId: number, reviewerId: number) {
       action: "balance_adjust",
       targetType: "refund",
       targetId: refundId,
-      before: sql`jsonb_build_object('status', ${record.status}, 'userId', ${record.userId}, 'amount', ${amount})`,
-      after: sql`jsonb_build_object('status', 'completed', 'amount', ${amount})`,
+      before: sql`jsonb_build_object('status', ${record.status}::text, 'userId', ${record.userId}::text, 'amount', ${amount}::text)`,
+      after: sql`jsonb_build_object('status', 'completed', 'amount', ${amount}::text)`,
       description: `退款审核通过 #${refundId}：用户 ${record.userId}，金额 ${amount}，类型 ${record.refundType}`,
     });
   });

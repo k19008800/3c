@@ -3,7 +3,7 @@ import { get, post } from '@/lib/api'
 import api from '@/lib/api'
 import { useImpersonate } from '@/hooks/use-impersonate'
 import type { UserRealNameHistoryRecord } from '@/types'
-import { Loader2, CheckCircle2, AlertCircle, XCircle, Clock, Shield, Building2, User, Upload, Trash2, FileImage, FileText } from 'lucide-react'
+import { Loader2, CheckCircle2, AlertCircle, XCircle, Clock, Shield, Building2, User, Upload, Trash2, FileText } from 'lucide-react'
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   unverified: { label: '未认证', color: 'text-slate-400 bg-slate-50', icon: Shield },

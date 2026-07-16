@@ -14,7 +14,6 @@ import {
   XCircle,
   BarChart3,
   CheckCircle2,
-  Calendar,
   DollarSign,
   Megaphone,
 } from 'lucide-react'

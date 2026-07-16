@@ -548,6 +548,7 @@ export async function getReconciliationReport(params?: ReconParams) {
         ? sql`to_char(date_trunc('week', ${commissionLogs.createdAt}), 'YYYY-MM-DD')`
         : sql`to_char(${commissionLogs.createdAt}, 'YYYY-MM-DD')`;
 
+    // PERF: 修复 groupBy 使用表达式而非常量 1，确保按正确粒度分组
     const [trendComm, trendWdraw, trendRech] = await Promise.all([
       db.select({
         date: sql<string>`${groupExpr}`,
@@ -558,8 +559,8 @@ export async function getReconciliationReport(params?: ReconParams) {
           gte(commissionLogs.createdAt, startOfRange),
           lte(commissionLogs.createdAt, endOfRange),
         ))
-        .groupBy(sql`1`)
-        .orderBy(sql`1`),
+        .groupBy(sql`${groupExpr}`)
+        .orderBy(sql`${groupExpr}`),
       db.select({
         date: sql<string>`to_char(${withdrawOrders.createdAt}, 'YYYY-MM-DD')`,
         amount: sql<string>`coalesce(sum(${withdrawOrders.amount}), '0.000000')`,
@@ -569,8 +570,8 @@ export async function getReconciliationReport(params?: ReconParams) {
           gte(withdrawOrders.createdAt, startOfRange),
           lte(withdrawOrders.createdAt, endOfRange),
         ))
-        .groupBy(sql`1`)
-        .orderBy(sql`1`),
+        .groupBy(sql`to_char(${withdrawOrders.createdAt}, 'YYYY-MM-DD')`)
+        .orderBy(sql`to_char(${withdrawOrders.createdAt}, 'YYYY-MM-DD')`),
       db.select({
         date: sql<string>`to_char(${rechargeOrders.confirmedAt}, 'YYYY-MM-DD')`,
         amount: sql<string>`coalesce(sum(${rechargeOrders.amount}), '0.000000')`,
@@ -581,8 +582,8 @@ export async function getReconciliationReport(params?: ReconParams) {
           gte(rechargeOrders.confirmedAt, startOfRange),
           lte(rechargeOrders.confirmedAt, endOfRange),
         ))
-        .groupBy(sql`1`)
-        .orderBy(sql`1`),
+        .groupBy(sql`to_char(${rechargeOrders.confirmedAt}, 'YYYY-MM-DD')`)
+        .orderBy(sql`to_char(${rechargeOrders.confirmedAt}, 'YYYY-MM-DD')`),
     ]);
 
     // 合并趋势数据
@@ -661,7 +662,7 @@ export async function getReconciliationReport(params?: ReconParams) {
       .map(([date, vals]) => ({ date, ...vals }));
   }
 
-  // ── 等待所有并行查询完成 ──
+  // PERF: 并行查询汇总、维度拆分、异常检测同时执行，减少总等待时间
 
   const [
     [commissionResult],

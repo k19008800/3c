@@ -20,13 +20,13 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import api from '@/lib/api'
-import { Badge } from '@/components/ui/badge'
-import PaginationBar from '@/components/ui/PaginationBar'
+
+
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
   Loader2, AlertCircle, RefreshCw, Users, Plus, Key, Activity, Shield,
-  TrendingUp, Eye, EyeOff, DollarSign, CheckCircle, XCircle,
-  Save, X, BarChart3, Download, Clock, Zap, Edit3, Trash2,
+  TrendingUp, EyeOff, DollarSign, XCircle,
+  Save, X, BarChart3, Clock, Zap, Edit3, Trash2,
 } from 'lucide-react'
 
 // ── Types ──

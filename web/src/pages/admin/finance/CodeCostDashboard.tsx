@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { get } from '@/lib/api'
 import {
-  BarChart3, TrendingUp, PiggyBank, DollarSign,
-  Loader2, AlertCircle, RefreshCw, Search
+  BarChart3, PiggyBank, Loader2, AlertCircle, RefreshCw
 } from 'lucide-react'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 

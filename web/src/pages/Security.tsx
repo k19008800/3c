@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { get, post } from '@/lib/api'
 import type { LoginHistoryItem, ActiveSession } from '@/types'
-import { Loader2, Shield, LogOut, Smartphone, Globe, Monitor, Clock, CheckCircle2, XCircle, ShieldCheck, AlertTriangle, MapPin } from 'lucide-react'
+import { Loader2, Shield, LogOut, Smartphone, Monitor, Clock, CheckCircle2, XCircle, ShieldCheck, AlertTriangle, MapPin } from 'lucide-react'
 
 // ── 账号安全（用户端）─-
 //

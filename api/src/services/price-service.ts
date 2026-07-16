@@ -51,11 +51,20 @@ export async function batchUpdateSellPrices(
       })
       .where(inArray(vendorModels.id, foundIds));
 
-    // 写变更历史（每个模型一条）
+    // PERF: 批量构建 priceChangeHistory INSERT，替代逐行循环 INSERT
+    const historyValues: Array<{
+      operatorId: number;
+      changeType: string;
+      targetType: string;
+      targetId: number;
+      beforeValue: string;
+      afterValue: string;
+      reason: string;
+    }> = [];
+
     for (const row of currentRows) {
-      // input price change
       if (row.sellPriceInput !== sellPriceInput) {
-        await tx.insert(priceChangeHistory).values({
+        historyValues.push({
           operatorId,
           changeType: "sell_price",
           targetType: "vendor_model",
@@ -65,9 +74,8 @@ export async function batchUpdateSellPrices(
           reason,
         });
       }
-      // output price change
       if (row.sellPriceOutput !== sellPriceOutput) {
-        await tx.insert(priceChangeHistory).values({
+        historyValues.push({
           operatorId,
           changeType: "sell_price",
           targetType: "vendor_model",
@@ -77,6 +85,11 @@ export async function batchUpdateSellPrices(
           reason,
         });
       }
+    }
+
+    // PERF: 批量 INSERT（一次 round-trip），减少事务内的 SQL 交互次数
+    if (historyValues.length > 0) {
+      await tx.insert(priceChangeHistory).values(historyValues);
     }
   });
 
@@ -123,9 +136,20 @@ export async function batchUpdateCostPrices(
       })
       .where(inArray(vendorModels.id, foundIds));
 
+    // PERF: 批量构建 priceChangeHistory INSERT，替代逐行循环 INSERT
+    const historyValues: Array<{
+      operatorId: number;
+      changeType: string;
+      targetType: string;
+      targetId: number;
+      beforeValue: string;
+      afterValue: string;
+      reason: string;
+    }> = [];
+
     for (const row of currentRows) {
       if (row.costPriceInput !== costPriceInput) {
-        await tx.insert(priceChangeHistory).values({
+        historyValues.push({
           operatorId,
           changeType: "cost_price",
           targetType: "vendor_model",
@@ -136,7 +160,7 @@ export async function batchUpdateCostPrices(
         });
       }
       if (row.costPriceOutput !== costPriceOutput) {
-        await tx.insert(priceChangeHistory).values({
+        historyValues.push({
           operatorId,
           changeType: "cost_price",
           targetType: "vendor_model",
@@ -146,6 +170,11 @@ export async function batchUpdateCostPrices(
           reason,
         });
       }
+    }
+
+    // PERF: 批量 INSERT（一次 round-trip），减少事务内的 SQL 交互次数
+    if (historyValues.length > 0) {
+      await tx.insert(priceChangeHistory).values(historyValues);
     }
   });
 
@@ -194,7 +223,7 @@ export async function updatePricingMultiplier(
       operatorId,
       changeType: "pricing_multiplier",
       targetType: "system",
-      targetId: null,
+      targetId: null as any,
       beforeValue: beforeValue ? parseFloat(beforeValue).toString() : null,
       afterValue: value,
       reason,

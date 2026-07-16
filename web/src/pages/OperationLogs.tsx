@@ -7,7 +7,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { get } from '@/lib/api'
 import type { OperationLog, PaginatedData } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
-import { Loader2, AlertCircle, Search, RefreshCw, Filter } from 'lucide-react'
+import { Loader2, AlertCircle, RefreshCw } from 'lucide-react'
 
 // ── 分类筛选选项 ──
 

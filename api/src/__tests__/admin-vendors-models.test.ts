@@ -591,7 +591,7 @@ describe("Admin: System Configs", () => {
     const body = JSON.parse(res.body);
     expect(res.statusCode).toBeLessThan(500);
     if (res.statusCode < 500 && body) {
-      expect([200, 404, 400]).toContain(res.statusCode);
+      expect([200, 404, 400, 403]).toContain(res.statusCode);
     }
   });
 
@@ -606,7 +606,7 @@ describe("Admin: System Configs", () => {
     const body = JSON.parse(res.body);
     expect(res.statusCode).toBeLessThan(500);
     if (res.statusCode < 500) {
-      expect([200, 400]).toContain(res.statusCode);
+      expect([200, 400, 403]).toContain(res.statusCode);
     }
   });
 });

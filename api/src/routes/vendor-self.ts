@@ -1,11 +1,12 @@
 // ============================================================
 //  3cloud (3C) — 供应商自助管理路由
-//  X-Vendor-Key 鉴权
+//  X-Vendor-Key / JWT 双认证体系
 // ============================================================
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { createHash, randomBytes } from "node:crypto";
+import bcrypt from "bcryptjs";
 import { getDb } from "../db/index.js";
 import {
   vendors,
@@ -15,7 +16,8 @@ import {
   callLogs,
   vendorStatusEnum,
 } from "../db/schema.js";
-import { AppError } from "../services/auth-service.js";
+import { AppError, generateTokens } from "../services/auth-service.js";
+import { authenticateVendorJWT } from "../middleware/auth.js";
 
 // ── Vendor auth declaration ──
 
@@ -99,37 +101,66 @@ async function authenticateVendorKey(
 export async function vendorSelfRoutes(app: FastifyInstance) {
   // ──────────────────────────────────────────────
   //  POST /api/vendor/register — 供应商注册
+  //  公开路由（无需鉴权）
   // ──────────────────────────────────────────────
   app.post("/api/vendor/register", async (request, reply) => {
     const db = getDb();
     const body = request.body as any;
 
-    const { name, baseUrl, description, companyName, contactName, contactPhone, contactEmail } = body || {};
+    const { name, baseUrl, description, companyName, contactName, contactPhone, contactEmail, email, password } = body || {};
 
     if (!name || !baseUrl) {
       reply.status(400).send({ code: 400, data: null, message: "name 和 baseUrl 必填" });
       return;
     }
 
+    // 如果提供了 email/password，则进行校验
+    if (email && !password) {
+      reply.status(400).send({ code: 400, data: null, message: "提供 email 时必须同时提供 password" });
+      return;
+    }
+
     try {
+      // 检查 email 唯一性（如果提供了）
+      if (email) {
+        const [existing] = await db
+          .select({ id: vendors.id })
+          .from(vendors)
+          .where(eq(vendors.email, email.toLowerCase()))
+          .limit(1);
+        if (existing) {
+          reply.status(409).send({ code: 409, data: null, message: "该邮箱已被其他供应商使用" });
+          return;
+        }
+      }
+
+      const values: any = {
+        name,
+        baseUrl,
+        description,
+        status: "pending",
+        companyName,
+        contactName,
+        contactPhone,
+        contactEmail,
+      };
+
+      if (email) {
+        values.email = email.toLowerCase();
+        values.passwordHash = await bcrypt.hash(password, 10);
+      }
+
       const [vendor] = await db
         .insert(vendors)
-        .values({
-          name,
-          baseUrl,
-          description,
-          status: "pending",
-          companyName,
-          contactName,
-          contactPhone,
-          contactEmail,
-        })
+        .values(values)
         .returning();
 
       reply.status(200).send({
         code: 0,
         data: { id: vendor.id, name: vendor.name, status: "pending" },
-        message: "注册成功，请等待管理员审核",
+        message: email
+          ? "注册成功，请等待管理员审核"
+          : "注册成功，请等待管理员审核",
       });
     } catch (err: any) {
       if (err?.code === "23505") {
@@ -140,18 +171,112 @@ export async function vendorSelfRoutes(app: FastifyInstance) {
     }
   });
 
-  // ── 以下路由需要 X-Vendor-Key 鉴权 ──
+  // ──────────────────────────────────────────────
+  //  POST /api/vendor/login — 供应商登录
+  //  公开路由（无需鉴权）
+  // ──────────────────────────────────────────────
+  app.post("/api/vendor/login", async (request, reply) => {
+    const db = getDb();
+    const body = request.body as any;
+    const { email, password } = body || {};
+
+    if (!email || !password) {
+      reply.status(400).send({ code: 400, data: null, message: "email 和 password 必填" });
+      return;
+    }
+
+    // 查询 vendors 表匹配 email
+    const [vendor] = await db
+      .select()
+      .from(vendors)
+      .where(eq(vendors.email, email.toLowerCase()))
+      .limit(1);
+
+    if (!vendor) {
+      reply.status(401).send({ code: 401, data: null, message: "邮箱或密码错误" });
+      return;
+    }
+
+    if (!vendor.passwordHash) {
+      reply.status(401).send({ code: 401, data: null, message: "该账号尚未设置密码，请联系管理员" });
+      return;
+    }
+
+    // 对比 passwordHash
+    const valid = await bcrypt.compare(password, vendor.passwordHash);
+    if (!valid) {
+      reply.status(401).send({ code: 401, data: null, message: "邮箱或密码错误" });
+      return;
+    }
+
+    // 检查 status
+    if (vendor.status !== "active") {
+      reply.status(403).send({
+        code: 403,
+        data: null,
+        message: vendor.status === "pending"
+          ? "您的账号正在审核中，请耐心等待"
+          : vendor.status === "rejected"
+            ? `您的账号已被拒绝：${vendor.rejectReason || "未提供原因"}`
+            : `供应商状态异常: ${vendor.status}`,
+      });
+      return;
+    }
+
+    // 生成 JWT Token
+    const tokens = generateTokens(vendor.id, "vendor");
+
+    // 获取 key info
+    const [keyRecord] = await db
+      .select({ keyPrefix: vendorApiKeys.keyPrefix, status: vendorApiKeys.status })
+      .from(vendorApiKeys)
+      .where(eq(vendorApiKeys.vendorId, vendor.id))
+      .limit(1);
+
+    reply.status(200).send({
+      code: 0,
+      data: {
+        vendor: {
+          id: vendor.id,
+          name: vendor.name,
+          baseUrl: vendor.baseUrl,
+          status: vendor.status,
+          description: vendor.description,
+          companyName: vendor.companyName,
+          contactName: vendor.contactName,
+          contactPhone: vendor.contactPhone,
+          contactEmail: vendor.contactEmail,
+          email: vendor.email,
+          createdAt: vendor.createdAt.toISOString(),
+          vendorKeyPrefix: keyRecord?.keyPrefix ?? null,
+          vendorKeyActive: keyRecord?.status ?? false,
+        },
+        token: tokens,
+      },
+      message: "ok",
+    });
+  });
+
+  // ── X-Vendor-Key 鉴权中间件 ──
   app.addHook("preHandler", (request, reply, done) => {
-    // Skip auth for register route
-    if (request.url === "/api/vendor/register" && request.method === "POST") {
+    // Skip auth for register and login routes
+    if ((request.url === "/api/vendor/register" && request.method === "POST") ||
+        (request.url === "/api/vendor/login" && request.method === "POST")) {
       done();
       return;
     }
+    // JWT auth (Authorization: Bearer header) for vendor portal users
+    const authHeader = request.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      authenticateVendorJWT(request, reply).then(() => done()).catch((err) => done(err));
+      return;
+    }
+    // Fallback: X-Vendor-Key auth
     authenticateVendorKey(request, reply).then(() => done()).catch((err) => done(err));
   });
 
   // ──────────────────────────────────────────────
-  //  GET /api/vendor/me — 查看自己的信息
+  //  GET /api/vendor/me — 查看自己的信息（X-Vendor-Key / JWT 鉴权）
   // ──────────────────────────────────────────────
   app.get("/api/vendor/me", async (request, reply) => {
     const db = getDb();
@@ -187,6 +312,9 @@ export async function vendorSelfRoutes(app: FastifyInstance) {
         contactName: vendor.contactName,
         contactPhone: vendor.contactPhone,
         contactEmail: vendor.contactEmail,
+        email: vendor.email,
+        approvedAt: vendor.approvedAt?.toISOString() ?? null,
+        rejectReason: vendor.rejectReason,
         createdAt: vendor.createdAt.toISOString(),
         vendorKeyPrefix: keyRecord?.keyPrefix ?? null,
         vendorKeyActive: keyRecord?.status ?? false,
@@ -229,6 +357,65 @@ export async function vendorSelfRoutes(app: FastifyInstance) {
       }
       throw err;
     }
+  });
+
+  // ──────────────────────────────────────────────
+  //  PUT /api/vendor/password — 修改/设置密码
+  //  如果 passwordHash 为空（首次设置），不需要 oldPassword
+  // ──────────────────────────────────────────────
+  app.put("/api/vendor/password", async (request, reply) => {
+    const db = getDb();
+    const vendorId = request.vendor!.id;
+    const body = request.body as any;
+    const { oldPassword, newPassword } = body || {};
+
+    if (!newPassword) {
+      reply.status(400).send({ code: 400, data: null, message: "newPassword 必填" });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      reply.status(400).send({ code: 400, data: null, message: "密码长度不能小于 6 位" });
+      return;
+    }
+
+    const [vendor] = await db
+      .select({ passwordHash: vendors.passwordHash })
+      .from(vendors)
+      .where(eq(vendors.id, vendorId))
+      .limit(1);
+
+    if (!vendor) {
+      reply.status(404).send({ code: 404, data: null, message: "供应商不存在" });
+      return;
+    }
+
+    // 如果已有密码，验证旧密码
+    if (vendor.passwordHash) {
+      if (!oldPassword) {
+        reply.status(400).send({ code: 400, data: null, message: "oldPassword 必填" });
+        return;
+      }
+      const valid = await bcrypt.compare(oldPassword, vendor.passwordHash);
+      if (!valid) {
+        reply.status(400).send({ code: 400, data: null, message: "原密码错误" });
+        return;
+      }
+    }
+
+    // 哈希新密码
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await db
+      .update(vendors)
+      .set({ passwordHash })
+      .where(eq(vendors.id, vendorId));
+
+    reply.status(200).send({
+      code: 0,
+      data: null,
+      message: vendor.passwordHash ? "密码已修改" : "密码已设置",
+    });
   });
 
   // ──────────────────────────────────────────────
@@ -725,6 +912,122 @@ export async function vendorSelfRoutes(app: FastifyInstance) {
           revenue: m.revenue,
         })),
       },
+      message: "ok",
+    });
+  });
+}
+
+// ──────────────────────────────────────────────
+//  JWT 鉴权的供应商路由（供门户使用）
+// ──────────────────────────────────────────────
+export async function vendorJWTRoutes(app: FastifyInstance) {
+  // 所有路由需要 Vendor JWT 鉴权
+  app.addHook("preHandler", authenticateVendorJWT);
+
+  // ──────────────────────────────────────────────
+  //  GET /api/vendor/profile — 获取当前供应商信息
+  // ──────────────────────────────────────────────
+  app.get("/api/vendor/profile", async (request, reply) => {
+    const db = getDb();
+    const vendorId = request.vendor!.id;
+
+    const [vendor] = await db
+      .select()
+      .from(vendors)
+      .where(eq(vendors.id, vendorId))
+      .limit(1);
+
+    if (!vendor) {
+      reply.status(404).send({ code: 404, data: null, message: "供应商不存在" });
+      return;
+    }
+
+    const [keyRecord] = await db
+      .select({ keyPrefix: vendorApiKeys.keyPrefix, status: vendorApiKeys.status })
+      .from(vendorApiKeys)
+      .where(eq(vendorApiKeys.vendorId, vendorId))
+      .limit(1);
+
+    reply.status(200).send({
+      code: 0,
+      data: {
+        id: vendor.id,
+        name: vendor.name,
+        baseUrl: vendor.baseUrl,
+        status: vendor.status,
+        description: vendor.description,
+        companyName: vendor.companyName,
+        contactName: vendor.contactName,
+        contactPhone: vendor.contactPhone,
+        contactEmail: vendor.contactEmail,
+        email: vendor.email,
+        approvedAt: vendor.approvedAt?.toISOString() ?? null,
+        rejectReason: vendor.rejectReason,
+        createdAt: vendor.createdAt.toISOString(),
+        vendorKeyPrefix: keyRecord?.keyPrefix ?? null,
+        vendorKeyActive: keyRecord?.status ?? false,
+      },
+      message: "ok",
+    });
+  });
+
+  // ──────────────────────────────────────────────
+  //  PUT /api/vendor/profile — 更新供应商信息（JWT 鉴权）
+  // ──────────────────────────────────────────────
+  app.put("/api/vendor/profile", async (request, reply) => {
+    const db = getDb();
+    const vendorId = request.vendor!.id;
+    const body = request.body as any;
+
+    const allowedFields = ["name", "baseUrl", "description", "companyName", "contactName", "contactPhone", "contactEmail"] as const;
+    const updates: Record<string, any> = {};
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) updates[field] = body[field];
+    }
+
+    if (Object.keys(updates).length === 0) {
+      reply.status(400).send({ code: 400, data: null, message: "没有可更新的字段" });
+      return;
+    }
+
+    try {
+      const [vendor] = await db
+        .update(vendors)
+        .set(updates)
+        .where(eq(vendors.id, vendorId))
+        .returning();
+      reply.status(200).send({ code: 0, data: vendor, message: "ok" });
+    } catch (err: any) {
+      if (err?.code === "23505") {
+        reply.status(409).send({ code: 409, data: null, message: "厂商名称已存在" });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // ──────────────────────────────────────────────
+  //  GET /api/vendor/api-keys — 获取所有 API Key（JWT 鉴权）
+  // ──────────────────────────────────────────────
+  app.get("/api/vendor/api-keys", async (request, reply) => {
+    const db = getDb();
+    const vendorId = request.vendor!.id;
+
+    const keys = await db
+      .select({
+        id: vendorApiKeys.id,
+        keyPrefix: vendorApiKeys.keyPrefix,
+        status: vendorApiKeys.status,
+        permissions: vendorApiKeys.permissions,
+        createdAt: vendorApiKeys.createdAt,
+      })
+      .from(vendorApiKeys)
+      .where(eq(vendorApiKeys.vendorId, vendorId))
+      .orderBy(desc(vendorApiKeys.createdAt));
+
+    reply.status(200).send({
+      code: 0,
+      data: keys.map((k) => ({ ...k, createdAt: k.createdAt.toISOString() })),
       message: "ok",
     });
   });

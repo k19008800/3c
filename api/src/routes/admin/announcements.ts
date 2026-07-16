@@ -90,6 +90,42 @@ export async function adminAnnouncementRoutes(app: FastifyInstance) {
     });
   });
 
+    // ── 单条详情 ──
+  app.get("/api/v1/admin/announcements/:id", {
+    preHandler: [requirePerm(Perm.CONFIG_VIEW)],
+  }, async (request, reply) => {
+    const db = getDb();
+    const id = parseInt((request.params as any).id, 10);
+    if (isNaN(id)) {
+      reply.status(400).send({ code: 400, data: null, message: "无效的 ID" });
+      return;
+    }
+
+    const [row] = await db
+      .select({
+        id: announcements.id,
+        title: announcements.title,
+        content: announcements.content,
+        type: announcements.type,
+        status: announcements.status,
+        priority: announcements.priority,
+        createdBy: users.nickname,
+        createdAt: announcements.createdAt,
+        updatedAt: announcements.updatedAt,
+      })
+      .from(announcements)
+      .leftJoin(users, eq(announcements.createdBy, users.id))
+      .where(eq(announcements.id, id))
+      .limit(1);
+
+    if (!row) {
+      reply.status(404).send({ code: 404, data: null, message: "公告不存在" });
+      return;
+    }
+
+    reply.status(200).send({ code: 0, data: row, message: "ok" });
+  });
+
   // ── 创建公告 ──
   app.post("/api/v1/admin/announcements", {
     preHandler: [requirePerm(Perm.CONFIG_VIEW)],

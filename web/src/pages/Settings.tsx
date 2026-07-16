@@ -5,7 +5,7 @@ import type { LoginHistoryItem, ActiveSession } from '@/types'
 import {
   Loader2, User, Shield, Monitor, Clock, Smartphone, LogOut,
   CheckCircle2, XCircle, AlertCircle, Save, Lock, Eye, EyeOff,
-  Globe, RefreshCw, Mail, Bell, BellRing,
+  RefreshCw, Mail, Bell, BellRing,
 } from 'lucide-react'
 
 type Tab = 'profile' | 'security' | 'sessions' | 'login-history' | 'notifications'

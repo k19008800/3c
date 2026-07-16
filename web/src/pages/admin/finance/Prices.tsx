@@ -3,8 +3,7 @@ import { get, post } from '@/lib/api'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import PaginationBar from '@/components/ui/PaginationBar'
 import {
-  Loader2, AlertCircle, RefreshCw, DollarSign, Plus, X,
-  CheckCircle2, History, TrendingUp, Settings2,
+  Loader2, AlertCircle, RefreshCw, DollarSign, Plus, CheckCircle2, History, TrendingUp, Settings2,
 } from 'lucide-react'
 import type { ChangeEvent } from 'react'
 

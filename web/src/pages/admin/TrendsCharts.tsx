@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { get } from '@/lib/api'
-import { Loader2, AlertTriangle, TrendingUp, DollarSign, Users, PhoneCall, RefreshCw, ChevronDown, ChevronUp, Clock, BarChart3, Zap } from 'lucide-react'
+import { Loader2, AlertTriangle, TrendingUp, DollarSign, Users, PhoneCall, RefreshCw, ChevronUp, Clock, BarChart3, Zap } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════
    Types

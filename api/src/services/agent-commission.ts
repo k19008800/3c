@@ -208,6 +208,8 @@ export async function getAgentCommissionSummary(userId: number) {
   // 当前月份范围
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  // PERF: 添加默认时间范围限制（过去一年），避免扫描全部历史记录
+  const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), 1);
 
   const [totalStat] = await db
     .select({
@@ -218,7 +220,10 @@ export async function getAgentCommissionSummary(userId: number) {
       settledCount: sql<number>`count(*) filter (where ${commissionLogs.status} = 'settled')`,
     })
     .from(commissionLogs)
-    .where(eq(commissionLogs.agentId, agent.id));
+    .where(and(
+      eq(commissionLogs.agentId, agent.id),
+      gte(commissionLogs.createdAt, oneYearAgo),
+    ));
 
   const [monthStat] = await db
     .select({

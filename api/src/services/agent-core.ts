@@ -203,7 +203,8 @@ export async function getAgentClients(userId: number, page: number, pageSize: nu
     .limit(pageSize)
     .offset(offset);
 
-  // 批量查询消费汇总（从 agent_customer_consumption 读取，此为记账引擎实时维护的真实数据）
+  // PERF: 批量查询消费汇总（从 agent_customer_consumption 读取，记账引擎实时维护）
+  // PERF: 移除 commission_logs 降级回退双路径查询，减少不必要扫描
   const clientUserIds = rows.map((r) => r.clientUserId);
   let consumptionMap = new Map<number, {
     totalCallCost: string;
@@ -236,38 +237,6 @@ export async function getAgentClients(userId: number, page: number, pageSize: nu
         orderCount: row.orderCount ?? 0,
         lastOrderAt: row.lastOrderAt?.toISOString() ?? null,
       });
-    }
-
-    // 降级：如果 agent_customer_consumption 无数据（如历史数据未回填），
-    // 从 commission_logs 按 sourceCustomerId 聚合
-    if (consumptionMap.size === 0) {
-      const commissionAgg = await db
-        .select({
-          customerUserId: commissionLogs.sourceCustomerId,
-          totalCallCost: sql<string>`coalesce(sum(${commissionLogs.callCost}), '0.000000')`,
-          totalCommission: sql<string>`coalesce(sum(${commissionLogs.commissionAmount}), '0.000000')`,
-          orderCount: sql<number>`count(*)`,
-          lastOrderAt: sql<string>`max(${commissionLogs.createdAt})`,
-        })
-        .from(commissionLogs)
-        .where(
-          and(
-            eq(commissionLogs.agentId, agent.id),
-            inArray(commissionLogs.sourceCustomerId, clientUserIds),
-          )
-        )
-        .groupBy(commissionLogs.sourceCustomerId);
-
-      for (const row of commissionAgg) {
-        if (row.customerUserId != null) {
-          consumptionMap.set(row.customerUserId, {
-            totalCallCost: row.totalCallCost,
-            totalCommission: row.totalCommission,
-            orderCount: row.orderCount,
-            lastOrderAt: row.lastOrderAt ?? null,
-          });
-        }
-      }
     }
   }
 
@@ -351,12 +320,12 @@ export async function listAgentClientsForAdmin(
     .limit(pageSize)
     .offset(offset);
 
-  // 批量查询每个客户的消费汇总（从 agent_customer_consumption 读取）
+  // PERF: 批量查询每个客户的消费汇总（从 agent_customer_consumption 读取）
+  // PERF: 移除 commission_logs 降级回退双路径查询，减少不必要扫描
   const clientUserIds = rows.map((r) => r.clientUserId);
   let commissionMap = new Map<number, { totalCallCost: string; totalCommission: string; count: number }>();
 
   if (clientUserIds.length > 0) {
-    // 优先从 agent_customer_consumption 读取，此为记账引擎实时维护的真实数据
     const consRows = await db
       .select({
         customerUserId: agentCustomerConsumption.customerUserId,
@@ -378,35 +347,6 @@ export async function listAgentClientsForAdmin(
         totalCommission: item.totalCommission ?? '0.000000',
         count: item.orderCount ?? 0,
       });
-    }
-
-    // 降级：如果 agent_customer_consumption 无数据，从 commission_logs 聚合
-    if (commissionMap.size === 0) {
-      const commissionAgg = await db
-        .select({
-          customerUserId: commissionLogs.sourceCustomerId,
-          totalCallCost: sql<string>`coalesce(sum(${commissionLogs.callCost}), '0.000000')`,
-          totalCommission: sql<string>`coalesce(sum(${commissionLogs.commissionAmount}), '0.000000')`,
-          commissionCount: sql<number>`count(${commissionLogs.id})`,
-        })
-        .from(commissionLogs)
-        .where(
-          and(
-            eq(commissionLogs.agentId, agentId),
-            inArray(commissionLogs.sourceCustomerId, clientUserIds)
-          )
-        )
-        .groupBy(commissionLogs.sourceCustomerId);
-
-      for (const item of commissionAgg) {
-        if (item.customerUserId != null) {
-          commissionMap.set(item.customerUserId, {
-            totalCallCost: item.totalCallCost,
-            totalCommission: item.totalCommission,
-            count: item.commissionCount,
-          });
-        }
-      }
     }
   }
 

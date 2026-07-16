@@ -1,4 +1,4 @@
-import { STATUS_OPTIONS, fmt } from './types'
+import { STATUS_OPTIONS } from './types'
 
 /* ── Status Badge ── */
 export function StatusBadge({ status }: { status: string }) {

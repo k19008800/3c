@@ -1,46 +1,38 @@
-# 调试/临时文件
-api/_check*.ts
-api/_cleanup*.sql
-api/_find_delete.ts
-api/_login.json
-api/null
-api/test_env.mjs
-
-# 构建产物
+# Node
+node_modules/
 dist/
-build/
+*.tsbuildinfo
 
-# Vite 缓存
-.vite/
-
-# 环境变量
+# Env
 .env
 .env.local
+.env.*.local
 
-# 操作系统
-.DS_Store
+# Debug scripts
+api/check-*.ts
+api/fix-*.ts
+api/debug-*.ts
+api/test-*.ts
+api/test-*.ps1
+
+# Reports
+api/regression-*
+PERF_*
+TEST_CASES.md
+perf-baseline.json
+scripts/perf-verify.ts
+
+# Test plans
+test-plans/
+__tests__/
+docs/http3-research.md
+
+# E2E
+web/e2e/
+web/test-results/
+web/fix-oxlint.py
+
+# OS
+测试文档/
 Thumbs.db
-
-# npm
-node_modules/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# 临时/调试文件
-api/__*
-api/_*
-api/*_backup*
-api/*tmp*
-api/grep_result.txt
-api/tsc_output.txt
-api/verify.mjs
-api/README-*.md
-api/migrations/
-
-# 重构残留脚本
-api/src/services/re-split*.cjs
-api/src/services/fix-*.cjs
+.DS_Store

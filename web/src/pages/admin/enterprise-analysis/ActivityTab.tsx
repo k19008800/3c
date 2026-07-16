@@ -1,7 +1,7 @@
-import { useState } from 'react'
+
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { Loader2, Activity, Clock, MapPin, PieChart as PieIcon } from 'lucide-react'
-import type { ActivityData, ModelBreakdown, IPPoint } from './types'
+import { Loader2, Activity, Clock, PieChart as PieIcon } from 'lucide-react'
+import type { ActivityData, ModelBreakdown } from './types'
 import GeographicDistribution from './GeographicDistribution'
 
 interface Props {

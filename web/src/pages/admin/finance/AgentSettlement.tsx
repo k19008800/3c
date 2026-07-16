@@ -4,6 +4,7 @@ import {
   TrendingDown, TrendingUp, Lock, Unlock, Wallet,
 } from 'lucide-react';
 import FeatureDescription from '@/components/admin/FeatureDescription';
+import api from '@/lib/api';
 
 // ── Types (matches backend response) ──
 
@@ -44,11 +45,13 @@ interface SettlementData {
 
 // ── Helpers ──
 
-function fmt(n: number): string {
+function fmt(n: number | null | undefined): string {
+  if (n == null) return '¥0.00'
   return `¥${(n / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-function fmtRaw(n: number, digits = 2): string {
+function fmtRaw(n: number | null | undefined, digits = 2): string {
+  if (n == null) return `¥0.${'0'.repeat(digits)}`
   return `¥${n.toLocaleString('zh-CN', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`
 }
 
@@ -76,11 +79,8 @@ const AgentSettlement: React.FC = () => {
       params.set('page', String(page))
       params.set('pageSize', String(pageSize))
 
-      const res = await fetch(
-        `/api/v1/admin/finance/codes/agent-settlement?${params.toString()}`,
-      )
-      if (!res.ok) throw new Error(`请求失败 (${res.status})`)
-      const body = await res.json()
+      const res = await api.get(`/api/v1/admin/finance/codes/agent-settlement`, { params: Object.fromEntries(params) })
+      const body = res.data
       if (body.code !== 0) throw new Error(body.message || '加载失败')
       setData(body.data)
     } catch (e: unknown) {

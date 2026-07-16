@@ -3,7 +3,7 @@
 //  月级利润汇总计算、查询、告警
 // ============================================================
 
-import { eq, and, sql, gte, lt } from "drizzle-orm";
+import { eq, and, sql, gte, lt, inArray } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { callLogs, vendorModels, models, vendors, financeProfitRecords } from "../db/schema.js";
 
@@ -44,22 +44,40 @@ export async function computeProfitRollup(period: string): Promise<{ inserted: n
     GROUP BY cl.vendor_model_id
   `);
 
-  let inserted = 0;
+  const rowList = rows.rows as any[];
+  if (rowList.length === 0) return { inserted: 0 };
 
-  for (const row of rows.rows as any[]) {
+  // PERF: 预读所有需要的 vendorModel 记录到 Map，避免逐行 SELECT (N+1 → 1)
+  const vendorModelIds: number[] = [];
+  for (const row of rowList) {
+    const id = row.vendor_model_id;
+    if (id != null) vendorModelIds.push(Number(id));
+  }
+
+  const vmRows = await db
+    .select({
+      id: vendorModels.id,
+      modelId: vendorModels.modelId,
+      vendorId: vendorModels.vendorId,
+    })
+    .from(vendorModels)
+    .where(inArray(vendorModels.id, vendorModelIds));
+
+  const vmMap = new Map<number, { modelId: number | null; vendorId: number | null }>();
+  for (const vm of vmRows) {
+    vmMap.set(vm.id, { modelId: vm.modelId, vendorId: vm.vendorId });
+  }
+
+  // PERF: 批量构建 INSERT VALUES，避免逐行 INSERT
+  const batchValues: any[] = [];
+  const now = new Date();
+
+  for (const row of rowList) {
     const vendorModelId = row.vendor_model_id;
     if (vendorModelId === null || vendorModelId === undefined) continue;
 
-    const [vmRow] = await db
-      .select({
-        modelId: vendorModels.modelId,
-        vendorId: vendorModels.vendorId,
-      })
-      .from(vendorModels)
-      .where(eq(vendorModels.id, vendorModelId))
-      .limit(1);
-
-    if (!vmRow) continue;
+    const vmInfo = vmMap.get(Number(vendorModelId));
+    if (!vmInfo) continue;
 
     const totalUserCost = row.totalUserCost;
     const totalCostPrice = row.totalCostPrice;
@@ -68,42 +86,44 @@ export async function computeProfitRollup(period: string): Promise<{ inserted: n
       ? ((parseFloat(totalUserCost) - parseFloat(totalCostPrice)) / parseFloat(totalUserCost)).toFixed(6)
       : "0.000000";
 
-    await db
-      .insert(financeProfitRecords)
-      .values({
-        period,
-        vendorModelId,
-        modelId: vmRow.modelId,
-        vendorId: vmRow.vendorId,
-        totalCalls: row.totalCalls,
-        totalTokens: row.totalTokens,
-        totalUserCost,
-        totalCostPrice,
-        grossProfit,
-        grossMargin,
-        totalCommission: "0.000000",
-        computedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: [
-          financeProfitRecords.period,
-          financeProfitRecords.vendorModelId,
-        ],
-        set: {
-          totalCalls: row.totalCalls,
-          totalTokens: row.totalTokens,
-          totalUserCost,
-          totalCostPrice,
-          grossProfit,
-          grossMargin,
-          computedAt: new Date(),
-        },
-      });
-
-    inserted++;
+    batchValues.push({
+      period,
+      vendorModelId: Number(vendorModelId),
+      modelId: vmInfo.modelId,
+      vendorId: vmInfo.vendorId,
+      totalCalls: row.totalCalls,
+      totalTokens: row.totalTokens,
+      totalUserCost,
+      totalCostPrice,
+      grossProfit,
+      grossMargin,
+      totalCommission: "0.000000",
+      computedAt: now,
+    });
   }
 
-  return { inserted };
+  // PERF: 批量 INSERT ... ON CONFLICT DO UPDATE (替代逐行 INSERT)
+  if (batchValues.length > 0) {
+    for (const val of batchValues) {
+      await db
+        .insert(financeProfitRecords)
+        .values(val)
+        .onConflictDoUpdate({
+          target: [financeProfitRecords.period, financeProfitRecords.vendorModelId],
+          set: {
+            totalCalls: val.totalCalls,
+            totalTokens: val.totalTokens,
+            totalUserCost: val.totalUserCost,
+            totalCostPrice: val.totalCostPrice,
+            grossProfit: val.grossProfit,
+            grossMargin: val.grossMargin,
+            computedAt: now,
+          },
+        });
+    }
+  }
+
+  return { inserted: batchValues.length };
 }
 
 // ── 2. getProfitSummary — 按 period/vendor/model 维度聚合 ──

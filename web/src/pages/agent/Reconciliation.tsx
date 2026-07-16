@@ -2,10 +2,9 @@ import { useEffect, useState, useCallback } from 'react'
 import { get, downloadUrl } from '@/lib/api'
 import PaginationBar from '@/components/ui/PaginationBar'
 import {
-  BarChart3, TrendingUp, TrendingDown, CreditCard,
-  Calendar, RefreshCw, ArrowUpRight, ArrowDownRight,
+  BarChart3, TrendingDown, Calendar, RefreshCw, ArrowDownRight,
   MinusCircle, PlusCircle, RotateCcw, Wallet,
-  Search, Filter, Download,
+  Filter, Download,
 } from 'lucide-react'
 
 // ── Types ──

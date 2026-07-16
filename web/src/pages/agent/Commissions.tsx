@@ -6,7 +6,7 @@ import PaginationBar from '@/components/ui/PaginationBar'
 import {
   Loader2, AlertCircle,
   DollarSign, TrendingUp, Clock, CheckCircle2,
-  Search, Download, X, Info, FileText, ArrowUpRight,
+  Search, Download, X, Info, ArrowUpRight,
 } from 'lucide-react'
 
 // ── helpers ──

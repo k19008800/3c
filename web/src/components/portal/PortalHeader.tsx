@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Menu, X, ChevronRight } from 'lucide-react'
+import { useSiteConfig } from '@/hooks/use-site-config'
 
 const NAV_LINKS = [
   { href: '/', label: '首页' },
@@ -13,6 +14,7 @@ export default function PortalHeader() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
+  const { config: siteConfig } = useSiteConfig()
 
   useEffect(() => {
     function onScroll() { setScrolled(window.scrollY > 10) }
@@ -35,10 +37,20 @@ export default function PortalHeader() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">3C</span>
-            </div>
-            <span className="text-lg font-bold text-slate-900">3Cloud</span>
+            {siteConfig?.site_logo_url ? (
+              <img
+                src={siteConfig.site_logo_url}
+                alt={siteConfig.site_name || 'Logo'}
+                className="h-8 max-w-[180px] object-contain"
+              />
+            ) : (
+              <>
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">3C</span>
+                </div>
+                <span className="text-lg font-bold text-slate-900">{siteConfig?.site_name || '3Cloud'}</span>
+              </>
+            )}
           </Link>
 
           {/* Desktop nav */}

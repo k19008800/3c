@@ -89,6 +89,7 @@ import { getAgentByUserId, num, fmt, getStatusLabel, WITHDRAW_STATUS_LABEL } fro
 
 // ── 辅助: 获取系统配置值 ──
 
+// PERF: 支持单 key 和批量 key 查询，避免多次独立查询
 async function getSystemConfig(key: string): Promise<string | null> {
   const db = getDb();
   const [config] = await db
@@ -97,6 +98,20 @@ async function getSystemConfig(key: string): Promise<string | null> {
     .where(eq(systemConfigs.key, key))
     .limit(1);
   return config?.value ?? null;
+}
+
+// PERF: 批量获取多个系统配置，单次 SQL WHERE key IN (...)
+async function getSystemConfigs(keys: string[]): Promise<Map<string, string>> {
+  const db = getDb();
+  const rows = await db
+    .select({ key: systemConfigs.key, value: systemConfigs.value })
+    .from(systemConfigs)
+    .where(inArray(systemConfigs.key, keys));
+  const map = new Map<string, string>();
+  for (const r of rows) {
+    map.set(r.key, r.value);
+  }
+  return map;
 }
 
 // ══════════════════════════════════════════════
@@ -154,8 +169,11 @@ export async function createWithdraw(userId: number, amount: string, bankCardNo:
     throw new AppError("INVALID_AMOUNT", "提现金额必须大于 0", 400);
   }
 
+  // PERF: 批量获取所有系统配置，单次 SQL 替代 3 次独立查询
+  const configs = await getSystemConfigs(["agent_min_withdraw", "agent_daily_withdraw_limit", "withdraw_fee_rate"]);
+
   // 检查最小提现金额
-  const minWithdrawStr = await getSystemConfig("agent_min_withdraw");
+  const minWithdrawStr = configs.get("agent_min_withdraw");
   if (minWithdrawStr) {
     const minWithdraw = parseFloat(minWithdrawStr);
     if (amountNum < minWithdraw) {
@@ -164,7 +182,7 @@ export async function createWithdraw(userId: number, amount: string, bankCardNo:
   }
 
   // 检查每日提现次数限制
-  const dailyLimitStr = await getSystemConfig("agent_daily_withdraw_limit");
+  const dailyLimitStr = configs.get("agent_daily_withdraw_limit");
   if (dailyLimitStr) {
     const dailyLimit = parseInt(dailyLimitStr, 10);
     if (dailyLimit > 0) {
@@ -188,24 +206,16 @@ export async function createWithdraw(userId: number, amount: string, bankCardNo:
     }
   }
 
-  // 检查可用余额（实时计算，与 Dashboard 展示逻辑一致）
-  const [withdrawnTotalResult] = await db
-    .select({ sum: sql<string>`coalesce(sum(${withdrawOrders.actualAmount}), '0.000000')` })
+  // PERF: 合并 withdrawn + pendingWithdraw 统计为单次 SQL，减少一次全表扫描
+  const [aggregateResult] = await db
+    .select({
+      withdrawnSum: sql<string>`coalesce(sum(${withdrawOrders.actualAmount}) filter (where ${withdrawOrders.status} = 'paid'), '0.000000')`,
+      pendingSum: sql<string>`coalesce(sum(${withdrawOrders.amount}) filter (where ${withdrawOrders.status} NOT IN ('paid', 'rejected')), '0.000000')`,
+    })
     .from(withdrawOrders)
-    .where(and(
-      eq(withdrawOrders.agentId, agent.id),
-      eq(withdrawOrders.status, "paid"),
-    ));
-  const withdrawnTotal = withdrawnTotalResult?.sum ?? "0.000000";
-
-  const [pendingWithdrawTotalResult] = await db
-    .select({ sum: sql<string>`coalesce(sum(${withdrawOrders.amount}), '0.000000')` })
-    .from(withdrawOrders)
-    .where(and(
-      eq(withdrawOrders.agentId, agent.id),
-      sql`${withdrawOrders.status} NOT IN ('paid', 'rejected')`,
-    ));
-  const pendingWithdrawTotal = pendingWithdrawTotalResult?.sum ?? "0.000000";
+    .where(eq(withdrawOrders.agentId, agent.id));
+  const withdrawnTotal = aggregateResult?.withdrawnSum ?? "0.000000";
+  const pendingWithdrawTotal = aggregateResult?.pendingSum ?? "0.000000";
 
   const settledCommission = num(agent.settledCommission);
   const withdrawn = num(withdrawnTotal);
@@ -217,8 +227,8 @@ export async function createWithdraw(userId: number, amount: string, bankCardNo:
     throw new AppError("INSUFFICIENT_BALANCE", `可提现余额不足。当前可提现: ${fmt(num(availableBalance))} 元`, 400);
   }
 
-  // 获取提现手续费率
-  const feeRateStr = await getSystemConfig("withdraw_fee_rate");
+  // 获取提现手续费率（从已批量获取的 configs 中读取）
+  const feeRateStr = configs.get("withdraw_fee_rate");
   const feeRate = feeRateStr ? parseFloat(feeRateStr) : 0;
   const feeAmount = amountNum * feeRate;
   const actualAmount = amountNum - feeAmount;

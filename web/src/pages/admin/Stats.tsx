@@ -1,10 +1,10 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { get } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
-  Loader2, AlertCircle, BarChart3, Activity, Cpu, DollarSign, Clock,
-  Filter, ChevronDown, ChevronUp, Download, TrendingUp, Users, PieChart, Zap,
+  Loader2, AlertCircle, BarChart3, Activity, Cpu, Clock,
+  Filter, ChevronDown, ChevronUp, Download, TrendingUp, Users,
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,

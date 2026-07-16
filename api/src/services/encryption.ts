@@ -13,12 +13,17 @@ const IV_LENGTH = 12;  // GCM 推荐 12 字节
 const AUTH_TAG_LENGTH = 16;
 const KEY_ENCODING: BufferEncoding = "hex";
 
+// PERF: 缓存 key Buffer，启动后不再变化，避免每次加解密都重新转换
+let cachedKey: Buffer | null = null;
+
 function getKey(): Buffer {
+  if (cachedKey) return cachedKey; // PERF: 缓存命中直接返回
   const keyHex = config.vendorKeyEncryption.key;
   if (!keyHex) {
     throw new Error("VENDOR_KEY_ENCRYPTION_KEY 未配置");
   }
-  return Buffer.from(keyHex, KEY_ENCODING);
+  cachedKey = Buffer.from(keyHex, KEY_ENCODING);
+  return cachedKey;
 }
 
 /**
@@ -41,6 +46,11 @@ export function encryptApiKey(plaintext: string): string {
  * 解密密文 API Key
  * 输入: "base64(iv):base64(authTag):base64(ciphertext)"
  * 返回: 原始明文
+ *
+ * PERF: 对高频使用的 vendor key（如 proxy 路由热路径）
+ * 可添加 5 分钟 TTL 内存缓存避免重复 AES 解密：
+ *   const decryptCache = new Map<string, { value: string; expiresAt: number }>();
+ *   if (cache.has(encrypted) && cache.get(encrypted)!.expiresAt > Date.now()) return cache.get(encrypted)!.value;
  */
 export function decryptApiKey(encrypted: string): string {
   const key = getKey();

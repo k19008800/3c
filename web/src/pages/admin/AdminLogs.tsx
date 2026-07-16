@@ -15,13 +15,12 @@ import {
   ChevronDown,
   ChevronUp,
   Download,
-  Activity,
   Clock,
   XCircle,
 } from 'lucide-react'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, Area, AreaChart,
+  Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  Line, Area, AreaChart,
 } from 'recharts'
 
 /** Admin log item — extends user-facing LogItem with user email */

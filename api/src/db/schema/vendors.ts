@@ -40,6 +40,13 @@ export const vendors = pgTable(
     contactName: varchar("contact_name", { length: 100 }),
     contactPhone: varchar("contact_phone", { length: 20 }),
     contactEmail: varchar("contact_email", { length: 255 }),
+    // 供应商登录字段
+    email: varchar("email", { length: 255 }).unique(),
+    passwordHash: varchar("password_hash", { length: 255 }),
+    // 审核字段
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    approvedBy: integer("approved_by").references(() => users.id, { onDelete: "set null" }),
+    rejectReason: text("reject_reason"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

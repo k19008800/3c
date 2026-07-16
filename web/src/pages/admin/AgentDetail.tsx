@@ -11,19 +11,16 @@ import {
   ArrowLeft,
   RefreshCw,
   Percent,
-  Calendar,
   Activity,
   Users,
   Link2,
   DollarSign,
-  Shield,
   Tag,
   ChevronRight,
   Plus,
   Trash2,
   Edit3,
   X,
-  CheckCircle2,
 } from 'lucide-react'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 

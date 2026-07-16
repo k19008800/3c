@@ -4,9 +4,11 @@
 // ============================================================
 
 import { getDb } from "../db/index.js";
-import { userNotifications, notificationTypeEnum } from "../db/schema.js";
-import { sendRealNameResultEmail } from "./email-service.js";
+import { userNotifications, notificationTypeEnum, users as usersTable, agents as agentsTable } from "../db/schema.js";
+import { sendRealNameResultEmail, sendLoginAlertEmail, sendEmail } from "./email-service.js";
 import { logger } from "../logger.js";
+import { eq } from "drizzle-orm";
+// PERF: 顶部静态导入 email-service 和 drizzle-orm，消除所有函数内动态 import
 
 // ──────────────────────────────────────────────
 //  站内信
@@ -218,6 +220,19 @@ export async function notifyRedemptionSuccess(
   }).catch((err) => logger.error({ err, userId }, "[Notif] redemption_success 通知失败"));
 }
 
+// PERF: 邮件发送辅助函数，统一处理异步发送和错误日志
+export async function sendEmailAsync(
+  emailFn: () => any,
+  context: Record<string, any>,
+  label: string,
+): Promise<void> {
+  try {
+    await emailFn();
+  } catch (err) {
+    logger.error({ err, ...context }, `[Notif] ${label} 发送失败`);
+  }
+}
+
 /**
  * 根据用户 ID 获取 email 等信息的快捷函数
  */
@@ -227,18 +242,17 @@ export async function notifyRealNameReviewByUserId(
   rejectReason?: string | null,
 ): Promise<void> {
   const db = getDb();
-  const { users } = await import("../db/schema.js");
-  const { eq } = await import("drizzle-orm");
+  // PERF: 使用顶部静态导入，消除动态 import
 
   const [user] = await db
     .select({
-      email: users.email,
-      nickname: users.nickname,
-      realName: users.realName,
-      userType: users.userType,
+      email: usersTable.email,
+      nickname: usersTable.nickname,
+      realName: usersTable.realName,
+      userType: usersTable.userType,
     })
-    .from(users)
-    .where(eq(users.id, userId))
+    .from(usersTable)
+    .where(eq(usersTable.id, userId))
     .limit(1);
 
   if (!user) {
@@ -276,22 +290,21 @@ export async function notifyUnusualLogin(
     title: "异常登录提醒",
     content: `检测到异常登录：IP ${ip}，位置 ${city}，设备 ${device}。如非本人操作请及时修改密码。`,
     refType: "login_alert",
-  }).catch((err) => logger.error({ err, userId }, "[Notif] login_alert 通知失败"));
+  }).catch((err) => { logger.error({ err, userId }, "[Notif] login_alert 通知失败"); });
 
-  // 发送邮件
-  try {
-    const { sendLoginAlertEmail } = await import("./email-service.js");
-    sendLoginAlertEmail({
+  // PERF: 使用静态导入 + sendEmailAsync 辅助函数
+  await sendEmailAsync(
+    () => sendLoginAlertEmail({
       toEmail: email,
       nickname: null,
       city,
       country: "",
       ip,
       device,
-    }).catch((err: any) => logger.error({ err, userId }, "[Notif] login_alert 邮件失败"));
-  } catch (err) {
-    logger.error({ err, userId }, "[Notif] 邮件服务导入失败");
-  }
+    }),
+    { userId },
+    "login_alert",
+  );
 }
 
 /**
@@ -308,19 +321,18 @@ export async function notifyApiKeyCreated(
     title: "API Key 已创建",
     content: `新的 API Key「${keyName}」已创建。请妥善保管密钥。`,
     refType: "api_key",
-  }).catch((err) => logger.error({ err, userId }, "[Notif] api_key_created 通知失败"));
+  }).catch((err) => { logger.error({ err, userId }, "[Notif] api_key_created 通知失败"); });
 
-  // 可选：发送邮件通知
-  try {
-    const { sendEmail } = await import("./email-service.js");
-    sendEmail({
+  // PERF: 使用静态导入 + sendEmailAsync 辅助函数
+  await sendEmailAsync(
+    () => sendEmail({
       to: email,
       subject: "API Key 已创建 — 3cloud",
       html: `<p>您好，</p><p>您的 API Key「${keyName}」已成功创建。</p><p>请登录控制台查看并妥善保管密钥信息。</p>`,
-    }).catch((err: any) => logger.error({ err, userId }, "[Notif] api_key_created 邮件失败"));
-  } catch (err) {
-    logger.error({ err, userId }, "[Notif] 邮件服务导入失败");
-  }
+    }),
+    { userId },
+    "api_key_created",
+  );
 }
 
 /**
@@ -337,18 +349,18 @@ export async function notifyApiKeyDeleted(
     title: "API Key 已删除",
     content: `API Key「${keyName}」已被删除。使用该密钥的应用将无法继续调用。`,
     refType: "api_key",
-  }).catch((err) => logger.error({ err, userId }, "[Notif] api_key_deleted 通知失败"));
+  }).catch((err) => { logger.error({ err, userId }, "[Notif] api_key_deleted 通知失败"); });
 
-  try {
-    const { sendEmail } = await import("./email-service.js");
-    sendEmail({
+  // PERF: 使用静态导入 + sendEmailAsync 辅助函数
+  await sendEmailAsync(
+    () => sendEmail({
       to: email,
       subject: "API Key 已删除 — 3cloud",
       html: `<p>您好，</p><p>您的 API Key「${keyName}」已被删除。</p><p>如非本人操作，请立即检查账户安全。</p>`,
-    }).catch((err: any) => logger.error({ err, userId }, "[Notif] api_key_deleted 邮件失败"));
-  } catch (err) {
-    logger.error({ err, userId }, "[Notif] 邮件服务导入失败");
-  }
+    }),
+    { userId },
+    "api_key_deleted",
+  );
 }
 
 /**
@@ -366,18 +378,18 @@ export async function notifyRateLimitWarned(
     title: "速率限制警告",
     content: `${limitType} 当前使用量 ${currentUsage}，即将达到限制。请合理控制调用频率。`,
     refType: "rate_limit",
-  }).catch((err) => logger.error({ err, userId }, "[Notif] rate_limit 通知失败"));
+  }).catch((err) => { logger.error({ err, userId }, "[Notif] rate_limit 通知失败"); });
 
-  try {
-    const { sendEmail } = await import("./email-service.js");
-    sendEmail({
+  // PERF: 使用静态导入 + sendEmailAsync 辅助函数
+  await sendEmailAsync(
+    () => sendEmail({
       to: email,
       subject: "速率限制警告 — 3cloud",
       html: `<p>您好，</p><p>您的 ${limitType} 当前使用量 ${currentUsage}，即将达到限制。</p><p>请合理控制调用频率，以免影响服务使用。</p>`,
-    }).catch((err: any) => logger.error({ err, userId }, "[Notif] rate_limit 邮件失败"));
-  } catch (err) {
-    logger.error({ err, userId }, "[Notif] 邮件服务导入失败");
-  }
+    }),
+    { userId },
+    "rate_limit",
+  );
 }
 
 /**
@@ -389,8 +401,7 @@ export async function notifySettlementComplete(
   count: number,
 ): Promise<void> {
   const db = getDb();
-  const { agents: agentsTable, users: usersTable } = await import("../db/schema.js");
-  const { eq: eqFn } = await import("drizzle-orm");
+  // PERF: 使用顶部静态导入，消除动态 import
 
   // 查找代理商关联的用户
   const [agent] = await db
@@ -399,8 +410,8 @@ export async function notifySettlementComplete(
       email: usersTable.email,
     })
     .from(agentsTable)
-    .innerJoin(usersTable, eqFn(agentsTable.userId, usersTable.id))
-    .where(eqFn(agentsTable.id, agentId))
+    .innerJoin(usersTable, eq(agentsTable.userId, usersTable.id))
+    .where(eq(agentsTable.id, agentId))
     .limit(1);
 
   if (!agent) {
@@ -414,18 +425,18 @@ export async function notifySettlementComplete(
     title: "佣金结算完成",
     content: `本期佣金已结算 ${count} 笔，总金额 ${amount}，请查收。`,
     refType: "commission_settlement",
-  }).catch((err) => logger.error({ err, agentId }, "[Notif] settlement 通知失败"));
+  }).catch((err) => { logger.error({ err, agentId }, "[Notif] settlement 通知失败"); });
 
-  try {
-    const { sendEmail } = await import("./email-service.js");
-    sendEmail({
+  // PERF: 使用静态导入 + sendEmailAsync 辅助函数
+  await sendEmailAsync(
+    () => sendEmail({
       to: agent.email,
       subject: "佣金结算通知 — 3cloud",
       html: `<p>您好，</p><p>本期佣金已结算 <strong>${count}</strong> 笔，总金额 <strong>${amount}</strong> 元。</p><p>请登录代理商后台查看明细。</p>`,
-    }).catch((err: any) => logger.error({ err, agentId }, "[Notif] settlement 邮件失败"));
-  } catch (err) {
-    logger.error({ err, agentId }, "[Notif] 邮件服务导入失败");
-  }
+    }),
+    { agentId },
+    "settlement",
+  );
 }
 
 

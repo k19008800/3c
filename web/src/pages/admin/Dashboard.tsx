@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { get } from '@/lib/api'
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import type {
   AdminDashboardStats, RevenueAnalysis, TopConsumersData, TodoQueue as TodoQueueData,
@@ -9,11 +9,11 @@ import type {
 } from '@/types'
 import {
   Loader2, AlertCircle, RefreshCw,
-  PhoneCall, DollarSign, Activity,
-  Sun, CalendarDays, Calendar, CalendarRange, X,
+  PhoneCall, DollarSign,
 } from 'lucide-react'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import AlertBar from './dashboard/AlertBar'
+import OverviewTrends from './dashboard/OverviewTrends'
 import ModelRankBar from './dashboard/ModelRankBar'
 import RevenueBreakdown from './dashboard/RevenueBreakdown'
 import VendorHealthPanel from './dashboard/VendorHealthPanel'
@@ -26,12 +26,6 @@ import ModelSchedulingRealtime from './dashboard/ModelSchedulingRealtime'
 function fmtMoney(v: string | number): string {
   const n = typeof v === 'string' ? parseFloat(v) : v
   return n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-function fmtTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 10000) return `${(n / 10000).toFixed(1)}万`
-  return n.toLocaleString()
 }
 
 /* ════════════════════════════════════════
@@ -49,13 +43,6 @@ interface DaySeries {
    AdminDashboard
    ════════════════════════════════════════ */
 
-const TIME_TABS = [
-  { key: 1 as const, label: '今日', icon: Sun },
-  { key: 7 as const, label: '本周', icon: CalendarDays },
-  { key: 30 as const, label: '本月', icon: Calendar },
-  { key: 0 as const, label: '自定义', icon: CalendarRange },
-] as const
-
 export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null)
   const [revenue, setRevenue] = useState<RevenueAnalysis | null>(null)
@@ -67,10 +54,6 @@ export default function AdminDashboard() {
   const [days, setDays] = useState(7)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
-  // Custom date range modal
-  const [customOpen, setCustomOpen] = useState(false)
-  const [customDays, setCustomDays] = useState('')
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -100,15 +83,6 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchData()
   }, [fetchData])
-
-  const handleCustomSubmit = () => {
-    const d = parseInt(customDays)
-    if (d >= 1 && d <= 365) {
-      setDays(d)
-      setCustomOpen(false)
-      setCustomDays('')
-    }
-  }
 
   /* ── Loading state ── */
   if (loading && !stats) {
@@ -144,43 +118,7 @@ export default function AdminDashboard() {
   /* ── Top 10 models ── */
   const topModels = s.topModels.length > 0 ? s.topModels : []
 
-  /* ── KPI computed values ── */
-  const todayCalls = s.calls.today
-  const yesterdayCalls = s.calls.yesterday
-  const successRate = todayCalls.total > 0
-    ? ((todayCalls.success / todayCalls.total) * 100).toFixed(2)
-    : '100.00'
 
-  const kpiCards = [
-    {
-      label: '今日调用',
-      value: todayCalls.total.toLocaleString(),
-      sub: `${todayCalls.success} 成功 / ${todayCalls.failed + todayCalls.timeout} 失败`,
-      color: 'border-blue-200 bg-blue-50',
-      textColor: 'text-blue-700',
-    },
-    {
-      label: '今日 Token',
-      value: fmtTokens(todayCalls.totalTokens),
-      sub: `消耗 ¥${fmtMoney(todayCalls.totalCost)}`,
-      color: 'border-purple-200 bg-purple-50',
-      textColor: 'text-purple-700',
-    },
-    {
-      label: '今日营收',
-      value: `¥${fmtMoney(s.revenue.todayRecharge)}`,
-      sub: `${s.revenue.todayRechargeCount} 笔充值`,
-      color: 'border-green-200 bg-green-50',
-      textColor: 'text-green-700',
-    },
-    {
-      label: '活跃用户',
-      value: s.yesterdayDau.toLocaleString(),
-      sub: `总用户 ${s.users.total.toLocaleString()} · 成功率 ${successRate}%`,
-      color: 'border-amber-200 bg-amber-50',
-      textColor: 'text-amber-700',
-    },
-  ]
 
   return (
     <div className="space-y-5">
@@ -211,166 +149,19 @@ export default function AdminDashboard() {
       <AlertBar system={s.system} lowBalanceUsers={s.lowBalanceUsers} />
 
       {/* ══════════════════════════════════════ */}
-      {/*  Tabbed Analytics Panel                */}
+      {/*  沉浸式总览趋势（宝塔监控UI风格）        */}
       {/* ══════════════════════════════════════ */}
 
-      <div className="bg-gradient-to-b from-blue-50/30 to-white rounded-2xl border border-blue-100/50 p-5 space-y-4">
+      <OverviewTrends
+        series={trends ?? []}
+        days={days}
+        onDaysChange={setDays}
+        loading={loading}
+        onRefresh={fetchData}
+      />
 
-        {/* Tab bar + refresh */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
-            {TIME_TABS.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => tab.key === 0 ? setCustomOpen(true) : setDays(tab.key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition ${
-                  tab.key === 0 && days !== 1 && days !== 7 && days !== 30
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : tab.key === days
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                <tab.icon size={13} /> {tab.label}
-                {tab.key === 0 && days !== 1 && days !== 7 && days !== 30 && (
-                  <span className="ml-0.5 text-[10px]">({days}天)</span>
-                )}
-              </button>
-            ))}
-          </div>
-          <span className="text-xs text-slate-400">
-            {loading ? '加载中...' : `最近 ${days} 天 · 点击上方标签切换时间范围`}
-          </span>
-        </div>
-
-        {/* Custom date modal */}
-        {customOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-slate-800">自定义天数</h3>
-                <button onClick={() => setCustomOpen(false)} className="text-slate-400 hover:text-slate-600">
-                  <X size={18} />
-                </button>
-              </div>
-              <input
-                type="number"
-                min={1}
-                max={365}
-                value={customDays}
-                onChange={(e) => setCustomDays(e.target.value)}
-                placeholder="输入天数 (1-365)"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <div className="flex gap-2 justify-end">
-                <button onClick={() => setCustomOpen(false)} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">取消</button>
-                <button onClick={handleCustomSubmit} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">确认</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* KPI Cards — colored pattern */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {kpiCards.map((card) => (
-            <div key={card.label} className={`rounded-lg border p-3 ${card.color}`}>
-              <p className="text-xs text-slate-500 mb-1">{card.label}</p>
-              <p className="text-lg font-bold text-slate-800">{card.value}</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">{card.sub}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Mini 总览趋势 bar chart (7-day revenue + calls) */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-semibold text-slate-700">
-              <Activity size={12} className="inline mr-1 text-blue-500" />
-              总览趋势（近7天）
-            </h3>
-            <span className="text-[10px] text-slate-400">营收 & 调用量</span>
-          </div>
-          {trendChartData.length === 0 ? (
-            <div className="h-[150px] flex items-center justify-center text-sm text-slate-400">暂无数据</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={150}>
-              <BarChart data={trendChartData.slice(-7)}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
-                <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} tickFormatter={(v) => `¥${v}`} />
-                <Tooltip
-                  contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }}
-                />
-                <Bar yAxisId="left" dataKey="calls" fill="#3B82F6" radius={[3, 3, 0, 0]} name="调用量" />
-                <Bar yAxisId="right" dataKey="revenue" fill="#10B981" radius={[3, 3, 0, 0]} name="营收" />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </div>
-
-      {/* ── Row 1: Call Trend + Model Top 10 ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Call & Enterprise Trend Chart */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-          <div className="px-5 py-4 border-b border-slate-100">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Activity size={16} className="text-slate-600" />
-                <h3 className="text-sm font-semibold text-slate-800">调用量 & Token 趋势</h3>
-              </div>
-            </div>
-          </div>
-          <div className="p-5">
-            {trendChartData.length === 0 ? (
-              <div className="h-[200px] flex items-center justify-center text-sm text-slate-400">暂无趋势数据</div>
-            ) : (
-              <>
-                <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={trendChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#bbb" />
-                    <YAxis yAxisId="left" tick={{ fontSize: 11 }} stroke="#bbb" />
-                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} stroke="#bbb" />
-                    <Tooltip
-                      contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }}
-                    />
-                    <Legend />
-                    <Line
-                      yAxisId="left"
-                      type="monotone"
-                      dataKey="calls"
-                      stroke="#0984e3"
-                      strokeWidth={2.5}
-                      dot={false}
-                      name="调用量"
-                    />
-                    <Line
-                      yAxisId="right"
-                      type="monotone"
-                      dataKey="tokens"
-                      stroke="#6c5ce7"
-                      strokeWidth={2.5}
-                      strokeDasharray="5 3"
-                      dot={false}
-                      name="Token(万)"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-                <div className="flex justify-between items-center mt-3">
-                  <div className="flex gap-4 text-xs text-slate-500">
-                    <span><span className="inline-block w-3 h-0.5 bg-blue-500 align-middle mr-1" /> 调用量</span>
-                    <span><span className="inline-block w-3 h-0.5 bg-violet-500 align-middle mr-1" style={{ borderTop: '2px dashed #6c5ce7', height: 0 }} /> Token 消耗</span>
-                  </div>
-                  <span className="text-xs text-slate-400">整体视图</span>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Model Top 10 Bar */}
+      {/* ── Row 1: Model Top 10 排布（原双轴趋势图已由上方总览趋势覆盖） ── */}
+      <div className="grid grid-cols-1 gap-4">
         <ModelRankBar models={topModels} />
       </div>
 

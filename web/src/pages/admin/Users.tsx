@@ -13,10 +13,10 @@ import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
   Loader2, AlertCircle, ChevronDown,
   Search, UserPlus, Download, FileJson, LogIn,
-  CheckCircle2, XCircle, Plus, Trash2, RefreshCw,
+  CheckCircle2, Plus, Trash2, RefreshCw,
   Ban, User, Key, History, Shield, FileText,
   Wallet, Activity, Globe, MessageSquare, BarChart3,
-  Lock, TrendingUp, PieChart, Clock, Zap, Cpu,
+  Lock, TrendingUp, PieChart, Clock, Cpu,
 } from 'lucide-react'
 
 // ──────────────────────────────────────────────
@@ -47,7 +47,6 @@ function fmtDate(v: string | null | undefined): string {
   if (!v) return '-'
   try { return new Date(v).toLocaleString('zh-CN') } catch { return v }
 }
-function cmp(a: string, b: string): number { return a === b ? 0 : a < b ? -1 : 1 }
 
 // ──────────────────────────────────────────────
 //  Main Page
@@ -1118,9 +1117,7 @@ function CallStatsTab({ userId }: { userId: number }) {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {(() => {
-                    const totalTokens = data.byKey.reduce((a, b) => a + b.tokens, 0)
                     const totalCalls = data.byKey.reduce((a, b) => a + b.calls, 0)
-                    const totalCost = data.byKey.reduce((a, b) => a + parseFloat(b.cost), 0)
                     return data.byKey.map(k => (
                       <tr key={k.apiKeyId} className="hover:bg-slate-50">
                         <td className="px-4 py-2.5 font-medium text-slate-700 font-mono">#{k.apiKeyId}</td>

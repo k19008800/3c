@@ -134,7 +134,7 @@ const AdminRefunds: React.FC = () => {
                 refunds.map(refund => (
                   <tr key={refund.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {new Date(refund.appliedAt).toLocaleString('zh-CN')}
+                      {refund.appliedAt ? new Date(refund.appliedAt).toLocaleString('zh-CN') : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                       <div className="font-medium">{refund.user?.name ?? '—'}</div>

@@ -2,8 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { get, post } from '@/lib/api'
 import PaginationBar from '@/components/ui/PaginationBar'
 import {
-  Loader2, AlertCircle, RefreshCw, FileText, Plus, X,
-  CheckCircle2, DollarSign,
+  Loader2, AlertCircle, RefreshCw, FileText, Plus, CheckCircle2,
 } from 'lucide-react'
 
 // ── Types ──

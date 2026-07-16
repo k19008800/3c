@@ -6,12 +6,13 @@ import {
   ChevronLeft, ChevronRight, LogOut, Menu, X, ChevronDown,
   Building2, GitBranch, Handshake, ScrollText, BarChart3, DollarSign,
   AlertTriangle, Lock, Bell, Settings2, Mail, ShieldAlert, PieChart, Megaphone,
-  Zap, TrendingUp, Gift, Gauge, Newspaper, Activity, RotateCcw, Heart,
+  Zap, TrendingUp, Gift, Gauge, Newspaper, Activity, RotateCcw, Heart, Globe,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useImpersonate } from '@/hooks/use-impersonate'
 import { cn } from '@/lib/utils'
 import { get, post } from '@/lib/api'
+import { useSiteConfig } from '@/hooks/use-site-config'
 import { Perm, hasPerm, hasAnyPerm, isAdminRole } from '@/lib/permissions'
 import type { NotificationItem } from '@/types'
 
@@ -141,6 +142,7 @@ const adminGroups: AdminGroup[] = [
     label: '⚙️ 运维配置',
     items: [
       { to: '/console/admin/configs', icon: Settings, label: '系统配置', requiredPerms: [Perm.CONFIG_VIEW] },
+      { to: '/console/admin/site-settings', icon: Globe, label: '站点设置', requiredPerms: [Perm.CONFIG_VIEW] },
       { to: '/console/admin/rate-limits', icon: Activity, label: '限流管理', requiredPerms: [Perm.OPS_READ] },
       { to: '/console/admin/email-templates', icon: Mail, label: '邮件模板', requiredPerms: [Perm.CONFIG_VIEW] },
       { to: '/console/admin/page-contents', icon: FileText, label: '内容管理', requiredPerms: [Perm.CONFIG_VIEW] },
@@ -365,6 +367,7 @@ function isNavItemVisible(item: NavItem, perms: string | undefined, role: string
 export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const location = useLocation()
   const { user, logout } = useAuth()
+  const { config: siteConfig } = useSiteConfig()
   const { isImpersonating, stopImpersonate } = useImpersonate()
   const [mobileOpen, setMobileOpen] = useState(false)
   const role = user?.role || 'user'
@@ -408,7 +411,19 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
   const sidebar = (
     <div className={cn('flex flex-col h-full bg-slate-900 text-white transition-all duration-300', collapsed ? 'w-16' : 'w-60')}>
       <div className={cn('flex items-center h-14 px-4 border-b border-slate-700', collapsed ? 'justify-center' : 'justify-between')}>
-        {!collapsed && <span className="font-bold text-lg whitespace-nowrap">3Cloud 控制台</span>}
+        {!collapsed && (
+          <div className="flex items-center gap-2 overflow-hidden">
+            {siteConfig?.site_logo_url ? (
+              <img
+                src={siteConfig.site_logo_url}
+                alt={siteConfig.site_name || 'Logo'}
+                className="max-h-8 max-w-[140px] object-contain"
+              />
+            ) : (
+              <span className="font-bold text-lg whitespace-nowrap">3Cloud 控制台</span>
+            )}
+          </div>
+        )}
         <button onClick={onToggle} className="p-1 hover:bg-slate-700 rounded hidden lg:block">
           {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>

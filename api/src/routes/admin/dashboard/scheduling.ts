@@ -13,7 +13,7 @@ export async function schedulingRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const redis = getRedis();
     const query = request.query as { minutes?: string };
-    const minutes = Math.min(120, Math.max(5, parseInt(query.minutes ?? "30", 10) || 30));
+    const minutes = Math.min(1440, Math.max(5, parseInt(query.minutes ?? "60", 10) || 60));
 
     const cacheKey = `dashboard:scheduling-realtime:${minutes}`;
     try {

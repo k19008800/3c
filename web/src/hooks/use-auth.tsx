@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import api from '@/lib/api'
-import type { UserProfile, LoginResponse } from '@/types'
+import type { UserProfile } from '@/types'
 
 interface AuthState {
   user: UserProfile | null

@@ -13,11 +13,13 @@ export function createRedis() {
 
   redis = new Redis(config.redis.url, {
     maxRetriesPerRequest: 3,
+    enableAutoPipelining: true, // PERF: 自动批量合并命令减少 RTT
     retryStrategy(times) {
-      if (times > 3) return null;
-      return Math.min(times * 200, 2000);
+      // PERF: 增加重试次数到 10，最大退避 5s，提高瞬断恢复能力
+      if (times > 10) return null;
+      return Math.min(times * 200, 5000);
     },
-    lazyConnect: true,
+    lazyConnect: false, // PERF: 启动时即连接，尽早暴露连接问题
   });
 
   redis.on("error", (err) => {

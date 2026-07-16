@@ -6,6 +6,8 @@ import { ImpersonateProvider } from '@/hooks/use-impersonate'
 import AppLayout from '@/components/layout/AppLayout'
 import PublicLayout from '@/components/portal/PublicLayout'
 import AdminRoute from '@/components/layout/AdminRoute'
+import VendorRoute from '@/components/layout/VendorRoute'
+import VendorLayout from '@/components/layout/VendorLayout'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 // ── 门户公开页面 ──
@@ -77,6 +79,7 @@ const AdminSystemHealthPanel = lazy(() => import('@/pages/admin/SystemHealthPane
 const AdminCampaignDetail = lazy(() => import('@/pages/admin/CampaignDetail'))
 const AdminPageContents = lazy(() => import('@/pages/admin/PageContents'))
 const AdminProfitAnalysis = lazy(() => import('@/pages/admin/ProfitAnalysis'))
+const AdminSiteSettings = lazy(() => import('@/pages/admin/SiteSettings'))
 const AdminVendorSelfMgmt = lazy(() => import('@/pages/admin/VendorSelfMgmt'))
 const AdminPrices = lazy(() => import('@/pages/admin/finance/Prices'))
 const AdminInvoices = lazy(() => import('@/pages/admin/finance/Invoices'))
@@ -94,6 +97,12 @@ const AgentWithdraw = lazy(() => import('@/pages/agent/Withdraw'))
 const AgentRedemption = lazy(() => import('@/pages/agent/Redemption'))
 const AgentFinance = lazy(() => import('@/pages/agent/Finance'))
 const AgentReconciliation = lazy(() => import('@/pages/agent/Reconciliation'))
+
+// ── Vendor 页面 ──
+const VendorLogin = lazy(() => import('@/pages/vendor/VendorLogin'))
+const VendorRegister = lazy(() => import('@/pages/vendor/VendorRegister'))
+const VendorRegisterSuccess = lazy(() => import('@/pages/vendor/VendorRegisterSuccess'))
+const VendorDashboard = lazy(() => import('@/pages/vendor/VendorDashboard'))
 
 // ── Loading 占位 ──
 function PageLoader() {
@@ -192,6 +201,7 @@ export default function App() {
               <Route path="admin/campaigns/:id" element={withSuspense(<AdminCampaignDetail />)} />
               <Route path="admin/vendor-self" element={withSuspense(<AdminVendorSelfMgmt />)} />
               <Route path="admin/page-contents" element={withSuspense(<AdminPageContents />)} />
+              <Route path="admin/site-settings" element={withSuspense(<AdminSiteSettings />)} />
             </Route>
 
             {/* User routes */}
@@ -212,6 +222,16 @@ export default function App() {
             <Route path="invoices" element={withSuspense(<UserInvoices />)} />
             <Route path="refunds" element={withSuspense(<UserRefunds />)} />
             <Route path="agent/notifications" element={withSuspense(<Notifications />)} />
+          </Route>
+
+          {/* ── 供应商路由 ── */}
+          <Route path="/vendor/login" element={withSuspense(<VendorLogin />)} />
+          <Route path="/vendor/register" element={withSuspense(<VendorRegister />)} />
+          <Route path="/vendor/register-success" element={withSuspense(<VendorRegisterSuccess />)} />
+          <Route element={<VendorRoute />}>
+            <Route element={<VendorLayout />}>
+              <Route path="/vendor/dashboard" element={withSuspense(<VendorDashboard />)} />
+            </Route>
           </Route>
 
           {/* ── 向后兼容重定向 ── */}

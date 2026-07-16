@@ -138,7 +138,7 @@ const AdminInvoices: React.FC = () => {
                 invoices.map(invoice => (
                   <tr key={invoice.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {new Date(invoice.appliedAt).toLocaleString('zh-CN')}
+                      {invoice.appliedAt ? new Date(invoice.appliedAt).toLocaleString('zh-CN') : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                       <div className="font-medium">{invoice.user?.name ?? '—'}</div>

@@ -2,8 +2,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { get } from '@/lib/api'
 import type { ApiKey, PaginatedData } from '@/types'
 import {
-  Loader2, AlertCircle, BarChart3, Activity, Cpu, DollarSign, Clock,
-  TrendingUp, PieChart, Download, Zap, Key, ChevronDown, ChevronRight,
+  Loader2, AlertCircle, BarChart3, Activity, DollarSign, Clock,
+  TrendingUp, PieChart, Download, Key, ChevronDown, ChevronRight,
 } from 'lucide-react'
 
 // ── Types ──

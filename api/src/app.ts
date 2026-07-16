@@ -3,6 +3,7 @@
 // ============================================================
 
 import Fastify from "fastify";
+import { join } from "node:path";
 import { config } from "./config.js";
 import { createDb, closeDb, checkDbConnection } from "./db/index.js";
 import { createRedis, checkRedisConnection } from "./redis.js";
@@ -43,7 +44,7 @@ import { redemptionGiftRoutes } from "./routes/redemption-gift.js";
 import { adminAgentRedemptionRoutes } from "./routes/admin/agent-redemption.js";
 import { adminRedemptionFraudRoutes } from "./routes/admin/redemption-fraud.js";
 import { adminFinanceCodeRoutes } from "./routes/admin/finance/codes.js";
-import { vendorSelfRoutes } from "./routes/vendor-self.js";
+import { vendorSelfRoutes, vendorJWTRoutes } from "./routes/vendor-self.js";
 import { adminKeyManagementRoutes } from "./routes/admin/admin-keys.js";
 import { adminRoleRoutes } from "./routes/admin/roles.js";
 import { authenticateAdminKey } from "./middleware/adminKeyAuth.js";
@@ -75,8 +76,11 @@ import { adminRedemptionEnhancedRoutes } from "./routes/admin/redemption-enhance
 import { redemptionUserRoutes } from "./routes/redemption-user.js";
 import { agentRedemptionRoutes } from "./routes/agent/redemption.js";
 import { agentFinanceRoutes } from "./routes/agent/finance.js";
-import { adminPageContentRoutes } from "./routes/admin/page-contents.js";
 import { adminEmailTemplateRoutes } from "./routes/admin/email-templates.js";
+import { adminPageContentRoutes } from "./routes/admin/page-contents.js";
+import { adminPerfCacheStatsRoutes } from "./routes/admin/perf-stats.js";
+import { adminSiteSettingsRoutes } from "./routes/admin/site-settings.js";
+import { publicSiteConfigRoutes } from "./routes/public/site-config.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -133,6 +137,14 @@ export async function buildApp() {
   // ── DB & Redis Decorate ──
   const { default: dbPlugin } = await import("./plugins/db.js");
   await app.register(dbPlugin, {});
+
+  // ── 静态文件服务（用于上传图片访问）──
+  await app.register(import("@fastify/static"), {
+    root: join(import.meta.dirname, "../public"),
+    prefix: "/",
+    decorateReply: false,
+    wildcard: true,
+  });
 
   // ── 健康检查 ──
   await app.register(healthRoutes, { prefix: "" });
@@ -196,12 +208,6 @@ export async function buildApp() {
 
   // ── Admin 公告管理 ──
   await app.register(adminAnnouncementRoutes, { prefix: "" });
-
-  // ── Admin 页面内容管理 ──
-  await app.register(adminPageContentRoutes, { prefix: "" });
-
-  // ── Admin 邮件模板管理 ──
-  await app.register(adminEmailTemplateRoutes, { prefix: "" });
 
   // ── 用户端公告 ──
   await app.register(announcementRoutes, { prefix: "" });
@@ -285,6 +291,9 @@ export async function buildApp() {
   // ── 供应商自助管理 ──
   await app.register(vendorSelfRoutes, { prefix: "" });
 
+  // ── 供应商自助管理（JWT 鉴权，供门户使用）──
+  await app.register(vendorJWTRoutes, { prefix: "" });
+
   // ── Admin 额度管理 ──
   await app.register(adminQuotaRoutes, { prefix: "" });
 
@@ -314,6 +323,21 @@ export async function buildApp() {
 
   // ── 代理端财务（结算单/资金流水）──
   await app.register(agentFinanceRoutes, { prefix: "" });
+
+  // ── Admin 邮件模板管理 ──
+  await app.register(adminEmailTemplateRoutes, { prefix: "" });
+
+  // ── Admin 页面内容管理 ──
+  await app.register(adminPageContentRoutes, { prefix: "" });
+
+  // ── Admin 性能缓存统计 ──
+  await app.register(adminPerfCacheStatsRoutes, { prefix: "" });
+
+  // ── Admin 站点基础信息 ──
+  await app.register(adminSiteSettingsRoutes, { prefix: "" });
+
+  // ── 公开站点配置（免认证）──
+  await app.register(publicSiteConfigRoutes, { prefix: "" });
 
   // ── Token 代理 ──
   await app.register(proxyRoutes, { prefix: "" });
@@ -483,24 +507,6 @@ export async function buildApp() {
   });
   app.log.info("[Cron] Monthly quota reset scheduled: 1st day of month at 00:05");
 
-  // ══════════════════════════════════════════════
-  //  供应商模型/价格自动同步（每 6 小时）
-  // ══════════════════════════════════════════════
-
-  cron.schedule("0 */6 * * *", async () => {
-    try {
-      const { syncAllVendors } = await import("./services/vendor-sync.js");
-      const results = await syncAllVendors();
-      const total = results.reduce((s, r) => s + r.newMappings.length + r.updatedPrices.length, 0);
-      if (total > 0) {
-        app.log.info(`[Cron] Vendor sync: ${results.length} vendors, ${total} updates (models+prices)`);
-      }
-    } catch (err) {
-      app.log.error({ err }, "[Cron] Vendor sync error");
-    }
-  });
-  app.log.info("[Cron] Vendor model sync scheduled: every 6 hours");
-
   return app;
 }
 
@@ -547,6 +553,15 @@ async function checkCommissionLogsPartition(log: Fastify.FastifyBaseLogger) {
   }
 }
 
+// ── Windows 控制台 UTF-8 编码（防止中文/emoji 乱码）──
+if (process.platform === 'win32') {
+  try {
+    require('child_process').execSync('chcp 65001 >NUL', { stdio: 'pipe' });
+  } catch (_) {
+    // ignore
+  }
+}
+
 export async function startServer() {
   // 初始化数据库（必须在 buildApp 之前，因为 dbPlugin 需要 db 实例）
   createDb();
@@ -558,9 +573,10 @@ export async function startServer() {
   await checkCallLogsPartition(app.log);
   await checkCommissionLogsPartition(app.log);
 
-  // ── 兑换码批次过期提醒调度器 ──
+  // ── 兑换码批次过期提醒调度器（必须在 listen 之前注册，避免 addHook 报错） ──
   registerRedemptionScheduler(app);
 
+  // 启动
   try {
     await app.listen({ port: config.server.port, host: config.server.host });
     app.log.info(`\n  🚀 3cloud API 已启动`);

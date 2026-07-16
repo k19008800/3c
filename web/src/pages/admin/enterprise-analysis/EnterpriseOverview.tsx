@@ -6,7 +6,7 @@ import {
   BarChart3, AlertCircle, Building2, Wallet,
 } from 'lucide-react'
 import type { EnterpriseOverview as OverviewType, TopConsumer, DaySeries, EnterpriseUser } from './types'
-import { fmt, fmtCompact, CHART_TOOLTIP_STYLE, DATE_RANGES } from './types'
+import { fmt, fmtCompact, CHART_TOOLTIP_STYLE } from './types'
 import { StatCard } from './shared'
 
 interface Props {

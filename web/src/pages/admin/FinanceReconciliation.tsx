@@ -2,15 +2,13 @@ import { useState, useEffect, useMemo } from 'react'
 import { get } from '@/lib/api'
 import type {
   ReconciliationReport,
-  ReconAnomalyItem,
   ReconTrendPoint,
-  ReconDimensionItem,
   ReconBalanceCheck,
 } from '@/types'
 import {
   Loader2, AlertCircle, FileText, DollarSign, Receipt, Percent, TrendingUp,
-  Download, ChevronDown, ChevronRight, Search, AlertTriangle, CheckCircle2,
-  BarChart3, XCircle, ArrowUpDown,
+  Download, ChevronDown, ChevronRight, AlertTriangle, CheckCircle2,
+  BarChart3, ArrowUpDown,
 } from 'lucide-react'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 

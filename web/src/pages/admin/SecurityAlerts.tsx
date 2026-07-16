@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { get, patch, post } from '@/lib/api'
-import type { SecurityConfig, PaginatedData } from '@/types'
-import { Loader2, AlertCircle, Save, Bell, Mail, Globe, Clock, RefreshCw, Send } from 'lucide-react'
+import type { SecurityConfig } from '@/types'
+import { Loader2, AlertCircle, Save, Bell, Mail, Globe, RefreshCw, Send } from 'lucide-react'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 
 export default function AdminSecurityAlerts() {

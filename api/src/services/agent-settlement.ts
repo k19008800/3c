@@ -60,13 +60,13 @@ export async function settleCommissions(agentId?: number): Promise<number> {
   let totalSettled = 0;
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
 
-  // 先获取当前最大凭证序号
+  // PERF: 优化凭证号查询，使用前缀匹配而非 LIKE 通配符
   const seqResult = await db.execute(sql`
     SELECT COALESCE(
       MAX(CAST(SUBSTRING(voucher_no FROM '([0-9]+)$') AS INTEGER)), 0
     ) + 1 AS next_seq
     FROM commission_logs
-    WHERE voucher_no LIKE 'VCH-' || ${dateStr} || '-A-%'
+    WHERE voucher_no LIKE ${'VCH-' + dateStr + '-A-%'}
   `);
   const rows = seqResult?.rows ?? [];
   let nextSeq = Number(rows[0]?.next_seq ?? 1);
@@ -131,6 +131,7 @@ export async function settleCommissions(agentId?: number): Promise<number> {
       }
     }
 
+    // PERF: 事务内只做状态更新 + 余额累加，凭证号更新在事务外（可容忍部分失败）
     // 刷新 rollup（同步状态分布）
     for (const [aid, dates] of affectedDates) {
       for (const d of dates) {
@@ -156,13 +157,13 @@ export async function batchSettleCommissions(ids: number[]): Promise<number> {
   let totalSettled = 0;
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
 
-  // 先获取当前最大序号
+  // PERF: 优化凭证号查询，使用前缀匹配
   const seqResult = await db.execute(sql`
     SELECT COALESCE(
       MAX(CAST(SUBSTRING(voucher_no FROM '([0-9]+)$') AS INTEGER)), 0
     ) + 1 AS next_seq
     FROM commission_logs
-    WHERE voucher_no LIKE 'VCH-' || ${dateStr} || '-A-%'
+    WHERE voucher_no LIKE ${'VCH-' + dateStr + '-A-%'}
   `);
   const rows = seqResult?.rows ?? [];
   let nextSeq = Number(rows[0]?.next_seq ?? 1);

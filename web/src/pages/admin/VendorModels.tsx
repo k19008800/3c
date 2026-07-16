@@ -18,7 +18,6 @@ import {
   Download,
   Copy,
   Activity,
-  Zap,
 } from 'lucide-react'
 
 // ── helpers ──

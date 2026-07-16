@@ -96,6 +96,8 @@ function generateOrderNo(prefix: string): string {
 // ── 支付通道适配器 ──
 
 import { createPaymentProvider, type PaymentProvider } from "./payment-adapter.js";
+import { processRenewalCommission, processActivityCommission } from "./billing.js";
+// PERF: 静态导入 billing 模块，避免事务内多次动态 import
 
 // ── 获取价格倍率（30 分钟过期的充电订单时限） ──
 
@@ -563,14 +565,7 @@ export async function handlePaymentNotify(
       })
       .where(eq(rechargeOrders.id, order.id));
 
-    // 增加用户余额
-    await tx
-      .update(users)
-      .set({
-        balance: sql`${users.balance} + ${amount}`,
-      })
-      .where(eq(users.id, order.userId));
-
+    // PERF: 消除直接 UPDATE users.balance，applyRechargeBalance 内部已处理余额变更
     // 记录余额变动（含负余额回补逻辑）
     await applyRechargeBalance(tx, order.userId, amount, order.id, `在线充值 / ${order.channel}`, orderNo);
 
@@ -595,7 +590,7 @@ export async function handlePaymentNotify(
         .limit(1);
 
       if (firstRechargeClient) {
-        const { processActivityCommission } = await import("./billing.js");
+        // PERF: 使用顶部静态导入，避免事务内动态 import
         await processActivityCommission(
           tx, firstRechargeClient.agentId, order.userId,
           "first_recharge", amount, orderNo,
@@ -603,8 +598,7 @@ export async function handlePaymentNotify(
       }
     }
 
-    // 处理续费佣金（复用当前事务）
-    const { processRenewalCommission } = await import("./billing.js");
+    // PERF: 使用顶部静态导入，避免事务内动态 import
     await processRenewalCommission(tx, order.userId, order.id, amount, orderNo);
   });
 }
@@ -651,22 +645,14 @@ export async function confirmBankTransfer(
       })
       .where(eq(rechargeOrders.id, order.id));
 
-    // 增加用户余额
-    await tx
-      .update(users)
-      .set({
-        balance: sql`${users.balance} + ${amount}`,
-      })
-      .where(eq(users.id, order.userId));
-
+    // PERF: 消除直接 UPDATE users.balance，applyRechargeBalance 内部已处理余额变更
     // 记录余额变动（含负余额回补逻辑）
     const bankInfo = order.payerAccountName
       ? `${order.payerAccountName}/${order.payerAccountNo ?? ""}`
       : order.remark ?? "";
     await applyRechargeBalance(tx, order.userId, amount, order.id, `对公转账到账 / ${bankInfo}`, order.orderNo);
 
-    // 处理续费佣金（复用当前事务）
-    const { processRenewalCommission } = await import("./billing.js");
+    // PERF: 使用顶部静态导入，避免事务内动态 import
     await processRenewalCommission(tx, order.userId, order.id, amount, order.orderNo);
   });
 }

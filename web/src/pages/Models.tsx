@@ -20,7 +20,6 @@ import {
   BarChart3,
   ArrowUpDown,
   TrendingUp,
-  Zap,
   X,
   PieChart,
   Download,
