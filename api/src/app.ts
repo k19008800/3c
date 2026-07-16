@@ -81,6 +81,7 @@ import { adminPageContentRoutes } from "./routes/admin/page-contents.js";
 import { adminPerfCacheStatsRoutes } from "./routes/admin/perf-stats.js";
 import { adminSiteSettingsRoutes } from "./routes/admin/site-settings.js";
 import { publicSiteConfigRoutes } from "./routes/public/site-config.js";
+import { userTransactionRoutes } from "./routes/user-transactions.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -340,6 +341,9 @@ export async function buildApp() {
   await app.register(publicSiteConfigRoutes, { prefix: "" });
 
   // ── Token 代理 ──
+  await app.register(userTransactionRoutes, { prefix: "" });
+
+  // -- Token 代理 --
   await app.register(proxyRoutes, { prefix: "" });
 
   // ══════════════════════════════════════════════

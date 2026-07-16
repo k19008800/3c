@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { get, post, patch, del } from '@/lib/api'
 import type { Agent, WithdrawOrder, PaginatedData } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
+import { TableSkeleton } from '@/components/ui/skeleton'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
   Loader2,
@@ -141,11 +142,7 @@ function AgentsList() {
             </thead>
             <tbody className="divide-y divide-slate-200">
               {loading ? (
-                <tr>
-                  <td colSpan={9} className="text-center py-12">
-                    <Loader2 className="animate-spin inline-block" size={24} />
-                  </td>
-                </tr>
+                <TableSkeleton rows={5} cols={9} />
               ) : agents.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="text-center py-12 text-slate-400">
@@ -699,11 +696,7 @@ function WithdrawOrders() {
             </thead>
             <tbody className="divide-y divide-slate-200">
               {loading ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-12">
-                    <Loader2 className="animate-spin inline-block" size={24} />
-                  </td>
-                </tr>
+                <TableSkeleton rows={5} cols={7} />
               ) : orders.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-12 text-slate-400">

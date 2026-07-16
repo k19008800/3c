@@ -25,6 +25,23 @@ export default function PortalHeader() {
   // Close mobile menu on route change
   useEffect(() => { setMobileOpen(false) }, [location.pathname])
 
+  // ── 从站点设置同步页面标题、favicon ──
+  useEffect(() => {
+    if (!siteConfig) return
+    if (siteConfig.site_name) {
+      document.title = siteConfig.site_name
+    }
+    if (siteConfig.site_favicon_url) {
+      let link = document.querySelector<HTMLLinkElement>('link[rel*="icon"]')
+      if (!link) {
+        link = document.createElement('link')
+        link.rel = 'icon'
+        document.head.appendChild(link)
+      }
+      link.href = siteConfig.site_favicon_url
+    }
+  }, [siteConfig])
+
   return (
     <header
       className={`sticky top-0 z-50 transition-colors ${

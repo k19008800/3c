@@ -1,7 +1,11 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight, Zap } from 'lucide-react'
+import { useSiteConfig } from '@/hooks/use-site-config'
 
 export default function HeroSection() {
+  const { config: siteConfig } = useSiteConfig()
+  const siteName = siteConfig?.site_name || '3Cloud'
+
   return (
     <section className="relative overflow-hidden">
       {/* Background gradient */}
@@ -29,7 +33,7 @@ export default function HeroSection() {
 
           {/* Subtitle */}
           <p className="mt-6 text-lg sm:text-xl text-slate-500 max-w-2xl mx-auto leading-relaxed">
-            3Cloud 聚合 DeepSeek、OpenAI、Anthropic 等多家顶级 AI 厂商，
+            {siteName} 聚合 DeepSeek、OpenAI、Anthropic 等多家顶级 AI 厂商，
             提供统一的 API 接入体验、智能路由调度与透明的按量计费。
           </p>
 

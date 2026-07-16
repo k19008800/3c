@@ -3,6 +3,7 @@ import { get, post } from '@/lib/api'
 import type { WithdrawRecord, PaginatedData } from '@/types'
 import { usePagePreferences } from '@/hooks/use-page-preferences'
 import FeatureDescription from '@/components/admin/FeatureDescription'
+import PaginationBar from '@/components/ui/PaginationBar'
 import { Loader2, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Download, CheckSquare } from 'lucide-react'
 
 const REJECT_REASONS = [
@@ -18,7 +19,7 @@ export default function AdminWithdraws() {
   const [rows, setRows] = useState<WithdrawRecord[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [pageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [msg, setMsg] = useState('')
@@ -385,15 +386,14 @@ export default function AdminWithdraws() {
         </div>
 
         {total > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
-            <span className="text-sm text-slate-500">第 {page} / {totalPages} 页，共 {total} 条</span>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
-                className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"><ChevronLeft size={18} /></button>
-              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
-                className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"><ChevronRight size={18} /></button>
-            </div>
-          </div>
+          <PaginationBar
+            page={page}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            total={total}
+            totalPages={totalPages}
+          />
         )}
       </div>
     </div>

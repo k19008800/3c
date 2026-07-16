@@ -35,6 +35,7 @@ const Notifications = lazy(() => import('@/pages/Notifications'))
 const Announcements = lazy(() => import('@/pages/Announcements'))
 const Settings = lazy(() => import('@/pages/Settings'))
 const OperationLogs = lazy(() => import('@/pages/OperationLogs'))
+const Transactions = lazy(() => import('@/pages/Transactions'))
 
 // ── Admin 页面 ──
 const AdminDashboard = lazy(() => import('@/pages/admin/Dashboard'))
@@ -148,6 +149,7 @@ export default function App() {
             <Route path="api-keys" element={withSuspense(<ApiKeys />)} />
             <Route path="logs" element={withSuspense(<Logs />)} />
             <Route path="operation-logs" element={withSuspense(<OperationLogs />)} />
+            <Route path="transactions" element={withSuspense(<Transactions />)} />
             <Route path="recharge" element={withSuspense(<Recharge />)} />
             <Route path="real-name" element={withSuspense(<RealName />)} />
             <Route path="redemption" element={withSuspense(<Redemption />)} />
@@ -248,6 +250,7 @@ export default function App() {
           <Route path="/notifications" element={<Navigate to="/console/notifications" replace />} />
           <Route path="/settings" element={<Navigate to="/console/settings" replace />} />
           <Route path="/operation-logs" element={<Navigate to="/console/operation-logs" replace />} />
+          <Route path="/transactions" element={<Navigate to="/console/transactions" replace />} />
           <Route path="/invoices" element={<Navigate to="/console/invoices" replace />} />
           <Route path="/refunds" element={<Navigate to="/console/refunds" replace />} />
         </Routes>

@@ -9,6 +9,7 @@ import type {
   UserRealNameHistoryRecord
 } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
+import { Skeleton, TableSkeleton } from '@/components/ui/skeleton'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
   Loader2, AlertCircle, ChevronDown,
@@ -151,7 +152,7 @@ export default function AdminUsers() {
             <label className="block text-xs text-slate-500 mb-1">搜索</label>
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input type="text" value={keyword} onChange={e => { setKeyword(e.target.value); setPage(1) }} placeholder="搜索邮箱或昵称" className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input type="text" value={keyword} onChange={e => { setKeyword(e.target.value); setPage(1) }} onKeyDown={e => e.key === 'Enter' && fetchUsers()} placeholder="搜索邮箱或昵称" className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
           <div>
@@ -216,7 +217,7 @@ export default function AdminUsers() {
             </thead>
             <tbody className="divide-y divide-slate-200">
               {loading ? (
-                <tr><td colSpan={12} className="text-center py-12"><Loader2 className="animate-spin inline-block" size={24} /></td></tr>
+                <TableSkeleton rows={5} cols={12} />
               ) : users.length === 0 ? (
                 <tr><td colSpan={12} className="text-center py-12 text-slate-400">暂无用户数据</td></tr>
               ) : (

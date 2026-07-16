@@ -20,6 +20,8 @@ const PUBLIC_KEYS = new Set([
   "site_contact_email",
   "site_contact_phone",
   "site_copyright",
+  "site_wechat_qr_url",
+  "site_footer_html",
 ]);
 
 export async function publicSiteConfigRoutes(app: FastifyInstance) {

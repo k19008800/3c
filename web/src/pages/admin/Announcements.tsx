@@ -101,6 +101,7 @@ export default function AdminAnnouncements() {
                 type="text"
                 value={keyword}
                 onChange={(e) => { setKeyword(e.target.value); setPage(1) }}
+                onKeyDown={e => e.key === 'Enter' && fetchData()}
                 placeholder="搜索公告标题"
                 className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />

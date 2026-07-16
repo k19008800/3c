@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { get, patch, del, post } from '@/lib/api'
-import { Loader2, AlertCircle, CheckCircle2, Edit2, Save, X, Trash2, Activity, Users, Globe, Zap, Search, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
+import PaginationBar from '@/components/ui/PaginationBar'
+import { Loader2, AlertCircle, CheckCircle2, Edit2, Save, X, Trash2, Activity, Users, Globe, Zap, Search, Plus } from 'lucide-react'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 
 // ── Types ──
@@ -64,60 +65,7 @@ function groupKey(key: string): string {
   return GROUP_MAP[key] || '其他'
 }
 
-// ── 分页组件 ──
-
-function Pagination({ page, pageSize, total, onChange }: {
-  page: number
-  pageSize: number
-  total: number
-  onChange: (page: number) => void
-}) {
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  if (totalPages <= 1) return null
-
-  return (
-    <div className="flex items-center justify-between pt-4">
-      <span className="text-sm text-slate-400">共{total} 条</span>
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => onChange(page - 1)}
-          disabled={page <= 1}
-          className="px-2 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          <ChevronLeft size={14} />
-        </button>
-        {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-          let pageNum: number
-          if (totalPages <= 7) {
-            pageNum = i + 1
-          } else if (page <= 4) {
-            pageNum = i + 1
-          } else if (page >= totalPages - 3) {
-            pageNum = totalPages - 6 + i
-          } else {
-            pageNum = page - 3 + i
-          }
-          return (
-            <button
-              key={pageNum}
-              onClick={() => onChange(pageNum)}
-              className={`px-2.5 py-1 text-sm rounded ${pageNum === page ? 'bg-blue-600 text-white' : 'border border-slate-300 hover:bg-slate-50'}`}
-            >
-              {pageNum}
-            </button>
-          )
-        })}
-        <button
-          onClick={() => onChange(page + 1)}
-          disabled={page >= totalPages}
-          className="px-2 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          <ChevronRight size={14} />
-        </button>
-      </div>
-    </div>
-  )
-}
+// Pagination replaced by PaginationBar
 
 // ── 水位条组件 ──
 
@@ -770,7 +718,15 @@ export default function AdminRateLimits() {
                   </tbody>
                 </table>
               </div>
-              <Pagination page={overridePage} pageSize={OVERRIDE_PAGE_SIZE} total={overrideTotal} onChange={(p) => { setOverridePage(p); fetchOverrides(p) }} />
+              {overrideTotal > 0 && (
+                <PaginationBar
+                  page={overridePage}
+                  onPageChange={(p) => { setOverridePage(p); fetchOverrides(p) }}
+                  pageSize={OVERRIDE_PAGE_SIZE}
+                  total={overrideTotal}
+                  totalPages={Math.ceil(overrideTotal / OVERRIDE_PAGE_SIZE)}
+                />
+              )}
             </div>
           )}
         </div>
@@ -848,7 +804,15 @@ export default function AdminRateLimits() {
                 </tbody>
               </table>
             </div>
-            <Pagination page={hitsPage} pageSize={HITS_PAGE_SIZE} total={hitsTotal} onChange={(p) => { setHitsPage(p); fetchHits(p) }} />
+            {hitsTotal > 0 && (
+              <PaginationBar
+                page={hitsPage}
+                onPageChange={(p) => { setHitsPage(p); fetchHits(p) }}
+                pageSize={HITS_PAGE_SIZE}
+                total={hitsTotal}
+                totalPages={Math.ceil(hitsTotal / HITS_PAGE_SIZE)}
+              />
+            )}
           </div>
         </div>
       )}

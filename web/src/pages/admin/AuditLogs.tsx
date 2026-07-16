@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { get } from '@/lib/api'
 import type { AuditLog, AuditLogDetail, PaginatedData } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
+import { TableSkeleton } from '@/components/ui/skeleton'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
   Loader2,
@@ -490,6 +491,7 @@ export default function AdminAuditLogs() {
                 type="text"
                 value={keyword}
                 onChange={(e) => { setKeyword(e.target.value); setPage(1) }}
+                onKeyDown={e => e.key === 'Enter' && fetchLogs()}
                 placeholder="搜索描述/操作人"
                 className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -594,11 +596,7 @@ export default function AdminAuditLogs() {
             </thead>
             <tbody className="divide-y divide-slate-200">
               {loading ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-12">
-                    <Loader2 className="animate-spin inline-block" size={24} />
-                  </td>
-                </tr>
+                <TableSkeleton rows={5} cols={7} />
               ) : logs.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-12 text-slate-400">

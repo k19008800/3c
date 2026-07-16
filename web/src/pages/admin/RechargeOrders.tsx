@@ -1,10 +1,10 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { get, post } from '@/lib/api'
 import type { RechargeOrder, PaginatedData } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
-  Loader2, AlertCircle, CheckCircle2, Ban, ShieldCheck, Shield,
+  Loader2, AlertCircle, CheckCircle2, Ban, ShieldCheck, Shield, CheckSquare, X, Download,
 } from 'lucide-react'
 
 // ── 审核弹窗 ──
@@ -222,12 +222,42 @@ export default function AdminRechargeOrders() {
   const [statusFilter, setStatusFilter] = useState('')
   const [channelFilter, setChannelFilter] = useState('')
 
+  // 批量审核状态
+  const [batchMode, setBatchMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [batchModalOpen, setBatchModalOpen] = useState(false)
+  const [batchAction, setBatchAction] = useState<'confirm' | 'reject'>('confirm')
+  const [batchIsSecond, setBatchIsSecond] = useState(false)
+  const [batchRejectReason, setBatchRejectReason] = useState('')
+  const [batchSubmitting, setBatchSubmitting] = useState(false)
+  const selectAllRef = useRef<HTMLInputElement>(null)
+
   // 审核弹窗状态
   const [modalOpen, setModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState<ReviewMode>('first-confirm')
   const [modalOrder, setModalOrder] = useState<RechargeOrder | null>(null)
 
   const totalPages = Math.ceil(total / pageSize)
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === orders.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(orders.map(r => r.id)))
+    }
+  }
+
+  // 翻页清空选择
+  useEffect(() => { setSelectedIds(new Set()) }, [page, statusFilter, channelFilter])
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
@@ -250,6 +280,41 @@ export default function AdminRechargeOrders() {
   useEffect(() => {
     fetchOrders()
   }, [fetchOrders])
+
+  // ── 批量审核提交 ──
+  const doBatchReview = async () => {
+    const ids = Array.from(selectedIds)
+    if (!ids.length) {
+      setError('请先选择要审核的充值订单')
+      return
+    }
+    setBatchModalOpen(true)
+  }
+
+  const handleBatchSubmit = async () => {
+    const ids = Array.from(selectedIds)
+    setBatchSubmitting(true)
+    try {
+      const res = await post('/api/v1/admin/recharge-orders/batch-confirm', {
+        ids,
+        action: batchAction,
+        rejectReason: batchAction === 'reject' ? batchRejectReason.trim() || undefined : undefined,
+        isSecond: batchIsSecond,
+      })
+      const data = res.data
+      const confirmLabel = batchAction === 'confirm' ? '通过' : '拒绝'
+      setMsg('批量' + confirmLabel + '：成功 ' + (batchAction === 'confirm' ? data.confirmed : data.rejected) + ' 笔' +
+        (data.errors?.length ? '，' + data.errors.length + ' 笔失败' : ''))
+      setBatchModalOpen(false)
+      setSelectedIds(new Set())
+      setBatchMode(false)
+      fetchOrders()
+    } catch (err: any) {
+      setError(err.message || '批量操作失败')
+    } finally {
+      setBatchSubmitting(false)
+    }
+  }
 
   // ── 打开审核弹窗 ──
   const openModal = (mode: ReviewMode, order: RechargeOrder) => {
@@ -362,10 +427,33 @@ export default function AdminRechargeOrders() {
     )
   }
 
+  const exportCSV = () => {
+    if (orders.length === 0) return
+    const headers = ['订单号','用户ID','用户邮箱','金额','方式','状态','凭证号','创建时间']
+    const rows = orders.map(o => [
+      o.orderNo || '', o.userId, o.userEmail || '',
+      o.amount || '', o.channel || '', o.status || '',
+      o.voucherNo || '', o.createdAt
+    ])
+    const bom = '\uFEFF'
+    const csv = bom + headers.join(',') + '\n' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob)
+    a.download = `recharge_orders_${new Date().toISOString().slice(0,10)}.csv`; a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">充值订单管理</h1>
-      <FeatureDescription page="admin/recharge-orders" className="ml-2" />
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-900">充值订单管理</h1>
+        <div className="flex items-center gap-2">
+          <FeatureDescription page="admin/recharge-orders" className="ml-2" />
+          <button onClick={exportCSV} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 transition">
+            <Download size={15} /> 导出 CSV
+          </button>
+        </div>
+      </div>
 
       {/* 消息提示 */}
       {msg && (
@@ -381,39 +469,70 @@ export default function AdminRechargeOrders() {
         </div>
       )}
 
-      {/* 筛选 */}
+      {/* 筛选 + 批量操作 */}
       <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div className="flex gap-4">
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">状态</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">全部</option>
-              <option value="pending">待支付</option>
-              <option value="paid">已支付</option>
-              <option value="confirmed">已确认</option>
-              <option value="failed">失败</option>
-              <option value="expired">已过期</option>
-              <option value="cancelled">已取消</option>
-            </select>
+        <div className="flex items-center justify-between">
+          <div className="flex gap-4 items-end">
+            <div>
+              <label className="block text-xs text-slate-500 mb-1">状态</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">全部</option>
+                <option value="pending">待支付</option>
+                <option value="paid">已支付</option>
+                <option value="confirmed">已确认</option>
+                <option value="failed">失败</option>
+                <option value="expired">已过期</option>
+                <option value="cancelled">已取消</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-500 mb-1">支付方式</label>
+              <select
+                value={channelFilter}
+                onChange={(e) => { setChannelFilter(e.target.value); setPage(1) }}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">全部</option>
+                <option value="wechat_scan">微信支付</option>
+                <option value="alipay_scan">支付宝</option>
+                <option value="bank_transfer">银行转账</option>
+              </select>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">支付方式</label>
-            <select
-              value={channelFilter}
-              onChange={(e) => { setChannelFilter(e.target.value); setPage(1) }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">全部</option>
-              <option value="wechat_scan">微信支付</option>
-              <option value="alipay_scan">支付宝</option>
-              <option value="bank_transfer">银行转账</option>
-            </select>
-          </div>
+          <button
+            onClick={() => { setBatchMode(!batchMode); setSelectedIds(new Set()) }}
+            className={'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition ' +
+              (batchMode
+                ? 'bg-blue-50 border-blue-300 text-blue-700'
+                : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50')}
+          >
+            <CheckSquare size={16} />
+            {batchMode ? '退出批量' : '批量审核'}
+          </button>
         </div>
+
+        {/* 批量操作按钮 */}
+        {batchMode && selectedIds.size > 0 && (
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+            <span className="text-sm text-slate-500">已选 {selectedIds.size} 笔</span>
+            <button
+              onClick={() => { setBatchAction('confirm'); doBatchReview() }}
+              className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition"
+            >
+              批量通过
+            </button>
+            <button
+              onClick={() => { setBatchAction('reject'); doBatchReview() }}
+              className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition"
+            >
+              批量拒绝
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 表格 */}
@@ -422,6 +541,17 @@ export default function AdminRechargeOrders() {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50 text-left">
+                {batchMode && (
+                  <th className="px-4 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      ref={selectAllRef}
+                      checked={orders.length > 0 && selectedIds.size === orders.length}
+                      onChange={toggleSelectAll}
+                      className="rounded border-slate-300"
+                    />
+                  </th>
+                )}
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">订单号</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">用户</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">金额</th>
@@ -436,19 +566,29 @@ export default function AdminRechargeOrders() {
             <tbody className="divide-y divide-slate-200">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12">
+                  <td colSpan={batchMode ? 10 : 9} className="text-center py-12">
                     <Loader2 className="animate-spin inline-block" size={24} />
                   </td>
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-slate-400">
+                  <td colSpan={batchMode ? 10 : 9} className="text-center py-12 text-slate-400">
                     暂无充值订单
                   </td>
                 </tr>
               ) : (
                 orders.map((order) => (
-                  <tr key={order.id} className="hover:bg-slate-50 transition">
+                  <tr key={order.id} className={'hover:bg-slate-50 transition ' + (selectedIds.has(order.id) ? 'bg-blue-50' : '')}>
+                    {batchMode && (
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(order.id)}
+                          onChange={() => toggleSelect(order.id)}
+                          className="rounded border-slate-300"
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-sm text-slate-600 font-mono max-w-[160px] truncate" title={order.orderNo}>
                       {order.orderNo}
                     </td>
@@ -539,6 +679,113 @@ export default function AdminRechargeOrders() {
         onClose={() => { setModalOpen(false); setModalOrder(null) }}
         onSubmit={handleModalSubmit}
       />
+
+      {/* 批量审核弹窗 */}
+      {batchModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setBatchModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-slate-900">批量审核</h3>
+
+            <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg">
+              <p>已选择 <strong>{selectedIds.size}</strong> 笔订单</p>
+            </div>
+
+            {/* 操作选择 */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setBatchAction('confirm')}
+                className={'flex-1 py-2 rounded-lg border text-sm transition ' +
+                  (batchAction === 'confirm'
+                    ? 'border-green-500 bg-green-50 text-green-700'
+                    : 'border-slate-300 text-slate-600')}
+              >
+                批量通过
+              </button>
+              <button
+                onClick={() => setBatchAction('reject')}
+                className={'flex-1 py-2 rounded-lg border text-sm transition ' +
+                  (batchAction === 'reject'
+                    ? 'border-red-500 bg-red-50 text-red-700'
+                    : 'border-slate-300 text-slate-600')}
+              >
+                批量拒绝
+              </button>
+            </div>
+
+            {/* 审核级别 */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">审核级别</label>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setBatchIsSecond(false)}
+                  className={'flex-1 py-2 rounded-lg border text-sm transition ' +
+                    (!batchIsSecond
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-slate-300 text-slate-600')}
+                >
+                  初审
+                </button>
+                <button
+                  onClick={() => setBatchIsSecond(true)}
+                  className={'flex-1 py-2 rounded-lg border text-sm transition ' +
+                    (batchIsSecond
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-slate-300 text-slate-600')}
+                >
+                  复审
+                </button>
+              </div>
+            </div>
+
+            {/* 拒绝原因 */}
+            {batchAction === 'reject' && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">统一拒绝原因</label>
+                <input
+                  type="text"
+                  value={batchRejectReason}
+                  onChange={(e) => setBatchRejectReason(e.target.value)}
+                  placeholder="请输入拒绝原因（可选）"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+            )}
+
+            {error && (
+              <div className="flex items-center gap-2 text-red-600 bg-red-50 p-2 rounded-lg text-sm">
+                <AlertCircle size={14} />
+                {error}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setBatchModalOpen(false)}
+                className="flex-1 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleBatchSubmit}
+                disabled={batchSubmitting}
+                className={'flex-1 py-2 rounded-lg text-sm text-white transition flex items-center justify-center gap-1 ' +
+                  (batchAction === 'reject'
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-blue-600 hover:bg-blue-700') + ' disabled:opacity-50'}
+              >
+                {batchSubmitting && <Loader2 className="animate-spin" size={14} />}
+                {batchAction === 'reject' ? '确认拒绝' : '确认通过'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

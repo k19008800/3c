@@ -94,6 +94,35 @@ export const userLoginSessions = pgTable(
   })
 );
 
+// ── 安全自动处置规则 ──
+
+export const securityAutoRules = pgTable(
+  "security_auto_rules",
+  {
+    id: serial("id").primaryKey(),
+    name: varchar("name", { length: 200 }).notNull(),
+    description: text("description"),
+    eventType: varchar("event_type", { length: 50 }).notNull(),
+    // 条件：在 timeWindowSeconds 内触发 countThreshold 次
+    countThreshold: integer("count_threshold").notNull().default(5),
+    timeWindowSeconds: integer("time_window_seconds").notNull().default(300),
+    // 动作：ban_ip | ban_user | notify_admin | limit_login
+    action: varchar("action", { length: 50 }).notNull().default("notify_admin"),
+    // 动作参数（如封禁时长秒数）
+    actionParams: jsonb("action_params").default({}),
+    // 是否启用
+    enabled: boolean("enabled").notNull().default(true),
+    createdBy: integer("created_by").references(() => users.id),
+    updatedBy: integer("updated_by").references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    eventTypeIdx: index("auto_rules_event_type_idx").on(table.eventType),
+    enabledIdx: index("auto_rules_enabled_idx").on(table.enabled),
+  })
+);
+
 // ── 熔断历史记录 ──
 
 export const circuitHistory = pgTable(

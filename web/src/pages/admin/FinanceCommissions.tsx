@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { get, post } from '@/lib/api'
 import type { CommissionRecord, CommissionRollupRow, PaginatedData } from '@/types'
-import { Loader2, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, ChevronDown, ChevronRight as ChevronRightSmall, Search, BarChart3, PieChart, TrendingUp, Download, DollarSign } from 'lucide-react'
+import PaginationBar from '@/components/ui/PaginationBar'
+import { Loader2, AlertCircle, CheckCircle2, ChevronDown, ChevronRight as ChevronRightSmall, Search, BarChart3, PieChart, TrendingUp, Download, DollarSign } from 'lucide-react'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 
 // ── helpers ──
@@ -338,37 +339,14 @@ function DetailPanel({
 
       {/* 明细分页 */}
       {total > 0 && (
-        <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-200">
-          <span className="text-xs text-slate-400">共 {total} 条</span>
-          <div className="flex items-center gap-2">
-            <select
-              value={pageSize}
-              onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1) }}
-              className="text-xs border border-slate-300 rounded px-1 py-0.5 bg-white"
-            >
-              <option value={20}>20条/页</option>
-              <option value={50}>50条/页</option>
-              <option value={100}>100条/页</option>
-            </select>
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="p-0.5 rounded hover:bg-slate-200 disabled:opacity-30"
-            >
-              <ChevronLeft size={14} />
-            </button>
-            <span className="text-xs text-slate-500">
-              {page}/{totalPages}
-            </span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages}
-              className="p-0.5 rounded hover:bg-slate-200 disabled:opacity-30"
-            >
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
+        <PaginationBar
+          page={page}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          total={total}
+          totalPages={totalPages}
+        />
       )}
     </div>
   )
@@ -775,29 +753,14 @@ export default function AdminFinanceCommissions() {
                     <option value={50}>50条/页</option>
                     <option value={100}>100条/页</option>
                   </select>
-                  <span className="text-sm text-slate-500">第</span>
-                  <input
-                    type="text"
-                    value={pageInput}
-                    onChange={(e) => setPageInput(e.target.value.replace(/\D/g, ''))}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handlePageJump() }}
-                    className="w-12 text-center text-sm border border-slate-300 rounded px-1 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  <PaginationBar
+                    page={page}
+                    onPageChange={setPage}
+                    pageSize={pageSize}
+                    onPageSizeChange={setPageSize}
+                    total={total}
+                    totalPages={totalPages}
                   />
-                  <span className="text-sm text-slate-500">/ {totalPages} 页</span>
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page <= 1}
-                    className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page >= totalPages}
-                    className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"
-                  >
-                    <ChevronRight size={18} />
-                  </button>
                 </div>
               </div>
             )}
@@ -919,29 +882,14 @@ export default function AdminFinanceCommissions() {
                     <option value={50}>50条/页</option>
                     <option value={100}>100条/页</option>
                   </select>
-                  <span className="text-sm text-slate-500">第</span>
-                  <input
-                    type="text"
-                    value={pageInput}
-                    onChange={(e) => setPageInput(e.target.value.replace(/\D/g, ''))}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handlePageJump() }}
-                    className="w-12 text-center text-sm border border-slate-300 rounded px-1 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  <PaginationBar
+                    page={page}
+                    onPageChange={setPage}
+                    pageSize={pageSize}
+                    onPageSizeChange={setPageSize}
+                    total={total}
+                    totalPages={totalPages}
                   />
-                  <span className="text-sm text-slate-500">/ {totalPages} 页</span>
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page <= 1}
-                    className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page >= totalPages}
-                    className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition"
-                  >
-                    <ChevronRight size={18} />
-                  </button>
                 </div>
               </div>
             )}

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { get } from '@/lib/api'
 import type { LogItem, PaginatedData } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
+import { TableSkeleton } from '@/components/ui/skeleton'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
   Loader2,
@@ -529,6 +530,22 @@ export default function AdminLogs() {
     fetchLogs()
   }, [fetchLogs])
 
+  const exportLogsCSV = () => {
+    if (logs.length === 0) return
+    const headers = ['ID','用户','模型','供应商','提示Token','补全Token','总计Token','消费','状态','耗时','时间']
+    const rows = logs.map(l => [
+      l.id, l.userEmail || '', l.modelName, l.vendorName || '',
+      l.promptTokens ?? '', l.completionTokens ?? '', l.totalTokens ?? '',
+      l.cost || '', l.status, l.durationMs || '', l.createdAt
+    ])
+    const bom = '\uFEFF'
+    const csv = bom + headers.join(',') + '\n' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob)
+    a.download = `admin_logs_${new Date().toISOString().slice(0,10)}.csv`; a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
   const resetFilters = () => {
     setKeyword('')
     setModelName('')
@@ -546,6 +563,13 @@ export default function AdminLogs() {
         <FeatureDescription page="admin/logs" className="ml-2" />
         <div className="flex items-center gap-3">
           <span className="text-sm text-slate-500">共 {total} 条记录</span>
+          <button
+            onClick={exportLogsCSV}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition"
+          >
+            <Download size={14} />
+            导出 CSV
+          </button>
           <button
             onClick={() => { setPage(1); fetchLogs() }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition"
@@ -600,6 +624,7 @@ export default function AdminLogs() {
                 type="text"
                 value={keyword}
                 onChange={(e) => { setKeyword(e.target.value); setPage(1) }}
+                onKeyDown={e => e.key === 'Enter' && fetchLogs()}
                 placeholder="搜索用户邮箱"
                 className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -692,11 +717,7 @@ export default function AdminLogs() {
             </thead>
             <tbody className="divide-y divide-slate-200">
               {loading ? (
-                <tr>
-                  <td colSpan={11} className="text-center py-12">
-                    <Loader2 className="animate-spin inline-block" size={24} />
-                  </td>
-                </tr>
+                <TableSkeleton rows={5} cols={11} />
               ) : logs.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="text-center py-12 text-slate-400">

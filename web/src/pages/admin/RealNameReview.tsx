@@ -200,7 +200,7 @@ export default function AdminRealNameReview() {
       <div className="flex items-center gap-2">
         <div className="relative flex-1 max-w-xs">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input type="text" value={keyword} onChange={e => { setKeyword(e.target.value); setPage(1); updateFilter('keyword', e.target.value) }} placeholder="搜索邮箱或昵称" className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <input type="text" value={keyword} onChange={e => { setKeyword(e.target.value); setPage(1); updateFilter('keyword', e.target.value) }} onKeyDown={e => e.key === 'Enter' && fetchRecords()} placeholder="搜索邮箱或昵称" className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <span className="text-sm text-slate-400">共 {total} 条</span>
       </div>

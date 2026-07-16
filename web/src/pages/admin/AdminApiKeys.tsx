@@ -286,6 +286,7 @@ export default function AdminApiKeys() {
             type="text"
             value={searchKeyword}
             onChange={(e) => { setSearchKeyword(e.target.value); setPage(1) }}
+            onKeyDown={e => e.key === 'Enter' && fetchKeys()}
             placeholder="搜索 Key 名称"
             className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           />

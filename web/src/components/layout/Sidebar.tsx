@@ -55,6 +55,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     items: [
       { to: '/console/recharge', icon: Wallet, label: '充值' },
       { to: '/console/redemption', icon: Gift, label: '兑换码' },
+      { to: '/console/transactions', icon: ClipboardList, label: '交易流水' },
       { to: '/console/invoices', icon: FileText, label: '发票管理' },
       { to: '/console/refunds', icon: RotateCcw, label: '退款申请' },
     ],

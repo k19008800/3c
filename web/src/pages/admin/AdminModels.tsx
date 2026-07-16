@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { get, post, patch, del } from '@/lib/api'
 import type { AdminModel, PaginatedData } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
+import { TableSkeleton } from '@/components/ui/skeleton'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
   Loader2,
@@ -11,6 +12,7 @@ import {
   Pencil,
   Trash2,
   CheckCircle2,
+  Download,
 } from 'lucide-react'
 
 const TYPE_OPTIONS = [
@@ -84,13 +86,35 @@ export default function AdminModels() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">模型管理</h1>
         <FeatureDescription page="admin/models" className="ml-2" />
-        <button
-          onClick={() => { setEditingModel(null); setShowFormModal(true) }}
-          className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-        >
-          <Plus size={16} />
-          新增模型
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              if (models.length === 0) return
+              const headers = ['ID','模型名称','显示名称','简介','类型','状态','创建时间']
+              const rows = models.map(m => [
+                m.id, m.name, m.displayName || '', m.description || '',
+                m.type, m.status ? '启用' : '停用', m.createdAt
+              ])
+              const bom = '\uFEFF'
+              const csv = bom + headers.join(',') + '\n' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+              const a = document.createElement('a'); a.href = URL.createObjectURL(blob)
+              a.download = `admin_models_${new Date().toISOString().slice(0,10)}.csv`; a.click()
+              URL.revokeObjectURL(a.href)
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition"
+          >
+            <Download size={15} />
+            导出 CSV
+          </button>
+          <button
+            onClick={() => { setEditingModel(null); setShowFormModal(true) }}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            <Plus size={16} />
+            新增模型
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -104,6 +128,7 @@ export default function AdminModels() {
                 type="text"
                 value={keyword}
                 onChange={(e) => { setKeyword(e.target.value); setPage(1) }}
+                onKeyDown={e => e.key === 'Enter' && fetchModels()}
                 placeholder="搜索模型名称"
                 className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -161,11 +186,7 @@ export default function AdminModels() {
             </thead>
             <tbody className="divide-y divide-slate-200">
               {loading ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-12">
-                    <Loader2 className="animate-spin inline-block" size={24} />
-                  </td>
-                </tr>
+                <TableSkeleton rows={5} cols={8} />
               ) : models.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="text-center py-12 text-slate-400">

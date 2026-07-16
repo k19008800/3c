@@ -428,4 +428,109 @@ export async function apiKeyRoutes(app: FastifyInstance) {
       reply.send('﻿' + header + '\n' + csv);
     },
   });
+
+  // GET /api/v1/user/api-keys/:id/stats
+  app.get("/api/v1/user/api-keys/:id/stats", {
+    preHandler: [authenticateJWT],
+  }, async (request, reply) => {
+    const db = getDb();
+    const keyId = parseInt((request.params as any).id);
+    const userId = request.user!.userId;
+    const query = request.query as { days?: string };
+    const days = Math.min(30, Math.max(1, parseInt(query.days ?? "7", 10) || 7));
+
+    if (isNaN(keyId)) {
+      reply.status(400).send({ code: 400, data: null, message: "invalid Key ID" });
+      return;
+    }
+
+    const [key] = await db
+      .select({ id: apiKeys.id, name: apiKeys.name })
+      .from(apiKeys)
+      .where(and(eq(apiKeys.id, keyId), eq(apiKeys.userId, userId)))
+      .limit(1);
+
+    if (!key) {
+      reply.status(404).send({ code: 404, data: null, message: "API Key not found" });
+      return;
+    }
+
+    const now = new Date();
+    const startDate = new Date(now.getTime() - days * 86400000);
+
+    const [summary] = await db
+      .select({
+        totalCalls: sql<number>`count(*)::int`,
+        successCalls: sql<number>`count(*) filter (where ${callLogs.status} = 'success')::int`,
+        failedCalls: sql<number>`count(*) filter (where ${callLogs.status} = 'failed')::int`,
+        totalTokens: sql<number>`coalesce(sum(${callLogs.totalTokens}), 0)::bigint`,
+        promptTokens: sql<number>`coalesce(sum(${callLogs.promptTokens}), 0)::bigint`,
+        completionTokens: sql<number>`coalesce(sum(${callLogs.completionTokens}), 0)::bigint`,
+        totalCost: sql<string>`coalesce(sum(${callLogs.cost}), '0')`,
+        avgDurationMs: sql<number>`coalesce(avg(${callLogs.durationMs}), 0)::int`,
+      })
+      .from(callLogs)
+      .where(and(eq(callLogs.apiKeyId, keyId), gte(callLogs.createdAt, startDate)));
+
+    const modelBreakdown = await db
+      .select({
+        modelName: callLogs.modelName,
+        calls: sql<number>`count(*)::int`,
+        tokens: sql<number>`coalesce(sum(${callLogs.totalTokens}), 0)::bigint`,
+        cost: sql<string>`coalesce(sum(${callLogs.cost}), '0')`,
+      })
+      .from(callLogs)
+      .where(and(eq(callLogs.apiKeyId, keyId), gte(callLogs.createdAt, startDate)))
+      .groupBy(callLogs.modelName)
+      .orderBy(sql`count(*)::int desc`);
+
+    const dailyTrend = await db
+      .select({
+        date: sql<string>`to_char(${callLogs.createdAt}, 'YYYY-MM-DD')`,
+        calls: sql<number>`count(*)::int`,
+        tokens: sql<number>`coalesce(sum(${callLogs.totalTokens}), 0)::bigint`,
+        cost: sql<string>`coalesce(sum(${callLogs.cost}), '0')`,
+      })
+      .from(callLogs)
+      .where(and(eq(callLogs.apiKeyId, keyId), gte(callLogs.createdAt, startDate)))
+      .groupBy(sql`to_char(${callLogs.createdAt}, 'YYYY-MM-DD')`)
+      .orderBy(sql`to_char(${callLogs.createdAt}, 'YYYY-MM-DD')`);
+
+    reply.status(200).send({
+      code: 0,
+      data: {
+        keyId,
+        keyName: key.name,
+        days,
+        startDate: startDate.toISOString(),
+        endDate: now.toISOString(),
+        summary: {
+          totalCalls: summary?.totalCalls ?? 0,
+          successCalls: summary?.successCalls ?? 0,
+          failedCalls: summary?.failedCalls ?? 0,
+          successRate: summary && summary.totalCalls > 0
+            ? Number(((summary.successCalls / summary.totalCalls) * 100).toFixed(2))
+            : 100,
+          totalTokens: Number(summary?.totalTokens ?? 0),
+          promptTokens: Number(summary?.promptTokens ?? 0),
+          completionTokens: Number(summary?.completionTokens ?? 0),
+          totalCost: summary?.totalCost ?? '0',
+          avgDurationMs: summary?.avgDurationMs ?? 0,
+        },
+        modelBreakdown: modelBreakdown.map(m => ({
+          modelName: m.modelName,
+          calls: m.calls,
+          tokens: Number(m.tokens),
+          cost: m.cost,
+        })),
+        dailyTrend: dailyTrend.map(d => ({
+          date: d.date,
+          calls: d.calls,
+          tokens: Number(d.tokens),
+          cost: d.cost,
+        })),
+      },
+      message: "ok",
+    });
+  });
 }

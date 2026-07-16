@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { Outlet, Navigate } from 'react-router-dom'
 import Sidebar from './Sidebar'
+import SearchModal from './SearchModal'
 import { useAuth } from '@/hooks/use-auth'
 import { useImpersonate } from '@/hooks/use-impersonate'
 import { Loader2, ShieldAlert, Clock, LogOut, Copy } from 'lucide-react'
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const [timeLeft, setTimeLeft] = useState('')
   const { isAuthenticated, isLoading } = useAuth()
   const { isImpersonating, targetEmail, expiresAt, stopImpersonate } = useImpersonate()
@@ -46,10 +48,24 @@ export default function AppLayout() {
     return <Navigate to="/login" replace />
   }
 
+  // Ctrl+K / ⌘K 全局搜索快捷键
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen((v) => !v)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
       <main className="flex-1 overflow-y-auto bg-gray-50">
+        {/* 全局搜索模态框 */}
+        <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
         {/* 模拟态横幅 */}
         {isImpersonating && (
           <div className="sticky top-0 z-30 bg-amber-50 border-b-2 border-amber-400 px-4 lg:px-6 py-2 flex items-center gap-3 text-sm flex-wrap">

@@ -212,6 +212,7 @@ export default function AdminVendorModels() {
                 type="text"
                 value={keyword}
                 onChange={(e) => { setKeyword(e.target.value); setPage(1) }}
+                onKeyDown={e => e.key === 'Enter' && fetchItems()}
                 placeholder="搜索供应商、模型或上游名称"
                 className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
