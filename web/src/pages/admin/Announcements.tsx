@@ -2,9 +2,11 @@ import { useEffect, useState, useCallback } from 'react'
 import { get, post, patch, del } from '@/lib/api'
 import type { PaginatedData } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
+import FilterBar from '@/components/ui/FilterBar'
 import FeatureDescription from '@/components/admin/FeatureDescription'
+import { usePersistedFilters } from '@/hooks/use-persisted-filters'
 import {
-  Loader2, AlertCircle, Search, Plus, Pencil, Trash2, CheckCircle2,
+  Loader2, AlertCircle, Plus, Pencil, Trash2, CheckCircle2,
   Megaphone, Eye, EyeOff,
 } from 'lucide-react'
 
@@ -25,15 +27,18 @@ const emptyForm = { title: '', content: '', type: 'system_announcement', priorit
 export default function AdminAnnouncements() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [keyword, setKeyword] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Announcement | null>(null)
   const [deleteId, setDeleteId] = useState<number | null>(null)
 
+  // ── 持久化筛选 ──
+  const { filters, setFilter, resetFilters, hasActiveFilters } = usePersistedFilters({
+    storageKey: 'admin-announcements',
+    defaults: { keyword: '', page: 1, pageSize: 20 },
+  })
+  const { keyword, page, pageSize } = filters as { keyword: string; page: number; pageSize: number }
   const totalPages = Math.ceil(total / pageSize)
 
   const fetchData = useCallback(async () => {
@@ -90,25 +95,17 @@ export default function AdminAnnouncements() {
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div className="flex flex-wrap gap-4 items-end">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs text-slate-500 mb-1">搜索</label>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={keyword}
-                onChange={(e) => { setKeyword(e.target.value); setPage(1) }}
-                onKeyDown={e => e.key === 'Enter' && fetchData()}
-                placeholder="搜索公告标题"
-                className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Filters — 持久化筛选栏 */}
+      <FilterBar
+        filters={{ keyword }}
+        setFilter={(key, value) => setFilter(key as any, value)}
+        resetFilters={resetFilters}
+        hasActiveFilters={hasActiveFilters}
+        onSearch={fetchData}
+        fields={[
+          { key: 'keyword', label: '搜索', type: 'text', placeholder: '搜索公告标题' },
+        ]}
+      />
 
       {error && (
         <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg text-sm">
@@ -214,9 +211,9 @@ export default function AdminAnnouncements() {
         {total > 0 && (
           <PaginationBar
             page={page}
-            onPageChange={setPage}
+            onPageChange={(p) => setFilter('page', p)}
             pageSize={pageSize}
-            onPageSizeChange={setPageSize}
+            onPageSizeChange={(s) => { setFilter('pageSize', s); setFilter('page', 1) }}
             total={total}
             totalPages={totalPages}
           />

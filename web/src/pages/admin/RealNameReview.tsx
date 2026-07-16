@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { get, post } from '@/lib/api'
 import type { RealNameReviewRecord, PaginatedData } from '@/types'
-import { usePagePreferences } from '@/hooks/use-page-preferences'
 
 // 管理员审查证件图片 URL 构建
 function buildAdminFileUrl(userId: number, relativePath: string | null): string | null {
@@ -11,10 +10,12 @@ function buildAdminFileUrl(userId: number, relativePath: string | null): string 
   return `/api/v1/admin/real-name/file/${userId}/${filename}`
 }
 import PaginationBar from '@/components/ui/PaginationBar'
+import FilterBar from '@/components/ui/FilterBar'
 import FeatureDescription from '@/components/admin/FeatureDescription'
+import { usePersistedFilters } from '@/hooks/use-persisted-filters'
 import {
   Loader2, AlertCircle, CheckCircle2, XCircle,
-  Search, Eye, Ban, Building2, User, FileImage, CheckSquare,
+  Eye, Ban, Building2, User, FileImage, CheckSquare,
 } from 'lucide-react'
 
 const REJECT_REASONS = [
@@ -41,13 +42,9 @@ const userTypeLabel: Record<string, string> = { personal: '个人', enterprise: 
 export default function AdminRealNameReview() {
   const [records, setRecords] = useState<RealNameReviewRecord[]>([])
   const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [msg, setMsg] = useState('')
-  const [activeTab, setActiveTab] = useState('pending_review')
-  const [keyword, setKeyword] = useState('')
   const [selected, setSelected] = useState<RealNameReviewRecord | null>(null)
   const [showDetail, setShowDetail] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
@@ -61,15 +58,14 @@ export default function AdminRealNameReview() {
   const [batchReviewing, setBatchReviewing] = useState(false)
   const selectAllRef = useRef<HTMLInputElement>(null)
 
-  const { filters, loaded: prefsLoaded, updateFilter } = usePagePreferences('admin_real_name_review')
-
-  // 恢复筛选条件
-  useEffect(() => {
-    if (prefsLoaded) {
-      if (filters.activeTab) setActiveTab(filters.activeTab)
-      if (filters.keyword) setKeyword(filters.keyword)
-    }
-  }, [prefsLoaded])
+  // ── 持久化筛选 ──
+  const { filters, setFilter, resetFilters, hasActiveFilters } = usePersistedFilters({
+    storageKey: 'admin-real-name-review',
+    defaults: { keyword: '', activeTab: 'pending_review', page: 1, pageSize: 20 },
+  })
+  const { keyword, activeTab, page, pageSize } = filters as {
+    keyword: string; activeTab: string; page: number; pageSize: number
+  }
 
   const totalPages = Math.ceil(total / pageSize)
 
@@ -190,18 +186,24 @@ export default function AdminRealNameReview() {
       {/* Tabs */}
       <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
         {statusTabs.map(t => (
-          <button key={t.key} onClick={() => { setActiveTab(t.key); setPage(1); updateFilter('activeTab', t.key) }} className={`px-4 py-2 text-sm font-medium rounded-md transition ${activeTab === t.key ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>
+          <button key={t.key} onClick={() => { setFilter('activeTab', t.key) }} className={`px-4 py-2 text-sm font-medium rounded-md transition ${activeTab === t.key ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>
             {t.label}
           </button>
         ))}
       </div>
 
-      {/* Search */}
+      {/* Search — 持久化筛选栏 */}
       <div className="flex items-center gap-2">
-        <div className="relative flex-1 max-w-xs">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input type="text" value={keyword} onChange={e => { setKeyword(e.target.value); setPage(1); updateFilter('keyword', e.target.value) }} onKeyDown={e => e.key === 'Enter' && fetchRecords()} placeholder="搜索邮箱或昵称" className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
+        <FilterBar
+          filters={{ keyword }}
+          setFilter={(key, value) => setFilter(key as any, value)}
+          resetFilters={resetFilters}
+          hasActiveFilters={hasActiveFilters}
+          onSearch={fetchRecords}
+          fields={[
+            { key: 'keyword', label: '搜索', type: 'text', placeholder: '搜索邮箱或昵称' },
+          ]}
+        />
         <span className="text-sm text-slate-400">共 {total} 条</span>
       </div>
 
@@ -334,9 +336,9 @@ export default function AdminRealNameReview() {
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
             <PaginationBar
               page={page}
-              onPageChange={setPage}
+              onPageChange={(p) => setFilter('page', p)}
               pageSize={pageSize}
-              onPageSizeChange={setPageSize}
+              onPageSizeChange={(s) => { setFilter('pageSize', s); setFilter('page', 1) }}
               total={total}
               totalPages={totalPages}
             />

@@ -8,30 +8,33 @@ import api from '@/lib/api';
 
 // ── Types (matches backend response) ──
 
+// 金额字段可能为 number 或 string（后端 BigInt 转换后的安全处理）
+type Amount = number | string
+
 interface SettlementItem {
   agentId: number
   agentName: string
   email: string
-  openingBalance: number
-  openingFrozen: number
-  monthDeduction: number
-  monthFreeze: number
-  monthUnfreeze: number
-  monthRefund: number
-  closingBalance: number
-  closingFrozen: number
+  openingBalance: Amount
+  openingFrozen: Amount
+  monthDeduction: Amount
+  monthFreeze: Amount
+  monthUnfreeze: Amount
+  monthRefund: Amount
+  closingBalance: Amount
+  closingFrozen: Amount
 }
 
 interface SettlementSummary {
   totalAgents: number
-  totalOpeningAvailable: number
-  totalOpeningFrozen: number
-  totalConsumption: number
-  totalFrozen: number
-  totalUnfreeze: number
-  totalRefund: number
-  totalClosingAvailable: number
-  totalClosingFrozen: number
+  totalOpeningAvailable: Amount
+  totalOpeningFrozen: Amount
+  totalConsumption: Amount
+  totalFrozen: Amount
+  totalUnfreeze: Amount
+  totalRefund: Amount
+  totalClosingAvailable: Amount
+  totalClosingFrozen: Amount
 }
 
 interface SettlementData {
@@ -45,14 +48,21 @@ interface SettlementData {
 
 // ── Helpers ──
 
-function fmt(n: number | null | undefined): string {
-  if (n == null) return '¥0.00'
-  return `¥${(n / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+function toNum(v: number | string | null | undefined): number {
+  if (v == null) return 0
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0
+  const n = Number(v)
+  return Number.isFinite(n) ? n : 0
 }
 
-function fmtRaw(n: number | null | undefined, digits = 2): string {
-  if (n == null) return `¥0.${'0'.repeat(digits)}`
-  return `¥${n.toLocaleString('zh-CN', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`
+function fmt(n: number | string | null | undefined): string {
+  const val = toNum(n)
+  return `¥${(val / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+function fmtRaw(n: number | string | null | undefined, digits = 2): string {
+  const val = toNum(n)
+  return `¥${val.toLocaleString('zh-CN', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`
 }
 
 // ── Component ──

@@ -2,9 +2,11 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { get, post, patch, del } from '@/lib/api'
 import PaginationBar from '@/components/ui/PaginationBar'
 import { Badge } from '@/components/ui/badge'
+import FilterBar from '@/components/ui/FilterBar'
 import FeatureDescription from '@/components/admin/FeatureDescription'
+import { usePersistedFilters } from '@/hooks/use-persisted-filters'
 import {
-  Loader2, Key, Plus, AlertCircle, CheckCircle2, Search,
+  Loader2, Key, Plus, AlertCircle, CheckCircle2,
   ToggleLeft, ToggleRight, FileText, X, Copy, ChevronDown, ChevronUp, Terminal,
 } from 'lucide-react'
 
@@ -36,10 +38,15 @@ const VALID_ACTIONS = ['read', 'write', 'delete', '*'] as const
 export default function AdminApiKeys() {
   const [keys, setKeys] = useState<AdminApiKeyItem[]>([])
   const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // ── 持久化筛选 ──
+  const { filters, setFilter, resetFilters, hasActiveFilters } = usePersistedFilters({
+    storageKey: 'admin-api-keys',
+    defaults: { keyword: '', page: 1, pageSize: 20 },
+  })
+  const { keyword, page, pageSize } = filters as { keyword: string; page: number; pageSize: number }
 
   const [formOpen, setFormOpen] = useState(false)
   const [form, setForm] = useState({ name: '', permissions: [] as string[], expiresAt: '' })
@@ -54,14 +61,9 @@ export default function AdminApiKeys() {
   const [copySuccess, setCopySuccess] = useState<number | null>(null)
   const [usageExampleOpen, setUsageExampleOpen] = useState<number | null>(null)
 
-  const [searchKeyword, setSearchKeyword] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<AdminApiKeyItem | null>(null)
 
   const totalPages = Math.ceil(total / pageSize)
-
-  const filteredKeys = searchKeyword
-    ? keys.filter(k => k.name.toLowerCase().includes(searchKeyword.toLowerCase()))
-    : keys
 
   const handleCopyKey = (keyPrefix: string) => {
     // 前缀不能直接复制完整 key，但可以在创建成功弹窗中复制
@@ -84,13 +86,15 @@ export default function AdminApiKeys() {
     setLoading(true)
     setError('')
     try {
-      const data = await get<{ list: AdminApiKeyItem[]; total: number }>('/api/v1/admin/api-keys', { page, pageSize })
+      const params: any = { page, pageSize }
+      if (keyword) params.keyword = keyword
+      const data = await get<{ list: AdminApiKeyItem[]; total: number }>('/api/v1/admin/api-keys', params)
       setKeys(data.list || [])
       setTotal(data.total)
     } catch (err: any) {
       setError(err.message || '获取管理 Key 列表失败')
     } finally { setLoading(false) }
-  }, [page, pageSize])
+  }, [page, pageSize, keyword])
 
   useEffect(() => { fetchKeys() }, [fetchKeys])
 
@@ -287,20 +291,17 @@ export default function AdminApiKeys() {
         </div>
       )}
 
-      {/* Search */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div className="relative max-w-xs">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={searchKeyword}
-            onChange={(e) => { setSearchKeyword(e.target.value); setPage(1) }}
-            onKeyDown={e => e.key === 'Enter' && fetchKeys()}
-            placeholder="搜索 Key 名称"
-            className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-          />
-        </div>
-      </div>
+      {/* Filters — 持久化筛选栏 */}
+      <FilterBar
+        filters={{ keyword }}
+        setFilter={(key, value) => setFilter(key as any, value)}
+        resetFilters={resetFilters}
+        hasActiveFilters={hasActiveFilters}
+        onSearch={fetchKeys}
+        fields={[
+          { key: 'keyword', label: '搜索', type: 'text', placeholder: '搜索 Key 名称' },
+        ]}
+      />
 
       {/* Key list */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200">
@@ -313,7 +314,7 @@ export default function AdminApiKeys() {
           </div>
         ) : keys.length === 0 ? (
           <div className="py-12 text-center text-slate-400 text-sm">暂无管理 API Key</div>
-        ) : filteredKeys.length === 0 ? (
+        ) : keys.length === 0 ? (
           <div className="py-12 text-center text-slate-400 text-sm">未找到匹配的 Key</div>
         ) : (
           <div className="overflow-x-auto">
@@ -331,7 +332,7 @@ export default function AdminApiKeys() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {filteredKeys.map(k => (
+                {keys.map(k => (
                   <React.Fragment key={k.id}>
                   <tr className={`hover:bg-slate-50 transition ${usageExampleOpen === k.id ? 'bg-indigo-50/30' : ''}`}>
                     <td className="px-4 py-3 text-sm font-medium text-slate-900">{k.name}</td>
@@ -479,7 +480,7 @@ const data = await res.json()`}
           </div>
         )}
         {totalPages > 0 && (
-          <PaginationBar page={page} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={setPageSize} total={total} totalPages={totalPages} />
+          <PaginationBar page={page} onPageChange={(p) => setFilter('page', p)} pageSize={pageSize} onPageSizeChange={(s) => { setFilter('pageSize', s); setFilter('page', 1) }} total={total} totalPages={totalPages} />
         )}
       </div>
 

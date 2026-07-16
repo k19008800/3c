@@ -258,7 +258,7 @@ export default function ModelSchedulingRealtime() {
 
   // ── 导出CSV ──
   const handleExportCsv = useCallback(() => {
-    if (!data?.series.length) return
+    if (!data?.series?.length) return
     const separator = ','
     const headers = ['时间', metricTab === 'rpm' ? 'RPM' : 'TPM(万)', ...activeModels]
     const rows = activeChartData.map(point => {
@@ -698,7 +698,7 @@ export default function ModelSchedulingRealtime() {
                     </div>
                   </div>
                   <div className="h-5 bg-slate-100 rounded overflow-hidden flex">
-                    {dist.topModels.length > 0 ? (
+                    {dist.topModels?.length ? (
                       dist.topModels.map((m, i) => {
                         const pct = dist.rpm > 0 ? (m.rpm / dist.rpm) * 100 : 0
                         if (pct < 0.5) return null
@@ -722,7 +722,7 @@ export default function ModelSchedulingRealtime() {
                       />
                     )}
                   </div>
-                  {dist.topModels.length > 0 && (
+                  {dist.topModels?.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-1">
                       {dist.topModels.map((m, i) => (
                         <span

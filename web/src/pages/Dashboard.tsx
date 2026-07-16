@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { get } from '@/lib/api'
 import type { LogSummary, LoginHistoryItem, ApiKey, PaginatedData, ApiKeyCallStats } from '@/types'
+import QuickConnectPanel from '@/components/portal/QuickConnectPanel'
 import {
   Loader2, DollarSign, Activity, Cpu, Wallet, Key, FileText, AlertCircle, Shield,
   CheckCircle2, XCircle, Gauge, Copy, Terminal, BarChart3, TrendingUp,
@@ -152,6 +153,7 @@ export default function Dashboard() {
   // Key activities state
   const [keyActivities, setKeyActivities] = useState<KeyActivity[]>([])
   const [keyActivityLoading, setKeyActivityLoading] = useState(true)
+  const [apiKeyList, setApiKeyList] = useState<ApiKey[]>([])
 
   const [curlCopied, setCurlCopied] = useState(false)
 
@@ -176,6 +178,7 @@ export default function Dashboard() {
       const { startDate, endDate } = getDateRange(timeRange)
       const keysData = await get<PaginatedData<ApiKey>>('/api/v1/api-keys')
       const allKeys = keysData.list || []
+      setApiKeyList(allKeys)
       const activeKeys = allKeys.filter((k) => k.status)
 
       if (activeKeys.length === 0) {
@@ -336,6 +339,9 @@ export default function Dashboard() {
           </span>
         </div>
       </div>
+
+      {/* Quick Connect */}
+      {apiKeyList.length > 0 && (<QuickConnectPanel apiKeys={apiKeyList} baseUrl={window.location.origin} defaultModel="deepseek-chat" />)}
 
       {/* Time Range Toggle */}
       <div className="flex items-center gap-2">

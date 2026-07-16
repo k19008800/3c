@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { get } from '@/lib/api'
 import type { LogItem, PaginatedData, LogSummary } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
+import FilterBar from '@/components/ui/FilterBar'
 import { TableSkeleton } from '@/components/ui/skeleton'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import LogStatsCards from '@/components/logs/LogStatsCards'
@@ -9,10 +10,10 @@ import LogDetailDrawer from '@/components/logs/LogDetailDrawer'
 import LogExportButton from '@/components/logs/LogExportButton'
 import LogModelChart from '@/components/logs/LogModelChart'
 import LogAnomaliesPanel from '@/components/logs/LogAnomaliesPanel'
+import { usePersistedFilters } from '@/hooks/use-persisted-filters'
 import {
   Loader2,
   AlertCircle,
-  Search,
   RefreshCw,
   BarChart3,
   AlertTriangle,
@@ -497,17 +498,17 @@ function LogAnalyticsPanel({ logs }: { logs: AdminLogItem[] }) {
 export default function AdminLogs() {
   const [logs, setLogs] = useState<AdminLogItem[]>([])
   const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // Filters
-  const [keyword, setKeyword] = useState('')
-  const [modelName, setModelName] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  // ── 持久化筛选 ──
+  const { filters, setFilter, resetFilters, hasActiveFilters } = usePersistedFilters({
+    storageKey: 'admin-logs',
+    defaults: { keyword: '', modelName: '', status: '', startDate: '', endDate: '', page: 1, pageSize: 20 },
+  })
+  const { keyword, modelName, status: statusFilter, startDate, endDate, page, pageSize } = filters as {
+    keyword: string; modelName: string; status: string; startDate: string; endDate: string; page: number; pageSize: number
+  }
 
   // Analytics panel toggle
   const [analyticsOpen, setAnalyticsOpen] = useState(false)
@@ -581,14 +582,7 @@ export default function AdminLogs() {
     URL.revokeObjectURL(a.href)
   }
 
-  const resetFilters = () => {
-    setKeyword('')
-    setModelName('')
-    setStatusFilter('')
-    setStartDate('')
-    setEndDate('')
-    setPage(1)
-  }
+  // resetFilters now comes from usePersistedFilters
 
   return (
     <div className="space-y-6">
@@ -607,7 +601,7 @@ export default function AdminLogs() {
             导出 CSV
           </button>
           <button
-            onClick={() => { setPage(1); fetchLogs() }}
+            onClick={() => { setFilter('page', 1); fetchLogs() }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition"
           >
             <RefreshCw size={14} />
@@ -680,81 +674,21 @@ export default function AdminLogs() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div className="flex flex-wrap gap-4 items-end">
-          {/* User keyword search */}
-          <div className="flex-1 min-w-[180px]">
-            <label className="block text-xs text-slate-500 mb-1">用户搜索</label>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={keyword}
-                onChange={(e) => { setKeyword(e.target.value); setPage(1) }}
-                onKeyDown={e => e.key === 'Enter' && fetchLogs()}
-                placeholder="搜索用户邮箱"
-                className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* Model name */}
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">模型名称</label>
-            <input
-              type="text"
-              value={modelName}
-              onChange={(e) => { setModelName(e.target.value); setPage(1) }}
-              placeholder="如 gpt-4o"
-              className="w-40 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Status */}
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">状态</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Date range */}
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">开始日期</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => { setStartDate(e.target.value); setPage(1) }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">结束日期</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => { setEndDate(e.target.value); setPage(1) }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <button
-            onClick={resetFilters}
-            className="px-3 py-2 text-sm text-slate-500 hover:text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 transition"
-          >
-            重置
-          </button>
-        </div>
-      </div>
+      {/* Filters — 持久化筛选栏 */}
+      <FilterBar
+        filters={{ keyword, modelName, status: statusFilter, startDate, endDate }}
+        setFilter={(key, value) => setFilter(key as any, value)}
+        resetFilters={resetFilters}
+        hasActiveFilters={hasActiveFilters}
+        onSearch={fetchLogs}
+        fields={[
+          { key: 'keyword', label: '用户搜索', type: 'text', placeholder: '搜索用户邮箱' },
+          { key: 'modelName', label: '模型名称', type: 'text', placeholder: '如 gpt-4o' },
+          { key: 'status', label: '状态', type: 'select', options: STATUS_OPTIONS as any },
+          { key: 'startDate', label: '开始日期', type: 'date' },
+          { key: 'endDate', label: '结束日期', type: 'date' },
+        ]}
+      />
 
       {/* Error */}
       {error && (
@@ -828,9 +762,9 @@ export default function AdminLogs() {
         {total > 0 && (
           <PaginationBar
             page={page}
-            onPageChange={setPage}
+            onPageChange={(p) => setFilter('page', p)}
             pageSize={pageSize}
-            onPageSizeChange={setPageSize}
+            onPageSizeChange={(s) => { setFilter('pageSize', s); setFilter('page', 1) }}
             total={total}
             totalPages={totalPages}
           />

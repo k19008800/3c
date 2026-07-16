@@ -429,8 +429,8 @@ export async function apiKeyRoutes(app: FastifyInstance) {
     },
   });
 
-  // GET /api/v1/user/api-keys/:id/stats
-  app.get("/api/v1/user/api-keys/:id/stats", {
+  // GET /api/v1/api-keys/:id/stats
+  app.get("/api/v1/api-keys/:id/stats", {
     preHandler: [authenticateJWT],
   }, async (request, reply) => {
     const db = getDb();

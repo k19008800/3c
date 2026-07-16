@@ -13,6 +13,13 @@ import { apiKeyRoutes } from "./routes/api-keys.js";
 import { adminVendorRoutes } from "./routes/admin/vendors.js";
 import { adminModelRoutes } from "./routes/admin/models.js";
 import { adminVendorModelRoutes } from "./routes/admin/vendor-models.js";
+import { adminKeyGroupRoutes } from "./routes/admin/vendor-key-groups.js";
+import { adminBatchRoutes } from "./routes/admin/batch.js";
+import { adminContentFilterRoutes } from "./routes/admin/content-filters.js";
+import { adminLogAnalysisRoutes } from "./routes/admin/log-analysis.js";
+import { playgroundRoutes } from "./routes/playground.js";
+import { adminTemplateRoutes } from "./routes/admin/templates.js";
+import { adminUndoRoutes } from "./routes/admin/undo.js";
 import { proxyRoutes } from "./routes/proxy.js";
 import { rechargeRoutes } from "./routes/recharge.js";
 import { modelListRoutes } from "./routes/models.js";
@@ -80,8 +87,10 @@ import { adminEmailTemplateRoutes } from "./routes/admin/email-templates.js";
 import { adminPageContentRoutes } from "./routes/admin/page-contents.js";
 import { adminPerfCacheStatsRoutes } from "./routes/admin/perf-stats.js";
 import { adminSiteSettingsRoutes } from "./routes/admin/site-settings.js";
+import { quickConnectRoutes } from "./routes/quick-connect.js";
 import { publicSiteConfigRoutes } from "./routes/public/site-config.js";
 import { userTransactionRoutes } from "./routes/user-transactions.js";
+import { userQuotaRoutes } from "./routes/user-quota.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -173,6 +182,13 @@ export async function buildApp() {
 
   // ── 厂商-模型关联管理 ──
   await app.register(adminVendorModelRoutes, { prefix: "" });
+  await app.register(adminKeyGroupRoutes, { prefix: "" });
+  await app.register(adminBatchRoutes, { prefix: "" });
+  await app.register(adminContentFilterRoutes, { prefix: "" });
+  await app.register(adminLogAnalysisRoutes, { prefix: "" });
+  await app.register(playgroundRoutes, { prefix: "" });
+  await app.register(adminTemplateRoutes, { prefix: "" });
+  await app.register(adminUndoRoutes, { prefix: "" });
 
   // ── 公共模型列表 ──
   await app.register(modelListRoutes, { prefix: "" });
@@ -336,12 +352,14 @@ export async function buildApp() {
 
   // ── Admin 站点基础信息 ──
   await app.register(adminSiteSettingsRoutes, { prefix: "" });
+  await app.register(quickConnectRoutes, { prefix: "" });
 
   // ── 公开站点配置（免认证）──
   await app.register(publicSiteConfigRoutes, { prefix: "" });
 
   // ── Token 代理 ──
   await app.register(userTransactionRoutes, { prefix: "" });
+  await app.register(userQuotaRoutes, { prefix: "" });
 
     // -- Token 代理 --
   await app.register(proxyRoutes, { prefix: "" });

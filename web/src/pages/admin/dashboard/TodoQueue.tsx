@@ -95,7 +95,7 @@ export default function TodoQueue({ queue }: Props) {
 
         <div className="pt-2">
           <a
-            href="/admin/real-name-review"
+            href="/console/admin/real-name-review"
             className="block text-center py-2.5 bg-blue-50 hover:bg-blue-100 rounded-lg text-xs text-blue-600 font-medium transition cursor-pointer"
           >
             📋 打开运营工作台 →

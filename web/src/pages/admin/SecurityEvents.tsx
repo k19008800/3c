@@ -4,7 +4,9 @@ import { get, post } from '@/lib/api'
 import type { SecurityEvent, PaginatedData } from '@/types'
 import RiskBadge from '@/components/security/RiskBadge'
 import PaginationBar from '@/components/ui/PaginationBar'
+import FilterBar from '@/components/ui/FilterBar'
 import FeatureDescription from '@/components/admin/FeatureDescription'
+import { usePersistedFilters } from '@/hooks/use-persisted-filters'
 import {
   Loader2, AlertCircle, ChevronRight, CheckCircle2,
   ShieldAlert, X, Download, CheckSquare, Square,
@@ -22,11 +24,17 @@ const RISK_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, lo
 export default function AdminSecurityEvents() {
   const [events, setEvents] = useState<SecurityEvent[]>([])
   const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [filter, setFilter] = useState({ eventType: '', riskLevel: '', acknowledged: '' })
+
+  // ── 持久化筛选 ──
+  const { filters, setFilter, resetFilters, hasActiveFilters } = usePersistedFilters({
+    storageKey: 'admin-security-events',
+    defaults: { eventType: '', riskLevel: '', acknowledged: '', page: 1, pageSize: 20 },
+  })
+  const { eventType, riskLevel, acknowledged, page, pageSize } = filters as {
+    eventType: string; riskLevel: string; acknowledged: string; page: number; pageSize: number
+  }
 
   // 详情弹窗
   const [detailEvent, setDetailEvent] = useState<SecurityEvent | null>(null)
@@ -42,9 +50,9 @@ export default function AdminSecurityEvents() {
     setError('')
     try {
       const params: any = { page, pageSize }
-      if (filter.eventType) params.eventType = filter.eventType
-      if (filter.riskLevel) params.riskLevel = filter.riskLevel
-      if (filter.acknowledged) params.acknowledged = filter.acknowledged === 'true'
+      if (eventType) params.eventType = eventType
+      if (riskLevel) params.riskLevel = riskLevel
+      if (acknowledged) params.acknowledged = acknowledged === 'true'
       const data = await get<PaginatedData<SecurityEvent>>('/api/v1/admin/security/events', params)
       setEvents(data.list.sort((a, b) => {
         const ra = RISK_ORDER[a.riskLevel] ?? 99
@@ -58,7 +66,7 @@ export default function AdminSecurityEvents() {
     } finally {
       setLoading(false)
     }
-  }, [page, pageSize, filter])
+  }, [page, pageSize, eventType, riskLevel, acknowledged])
 
   useEffect(() => { fetchEvents() }, [fetchEvents])
 
@@ -252,40 +260,31 @@ export default function AdminSecurityEvents() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div className="flex flex-wrap gap-4 items-end">
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">事件类型</label>
-            <select value={filter.eventType} onChange={(e) => { setFilter(f => ({ ...f, eventType: e.target.value })); setPage(1) }}
-              className="border border-slate-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">全部</option>
-              {Object.entries(eventTypeLabels).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">风险等级</label>
-            <select value={filter.riskLevel} onChange={(e) => { setFilter(f => ({ ...f, riskLevel: e.target.value })); setPage(1) }}
-              className="border border-slate-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">全部</option>
-              <option value="critical">严重</option>
-              <option value="high">高风险</option>
-              <option value="medium">中风险</option>
-              <option value="low">低风险</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">处理状态</label>
-            <select value={filter.acknowledged} onChange={(e) => { setFilter(f => ({ ...f, acknowledged: e.target.value })); setPage(1) }}
-              className="border border-slate-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">全部</option>
-              <option value="false">未处理</option>
-              <option value="true">已处理</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      {/* Filters — 持久化筛选栏 */}
+      <FilterBar
+        filters={{ eventType, riskLevel, acknowledged }}
+        setFilter={(key, value) => setFilter(key as any, value)}
+        resetFilters={resetFilters}
+        hasActiveFilters={hasActiveFilters}
+        fields={[
+          { key: 'eventType', label: '事件类型', type: 'select', options: [
+            { value: '', label: '全部' },
+            ...Object.entries(eventTypeLabels).map(([k, v]) => ({ value: k, label: v })),
+          ]},
+          { key: 'riskLevel', label: '风险等级', type: 'select', options: [
+            { value: '', label: '全部' },
+            { value: 'critical', label: '严重' },
+            { value: 'high', label: '高风险' },
+            { value: 'medium', label: '中风险' },
+            { value: 'low', label: '低风险' },
+          ]},
+          { key: 'acknowledged', label: '处理状态', type: 'select', options: [
+            { value: '', label: '全部' },
+            { value: 'false', label: '未处理' },
+            { value: 'true', label: '已处理' },
+          ]},
+        ]}
+      />
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         {loading ? (
@@ -385,9 +384,9 @@ export default function AdminSecurityEvents() {
       {totalPages > 1 && (
         <PaginationBar
           page={page}
-          onPageChange={setPage}
+          onPageChange={(p) => setFilter('page', p)}
           pageSize={pageSize}
-          onPageSizeChange={setPageSize}
+          onPageSizeChange={(s) => { setFilter('pageSize', s); setFilter('page', 1) }}
           total={total}
           totalPages={totalPages}
         />

@@ -14,6 +14,7 @@ import { topConsumersRoutes } from "./top-consumers.js";
 import { todoQueueRoutes } from "./todo-queue.js";
 import { enterpriseRoutes } from "./enterprise.js";
 import { schedulingRoutes } from "./scheduling.js";
+import { dashboardSummaryRoutes } from "./summaries.js";
 
 export async function adminDashboardRoutes(app: FastifyInstance) {
   app.addHook("preHandler", authenticateJWT);
@@ -27,4 +28,5 @@ export async function adminDashboardRoutes(app: FastifyInstance) {
   await todoQueueRoutes(app);
   await enterpriseRoutes(app);
   await schedulingRoutes(app);
+  await dashboardSummaryRoutes(app);
 }

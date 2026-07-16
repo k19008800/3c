@@ -7,8 +7,10 @@ import { useEffect, useState, useCallback } from 'react'
 import { get } from '@/lib/api'
 import type { OperationLog, PaginatedData } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
-import { Loader2, AlertCircle, Search, RefreshCw, Download } from 'lucide-react'
+import FilterBar from '@/components/ui/FilterBar'
+import { Loader2, AlertCircle, RefreshCw, Download, Search } from 'lucide-react'
 import FeatureDescription from '@/components/admin/FeatureDescription'
+import { usePersistedFilters } from '@/hooks/use-persisted-filters'
 
 // ── 筛选选项 ──
 
@@ -90,17 +92,17 @@ function CategoryBadge({ category }: { category: string }) {
 export default function AdminOperationLogs() {
   const [logs, setLogs] = useState<OperationLog[]>([])
   const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // Filters
-  const [keyword, setKeyword] = useState('')
-  const [category, setCategory] = useState('')
-  const [status, setStatus] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  // ── 持久化筛选 ──
+  const { filters, setFilter, resetFilters, hasActiveFilters } = usePersistedFilters({
+    storageKey: 'admin-operation-logs',
+    defaults: { keyword: '', category: '', status: '', startDate: '', endDate: '', page: 1, pageSize: 20 },
+  })
+  const { keyword, category, status, startDate, endDate, page, pageSize } = filters as {
+    keyword: string; category: string; status: string; startDate: string; endDate: string; page: number; pageSize: number
+  }
 
   const fetchLogs = useCallback(async () => {
     setLoading(true)
@@ -125,15 +127,6 @@ export default function AdminOperationLogs() {
   useEffect(() => {
     fetchLogs()
   }, [fetchLogs])
-
-  const resetFilters = () => {
-    setKeyword('')
-    setCategory('')
-    setStatus('')
-    setStartDate('')
-    setEndDate('')
-    setPage(1)
-  }
 
   // CSV 导出
   const exportCsv = () => {
@@ -180,7 +173,7 @@ export default function AdminOperationLogs() {
             导出 CSV
           </button>
           <button
-            onClick={() => { setPage(1); fetchLogs() }}
+            onClick={() => { setFilter('page', 1); fetchLogs() }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition"
           >
             <RefreshCw size={14} />
@@ -189,82 +182,26 @@ export default function AdminOperationLogs() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div className="flex flex-wrap gap-4 items-end">
-          {/* 关键词 */}
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs text-slate-500 mb-1">关键词</label>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={keyword}
-                onChange={(e) => { setKeyword(e.target.value); setPage(1) }}
-                onKeyDown={e => e.key === 'Enter' && fetchLogs()}
-                placeholder="搜索摘要、用户邮箱/昵称"
-                className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* 分类 */}
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">操作分类</label>
-            <select
-              value={category}
-              onChange={(e) => { setCategory(e.target.value); setPage(1) }}
-              className="w-36 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {CATEGORY_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* 状态 */}
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">结果</label>
-            <select
-              value={status}
-              onChange={(e) => { setStatus(e.target.value); setPage(1) }}
-              className="w-28 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">全部</option>
-              <option value="success">成功</option>
-              <option value="failure">失败</option>
-              <option value="pending">处理中</option>
-            </select>
-          </div>
-
-          {/* 日期区间 */}
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">开始日期</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => { setStartDate(e.target.value); setPage(1) }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">结束日期</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => { setEndDate(e.target.value); setPage(1) }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <button
-            onClick={resetFilters}
-            className="px-3 py-2 text-sm text-slate-500 hover:text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 transition"
-          >
-            重置
-          </button>
-        </div>
-      </div>
+      {/* Filters — 持久化筛选栏 */}
+      <FilterBar
+        filters={{ keyword, category, status, startDate, endDate }}
+        setFilter={(key, value) => setFilter(key as any, value)}
+        resetFilters={resetFilters}
+        hasActiveFilters={hasActiveFilters}
+        onSearch={fetchLogs}
+        fields={[
+          { key: 'keyword', label: '关键词', type: 'text', placeholder: '搜索摘要、用户邮箱/昵称' },
+          { key: 'category', label: '操作分类', type: 'select', options: CATEGORY_OPTIONS },
+          { key: 'status', label: '结果', type: 'select', options: [
+            { value: '', label: '全部' },
+            { value: 'success', label: '成功' },
+            { value: 'failure', label: '失败' },
+            { value: 'pending', label: '处理中' },
+          ]},
+          { key: 'startDate', label: '开始日期', type: 'date' },
+          { key: 'endDate', label: '结束日期', type: 'date' },
+        ]}
+      />
 
       {/* Error */}
       {error && (
@@ -338,9 +275,9 @@ export default function AdminOperationLogs() {
         {total > 0 && (
           <PaginationBar
             page={page}
-            onPageChange={setPage}
+            onPageChange={(p) => setFilter('page', p)}
             pageSize={pageSize}
-            onPageSizeChange={setPageSize}
+            onPageSizeChange={(s) => { setFilter('pageSize', s); setFilter('page', 1) }}
             total={total}
             totalPages={Math.ceil(total / pageSize)}
           />

@@ -244,7 +244,7 @@ export default function AdminFinanceDashboard() {
                 <Loader2 className="animate-spin text-slate-300" size={20} />
               </div>
             ) : overview ? ([
-              { label: '平台收入', v: fmt(overview.totalCost), sub: `成功率 ${(overview.successRate * 100).toFixed(1)}%`, color: 'border-blue-200 bg-blue-50' },
+              { label: '平台收入', v: fmt(overview.totalCost), sub: `成功率 ${overview.totalCalls > 0 ? ((overview.successCalls / (overview.successCalls + overview.failedCalls)) * 100).toFixed(1) : '0.0'}%`, color: 'border-blue-200 bg-blue-50' },
               { label: '总调用', v: fmtNum(overview.totalCalls), sub: `${fmtNum(overview.successCalls)} 成功 / ${fmtNum(overview.failedCalls)} 失败`, color: 'border-emerald-200 bg-emerald-50' },
               { label: '活跃用户', v: fmtNum(overview.uniqueUsers), sub: `Token ${fmtTokens(overview.totalTokens)}`, color: 'border-amber-200 bg-amber-50' },
               { label: '平均耗时', v: fmtMs(overview.avgDuration), sub: period === '7d' ? '近7天' : period === '30d' ? '近30天' : '近90天', color: 'border-purple-200 bg-purple-50' },
@@ -344,7 +344,7 @@ export default function AdminFinanceDashboard() {
                 s.date,
                 String(s.totalCalls),
                 String(s.successCalls),
-                `${(s.successRate * 100).toFixed(1)}%`,
+                `${s.totalCalls > 0 ? (s.successCalls / s.totalCalls * 100).toFixed(1) : '0.0'}%`,
                 String(s.totalTokens),
                 String(typeof s.totalCost === 'number' ? s.totalCost.toFixed(4) : s.totalCost),
                 String(s.avgDuration),

@@ -2,8 +2,10 @@ import { useEffect, useState, useCallback } from 'react'
 import { get } from '@/lib/api'
 import type { AuditLog, AuditLogDetail, PaginatedData } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
+import FilterBar from '@/components/ui/FilterBar'
 import { TableSkeleton } from '@/components/ui/skeleton'
 import FeatureDescription from '@/components/admin/FeatureDescription'
+import { usePersistedFilters } from '@/hooks/use-persisted-filters'
 import {
   Loader2,
   AlertCircle,
@@ -345,23 +347,20 @@ function OperatorFilter({
 export default function AdminAuditLogs() {
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
-  // Filters
-  const [keyword, setKeyword] = useState('')
-  const [actionFilter, setActionFilter] = useState('')
-  const [targetTypeFilter, setTargetTypeFilter] = useState('')
-  const [operatorKeyword, setOperatorKeyword] = useState('')
-  const [targetIdFilter, setTargetIdFilter] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
 
   // Detail
   const [detailLog, setDetailLog] = useState<AuditLog | null>(null)
 
+  // ── 持久化筛选 ──
+  const { filters, setFilter, resetFilters, hasActiveFilters } = usePersistedFilters({
+    storageKey: 'admin-audit-logs',
+    defaults: { keyword: '', action: '', targetType: '', operator: '', targetId: '', startDate: '', endDate: '', page: 1, pageSize: 20 },
+  })
+  const { keyword, action: actionFilter, targetType: targetTypeFilter, operator: operatorKeyword, targetId: targetIdFilter, startDate, endDate, page, pageSize } = filters as {
+    keyword: string; action: string; targetType: string; operator: string; targetId: string; startDate: string; endDate: string; page: number; pageSize: number
+  }
   const totalPages = Math.ceil(total / pageSize)
 
   const fetchLogs = useCallback(async () => {
@@ -369,13 +368,12 @@ export default function AdminAuditLogs() {
     setError('')
     try {
       const params: any = { page, pageSize }
-      if (keyword) params.keyword = keyword
       if (actionFilter) params.action = actionFilter
       if (targetTypeFilter) params.targetType = targetTypeFilter
       if (targetIdFilter) params.targetId = targetIdFilter
       if (startDate) params.startDate = startDate
       if (endDate) params.endDate = endDate
-      // 操作人搜索复用 keyword 传给后端（覆盖 keyword 时合并搜索）
+      // 操作人搜索优先于关键词
       if (operatorKeyword) {
         params.keyword = operatorKeyword
       } else if (keyword) {
@@ -395,17 +393,6 @@ export default function AdminAuditLogs() {
     fetchLogs()
   }, [fetchLogs])
 
-  const resetFilters = () => {
-    setKeyword('')
-    setActionFilter('')
-    setTargetTypeFilter('')
-    setTargetIdFilter('')
-    setOperatorKeyword('')
-    setStartDate('')
-    setEndDate('')
-    setPage(1)
-  }
-
   const openDetail = async (log: AuditLog) => {
     setDetailLog(log)
   }
@@ -416,8 +403,7 @@ export default function AdminAuditLogs() {
 
   // 操作人快速筛选
   const filterByOperator = (email: string | null) => {
-    setOperatorKeyword(email || '')
-    setPage(1)
+    setFilter('operator', email || '')
   }
 
   // CSV 导出
@@ -450,7 +436,7 @@ export default function AdminAuditLogs() {
   }
 
   const onPageChange = (p: number) => {
-    setPage(p)
+    setFilter('page', p)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -470,7 +456,7 @@ export default function AdminAuditLogs() {
             导出 CSV
           </button>
           <button
-            onClick={() => { setPage(1); fetchLogs() }}
+            onClick={() => { setFilter('page', 1); fetchLogs() }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition"
           >
             <RefreshCw size={14} />
@@ -479,97 +465,22 @@ export default function AdminAuditLogs() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div className="flex flex-wrap gap-4 items-end">
-          {/* 关键词搜索 */}
-          <div className="flex-1 min-w-[160px]">
-            <label className="block text-xs text-slate-500 mb-1">关键词</label>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={keyword}
-                onChange={(e) => { setKeyword(e.target.value); setPage(1) }}
-                onKeyDown={e => e.key === 'Enter' && fetchLogs()}
-                placeholder="搜索描述/操作人"
-                className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* 操作类型 */}
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">操作类型</label>
-            <select
-              value={actionFilter}
-              onChange={(e) => { setActionFilter(e.target.value); setPage(1) }}
-              className="w-44 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {ACTION_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* 对象类型 */}
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">对象类型</label>
-            <select
-              value={targetTypeFilter}
-              onChange={(e) => { setTargetTypeFilter(e.target.value); setPage(1) }}
-              className="w-36 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {TARGET_TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* 对象 ID */}
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">对象 ID</label>
-            <input
-              type="number"
-              value={targetIdFilter}
-              onChange={(e) => { setTargetIdFilter(e.target.value); setPage(1) }}
-              placeholder="输入 ID"
-              className="w-24 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* 日期区间 */}
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">开始日期</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => { setStartDate(e.target.value); setPage(1) }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">结束日期</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => { setEndDate(e.target.value); setPage(1) }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <button
-            onClick={resetFilters}
-            className="px-3 py-2 text-sm text-slate-500 hover:text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 transition"
-          >
-            重置
-          </button>
-        </div>
-      </div>
+      {/* Filters — 持久化筛选栏 */}
+      <FilterBar
+        filters={{ keyword, action: actionFilter, targetType: targetTypeFilter, targetId: targetIdFilter, startDate, endDate }}
+        setFilter={(key, value) => setFilter(key as any, value)}
+        resetFilters={resetFilters}
+        hasActiveFilters={hasActiveFilters}
+        onSearch={fetchLogs}
+        fields={[
+          { key: 'keyword', label: '关键词', type: 'text', placeholder: '搜索描述/操作人' },
+          { key: 'action', label: '操作类型', type: 'select', options: ACTION_OPTIONS },
+          { key: 'targetType', label: '对象类型', type: 'select', options: TARGET_TYPE_OPTIONS },
+          { key: 'targetId', label: '对象 ID', type: 'number', placeholder: 'ID' },
+          { key: 'startDate', label: '开始日期', type: 'date' },
+          { key: 'endDate', label: '结束日期', type: 'date' },
+        ]}
+      />
 
       {/* Error */}
       {error && (
@@ -652,9 +563,9 @@ export default function AdminAuditLogs() {
         {total > 0 && (
           <PaginationBar
             page={page}
-            onPageChange={setPage}
+            onPageChange={(p) => setFilter('page', p)}
             pageSize={pageSize}
-            onPageSizeChange={setPageSize}
+            onPageSizeChange={(s) => { setFilter('pageSize', s); setFilter('page', 1) }}
             total={total}
             totalPages={totalPages}
           />

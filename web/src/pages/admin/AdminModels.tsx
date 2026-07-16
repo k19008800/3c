@@ -2,12 +2,13 @@ import { useEffect, useState, useCallback } from 'react'
 import { get, post, patch, del } from '@/lib/api'
 import type { AdminModel, PaginatedData } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
+import FilterBar from '@/components/ui/FilterBar'
 import { TableSkeleton } from '@/components/ui/skeleton'
 import FeatureDescription from '@/components/admin/FeatureDescription'
+import { usePersistedFilters } from '@/hooks/use-persisted-filters'
 import {
   Loader2,
   AlertCircle,
-  Search,
   Plus,
   Pencil,
   Trash2,
@@ -16,24 +17,37 @@ import {
 } from 'lucide-react'
 
 const TYPE_OPTIONS = [
+  { value: '', label: '全部' },
   { value: 'chat', label: '对话', color: 'bg-blue-100 text-blue-700' },
   { value: 'embedding', label: '嵌入', color: 'bg-green-100 text-green-700' },
   { value: 'image', label: '图像', color: 'bg-purple-100 text-purple-700' },
   { value: 'audio', label: '音频', color: 'bg-orange-100 text-orange-700' },
 ] as const
 
-const TYPE_MAP = Object.fromEntries(TYPE_OPTIONS.map((t) => [t.value, t]))
+const STATUS_OPTIONS = [
+  { value: '', label: '全部' },
+  { value: 'true', label: '启用' },
+  { value: 'false', label: '停用' },
+]
+
+const TYPE_MAP: Record<string, { value: string; label: string; color?: string }> = Object.fromEntries(
+  TYPE_OPTIONS.map((t) => [t.value, t])
+)
 
 export default function AdminModels() {
   const [models, setModels] = useState<AdminModel[]>([])
   const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [keyword, setKeyword] = useState('')
-  const [typeFilter, setTypeFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+
+  // ── 持久化筛选 ──
+  const { filters, setFilter, resetFilters, hasActiveFilters } = usePersistedFilters({
+    storageKey: 'admin-models',
+    defaults: { keyword: '', type: '', status: '', page: 1, pageSize: 20 },
+  })
+  const { keyword, type: typeFilter, status: statusFilter, page, pageSize } = filters as {
+    keyword: string; type: string; status: string; page: number; pageSize: number
+  }
 
   // Modal state
   const [showFormModal, setShowFormModal] = useState(false)
@@ -117,50 +131,19 @@ export default function AdminModels() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div className="flex flex-wrap gap-4 items-end">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs text-slate-500 mb-1">搜索</label>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={keyword}
-                onChange={(e) => { setKeyword(e.target.value); setPage(1) }}
-                onKeyDown={e => e.key === 'Enter' && fetchModels()}
-                placeholder="搜索模型名称"
-                className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">类型</label>
-            <select
-              value={typeFilter}
-              onChange={(e) => { setTypeFilter(e.target.value); setPage(1) }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">全部</option>
-              {TYPE_OPTIONS.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">状态</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">全部</option>
-              <option value="true">启用</option>
-              <option value="false">停用</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      {/* Filters — 持久化筛选栏 */}
+      <FilterBar
+        filters={{ keyword, type: typeFilter, status: statusFilter }}
+        setFilter={(key, value) => setFilter(key as any, value)}
+        resetFilters={resetFilters}
+        hasActiveFilters={hasActiveFilters}
+        onSearch={fetchModels}
+        fields={[
+          { key: 'keyword', label: '搜索', type: 'text', placeholder: '搜索模型名称' },
+          { key: 'type', label: '类型', type: 'select', options: TYPE_OPTIONS.map(t => ({ value: t.value, label: t.label })) },
+          { key: 'status', label: '状态', type: 'select', options: STATUS_OPTIONS },
+        ]}
+      />
 
       {error && (
         <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg text-sm">
@@ -248,9 +231,9 @@ export default function AdminModels() {
         {total > 0 && (
           <PaginationBar
             page={page}
-            onPageChange={setPage}
+            onPageChange={(p) => setFilter('page', p)}
             pageSize={pageSize}
-            onPageSizeChange={setPageSize}
+            onPageSizeChange={(s) => { setFilter('pageSize', s); setFilter('page', 1) }}
             total={total}
             totalPages={totalPages}
           />

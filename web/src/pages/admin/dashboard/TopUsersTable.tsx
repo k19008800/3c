@@ -13,7 +13,7 @@ export default function TopUsersTable({ consumers }: Props) {
           <span className="text-xs text-blue-500 cursor-pointer">查看全部</span>
         </div>
       </div>
-      {consumers.length === 0 ? (
+      {!consumers?.length ? (
         <div className="text-center py-10 text-sm text-slate-400">暂无数据</div>
       ) : (
         <div className="overflow-x-auto">

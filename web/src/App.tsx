@@ -8,7 +8,7 @@ import PublicLayout from '@/components/portal/PublicLayout'
 import AdminRoute from '@/components/layout/AdminRoute'
 import VendorRoute from '@/components/layout/VendorRoute'
 import VendorLayout from '@/components/layout/VendorLayout'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
+import ErrorBoundary from '@/components/ErrorBoundary'
 
 // ── 门户公开页面 ──
 const PortalHome = lazy(() => import('@/pages/portal/Home'))

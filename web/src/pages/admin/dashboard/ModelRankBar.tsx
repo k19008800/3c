@@ -24,7 +24,7 @@ function fmt(v: number): string {
 }
 
 export default function ModelRankBar({ models, title = '模型调用 Top 10' }: Props) {
-  const maxTokens = models.length > 0 ? Math.max(...models.map((m) => m.totalTokens)) : 1
+  const maxTokens = models?.length ? Math.max(...models.map((m) => m.totalTokens)) : 1
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200">

@@ -446,6 +446,10 @@ export default function ApiKeys() {
                     <td className="px-4 py-3 text-sm text-slate-500">{new Date(key.createdAt).toLocaleString('zh-CN')}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
+                        <button onClick={() => { handleCopy(key.key); setCopied(true); }}
+                          className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition">
+                          <Copy size={14} />
+                        </button>
                         <button onClick={() => setExpandedKeyId(expandedKeyId === key.id ? null : key.id)}
                           className="flex items-center gap-1 text-sm text-blue-500 hover:text-blue-700 transition">
                           <BarChart3 size={14} /> 用量

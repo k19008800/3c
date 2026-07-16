@@ -13,6 +13,8 @@ import {
 } from 'lucide-react'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import AlertBar from './dashboard/AlertBar'
+import SummaryBar from './dashboard/SummaryBar'
+import QuickActions from './dashboard/QuickActions'
 import OverviewTrends from './dashboard/OverviewTrends'
 import ModelRankBar from './dashboard/ModelRankBar'
 import RevenueBreakdown from './dashboard/RevenueBreakdown'
@@ -44,6 +46,7 @@ interface DaySeries {
    ════════════════════════════════════════ */
 
 export default function AdminDashboard() {
+  const [summary, setSummary] = useState<any>(null)
   const [stats, setStats] = useState<AdminDashboardStats | null>(null)
   const [revenue, setRevenue] = useState<RevenueAnalysis | null>(null)
   const [topConsumers, setTopConsumers] = useState<TopConsumersData | null>(null)
@@ -59,7 +62,8 @@ export default function AdminDashboard() {
     setLoading(true)
     setError('')
     try {
-      const [s, r, tc, tq, h, tr] = await Promise.all([
+      const [summaryData, s, r, tc, tq, h, tr] = await Promise.all([
+        get<any>('/api/v1/admin/dashboard/summary'),
         get<AdminDashboardStats>('/api/v1/admin/dashboard/stats'),
         get<RevenueAnalysis>('/api/v1/admin/dashboard/revenue-analysis'),
         get<TopConsumersData>('/api/v1/admin/dashboard/top-consumers'),
@@ -68,6 +72,7 @@ export default function AdminDashboard() {
         get<{ series: DaySeries[] }>('/api/v1/admin/dashboard/trends', { days }),
       ])
       setStats(s)
+      setSummary(summaryData?.data || summaryData)
       setRevenue(r)
       setTopConsumers(tc)
       setTodoQueue(tq)
@@ -116,7 +121,7 @@ export default function AdminDashboard() {
   })) ?? []
 
   /* ── Top 10 models ── */
-  const topModels = s.topModels.length > 0 ? s.topModels : []
+  const topModels = s.topModels?.length ? s.topModels : []
 
 
 
@@ -136,6 +141,43 @@ export default function AdminDashboard() {
           刷新
         </button>
       </div>
+
+      {/* ── 状态栏 ── */}
+      <SummaryBar data={summary} />
+
+      {/* ── 快捷操作 ── */}
+      <QuickActions />
+
+      {/* ── 异常告警 ── */}
+      {summary?.recentAnomalies?.length > 0 && (
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-red-100">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertCircle size={16} className="text-red-500" />
+            <span className="text-sm font-semibold text-red-700">
+              最近异常（{summary.recentAnomalies.length}）
+            </span>
+          </div>
+          <div className="space-y-2">
+            {summary.recentAnomalies.map((a: any) => (
+              <div key={a.id} className="flex items-center justify-between text-sm py-1.5 px-3 bg-red-50/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <span className={`w-2 h-2 rounded-full ${a.status === 'timeout' ? 'bg-orange-400' : 'bg-red-400'}`} />
+                  <span className="text-slate-500 text-xs">{a.relativeTime}</span>
+                  <span className="font-medium text-slate-700">{a.user}</span>
+                  <span className="text-slate-500 font-mono text-xs">{a.model}</span>
+                  <span className="text-red-500 text-xs">{a.error || a.status}</span>
+                </div>
+                <button
+                  onClick={() => window.location.href = `/console/admin/logs?id=${a.id}`}
+                  className="text-xs text-blue-600 hover:text-blue-800"
+                >
+                  查看
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Error banner ── */}
       {error && (
@@ -176,7 +218,7 @@ export default function AdminDashboard() {
             <h3 className="text-sm font-semibold text-slate-800">成本 vs 售价（本月）</h3>
           </div>
           <div className="p-5">
-            {!revenue || revenue.month.revenueTrend.length === 0 ? (
+            {!revenue || !revenue.month.revenueTrend?.length ? (
               <div className="h-[150px] flex items-center justify-center text-sm text-slate-400">暂无数据</div>
             ) : (
               <>

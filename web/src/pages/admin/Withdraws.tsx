@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { get, post } from '@/lib/api'
 import type { WithdrawRecord, PaginatedData } from '@/types'
-import { usePagePreferences } from '@/hooks/use-page-preferences'
+import FilterBar from '@/components/ui/FilterBar'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import PaginationBar from '@/components/ui/PaginationBar'
+import { usePersistedFilters } from '@/hooks/use-persisted-filters'
 import { Loader2, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Download, CheckSquare } from 'lucide-react'
 
 const REJECT_REASONS = [
@@ -18,26 +19,23 @@ const REJECT_REASONS = [
 export default function AdminWithdraws() {
   const [rows, setRows] = useState<WithdrawRecord[]>([])
   const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [msg, setMsg] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+
+  // ── 持久化筛选 ──
+  const { filters, setFilter, resetFilters, hasActiveFilters } = usePersistedFilters({
+    storageKey: 'admin-withdraws',
+    defaults: { status: '', page: 1, pageSize: 20 },
+  })
+  const { status: statusFilter, page, pageSize } = filters as {
+    status: string; page: number; pageSize: number
+  }
 
   // 批量选择
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [batchMode, setBatchMode] = useState(false)
   const selectAllRef = useRef<HTMLInputElement>(null)
-
-  const { filters, loaded: prefsLoaded, updateFilter } = usePagePreferences('admin_withdraws')
-
-  // 恢复筛选条件
-  useEffect(() => {
-    if (prefsLoaded && filters.status) {
-      setStatusFilter(filters.status)
-    }
-  }, [prefsLoaded])
 
   const totalPages = Math.ceil(total / pageSize)
 
@@ -61,12 +59,6 @@ export default function AdminWithdraws() {
 
   // 翻页时清空选择
   useEffect(() => { setSelectedIds(new Set()) }, [page, statusFilter])
-
-  const handleStatusFilterChange = (v: string) => {
-    setStatusFilter(v)
-    updateFilter('status', v || '')
-    setPage(1)
-  }
 
   // ── 勾选逻辑 ──
 
@@ -271,18 +263,22 @@ export default function AdminWithdraws() {
       {/* 筛选行 */}
       <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
         <div className="flex items-center gap-4">
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">状态</label>
-            <select value={statusFilter} onChange={(e) => { handleStatusFilterChange(e.target.value) }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">全部</option>
-              <option value="pending_first_review">待初审</option>
-              <option value="pending_second_review">待复审</option>
-              <option value="approved">已通过</option>
-              <option value="paid">已打款</option>
-              <option value="rejected">已拒绝</option>
-            </select>
-          </div>
+          <FilterBar
+            filters={{ status: statusFilter }}
+            setFilter={(key, value) => setFilter(key as any, value)}
+            resetFilters={resetFilters}
+            hasActiveFilters={hasActiveFilters}
+            fields={[
+              { key: 'status', label: '状态', type: 'select', options: [
+                { value: '', label: '全部' },
+                { value: 'pending_first_review', label: '待初审' },
+                { value: 'pending_second_review', label: '待复审' },
+                { value: 'approved', label: '已通过' },
+                { value: 'paid', label: '已打款' },
+                { value: 'rejected', label: '已拒绝' },
+              ]},
+            ]}
+          />
 
           {/* 批量操作按钮 */}
           {batchMode && selectedIds.size > 0 && (
@@ -388,9 +384,9 @@ export default function AdminWithdraws() {
         {total > 0 && (
           <PaginationBar
             page={page}
-            onPageChange={setPage}
+            onPageChange={(p) => setFilter('page', p)}
             pageSize={pageSize}
-            onPageSizeChange={setPageSize}
+            onPageSizeChange={(s) => { setFilter('pageSize', s); setFilter('page', 1) }}
             total={total}
             totalPages={totalPages}
           />

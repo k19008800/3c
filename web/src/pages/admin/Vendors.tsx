@@ -3,8 +3,12 @@ import { get, post, patch, del } from '@/lib/api'
 import type { Vendor, PaginatedData } from '@/types'
 import CircuitStatusBadge from '@/components/security/CircuitStatusBadge'
 import PaginationBar from '@/components/ui/PaginationBar'
+import FilterBar from '@/components/ui/FilterBar'
+import FormField from '@/components/ui/FormField'
 import { TableSkeleton } from '@/components/ui/skeleton'
 import FeatureDescription from '@/components/admin/FeatureDescription'
+import { usePersistedFilters } from '@/hooks/use-persisted-filters'
+import { useFormError } from '@/hooks/use-form-error'
 import {
   Loader2, AlertCircle, Search, Plus, CheckCircle2, RefreshCw,
 } from 'lucide-react'
@@ -22,15 +26,26 @@ function getStatusBadge(status: string) {
 
 const emptyForm = { name: '', baseUrl: '', description: '', status: 'active' }
 
+const STATUS_OPTIONS = [
+  { value: '', label: '全部' },
+  { value: 'active', label: '正常' },
+  { value: 'down', label: '宕机' },
+  { value: 'degraded', label: '降级' },
+  { value: 'disabled', label: '已禁用' },
+]
+
 export default function AdminVendors() {
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [keyword, setKeyword] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+
+  // ── 持久化筛选 ──
+  const { filters, setFilter, resetFilters, hasActiveFilters } = usePersistedFilters({
+    storageKey: 'admin-vendors',
+    defaults: { keyword: '', status: '', page: 1, pageSize: 20 },
+  })
+  const { keyword, status: statusFilter, page, pageSize } = filters as { keyword: string; status: string; page: number; pageSize: number }
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null)
@@ -84,39 +99,18 @@ export default function AdminVendors() {
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div className="flex flex-wrap gap-4 items-end">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs text-slate-500 mb-1">搜索</label>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={keyword}
-                onChange={(e) => { setKeyword(e.target.value); setPage(1) }}
-                onKeyDown={e => e.key === 'Enter' && fetchVendors()}
-                placeholder="搜索供应商名称"
-                className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">状态</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">全部</option>
-              <option value="active">正常</option>
-              <option value="down">宕机</option>
-              <option value="degraded">降级</option>
-              <option value="disabled">已禁用</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      {/* Filters — 持久化筛选栏 */}
+      <FilterBar
+        filters={{ keyword, status: statusFilter }}
+        setFilter={(key, value) => setFilter(key as any, value)}
+        resetFilters={resetFilters}
+        hasActiveFilters={hasActiveFilters}
+        onSearch={fetchVendors}
+        fields={[
+          { key: 'keyword', label: '搜索', type: 'text', placeholder: '搜索供应商名称' },
+          { key: 'status', label: '状态', type: 'select', options: STATUS_OPTIONS },
+        ]}
+      />
 
       {/* Error */}
       {error && (
@@ -237,9 +231,9 @@ export default function AdminVendors() {
         {total > 0 && (
           <PaginationBar
             page={page}
-            onPageChange={setPage}
+            onPageChange={(p) => setFilter('page', p)}
             pageSize={pageSize}
-            onPageSizeChange={setPageSize}
+            onPageSizeChange={(s) => { setFilter('pageSize', s); setFilter('page', 1) }}
             total={total}
             totalPages={totalPages}
           />
@@ -284,19 +278,24 @@ function VendorFormModal({
       : { ...emptyForm }
   )
   const [saving, setSaving] = useState(false)
+  const [apiError, setApiError] = useState<any>(null)
   const [message, setMessage] = useState('')
 
+  const { fieldErrors, globalError } = useFormError(apiError)
+
   const handleSubmit = async () => {
+    // 前端校验
     if (!form.name.trim()) {
-      setMessage('请输入供应商名称')
+      setApiError({ code: 'VALIDATION', message: 'name 必填' })
       return
     }
     if (!form.baseUrl.trim()) {
-      setMessage('请输入接口地址')
+      setApiError({ code: 'VALIDATION', message: 'baseUrl 必填' })
       return
     }
 
     setSaving(true)
+    setApiError(null)
     setMessage('')
     try {
       if (isEdit) {
@@ -318,7 +317,7 @@ function VendorFormModal({
       }
       setTimeout(onSuccess, 800)
     } catch (err: any) {
-      setMessage((isEdit ? '更新失败：' : '创建失败：') + (err.message || ''))
+      setApiError(err.response?.data || { code: err.code, message: err.message })
     } finally {
       setSaving(false)
     }
@@ -333,28 +332,30 @@ function VendorFormModal({
             <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
           </div>
 
-          {message && (
-            <div
-              className={`flex items-center gap-2 p-3 text-sm rounded-lg ${
-                message.includes('失败') || message.includes('请输入')
-                  ? 'bg-red-50 text-red-700'
-                  : 'bg-blue-50 text-blue-700'
-              }`}
-            >
-              {message.includes('失败') || message.includes('请输入') ? (
-                <AlertCircle size={16} />
-              ) : (
-                <CheckCircle2 size={16} />
-              )}
+          {/* 全局错误 */}
+          {globalError && (
+            <div className="flex items-center gap-2 p-3 text-sm rounded-lg bg-red-50 text-red-700">
+              <AlertCircle size={16} />
+              <span dangerouslySetInnerHTML={{ __html: globalError }} />
+            </div>
+          )}
+
+          {/* 成功消息 */}
+          {message && !globalError && (
+            <div className="flex items-center gap-2 p-3 text-sm rounded-lg bg-blue-50 text-blue-700">
+              <CheckCircle2 size={16} />
               {message}
             </div>
           )}
 
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                名称 <span className="text-red-500">*</span>
-              </label>
+          <div className="space-y-4">
+            <FormField
+              label="名称"
+              hint="建议使用英文或拼音命名，如 OpenAI"
+              required
+              error={fieldErrors.name?.message}
+              solution={fieldErrors.name?.solution}
+            >
               <input
                 type="text"
                 value={form.name}
@@ -362,11 +363,15 @@ function VendorFormModal({
                 placeholder="例如：OpenAI"
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                接口地址 <span className="text-red-500">*</span>
-              </label>
+            </FormField>
+
+            <FormField
+              label="接口地址"
+              hint="上游 API 的基础 URL，不需要包含路径参数"
+              required
+              error={fieldErrors.baseUrl?.message || fieldErrors.vendorId?.message}
+              solution={fieldErrors.baseUrl?.solution || fieldErrors.vendorId?.solution}
+            >
               <input
                 type="text"
                 value={form.baseUrl}
@@ -374,9 +379,9 @@ function VendorFormModal({
                 placeholder="例如：https://api.openai.com"
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">状态</label>
+            </FormField>
+
+            <FormField label="状态" hint="新供应商建议保持默认">
               <select
                 value={form.status || 'active'}
                 onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
@@ -387,9 +392,9 @@ function VendorFormModal({
                 <option value="down">宕机</option>
                 <option value="disabled">禁用</option>
               </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">描述</label>
+            </FormField>
+
+            <FormField label="描述" hint="可选，填写备注信息方便识别">
               <textarea
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
@@ -397,7 +402,7 @@ function VendorFormModal({
                 rows={3}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />
-            </div>
+            </FormField>
           </div>
 
           <div className="flex gap-2 justify-end pt-2">

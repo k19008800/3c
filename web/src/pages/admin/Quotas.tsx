@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react'
 import { get, post, put, del } from '@/lib/api'
+import FilterBar from '@/components/ui/FilterBar'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import PaginationBar from '@/components/ui/PaginationBar'
+import { usePersistedFilters } from '@/hooks/use-persisted-filters'
 import {
-  Loader2, Gauge, Plus, AlertCircle, CheckCircle2, Search,
-  Filter, Calendar,
+  Loader2, Gauge, Plus, AlertCircle, CheckCircle2, Calendar,
 } from 'lucide-react'
 
 interface QuotaRecord {
@@ -33,11 +34,13 @@ export default function AdminQuotas() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // Filters
-  const [searchUserId, setSearchUserId] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [limit] = useState(20)
-  const [page, setPage] = useState(1)
+  // ── 持久化筛选 ──
+  const { filters, setFilter, resetFilters, hasActiveFilters } = usePersistedFilters({
+    storageKey: 'admin-quotas',
+    defaults: { searchUserId: '', status: '', page: 1, pageSize: 20 },
+  })
+  const { searchUserId, status: statusFilter, page, pageSize } = filters as { searchUserId: string; status: string; page: number; pageSize: number }
+  const limit = pageSize
   const offset = (page - 1) * limit
 
   // Create form
@@ -249,27 +252,22 @@ export default function AdminQuotas() {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200 flex items-center gap-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Search size={16} className="text-slate-400" />
-          <input type="number" placeholder="用户 ID" value={searchUserId} onChange={(e) => setSearchUserId(e.target.value)}
-            className="w-28 px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-        </div>
-        <div className="flex items-center gap-2">
-          <Filter size={16} className="text-slate-400" />
-          <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-            className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            <option value="">全部状态</option>
-            <option value="active">生效中</option>
-            <option value="expired">已过期</option>
-          </select>
-        </div>
-        <button onClick={() => { fetchQuotas() }}
-          className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-sm hover:bg-indigo-100 transition">
-          查询
-        </button>
-      </div>
+      {/* Filters — 持久化筛选栏 */}
+      <FilterBar
+        filters={{ searchUserId, status: statusFilter }}
+        setFilter={(key, value) => setFilter(key as any, value)}
+        resetFilters={resetFilters}
+        hasActiveFilters={hasActiveFilters}
+        onSearch={fetchQuotas}
+        fields={[
+          { key: 'searchUserId', label: '用户 ID', type: 'number', placeholder: '用户 ID' },
+          { key: 'status', label: '状态', type: 'select', options: [
+            { value: '', label: '全部状态' },
+            { value: 'active', label: '生效中' },
+            { value: 'expired', label: '已过期' },
+          ]},
+        ]}
+      />
 
       {/* List */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200">
@@ -377,7 +375,7 @@ export default function AdminQuotas() {
 
         {/* Pagination */}
         {total > 0 && (
-          <PaginationBar page={page} total={total} totalPages={totalPages} onPageChange={setPage} />
+          <PaginationBar page={page} total={total} totalPages={totalPages} onPageChange={(p) => setFilter('page', p)} />
         )}
       </div>
 

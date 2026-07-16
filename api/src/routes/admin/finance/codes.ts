@@ -65,11 +65,11 @@ export async function adminFinanceCodeRoutes(app: FastifyInstance) {
       const finalizedRecords = await db
         .select({
           costType: financeCostRecords.costType,
-          totalFace: sql<number>`coalesce(sum(${financeCostRecords.totalFace}), 0)`,
-          totalUsed: sql<number>`coalesce(sum(${financeCostRecords.totalUsed}), 0)`,
-          costAmount: sql<number>`coalesce(sum(${financeCostRecords.costAmount}), 0)`,
-          subsidyAmount: sql<number>`coalesce(sum(${financeCostRecords.subsidyAmount}), 0)`,
-          revenueAttributed: sql<number>`coalesce(sum(${financeCostRecords.revenueAttributed}), 0)`,
+          totalFace: sql<string>`coalesce(sum(${financeCostRecords.totalFace})::text, '0')`,
+          totalUsed: sql<string>`coalesce(sum(${financeCostRecords.totalUsed})::text, '0')`,
+          costAmount: sql<string>`coalesce(sum(${financeCostRecords.costAmount})::text, '0')`,
+          subsidyAmount: sql<string>`coalesce(sum(${financeCostRecords.subsidyAmount})::text, '0')`,
+          revenueAttributed: sql<string>`coalesce(sum(${financeCostRecords.revenueAttributed})::text, '0')`,
           roi: sql<string>`coalesce(avg(${financeCostRecords.roi}), 0)`,
         })
         .from(financeCostRecords)
@@ -93,15 +93,18 @@ export async function adminFinanceCodeRoutes(app: FastifyInstance) {
         let revenue = 0;
 
         for (const r of finalizedRecords) {
-          platformCost += r.costAmount;
-          platformSubsidy += r.subsidyAmount;
-          revenue += r.revenueAttributed;
+          const cost = Number(r.costAmount);
+          const sub = Number(r.subsidyAmount);
+          const rev = Number(r.revenueAttributed);
+          platformCost += cost;
+          platformSubsidy += sub;
+          revenue += rev;
           if (r.costType === "admin_marketing") {
-            adminCost += r.costAmount;
-            adminSubsidy += r.subsidyAmount;
+            adminCost += cost;
+            adminSubsidy += sub;
           } else if (r.costType === "agent_cost") {
-            agentCost += r.costAmount;
-            agentSubsidy += r.subsidyAmount;
+            agentCost += cost;
+            agentSubsidy += sub;
           } else if (r.costType === "platform_subsidy") {
             // 补贴单独统计
           }
@@ -561,10 +564,10 @@ export async function adminFinanceCodeRoutes(app: FastifyInstance) {
         const records = await db
           .select({
             agentId: financeCostRecords.agentId,
-            totalFace: sql<number>`coalesce(sum(${financeCostRecords.totalFace}), 0)`,
-            totalUsed: sql<number>`coalesce(sum(${financeCostRecords.totalUsed}), 0)`,
-            costAmount: sql<number>`coalesce(sum(${financeCostRecords.costAmount}), 0)`,
-            subsidyAmount: sql<number>`coalesce(sum(${financeCostRecords.subsidyAmount}), 0)`,
+            totalFace: sql<string>`coalesce(sum(${financeCostRecords.totalFace})::text, '0')`,
+            totalUsed: sql<string>`coalesce(sum(${financeCostRecords.totalUsed})::text, '0')`,
+            costAmount: sql<string>`coalesce(sum(${financeCostRecords.costAmount})::text, '0')`,
+            subsidyAmount: sql<string>`coalesce(sum(${financeCostRecords.subsidyAmount})::text, '0')`,
           })
           .from(financeCostRecords)
           .where(
@@ -595,10 +598,10 @@ export async function adminFinanceCodeRoutes(app: FastifyInstance) {
         const detail = records.map(r => ({
           agentId: r.agentId,
           agentName: r.agentId ? agentNames.get(r.agentId) ?? `代理商 #${r.agentId}` : "未关联代理",
-          totalFace: r.totalFace,
-          totalUsed: r.totalUsed,
-          costAmount: r.costAmount,
-          subsidyAmount: r.subsidyAmount,
+          totalFace: Number(r.totalFace),
+          totalUsed: Number(r.totalUsed),
+          costAmount: Number(r.costAmount),
+          subsidyAmount: Number(r.subsidyAmount),
         }));
 
         reply.status(200).send({
@@ -668,12 +671,14 @@ export async function adminFinanceCodeRoutes(app: FastifyInstance) {
         .where(eq(agents.status, true));
 
       // 获取 ledger 中本月各 agent 的汇总
+      // NOTE: sum(bigint) 在 PG 中返回 numeric，pg 驱动以 string 返回
+      // 必须使用 sql<string> 并显式 Number() 转换，避免 string 拼接导致的 BigInt 溢出
       const ledgerSummary = await db
         .select({
           agentId: agentBalanceLedger.agentId,
           balanceType: agentBalanceLedger.balanceType,
           changeType: agentBalanceLedger.changeType,
-          totalAmount: sql<number>`coalesce(sum(${agentBalanceLedger.amount}), 0)`,
+          totalAmount: sql<string>`coalesce(sum(${agentBalanceLedger.amount})::text, '0')`,
         })
         .from(agentBalanceLedger)
         .where(
@@ -696,10 +701,13 @@ export async function adminFinanceCodeRoutes(app: FastifyInstance) {
           agentSummaryMap.set(ls.agentId, { deduction: 0, freeze: 0, unfreeze: 0, refund: 0 });
         }
         const sum = agentSummaryMap.get(ls.agentId)!;
-        if (ls.changeType === "deduction") sum.deduction += ls.totalAmount;
-        else if (ls.changeType === "freeze") sum.freeze += ls.totalAmount;
-        else if (ls.changeType === "unfreeze") sum.unfreeze += ls.totalAmount;
-        else if (ls.changeType === "refund") sum.refund += ls.totalAmount;
+        // 显式 Number() 转换：pg driver 将 numeric sum 以 string 返回，
+        // 若用 += 直接拼接则产生 string 拼接而非数学加法
+        const amt = Number(ls.totalAmount);
+        if (ls.changeType === "deduction") sum.deduction += amt;
+        else if (ls.changeType === "freeze") sum.freeze += amt;
+        else if (ls.changeType === "unfreeze") sum.unfreeze += amt;
+        else if (ls.changeType === "refund") sum.refund += amt;
       }
 
       // 获取该 period 上个月底的余额快照

@@ -91,6 +91,7 @@ export const vendorModels = pgTable(
     upstreamModelName: varchar("upstream_model_name", { length: 200 }).notNull(), // 上游真实模型名（硬映射）
     apiEndpoint: varchar("api_endpoint", { length: 500 }).notNull(),
     apiKeyEncrypted: text("api_key_encrypted").notNull(),          // AES-256-GCM 加密
+    keyGroupId: integer("key_group_id").references(() => vendorKeyGroups.id),
     costPriceInput: numeric("cost_price_input", { precision: 18, scale: 6 }).notNull().default("0.000000"),
     costPriceOutput: numeric("cost_price_output", { precision: 18, scale: 6 }).notNull().default("0.000000"),
     sellPriceInput: numeric("sell_price_input", { precision: 18, scale: 6 }).notNull().default("0.000000"),
@@ -120,6 +121,49 @@ export const vendorModels = pgTable(
     vendorModelIdx: uniqueIndex("vendor_models_vendor_model_idx").on(table.vendorId, table.modelId).where(sql`status = true`),
     modelIdIdx: index("vendor_models_model_id_idx").on(table.modelId),
     vendorDownIdx: index("vendor_models_vendor_down_idx").on(table.vendorId, table.isDown),
+  })
+);
+
+// ── 供应商 Key 分组 ──
+
+export const vendorKeyGroups = pgTable(
+  "vendor_key_groups",
+  {
+    id: serial("id").primaryKey(),
+    vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 100 }).notNull(),
+    strategy: varchar("strategy", { length: 20 }).notNull().default("round_robin"),
+    description: text("description"),
+    status: boolean("status").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    vendorIdIdx: index("key_groups_vendor_idx").on(table.vendorId),
+  })
+);
+
+// ── 供应商 Key 分组条目 ──
+
+export const vendorKeyGroupItems = pgTable(
+  "vendor_key_group_items",
+  {
+    id: serial("id").primaryKey(),
+    groupId: integer("group_id").notNull().references(() => vendorKeyGroups.id, { onDelete: "cascade" }),
+    apiKeyEncrypted: text("api_key_encrypted").notNull(),
+    apiKeyPrefix: varchar("api_key_prefix", { length: 12 }),
+    weight: integer("weight").notNull().default(1),
+    priority: integer("priority").notNull().default(0),
+    status: boolean("status").notNull().default(true),
+    isDown: boolean("is_down").notNull().default(false),
+    consecutiveFailures: integer("consecutive_failures").notNull().default(0),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    totalCalls: integer("total_calls").notNull().default(0),
+    successCalls: integer("success_calls").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    groupIdIdx: index("key_group_items_group_idx").on(table.groupId),
   })
 );
 

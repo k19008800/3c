@@ -3,11 +3,12 @@ import { get, post, patch, del } from '@/lib/api'
 import type { VendorModel, Vendor, AdminModel, PaginatedData } from '@/types'
 import { Link } from 'react-router-dom'
 import PaginationBar from '@/components/ui/PaginationBar'
+import FilterBar from '@/components/ui/FilterBar'
 import FeatureDescription from '@/components/admin/FeatureDescription'
+import { usePersistedFilters } from '@/hooks/use-persisted-filters'
 import {
   Loader2,
   AlertCircle,
-  Search,
   Plus,
   Edit3,
   Trash2,
@@ -38,16 +39,17 @@ function fullPrice(val: string | number): string {
 export default function AdminVendorModels() {
   const [items, setItems] = useState<VendorModel[]>([])
   const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // filters
-  const [keyword, setKeyword] = useState('')
-  const [vendorFilter, setVendorFilter] = useState('')
-  const [modelFilter, setModelFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  // ── 持久化筛选 ──
+  const { filters, setFilter, resetFilters, hasActiveFilters } = usePersistedFilters({
+    storageKey: 'admin-vendor-models',
+    defaults: { keyword: '', vendorId: '', modelId: '', status: '', page: 1, pageSize: 20 },
+  })
+  const { keyword, vendorId: vendorFilter, modelId: modelFilter, status: statusFilter, page, pageSize } = filters as {
+    keyword: string; vendorId: string; modelId: string; status: string; page: number; pageSize: number
+  }
 
   // dropdown options
   const [vendors, setVendors] = useState<Vendor[]>([])
@@ -72,6 +74,16 @@ export default function AdminVendorModels() {
       })
       .catch(() => {})
   }, [])
+
+  const vendorOptions = useMemo(() => [
+    { value: '', label: '全部供应商' },
+    ...vendors.map(v => ({ value: String(v.id), label: v.name })),
+  ], [vendors])
+
+  const modelOptions = useMemo(() => [
+    { value: '', label: '全部模型' },
+    ...models.map(m => ({ value: String(m.id), label: m.displayName || m.name })),
+  ], [models])
 
   const fetchItems = useCallback(async () => {
     setLoading(true)
@@ -201,69 +213,24 @@ export default function AdminVendorModels() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div className="flex flex-wrap gap-3 items-end">
-          <div className="flex-1 min-w-[180px]">
-            <label className="block text-xs text-slate-500 mb-1">搜索</label>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={keyword}
-                onChange={(e) => { setKeyword(e.target.value); setPage(1) }}
-                onKeyDown={e => e.key === 'Enter' && fetchItems()}
-                placeholder="搜索供应商、模型或上游名称"
-                className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">供应商</label>
-            <select
-              value={vendorFilter}
-              onChange={(e) => { setVendorFilter(e.target.value); setPage(1) }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">全部供应商</option>
-              {vendors.map(v => (
-                <option key={v.id} value={v.id}>{v.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">模型</label>
-            <select
-              value={modelFilter}
-              onChange={(e) => { setModelFilter(e.target.value); setPage(1) }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">全部模型</option>
-              {models.map(m => (
-                <option key={m.id} value={m.id}>{m.displayName || m.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">状态</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">全部</option>
-              <option value="true">启用</option>
-              <option value="false">禁用</option>
-            </select>
-          </div>
-          <button
-            onClick={() => { setKeyword(''); setVendorFilter(''); setModelFilter(''); setStatusFilter(''); setPage(1) }}
-            className="px-3 py-2 text-sm text-slate-500 hover:text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 transition"
-          >
-            重置
-          </button>
-        </div>
-      </div>
+      {/* Filters — 持久化筛选栏 */}
+      <FilterBar
+        filters={{ keyword, vendorId: vendorFilter, modelId: modelFilter, status: statusFilter }}
+        setFilter={(key, value) => setFilter(key as any, value)}
+        resetFilters={resetFilters}
+        hasActiveFilters={hasActiveFilters}
+        onSearch={fetchItems}
+        fields={[
+          { key: 'keyword', label: '搜索', type: 'text', placeholder: '搜索供应商、模型或上游名称' },
+          { key: 'vendorId', label: '供应商', type: 'select', options: vendorOptions },
+          { key: 'modelId', label: '模型', type: 'select', options: modelOptions },
+          { key: 'status', label: '状态', type: 'select', options: [
+            { value: '', label: '全部' },
+            { value: 'true', label: '启用' },
+            { value: 'false', label: '禁用' },
+          ]},
+        ]}
+      />
 
       {error && (
         <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg text-sm">
@@ -424,9 +391,9 @@ export default function AdminVendorModels() {
         {total > 0 && (
           <PaginationBar
             page={page}
-            onPageChange={setPage}
+            onPageChange={(p) => setFilter('page', p)}
             pageSize={pageSize}
-            onPageSizeChange={setPageSize}
+            onPageSizeChange={(s) => { setFilter('pageSize', s); setFilter('page', 1) }}
             total={total}
             totalPages={totalPages}
           />

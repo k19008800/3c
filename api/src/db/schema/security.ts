@@ -14,6 +14,7 @@ import {
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 import {
   riskLevelEnum,
@@ -142,5 +143,58 @@ export const circuitHistory = pgTable(
   (table) => ({
     vendorModelIdIdx: index("circuit_history_vm_id_idx").on(table.vendorModelId),
     createdAtIdx: index("circuit_history_created_at_idx").on(table.createdAt),
+  })
+);
+
+// ── 内容过滤规则 ──
+
+export const contentFilters = pgTable(
+  "content_filters",
+  {
+    id: serial("id").primaryKey(),
+    name: varchar("name", { length: 100 }).notNull(),
+    description: text("description"),
+    stage: varchar("stage", { length: 20 }).notNull().default("pre_request"),
+    scope: varchar("scope", { length: 20 }).notNull().default("request_body"),
+    matchType: varchar("match_type", { length: 20 }).notNull().default("keyword"),
+    pattern: text("pattern").notNull(),
+    action: varchar("action", { length: 20 }).notNull().default("block"),
+    replacement: text("replacement"),
+    applyTo: varchar("apply_to", { length: 10 }).array().notNull().default(sql`ARRAY['all']`),
+    priority: integer("priority").notNull().default(100),
+    hitCount: integer("hit_count").notNull().default(0),
+    lastHitAt: timestamp("last_hit_at", { withTimezone: true }),
+    status: boolean("status").notNull().default(true),
+    createdBy: integer("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    statusIdx: index("content_filters_status_idx").on(table.status),
+    stageIdx: index("content_filters_stage_idx").on(table.stage),
+  })
+);
+
+// ── 过滤日志 ──
+
+export const filterLogs = pgTable(
+  "filter_logs",
+  {
+    id: serial("id").primaryKey(),
+    filterId: integer("filter_id").notNull().references(() => contentFilters.id),
+    callLogId: integer("call_log_id"),
+    userId: integer("user_id"),
+    apiKeyId: integer("api_key_id"),
+    action: varchar("action", { length: 20 }).notNull(),
+    matchContent: text("match_content"),
+    matchedPattern: text("matched_pattern"),
+    stage: varchar("stage", { length: 20 }).notNull(),
+    requestSummary: text("request_summary"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    filterIdIdx: index("filter_logs_filter_idx").on(table.filterId),
+    createdAtIdx: index("filter_logs_created_idx").on(table.createdAt),
+    actionIdx: index("filter_logs_action_idx").on(table.action),
   })
 );

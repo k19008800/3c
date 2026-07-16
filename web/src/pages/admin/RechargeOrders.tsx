@@ -2,7 +2,9 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { get, post } from '@/lib/api'
 import type { RechargeOrder, PaginatedData } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
+import FilterBar from '@/components/ui/FilterBar'
 import FeatureDescription from '@/components/admin/FeatureDescription'
+import { usePersistedFilters } from '@/hooks/use-persisted-filters'
 import {
   Loader2, AlertCircle, CheckCircle2, Ban, ShieldCheck, Shield, CheckSquare, X, Download,
 } from 'lucide-react'
@@ -214,13 +216,18 @@ function ReviewModal({
 export default function AdminRechargeOrders() {
   const [orders, setOrders] = useState<RechargeOrder[]>([])
   const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [msg, setMsg] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [channelFilter, setChannelFilter] = useState('')
+
+  // ── 持久化筛选 ──
+  const { filters, setFilter, resetFilters, hasActiveFilters } = usePersistedFilters({
+    storageKey: 'admin-recharge-orders',
+    defaults: { status: '', channel: '', page: 1, pageSize: 20 },
+  })
+  const { status: statusFilter, channel: channelFilter, page, pageSize } = filters as {
+    status: string; channel: string; page: number; pageSize: number
+  }
 
   // 批量审核状态
   const [batchMode, setBatchMode] = useState(false)
@@ -472,37 +479,30 @@ export default function AdminRechargeOrders() {
       {/* 筛选 + 批量操作 */}
       <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
         <div className="flex items-center justify-between">
-          <div className="flex gap-4 items-end">
-            <div>
-              <label className="block text-xs text-slate-500 mb-1">状态</label>
-              <select
-                value={statusFilter}
-                onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">全部</option>
-                <option value="pending">待支付</option>
-                <option value="paid">已支付</option>
-                <option value="confirmed">已确认</option>
-                <option value="failed">失败</option>
-                <option value="expired">已过期</option>
-                <option value="cancelled">已取消</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-slate-500 mb-1">支付方式</label>
-              <select
-                value={channelFilter}
-                onChange={(e) => { setChannelFilter(e.target.value); setPage(1) }}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">全部</option>
-                <option value="wechat_scan">微信支付</option>
-                <option value="alipay_scan">支付宝</option>
-                <option value="bank_transfer">银行转账</option>
-              </select>
-            </div>
-          </div>
+
+            <FilterBar
+              filters={{ status: statusFilter, channel: channelFilter }}
+              setFilter={(key, value) => setFilter(key as any, value)}
+              resetFilters={resetFilters}
+              hasActiveFilters={hasActiveFilters}
+              fields={[
+                { key: 'status', label: '状态', type: 'select', options: [
+                  { value: '', label: '全部' },
+                  { value: 'pending', label: '待支付' },
+                  { value: 'paid', label: '已支付' },
+                  { value: 'confirmed', label: '已确认' },
+                  { value: 'failed', label: '失败' },
+                  { value: 'expired', label: '已过期' },
+                  { value: 'cancelled', label: '已取消' },
+                ]},
+                { key: 'channel', label: '支付方式', type: 'select', options: [
+                  { value: '', label: '全部' },
+                  { value: 'wechat_scan', label: '微信支付' },
+                  { value: 'alipay_scan', label: '支付宝' },
+                  { value: 'bank_transfer', label: '银行转账' },
+                ]},
+              ]}
+            />
           <button
             onClick={() => { setBatchMode(!batchMode); setSelectedIds(new Set()) }}
             className={'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition ' +
@@ -662,9 +662,9 @@ export default function AdminRechargeOrders() {
         {total > 0 && (
           <PaginationBar
             page={page}
-            onPageChange={setPage}
+            onPageChange={(p) => setFilter('page', p)}
             pageSize={pageSize}
-            onPageSizeChange={setPageSize}
+            onPageSizeChange={(s) => { setFilter('pageSize', s); setFilter('page', 1) }}
             total={total}
             totalPages={totalPages}
           />

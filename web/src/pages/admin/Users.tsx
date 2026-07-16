@@ -9,11 +9,13 @@ import type {
   UserRealNameHistoryRecord
 } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
+import FilterBar from '@/components/ui/FilterBar'
 import { Skeleton, TableSkeleton } from '@/components/ui/skeleton'
 import FeatureDescription from '@/components/admin/FeatureDescription'
+import { usePersistedFilters } from '@/hooks/use-persisted-filters'
 import {
   Loader2, AlertCircle, ChevronDown,
-  Search, UserPlus, Download, FileJson, LogIn,
+  UserPlus, Download, FileJson, LogIn,
   CheckCircle2, Plus, Trash2, RefreshCw,
   Ban, User, Key, History, Shield, FileText,
   Wallet, Activity, Globe, MessageSquare, BarChart3,
@@ -56,13 +58,17 @@ function fmtDate(v: string | null | undefined): string {
 export default function AdminUsers() {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [keyword, setKeyword] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [roleFilter, setRoleFilter] = useState('')
+
+  // ── 持久化筛选 ──
+  const { filters, setFilter, resetFilters, hasActiveFilters } = usePersistedFilters({
+    storageKey: 'admin-users',
+    defaults: { keyword: '', status: '', role: '', page: 1, pageSize: 20 },
+  })
+  const { keyword, status: statusFilter, role: roleFilter, page, pageSize } = filters as {
+    keyword: string; status: string; role: string; page: number; pageSize: number
+  }
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
@@ -145,37 +151,26 @@ export default function AdminUsers() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div className="flex flex-wrap gap-4 items-end">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs text-slate-500 mb-1">搜索</label>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input type="text" value={keyword} onChange={e => { setKeyword(e.target.value); setPage(1) }} onKeyDown={e => e.key === 'Enter' && fetchUsers()} placeholder="搜索邮箱或昵称" className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">状态</label>
-            <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1) }} className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">全部</option>
-              <option value="active">正常</option>
-              <option value="disabled">禁用</option>
-              <option value="pending">待验证</option>
-              <option value="deleted">已注销</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">角色</label>
-            <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(1) }} className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">全部</option>
-              <option value="user">用户</option>
-              <option value="admin">管理员</option>
-              <option value="super_admin">超级管理员</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      {/* Filters — 持久化筛选栏 */}
+      <FilterBar
+        filters={{ keyword, status: statusFilter, role: roleFilter }}
+        setFilter={(key, value) => setFilter(key as any, value)}
+        resetFilters={resetFilters}
+        hasActiveFilters={hasActiveFilters}
+        onSearch={fetchUsers}
+        fields={[
+          { key: 'keyword', label: '搜索', type: 'text', placeholder: '搜索邮箱或昵称' },
+          { key: 'status', label: '状态', type: 'select', options: [
+            { value: '', label: '全部' }, { value: 'active', label: '正常' },
+            { value: 'disabled', label: '禁用' }, { value: 'pending', label: '待验证' },
+            { value: 'deleted', label: '已注销' },
+          ]},
+          { key: 'role', label: '角色', type: 'select', options: [
+            { value: '', label: '全部' }, { value: 'user', label: '用户' },
+            { value: 'admin', label: '管理员' }, { value: 'super_admin', label: '超级管理员' },
+          ]},
+        ]}
+      />
 
       {/* Batch action bar */}
       {selectedIds.size > 0 && (
@@ -262,9 +257,9 @@ export default function AdminUsers() {
         {total > 0 && (
           <PaginationBar
             page={page}
-            onPageChange={setPage}
+            onPageChange={(p) => setFilter('page', p)}
             pageSize={pageSize}
-            onPageSizeChange={setPageSize}
+            onPageSizeChange={(s) => { setFilter('pageSize', s); setFilter('page', 1) }}
             total={total}
             totalPages={totalPages}
           />

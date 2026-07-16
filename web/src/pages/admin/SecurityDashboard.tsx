@@ -68,7 +68,7 @@ export default function AdminSecurityDashboard() {
     {
       icon: Lock, label: '封禁IP', value: stats.bannedIps,
       color: 'text-orange-600 bg-orange-50', border: 'border-orange-200',
-      link: '/admin/security/bans',
+      link: '/console/admin/security/bans',
     },
     {
       icon: Lock, label: '封禁用户', value: stats.bannedUsers,
