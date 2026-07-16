@@ -65,6 +65,7 @@ const AdminSecurityConfig = lazy(() => import('@/pages/admin/SecurityConfig'))
 const AdminSecurityEvents = lazy(() => import('@/pages/admin/SecurityEvents'))
 const AdminSecurityBans = lazy(() => import('@/pages/admin/SecurityBans'))
 const AdminSecurityAlerts = lazy(() => import('@/pages/admin/SecurityAlerts'))
+const AdminSecurityAutoRules = lazy(() => import('@/pages/admin/SecurityAutoRules'))
 const AdminEmailTemplates = lazy(() => import('@/pages/admin/EmailTemplates'))
 const AdminEnterpriseAnalysis = lazy(() => import('@/pages/admin/EnterpriseAnalysis'))
 const AdminCircuitBreakers = lazy(() => import('@/pages/admin/CircuitBreakers'))
@@ -190,6 +191,7 @@ export default function App() {
               <Route path="admin/security/config" element={withSuspense(<AdminSecurityConfig />)} />
               <Route path="admin/security/bans" element={withSuspense(<AdminSecurityBans />)} />
               <Route path="admin/security/alerts" element={withSuspense(<AdminSecurityAlerts />)} />
+              <Route path="admin/security/auto-rules" element={withSuspense(<AdminSecurityAutoRules />)} />
               <Route path="admin/enterprise-analysis" element={withSuspense(<AdminEnterpriseAnalysis />)} />
               <Route path="admin/circuit-breakers" element={withSuspense(<AdminCircuitBreakers />)} />
               <Route path="admin/stats" element={withSuspense(<AdminStats />)} />

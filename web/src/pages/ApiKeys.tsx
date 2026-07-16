@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { get, post, del, patch } from '@/lib/api'
 import type { ApiKey, PaginatedData } from '@/types'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Loader2, AlertCircle, Plus, Copy, CheckCircle2, Trash2, Key, Power, PowerOff,
   BarChart3, ChevronDown, ChevronRight, TrendingUp, Clock, Download,
@@ -51,7 +52,7 @@ function KeyUsageDashboard({ keyId, allKeys }: { keyId: number; allKeys: ApiKey[
 
   useEffect(() => {
     setLoading(true)
-    get<KeyUsageDeep>(`/api/v1/api-keys/${keyId}/usage`)
+    get<KeyUsageDeep>(`/api/v1/user/api-keys/${keyId}/stats`)
       .then(setUsage)
       .catch(e => setError(e.message || '加载失败'))
       .finally(() => setLoading(false))
@@ -60,14 +61,26 @@ function KeyUsageDashboard({ keyId, allKeys }: { keyId: number; allKeys: ApiKey[
   const handleExport = (period: string) => {
     const token = localStorage.getItem('accessToken')
     const a = document.createElement('a')
-    a.href = `/api/v1/api-keys/${keyId}/usage/export?period=${period}`
+    a.href = `/api/v1/user/api-keys/${keyId}/stats/export?period=${period}`
     if (token) a.href += `&token=${token}`
     a.download = `key_usage_${period}.csv`
     a.click()
   }
 
-  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin" size={24} /></div>
-  if (error) return <div className="p-4 text-sm text-red-600 bg-red-50 rounded-lg">{error}</div>
+  if (loading) {
+    return (
+      <td colSpan={7} className="px-6 py-6 bg-gradient-to-b from-blue-50/30 to-white border-b-2 border-blue-100">
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Skeleton variant="card" count={4} />
+          </div>
+          <Skeleton variant="chart" />
+          <Skeleton variant="table-row" count={3} />
+        </div>
+      </td>
+    )
+  }
+  if (error) return <td colSpan={7} className="px-6 py-4"><div className="p-4 text-sm text-red-600 bg-red-50 rounded-lg">{error}</div></td>
   if (!usage) return null
 
   const keyName = usage.keyName || `Key #${keyId}`

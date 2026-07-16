@@ -137,6 +137,7 @@ const adminGroups: AdminGroup[] = [
       { to: '/console/admin/security/config', icon: Settings, label: '安全配置', requiredPerms: [Perm.SECURITY_ACTION] },
       { to: '/console/admin/security/bans', icon: Lock, label: '封禁管理', requiredPerms: [Perm.SECURITY_ACTION] },
       { to: '/console/admin/security/alerts', icon: Bell, label: '告警通知', requiredPerms: [Perm.SECURITY_VIEW] },
+      { to: '/console/admin/security/auto-rules', icon: Zap, label: '自动规则', requiredPerms: [Perm.SECURITY_VIEW] },
     ],
   },
   {
@@ -371,8 +372,25 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
   const { config: siteConfig } = useSiteConfig()
   const { isImpersonating, stopImpersonate } = useImpersonate()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [navUnreadCount, setNavUnreadCount] = useState(0)
   const role = user?.role || 'user'
   const perms = user?.permissions
+
+  // ── Poll unread notification count for nav badge ──
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const res = await get<{ unreadCount: number }>('/api/v1/me/notifications/unread-count')
+      setNavUnreadCount(res.unreadCount)
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchUnreadCount()
+    const interval = setInterval(fetchUnreadCount, 60000)
+    return () => clearInterval(interval)
+  }, [fetchUnreadCount])
 
   const isActive = (path: string) => {
     if (path === '/console') return location.pathname === '/console'
@@ -380,21 +398,38 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
     return location.pathname.startsWith(path)
   }
 
-  const renderNavItem = (item: NavItem) => (
-    <Link
-      key={item.to}
-      to={item.to}
-      className={cn(
-        'flex items-center gap-3 px-3 py-1.5 rounded-md mb-0.5 transition-colors',
-        isActive(item.to) ? 'bg-slate-700 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white',
-        collapsed && 'justify-center'
-      )}
-      title={collapsed ? item.label : undefined}
-    >
-      <item.icon size={20} />
-      {!collapsed && <span className="text-sm">{item.label}</span>}
-    </Link>
-  )
+  const renderNavItem = (item: NavItem) => {
+    const isNotifItem = item.to === '/console/notifications'
+    return (
+      <Link
+        key={item.to}
+        to={item.to}
+        className={cn(
+          'flex items-center gap-3 px-3 py-1.5 rounded-md mb-0.5 transition-colors',
+          isActive(item.to) ? 'bg-slate-700 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white',
+          collapsed && 'justify-center'
+        )}
+        title={collapsed ? item.label : undefined}
+      >
+        <div className="relative">
+          <item.icon size={20} />
+          {isNotifItem && navUnreadCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-4 px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
+              {navUnreadCount > 99 ? '99+' : navUnreadCount}
+            </span>
+          )}
+        </div>
+        {!collapsed && (
+          <span className="text-sm flex-1">{item.label}</span>
+        )}
+        {!collapsed && isNotifItem && navUnreadCount > 0 && (
+          <span className="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold">
+            {navUnreadCount > 99 ? '99+' : navUnreadCount}
+          </span>
+        )}
+      </Link>
+    )
+  }
 
   const adminSectionVisible = isAdminRole(perms)
   // Track which admin groups are expanded (default all open)

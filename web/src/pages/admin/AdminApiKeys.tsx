@@ -1,11 +1,11 @@
-import { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { get, post, patch, del } from '@/lib/api'
 import PaginationBar from '@/components/ui/PaginationBar'
 import { Badge } from '@/components/ui/badge'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import {
   Loader2, Key, Plus, AlertCircle, CheckCircle2, Search,
-  ToggleLeft, ToggleRight, FileText, X, Copy,
+  ToggleLeft, ToggleRight, FileText, X, Copy, ChevronDown, ChevronUp, Terminal,
 } from 'lucide-react'
 
 interface AdminApiKeyItem {
@@ -51,6 +51,8 @@ export default function AdminApiKeys() {
   const [logs, setLogs] = useState<AdminKeyUsageLog[]>([])
   const [logPage, setLogPage] = useState(1)
   const [logsLoading, setLogsLoading] = useState(false)
+  const [copySuccess, setCopySuccess] = useState<number | null>(null)
+  const [usageExampleOpen, setUsageExampleOpen] = useState<number | null>(null)
 
   const [searchKeyword, setSearchKeyword] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<AdminApiKeyItem | null>(null)
@@ -60,6 +62,13 @@ export default function AdminApiKeys() {
   const filteredKeys = searchKeyword
     ? keys.filter(k => k.name.toLowerCase().includes(searchKeyword.toLowerCase()))
     : keys
+
+  const handleCopyKey = (keyPrefix: string) => {
+    // 前缀不能直接复制完整 key，但可以在创建成功弹窗中复制
+    navigator.clipboard.writeText(`sk-${keyPrefix.toLowerCase()}****`).then(() => {
+      alert('Key 前缀已复制到剪贴板（仅前缀，完整 Key 需在创建时保存）')
+    })
+  }
 
   const handleDelete = async (key: AdminApiKeyItem) => {
     try {
@@ -323,14 +332,16 @@ export default function AdminApiKeys() {
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {filteredKeys.map(k => (
-                  <tr key={k.id} className="hover:bg-slate-50 transition">
+                  <React.Fragment key={k.id}>
+                  <tr className={`hover:bg-slate-50 transition ${usageExampleOpen === k.id ? 'bg-indigo-50/30' : ''}`}>
                     <td className="px-4 py-3 text-sm font-medium text-slate-900">{k.name}</td>
                     <td className="px-4 py-3 text-sm font-mono text-slate-500">{k.keyPrefix}...</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
                         {k.permissions.map(perm => (
-                          <Badge key={perm} variant="outline" className="text-xs">{perm}</Badge>
+                          <Badge key={perm} variant="outline" className="text-xs max-w-[120px] truncate">{perm}</Badge>
                         ))}
+                        {k.permissions.length === 0 && <span className="text-xs text-slate-400">无</span>}
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -345,6 +356,14 @@ export default function AdminApiKeys() {
                     <td className="px-4 py-3 text-sm text-slate-500 whitespace-nowrap">{new Date(k.createdAt).toLocaleString('zh-CN')}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
+                        <button onClick={() => {
+                          handleCopyKey(k.keyPrefix)
+                        }}
+                          className="flex items-center gap-1 text-xs text-slate-500 hover:text-blue-600 transition"
+                          title="复制 Key 前缀">
+                          <Copy size={14} />
+                          复制
+                        </button>
                         <button onClick={() => handleToggleStatus(k)}
                           className="flex items-center gap-1 text-xs text-slate-500 hover:text-blue-600 transition"
                           title={k.status === 'active' ? '禁用' : '启用'}>
@@ -356,6 +375,11 @@ export default function AdminApiKeys() {
                           <FileText size={14} />
                           日志
                         </button>
+                        <button onClick={() => setUsageExampleOpen(usageExampleOpen === k.id ? null : k.id)}
+                          className={`flex items-center gap-1 text-xs transition ${usageExampleOpen === k.id ? 'text-indigo-600' : 'text-slate-500 hover:text-indigo-600'}`}>
+                          <Terminal size={14} />
+                          示例
+                        </button>
                         <button onClick={() => setDeleteConfirm(k)}
                           className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 transition">
                           <X size={14} />
@@ -364,6 +388,91 @@ export default function AdminApiKeys() {
                       </div>
                     </td>
                   </tr>
+                  {usageExampleOpen === k.id && (
+                    <tr className="bg-indigo-50/30 border-b border-indigo-100">
+                      <td colSpan={8} className="px-6 py-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 text-sm font-medium text-indigo-800">
+                            <Terminal size={16} />
+                            使用示例
+                          </div>
+
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium text-slate-500">curl 命令</p>
+                            <div className="relative group">
+                              <pre className="bg-slate-900 text-green-400 text-xs p-4 rounded-lg overflow-x-auto font-mono leading-relaxed">
+{`# 查询用户列表（GET 请求）
+curl -H "Authorization: Bearer sk-${k.keyPrefix.toLowerCase()}..." \
+  ${window.location.origin}/api/v1/admin/users?page=1&pageSize=10
+
+# 创建用户（POST 请求）
+curl -X POST \
+  -H "Authorization: Bearer sk-${k.keyPrefix.toLowerCase()}..." \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"******","role":"user"}' \
+  ${window.location.origin}/api/v1/admin/users
+
+# 更新模型（PATCH 请求）
+curl -X PATCH \
+  -H "Authorization: Bearer sk-${k.keyPrefix.toLowerCase()}..." \
+  -H "Content-Type: application/json" \
+  -d '{"status":"active"}' \
+  ${window.location.origin}/api/v1/admin/models/1`}
+                              </pre>
+                              <button
+                                onClick={() => {
+                                  const text = `# 查询用户列表（GET 请求）
+curl -H "Authorization: Bearer sk-${k.keyPrefix.toLowerCase()}..." \
+  ${window.location.origin}/api/v1/admin/users?page=1&pageSize=10
+
+# 创建用户（POST 请求）
+curl -X POST \
+  -H "Authorization: Bearer sk-${k.keyPrefix.toLowerCase()}..." \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"******","role":"user"}' \
+  ${window.location.origin}/api/v1/admin/users
+
+# 更新模型（PATCH 请求）
+curl -X PATCH \
+  -H "Authorization: Bearer sk-${k.keyPrefix.toLowerCase()}..." \
+  -H "Content-Type: application/json" \
+  -d '{"status":"active"}' \
+  ${window.location.origin}/api/v1/admin/models/1`
+                                  navigator.clipboard.writeText(text)
+                                }}
+                                className="absolute top-2 right-2 px-2 py-1 text-[10px] bg-slate-700 text-slate-300 rounded hover:bg-slate-600 transition opacity-0 group-hover:opacity-100"
+                              >
+                                复制全部
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium text-slate-500">Node.js（使用 fetch）</p>
+                            <pre className="bg-slate-100 text-xs p-3 rounded-lg font-mono">
+{`const res = await fetch('${window.location.origin}/api/v1/admin/users', {
+  headers: { 'Authorization': 'Bearer sk-${k.keyPrefix.toLowerCase()}...' }
+})
+const data = await res.json()`}
+                            </pre>
+                          </div>
+
+                          <div className="text-xs text-slate-400 bg-indigo-50/50 p-3 rounded-lg">
+                            <p className="font-medium text-indigo-600 mb-1">⚠️ 注意事项</p>
+                            <ul className="list-disc pl-4 space-y-0.5">
+                              <li>将 <code className="bg-indigo-100 px-1 rounded">sk-{k.keyPrefix.toLowerCase()}...</code> 替换为实际的完整 API Key</li>
+                              <li>管理 API Key 仅用于服务端调用，请勿暴露到前端代码中</li>
+                              <li>请将 API 地址 <code className="bg-indigo-100 px-1 rounded">{window.location.origin}</code> 替换为实际部署地址</li>
+                              {k.permissions.length > 0 && (
+                                <li>当前 Key 权限范围：<code className="bg-indigo-100 px-1 rounded">{k.permissions.join(', ')}</code></li>
+                              )}
+                            </ul>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

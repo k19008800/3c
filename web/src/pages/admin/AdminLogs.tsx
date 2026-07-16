@@ -1,9 +1,14 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { get } from '@/lib/api'
-import type { LogItem, PaginatedData } from '@/types'
+import type { LogItem, PaginatedData, LogSummary } from '@/types'
 import PaginationBar from '@/components/ui/PaginationBar'
 import { TableSkeleton } from '@/components/ui/skeleton'
 import FeatureDescription from '@/components/admin/FeatureDescription'
+import LogStatsCards from '@/components/logs/LogStatsCards'
+import LogDetailDrawer from '@/components/logs/LogDetailDrawer'
+import LogExportButton from '@/components/logs/LogExportButton'
+import LogModelChart from '@/components/logs/LogModelChart'
+import LogAnomaliesPanel from '@/components/logs/LogAnomaliesPanel'
 import {
   Loader2,
   AlertCircle,
@@ -18,6 +23,9 @@ import {
   Download,
   Clock,
   XCircle,
+  Eye,
+  LineChart,
+  DollarSign,
 } from 'lucide-react'
 import {
   Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -504,6 +512,9 @@ export default function AdminLogs() {
   // Analytics panel toggle
   const [analyticsOpen, setAnalyticsOpen] = useState(false)
 
+  // Detail drawer
+  const [selectedLogId, setSelectedLogId] = useState<number | null>(null)
+
   const totalPages = Math.ceil(total / pageSize)
 
   const fetchLogs = useCallback(async () => {
@@ -529,6 +540,30 @@ export default function AdminLogs() {
   useEffect(() => {
     fetchLogs()
   }, [fetchLogs])
+
+  // Compute LogSummary from visible logs for LogStatsCards
+  const statsSummary = useMemo<LogSummary | null>(() => {
+    if (logs.length === 0) return null
+    const successCalls = logs.filter(l => l.status === 'success').length
+    const failedCalls = logs.filter(l => l.status === 'failed').length
+    const totalTokens = logs.reduce((sum, l) => sum + (l.totalTokens || 0), 0)
+    const totalCost = logs.reduce((sum, l) => sum + parseFloat(l.cost || '0'), 0)
+    const avgDuration = logs.length > 0
+      ? Math.round(logs.reduce((sum, l) => sum + (l.durationMs || 0), 0) / logs.length)
+      : 0
+    const successRate = logs.length > 0
+      ? Math.round((successCalls / logs.length) * 10000) / 100
+      : 100
+    return {
+      totalCalls: logs.length,
+      successCalls,
+      failedCalls,
+      totalTokens,
+      totalCost,
+      avgDuration,
+      successRate,
+    }
+  }, [logs])
 
   const exportLogsCSV = () => {
     if (logs.length === 0) return
@@ -563,6 +598,7 @@ export default function AdminLogs() {
         <FeatureDescription page="admin/logs" className="ml-2" />
         <div className="flex items-center gap-3">
           <span className="text-sm text-slate-500">共 {total} 条记录</span>
+          <LogExportButton filters={{ keyword, modelName, status: statusFilter, startDate, endDate }} />
           <button
             onClick={exportLogsCSV}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition"
@@ -579,6 +615,12 @@ export default function AdminLogs() {
           </button>
         </div>
       </div>
+
+      {/* ══════════════════════════════════════ */}
+      {/*  LogStatsCards — 统计卡片              */}
+      {/* ══════════════════════════════════════ */}
+
+      <LogStatsCards summary={statsSummary} loading={loading} />
 
       {/* ══════════════════════════════════════ */}
       {/*  Collapsible Analytics Panel           */}
@@ -610,6 +652,32 @@ export default function AdminLogs() {
             <LogAnalyticsPanel logs={logs} />
           </div>
         )}
+      </div>
+
+      {/* ══════════════════════════════════════ */}
+      {/*  LogModelChart — 模型用量分布           */}
+      {/* ══════════════════════════════════════ */}
+      <div className="bg-gradient-to-b from-indigo-50/30 to-white rounded-2xl border border-indigo-100/50 overflow-hidden">
+        <div className="px-5 py-3.5 flex items-center gap-2">
+          <BarChart3 size={18} className="text-indigo-600" />
+          <span className="font-semibold text-sm text-slate-800">模型用量 Top 10</span>
+        </div>
+        <div className="px-5 pb-5">
+          <LogModelChart startDate={startDate || undefined} endDate={endDate || undefined} />
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════ */}
+      {/*  LogAnomaliesPanel — 异常检测           */}
+      {/* ══════════════════════════════════════ */}
+      <div className="bg-gradient-to-b from-amber-50/30 to-white rounded-2xl border border-amber-100/50 overflow-hidden">
+        <div className="px-5 py-3.5 flex items-center gap-2">
+          <AlertTriangle size={18} className="text-amber-600" />
+          <span className="font-semibold text-sm text-slate-800">成本异常检测</span>
+        </div>
+        <div className="px-5 pb-5">
+          <LogAnomaliesPanel days={7} />
+        </div>
       </div>
 
       {/* Filters */}
@@ -713,20 +781,21 @@ export default function AdminLogs() {
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">状态</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">耗时</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">时间</th>
+                <th className="px-4 py-3 text-sm font-medium text-slate-500">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {loading ? (
-                <TableSkeleton rows={5} cols={11} />
+                <TableSkeleton rows={5} cols={12} />
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="text-center py-12 text-slate-400">
+                  <td colSpan={12} className="text-center py-12 text-slate-400">
                     暂无调用日志数据
                   </td>
                 </tr>
               ) : (
                 logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-50 transition">
+                  <tr key={log.id} className="hover:bg-slate-50 transition cursor-pointer" onClick={() => setSelectedLogId(log.id)}>
                     <td className="px-4 py-3 text-sm text-slate-600">{log.id}</td>
                     <td className="px-4 py-3 text-sm text-slate-700">{log.userEmail || '-'}</td>
                     <td className="px-4 py-3 text-sm font-medium text-slate-900">{log.modelName}</td>
@@ -739,6 +808,14 @@ export default function AdminLogs() {
                     <td className="px-4 py-3 text-sm text-slate-600">{log.durationMs}ms</td>
                     <td className="px-4 py-3 text-sm text-slate-500 whitespace-nowrap">
                       {new Date(log.createdAt).toLocaleString('zh-CN')}
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setSelectedLogId(log.id) }}
+                        className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 transition"
+                      >
+                        <Eye size={14} /> 详情
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -759,6 +836,9 @@ export default function AdminLogs() {
           />
         )}
       </div>
+
+      {/* Log Detail Drawer */}
+      <LogDetailDrawer logId={selectedLogId} onClose={() => setSelectedLogId(null)} />
     </div>
   )
 }
