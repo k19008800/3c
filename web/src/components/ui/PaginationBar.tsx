@@ -51,7 +51,6 @@ export default function PaginationBar({
             value={pageSize}
             onChange={(e) => {
               onPageSizeChange(Number(e.target.value))
-              onPageChange(1)
             }}
             className="px-2 py-1 border border-slate-300 rounded text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >

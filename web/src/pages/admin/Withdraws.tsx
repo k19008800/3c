@@ -1,20 +1,13 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { get, post } from '@/lib/api'
 import type { WithdrawRecord, PaginatedData } from '@/types'
+import { usePersistedFilters } from '@/hooks/use-persisted-filters'
+import { Download, CheckCircle2, AlertCircle, CheckSquare } from 'lucide-react'
 import FilterBar from '@/components/ui/FilterBar'
 import FeatureDescription from '@/components/admin/FeatureDescription'
-import PaginationBar from '@/components/ui/PaginationBar'
-import { usePersistedFilters } from '@/hooks/use-persisted-filters'
-import { Loader2, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Download, CheckSquare } from 'lucide-react'
-
-const REJECT_REASONS = [
-  '银行信息有误，请核对后重新提交',
-  '风控拦截，请联系客服处理',
-  '提现金额超限，请调整金额',
-  '身份信息不符，请重新提交',
-  '银行卡号格式错误',
-  '开户行名称不完整',
-]
+import WithdrawStatsCards from './withdraws/WithdrawStatsCards'
+import WithdrawList from './withdraws/WithdrawList'
+import WithdrawReview from './withdraws/WithdrawReview'
 
 export default function AdminWithdraws() {
   const [rows, setRows] = useState<WithdrawRecord[]>([])
@@ -23,21 +16,23 @@ export default function AdminWithdraws() {
   const [error, setError] = useState('')
   const [msg, setMsg] = useState('')
 
-  // ── 持久化筛选 ──
-  const { filters, setFilter, resetFilters, hasActiveFilters } = usePersistedFilters({
+  const { filters, setFilter, setFilters, resetFilters, hasActiveFilters } = usePersistedFilters({
     storageKey: 'admin-withdraws',
     defaults: { status: '', page: 1, pageSize: 20 },
   })
   const { status: statusFilter, page, pageSize } = filters as {
     status: string; page: number; pageSize: number
   }
+  const totalPages = Math.ceil(total / pageSize)
 
-  // 批量选择
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [batchMode, setBatchMode] = useState(false)
-  const selectAllRef = useRef<HTMLInputElement>(null)
 
-  const totalPages = Math.ceil(total / pageSize)
+  const [reviewOpen, setReviewOpen] = useState(false)
+  const [reviewKind, setReviewKind] = useState<'first-review' | 'second-review' | 'mark-paid' | null>(null)
+  const [reviewId, setReviewId] = useState<number | null>(null)
+
+  useEffect(() => { setSelectedIds(new Set()) }, [page, statusFilter])
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -57,170 +52,93 @@ export default function AdminWithdraws() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  // 翻页时清空选择
-  useEffect(() => { setSelectedIds(new Set()) }, [page, statusFilter])
-
-  // ── 勾选逻辑 ──
-
-  const toggleSelect = (id: number) => {
+  const toggleSelect = useCallback((id: number) => {
     setSelectedIds(prev => {
       const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      if (next.has(id)) next.delete(id); else next.add(id)
       return next
     })
-  }
+  }, [])
 
-  const toggleSelectAll = () => {
-    if (selectedIds.size === rows.length) {
-      setSelectedIds(new Set())
-    } else {
-      setSelectedIds(new Set(rows.map(r => r.id)))
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds(prev => prev.size === rows.length ? new Set() : new Set(rows.map(r => r.id)))
+  }, [rows])
+
+  const openReview = useCallback((id: number, kind: 'first-review' | 'second-review' | 'mark-paid') => {
+    setReviewId(id)
+    setReviewKind(kind)
+    setReviewOpen(true)
+  }, [])
+
+  const handleReview = useCallback(async (data: {
+    action: 'approve' | 'reject'
+    rejectReason?: string
+    bankVoucherUrl?: string
+  }) => {
+    if (!reviewKind || !reviewId) return
+    const id = reviewId
+    try {
+      if (reviewKind === 'first-review')
+        await post(`/api/v1/admin/withdraws/${id}/first-review`, data)
+      else if (reviewKind === 'second-review')
+        await post(`/api/v1/admin/withdraws/${id}/second-review`, data)
+      else
+        await post(`/api/v1/admin/withdraws/${id}/mark-paid`, data)
+      setMsg(`提现 #${id} ${reviewKind === 'first-review' ? (data.action === 'approve' ? '初审通过' : '已拒绝') : reviewKind === 'second-review' ? (data.action === 'approve' ? '复审通过' : '复审拒绝') : '已标记为打款'}`)
+      setReviewOpen(false)
+      setReviewKind(null)
+      setReviewId(null)
+      fetchData()
+    } catch (err: any) {
+      setError(err.message || '操作失败')
     }
-  }
+  }, [reviewKind, reviewId, fetchData])
 
-  // ── 导出 CSV ──
-
-  const doExport = async () => {
+  const doExport = useCallback(async () => {
     try {
       const params = new URLSearchParams()
       if (statusFilter) params.set('status', statusFilter)
-      const url = `/api/v1/admin/withdraws/export?${params.toString()}`
-      const res = await fetch(url, { credentials: 'include' })
+      const res = await fetch(`/api/v1/admin/withdraws/export?${params.toString()}`, { credentials: 'include' })
       if (!res.ok) throw new Error('导出失败')
       const blob = await res.blob()
       const a = document.createElement('a')
       a.href = URL.createObjectURL(blob)
-      const filename = statusFilter
-        ? `withdraws_${statusFilter}_${new Date().toISOString().slice(0, 10)}.csv`
-        : `withdraws_all_${new Date().toISOString().slice(0, 10)}.csv`
-      a.download = filename
+      a.download = `withdraws${statusFilter ? `_${statusFilter}` : '_all'}_${new Date().toISOString().slice(0, 10)}.csv`
       a.click()
       URL.revokeObjectURL(a.href)
       setMsg(`已导出 ${rows.length} 条提现记录`)
     } catch (err: any) {
       setError(err.message || '导出失败')
     }
-  }
+  }, [statusFilter, rows])
 
-  // ── 批量审核 ──
-
-  const doBatchReview = async (action: 'approve' | 'reject') => {
+  const doBatchReview = useCallback(async (action: 'approve' | 'reject') => {
     const ids = Array.from(selectedIds)
-    if (!ids.length) {
-      setError('请先选择要审核的提现订单')
-      return
-    }
-
-    let reason: string | undefined
+    if (!ids.length) { setError('请先选择要审核的提现订单'); return }
+    let rejectReason: string | undefined
     if (action === 'reject') {
-      const options = REJECT_REASONS.map((r, i) => `${i + 1}. ${r}`).join('\n')
-      const input = prompt(
-        `请选择拒绝原因（输入编号或手动输入）：\n${options}`,
-        REJECT_REASONS[0]
-      )
-      if (!input) return
-      const num = parseInt(input, 10)
-      reason = num >= 1 && num <= REJECT_REASONS.length ? REJECT_REASONS[num - 1] : input.trim()
+      rejectReason = prompt('请输入拒绝原因：') || undefined
+      if (!rejectReason) return
     }
-
     try {
-      const res = await post('/api/v1/admin/withdraws/batch-review', { ids, action, rejectReason: reason })
-      const data = res.data
-      setMsg(
-        `批量${action === 'approve' ? '通过' : '拒绝'}：成功 ${action === 'approve' ? data.approved : data.rejected} 笔` +
-        (data.errors?.length ? `，${data.errors.length} 笔失败` : '')
-      )
+      const res = await post('/api/v1/admin/withdraws/batch-review', { ids, action, rejectReason })
+      const d = res.data
+      setMsg(`批量${action === 'approve' ? '通过' : '拒绝'}：成功 ${action === 'approve' ? d.approved : d.rejected} 笔${d.errors?.length ? `，${d.errors.length} 笔失败` : ''}`)
       setSelectedIds(new Set())
       fetchData()
     } catch (err: any) {
       setError(err.message || '批量操作失败')
     }
-  }
+  }, [selectedIds, fetchData])
 
-  // ── 拒绝原因提示框 ──
+  const toggleBatchMode = useCallback(() => {
+    setBatchMode(v => !v)
+    setSelectedIds(new Set())
+  }, [])
 
-  const promptRejectReason = (): string | null => {
-    const options = REJECT_REASONS.map((r, i) => `${i + 1}. ${r}`).join('\n')
-    const input = prompt(
-      `请选择拒绝原因（输入编号或手动输入）：\n${options}`,
-      REJECT_REASONS[0]
-    )
-    if (!input) return null
-    const num = parseInt(input, 10)
-    if (num >= 1 && num <= REJECT_REASONS.length) {
-      return REJECT_REASONS[num - 1]
-    }
-    return input.trim()
-  }
-
-  // ── 单个操作 ──
-
-  const doFirstReview = async (id: number, action: 'approve' | 'reject') => {
-    let reason: string | undefined
-    if (action === 'reject') {
-      reason = promptRejectReason() ?? undefined
-      if (!reason) return
-    }
-    try {
-      await post(`/api/v1/admin/withdraws/${id}/first-review`, { action, rejectReason: reason })
-      setMsg(`提现 #${id} ${action === 'approve' ? '初审通过' : '已拒绝'}`)
-      fetchData()
-    } catch (err: any) {
-      setError(err.message || '操作失败')
-    }
-  }
-
-  const doSecondReview = async (id: number, action: 'approve' | 'reject') => {
-    let reason: string | undefined
-    if (action === 'reject') {
-      reason = promptRejectReason() ?? undefined
-      if (!reason) return
-    }
-    const voucher = action === 'approve' ? (prompt('请输入打款凭证 URL（可选）：') || undefined) : undefined
-    try {
-      await post(`/api/v1/admin/withdraws/${id}/second-review`, { action, rejectReason: reason, bankVoucherUrl: voucher })
-      setMsg(`提现 #${id} ${action === 'approve' ? '复审通过' : '复审拒绝'}`)
-      fetchData()
-    } catch (err: any) {
-      setError(err.message || '操作失败')
-    }
-  }
-
-  const doMarkPaid = async (id: number) => {
-    const voucher = prompt('请输入打款凭证 URL（可选）：') || undefined
-    try {
-      await post(`/api/v1/admin/withdraws/${id}/mark-paid`, { bankVoucherUrl: voucher })
-      setMsg(`提现 #${id} 已标记为打款`)
-      fetchData()
-    } catch (err: any) {
-      setError(err.message || '操作失败')
-    }
-  }
-
-  const statusBadge = (s: string) => {
-    const map: Record<string, string> = {
-      pending_first_review: 'bg-yellow-100 text-yellow-700',
-      pending_second_review: 'bg-blue-100 text-blue-700',
-      approved: 'bg-violet-100 text-violet-700',
-      paid: 'bg-green-100 text-green-700',
-      rejected: 'bg-red-100 text-red-700',
-    }
-    const label: Record<string, string> = {
-      pending_first_review: '待初审',
-      pending_second_review: '待复审',
-      approved: '已通过',
-      paid: '已打款',
-      rejected: '已拒绝',
-    }
-    return (
-      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${map[s] || 'bg-slate-100 text-slate-700'}`}>
-        {label[s] || s}
-      </span>
-    )
-  }
-
-  // ── 渲染 ──
+  const handleFilterChange = useCallback((key: any, value: any) => {
+    setFilter(key, value)
+  }, [setFilter])
 
   return (
     <div className="space-y-6">
@@ -228,170 +146,63 @@ export default function AdminWithdraws() {
         <h1 className="text-2xl font-bold text-slate-900">提现管理</h1>
         <FeatureDescription page="admin/withdraws" className="ml-2" />
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => { setBatchMode(!batchMode); setSelectedIds(new Set()) }}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition ${
-              batchMode
-                ? 'bg-blue-50 border-blue-300 text-blue-700'
-                : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            <CheckSquare size={16} />
-            {batchMode ? '退出批量' : '批量审核'}
+          <button onClick={toggleBatchMode}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition ${batchMode ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}>
+            <CheckSquare size={16} /> {batchMode ? '退出批量' : '批量审核'}
           </button>
-          <button
-            onClick={doExport}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition"
-          >
-            <Download size={16} />
-            导出 CSV
+          <button onClick={doExport}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition">
+            <Download size={16} /> 导出 CSV
           </button>
         </div>
       </div>
 
-      {msg && (
-        <div className="flex items-center gap-2 text-green-700 bg-green-50 p-3 rounded-lg text-sm">
-          <CheckCircle2 size={16} /> {msg}
-        </div>
-      )}
-      {error && (
-        <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg text-sm">
-          <AlertCircle size={16} /> {error}
-        </div>
-      )}
+      {msg && <div className="flex items-center gap-2 text-green-700 bg-green-50 p-3 rounded-lg text-sm"><CheckCircle2 size={16} /> {msg}</div>}
+      {error && <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg text-sm"><AlertCircle size={16} /> {error}</div>}
 
-      {/* 筛选行 */}
+      <WithdrawStatsCards rows={rows} loading={loading} />
+
       <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
         <div className="flex items-center gap-4">
           <FilterBar
             filters={{ status: statusFilter }}
-            setFilter={(key, value) => setFilter(key as any, value)}
+            setFilter={handleFilterChange}
             resetFilters={resetFilters}
             hasActiveFilters={hasActiveFilters}
-            fields={[
-              { key: 'status', label: '状态', type: 'select', options: [
-                { value: '', label: '全部' },
-                { value: 'pending_first_review', label: '待初审' },
-                { value: 'pending_second_review', label: '待复审' },
-                { value: 'approved', label: '已通过' },
-                { value: 'paid', label: '已打款' },
-                { value: 'rejected', label: '已拒绝' },
-              ]},
-            ]}
+            fields={[{ key: 'status', label: '状态', type: 'select', options: [
+              { value: '', label: '全部' },
+              { value: 'pending_first_review', label: '待初审' },
+              { value: 'pending_second_review', label: '待复审' },
+              { value: 'approved', label: '已通过' },
+              { value: 'paid', label: '已打款' },
+              { value: 'rejected', label: '已拒绝' },
+            ]}]}
           />
-
-          {/* 批量操作按钮 */}
           {batchMode && selectedIds.size > 0 && (
             <div className="flex items-center gap-2 ml-auto">
               <span className="text-sm text-slate-500">已选 {selectedIds.size} 笔</span>
-              <button
-                onClick={() => doBatchReview('approve')}
-                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition"
-              >
-                批量通过
-              </button>
-              <button
-                onClick={() => doBatchReview('reject')}
-                className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition"
-              >
-                批量拒绝
-              </button>
+              <button onClick={() => doBatchReview('approve')} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition">批量通过</button>
+              <button onClick={() => doBatchReview('reject')} className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition">批量拒绝</button>
             </div>
           )}
         </div>
       </div>
 
-      {/* 表格 */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-slate-50 text-left">
-                {batchMode && (
-                  <th className="px-4 py-3 w-10">
-                    <input
-                      type="checkbox"
-                      ref={selectAllRef}
-                      checked={rows.length > 0 && selectedIds.size === rows.length}
-                      onChange={toggleSelectAll}
-                      className="rounded border-slate-300"
-                    />
-                  </th>
-                )}
-                <th className="px-4 py-3 text-sm font-medium text-slate-500">ID</th>
-                <th className="px-4 py-3 text-sm font-medium text-slate-500">代理商</th>
-                <th className="px-4 py-3 text-sm font-medium text-slate-500">金额</th>
-                <th className="px-4 py-3 text-sm font-medium text-slate-500">手续费</th>
-                <th className="px-4 py-3 text-sm font-medium text-slate-500">实际到账</th>
-                <th className="px-4 py-3 text-sm font-medium text-slate-500">状态</th>
-                <th className="px-4 py-3 text-sm font-medium text-slate-500">拒绝原因</th>
-                <th className="px-4 py-3 text-sm font-medium text-slate-500">创建时间</th>
-                <th className="px-4 py-3 text-sm font-medium text-slate-500">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {loading ? (
-                <tr><td colSpan={batchMode ? 10 : 9} className="text-center py-12"><Loader2 className="animate-spin inline-block" size={24} /></td></tr>
-              ) : rows.length === 0 ? (
-                <tr><td colSpan={batchMode ? 10 : 9} className="text-center py-12 text-slate-400">暂无提现订单</td></tr>
-              ) : (
-                rows.map((r) => (
-                  <tr key={r.id} className={`hover:bg-slate-50 transition ${selectedIds.has(r.id) ? 'bg-blue-50' : ''}`}>
-                    {batchMode && (
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(r.id)}
-                          onChange={() => toggleSelect(r.id)}
-                          className="rounded border-slate-300"
-                        />
-                      </td>
-                    )}
-                    <td className="px-4 py-3 text-sm text-slate-600">{r.id}</td>
-                    <td className="px-4 py-3 text-sm text-slate-900">{r.nickname || r.email || `#${r.userId}`}</td>
-                    <td className="px-4 py-3 text-sm font-medium">¥{Number(r.amount).toFixed(2)}</td>
-                    <td className="px-4 py-3 text-sm text-slate-500">¥{Number(r.feeAmount || '0').toFixed(2)}</td>
-                    <td className="px-4 py-3 text-sm">¥{Number(r.actualAmount || r.amount).toFixed(2)}</td>
-                    <td className="px-4 py-3">{statusBadge(r.status)}</td>
-                    <td className="px-4 py-3 text-sm text-slate-500">{r.rejectReason || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-slate-500 whitespace-nowrap">{new Date(r.createdAt).toLocaleString('zh-CN')}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1.5 flex-wrap">
-                        {r.status === 'pending_first_review' && (
-                          <>
-                            <button onClick={() => doFirstReview(r.id, 'approve')} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition">初审通过</button>
-                            <button onClick={() => doFirstReview(r.id, 'reject')} className="text-xs px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition">拒绝</button>
-                          </>
-                        )}
-                        {r.status === 'pending_second_review' && (
-                          <>
-                            <button onClick={() => doSecondReview(r.id, 'approve')} className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition">复审通过</button>
-                            <button onClick={() => doSecondReview(r.id, 'reject')} className="text-xs px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition">拒绝</button>
-                          </>
-                        )}
-                        {r.status === 'approved' && (
-                          <button onClick={() => doMarkPaid(r.id)} className="text-xs px-2 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition">标记已打款</button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      <WithdrawList
+        rows={rows} total={total} loading={loading}
+        page={page} pageSize={pageSize} totalPages={totalPages}
+        batchMode={batchMode} selectedIds={selectedIds}
+        onToggleSelect={toggleSelect} onToggleSelectAll={toggleSelectAll}
+        onPageChange={(p) => setFilter('page', p)}
+        onPageSizeChange={(s) => setFilters({ pageSize: s, page: 1 })}
+        onAction={openReview}
+      />
 
-        {total > 0 && (
-          <PaginationBar
-            page={page}
-            onPageChange={(p) => setFilter('page', p)}
-            pageSize={pageSize}
-            onPageSizeChange={(s) => { setFilter('pageSize', s); setFilter('page', 1) }}
-            total={total}
-            totalPages={totalPages}
-          />
-        )}
-      </div>
+      <WithdrawReview
+        open={reviewOpen} kind={reviewKind} recordId={reviewId}
+        onClose={() => { setReviewOpen(false); setReviewKind(null); setReviewId(null) }}
+        onSubmit={handleReview}
+      />
     </div>
   )
 }

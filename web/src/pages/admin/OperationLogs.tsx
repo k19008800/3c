@@ -96,7 +96,7 @@ export default function AdminOperationLogs() {
   const [error, setError] = useState('')
 
   // ── 持久化筛选 ──
-  const { filters, setFilter, resetFilters, hasActiveFilters } = usePersistedFilters({
+  const { filters, setFilter, setFilters, resetFilters, hasActiveFilters } = usePersistedFilters({
     storageKey: 'admin-operation-logs',
     defaults: { keyword: '', category: '', status: '', startDate: '', endDate: '', page: 1, pageSize: 20 },
   })
@@ -277,7 +277,7 @@ export default function AdminOperationLogs() {
             page={page}
             onPageChange={(p) => setFilter('page', p)}
             pageSize={pageSize}
-            onPageSizeChange={(s) => { setFilter('pageSize', s); setFilter('page', 1) }}
+            onPageSizeChange={(s) => setFilters({ pageSize: s, page: 1 })}
             total={total}
             totalPages={Math.ceil(total / pageSize)}
           />
