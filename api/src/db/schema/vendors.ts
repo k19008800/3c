@@ -152,6 +152,11 @@ export const vendorKeyGroupItems = pgTable(
     groupId: integer("group_id").notNull().references(() => vendorKeyGroups.id, { onDelete: "cascade" }),
     apiKeyEncrypted: text("api_key_encrypted").notNull(),
     apiKeyPrefix: varchar("api_key_prefix", { length: 12 }),
+    // 该 Key 专属价格（可选，为空则沿用 vendor_models 定价）
+    costPriceInput: numeric("cost_price_input", { precision: 18, scale: 6 }),
+    costPriceOutput: numeric("cost_price_output", { precision: 18, scale: 6 }),
+    sellPriceInput: numeric("sell_price_input", { precision: 18, scale: 6 }),
+    sellPriceOutput: numeric("sell_price_output", { precision: 18, scale: 6 }),
     weight: integer("weight").notNull().default(1),
     priority: integer("priority").notNull().default(0),
     status: boolean("status").notNull().default(true),

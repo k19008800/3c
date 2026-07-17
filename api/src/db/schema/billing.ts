@@ -45,6 +45,12 @@ export const callLogs = pgTable(
     vendorName: varchar("vendor_name", { length: 100 }),
     modelName: varchar("model_name", { length: 100 }),
 
+    // 溯源：Key 分组中实际使用的 Key 条目
+    keyGroupItemId: integer("key_group_item_id"),
+    // 当时生效的 Key 级别售价（可能不同于 vendor_models 的售价）
+    keySellPriceInput: numeric("key_sell_price_input", { precision: 18, scale: 6 }),
+    keySellPriceOutput: numeric("key_sell_price_output", { precision: 18, scale: 6 }),
+
     promptTokens: integer("prompt_tokens").notNull().default(0),
     completionTokens: integer("completion_tokens").notNull().default(0),
     totalTokens: integer("total_tokens").notNull().default(0),

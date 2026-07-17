@@ -5,6 +5,8 @@ import type { LogItem } from '@/types'
 /** Admin log item — extends user-facing LogItem with user email */
 export interface AdminLogItem extends LogItem {
   userEmail?: string
+  keyGroupItemId?: number | null
+  keyPrefix?: string | null
 }
 
 /* ── Analytics types ── */

@@ -25,6 +25,7 @@ const COLUMNS = [
   { key: 'user', label: '用户', className: '' },
   { key: 'model', label: '模型', className: '' },
   { key: 'vendor', label: '供应商', className: '' },
+  { key: 'key', label: '使用Key', className: '' },
   { key: 'promptTokens', label: '提示 Token', className: 'text-right' },
   { key: 'completionTokens', label: '补全 Token', className: 'text-right' },
   { key: 'totalTokens', label: '总计 Token', className: 'text-right' },
@@ -57,10 +58,10 @@ export default function LogList({
           </thead>
           <tbody className="divide-y divide-slate-200">
             {loading ? (
-              <TableSkeleton rows={5} cols={12} />
+              <TableSkeleton rows={5} cols={13} />
             ) : logs.length === 0 ? (
               <tr>
-                <td colSpan={12} className="text-center py-12 text-slate-400">
+                <td colSpan={13} className="text-center py-12 text-slate-400">
                   暂无调用日志数据
                 </td>
               </tr>
@@ -75,6 +76,15 @@ export default function LogList({
                   <td className="px-4 py-3 text-sm text-slate-700">{log.userEmail || '-'}</td>
                   <td className="px-4 py-3 text-sm font-medium text-slate-900">{log.modelName}</td>
                   <td className="px-4 py-3 text-sm text-slate-600">{log.vendorName}</td>
+                  <td className="px-4 py-3 text-sm text-slate-500 font-mono">
+                    {log.keyGroupItemId ? (
+                      <span title={`Key条目 #${log.keyGroupItemId}`}>
+                        {log.keyPrefix ? `${log.keyPrefix}...` : `#${log.keyGroupItemId}`}
+                      </span>
+                    ) : (
+                      <span className="text-slate-300">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-sm text-slate-600 text-right">
                     {log.promptTokens?.toLocaleString() || '-'}
                   </td>

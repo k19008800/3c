@@ -6,7 +6,7 @@
 import { FastifyInstance } from "fastify";
 import { eq, and, gte, lt, like, desc, sql } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
-import { callLogs, users } from "../../db/schema.js";
+import { callLogs, users, vendorKeyGroupItems } from "../../db/schema.js";
 import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
 
 export async function adminLogRoutes(app: FastifyInstance) {
@@ -90,9 +90,12 @@ export async function adminLogRoutes(app: FastifyInstance) {
         errorMessage: callLogs.errorMessage,
         createdAt: callLogs.createdAt,
         userEmail: users.email,
+        keyGroupItemId: callLogs.keyGroupItemId,
+        keyPrefix: vendorKeyGroupItems.apiKeyPrefix,
       })
       .from(callLogs)
       .leftJoin(users, eq(callLogs.userId, users.id))
+      .leftJoin(vendorKeyGroupItems, eq(callLogs.keyGroupItemId, vendorKeyGroupItems.id))
       .where(and(...conditions))
       .orderBy(desc(callLogs.createdAt))
       .limit(pageSize);
