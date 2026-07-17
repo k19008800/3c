@@ -5,7 +5,7 @@
 // ============================================================
 
 import { sql } from "drizzle-orm";
-import { getDb } from "../index.js";
+import { createDb, getDb, closeDb } from "../index.js";
 
 export async function up() {
   const db = getDb();
@@ -63,6 +63,7 @@ export async function down() {
 const isMain = process.argv[1]?.includes("2026-07-17-key-group-pricing");
 if (isMain) {
   const action = process.argv[2] || "up";
-  if (action === "up") up().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });
-  else down().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });
+  createDb();
+  if (action === "up") up().then(() => closeDb().then(() => process.exit(0))).catch(e => { console.error(e); closeDb().then(() => process.exit(1)); });
+  else down().then(() => closeDb().then(() => process.exit(0))).catch(e => { console.error(e); closeDb().then(() => process.exit(1)); });
 }
