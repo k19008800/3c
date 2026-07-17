@@ -105,6 +105,7 @@ const adminGroups: AdminGroup[] = [
     items: [
       { to: '/console/admin/models', icon: Cpu, label: '模型管理', requiredPerms: [Perm.MODEL_MANAGE] },
       { to: '/console/admin/vendors', icon: Building2, label: '供应商管理', requiredPerms: [Perm.MODEL_MANAGE] },
+      { to: '/console/admin/vendor-key-groups', icon: Key, label: 'Key 分组', requiredPerms: [Perm.MODEL_MANAGE] },
       { to: '/console/admin/vendor-models', icon: GitBranch, label: '模型映射', requiredPerms: [Perm.MODEL_MANAGE] },
       { to: '/console/admin/vendor-self', icon: Key, label: '供应商自助', requiredPerms: [Perm.MODEL_MANAGE] },
       { to: '/console/admin/agents', icon: Handshake, label: '代理商管理', requiredPerms: [Perm.AGENT_LIST] },

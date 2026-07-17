@@ -42,6 +42,7 @@ const AdminDashboard = lazy(() => import('@/pages/admin/Dashboard'))
 const AdminUsers = lazy(() => import('@/pages/admin/Users'))
 const AdminModels = lazy(() => import('@/pages/admin/AdminModels'))
 const AdminVendors = lazy(() => import('@/pages/admin/Vendors'))
+const AdminVendorKeyGroups = lazy(() => import('@/pages/admin/VendorKeyGroups'))
 const AdminVendorModels = lazy(() => import('@/pages/admin/VendorModels'))
 const AdminAgents = lazy(() => import('@/pages/admin/Agents'))
 const AdminAgentDetail = lazy(() => import('@/pages/admin/AgentDetail'))
@@ -79,6 +80,7 @@ const AdminRoles = lazy(() => import('@/pages/admin/Roles'))
 const AdminCampaigns = lazy(() => import('@/pages/admin/Campaigns'))
 const AdminSystemHealthPanel = lazy(() => import('@/pages/admin/SystemHealthPanel'))
 const AdminCampaignDetail = lazy(() => import('@/pages/admin/CampaignDetail'))
+const AdminPlayground = lazy(() => import('@/pages/admin/Playground'))
 const AdminPageContents = lazy(() => import('@/pages/admin/PageContents'))
 const AdminProfitAnalysis = lazy(() => import('@/pages/admin/ProfitAnalysis'))
 const AdminSiteSettings = lazy(() => import('@/pages/admin/SiteSettings'))
@@ -162,6 +164,7 @@ export default function App() {
               <Route path="admin/users" element={withSuspense(<AdminUsers />)} />
               <Route path="admin/models" element={withSuspense(<AdminModels />)} />
               <Route path="admin/vendors" element={withSuspense(<AdminVendors />)} />
+              <Route path="admin/vendor-key-groups" element={withSuspense(<AdminVendorKeyGroups />)} />
               <Route path="admin/vendor-models" element={withSuspense(<AdminVendorModels />)} />
               <Route path="admin/agents" element={withSuspense(<AdminAgents />)} />
               <Route path="admin/agents/:agentId/detail" element={withSuspense(<AdminAgentDetail />)} />
@@ -206,6 +209,7 @@ export default function App() {
               <Route path="admin/vendor-self" element={withSuspense(<AdminVendorSelfMgmt />)} />
               <Route path="admin/page-contents" element={withSuspense(<AdminPageContents />)} />
               <Route path="admin/site-settings" element={withSuspense(<AdminSiteSettings />)} />
+              <Route path="admin/playground" element={withSuspense(<AdminPlayground />)} />
             </Route>
 
             {/* User routes */}

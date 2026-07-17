@@ -159,6 +159,10 @@ export async function adminKeyGroupRoutes(app: FastifyInstance) {
         apiKeyPrefix: prefix,
         weight: body.weight ?? 1,
         priority: body.priority ?? 0,
+        costPriceInput: body.costPriceInput ?? null,
+        costPriceOutput: body.costPriceOutput ?? null,
+        sellPriceInput: body.sellPriceInput ?? null,
+        sellPriceOutput: body.sellPriceOutput ?? null,
       })
       .returning();
 
@@ -177,6 +181,10 @@ export async function adminKeyGroupRoutes(app: FastifyInstance) {
     if (body.weight !== undefined) updateData.weight = body.weight;
     if (body.priority !== undefined) updateData.priority = body.priority;
     if (body.status !== undefined) updateData.status = body.status;
+    if (body.costPriceInput !== undefined) updateData.costPriceInput = body.costPriceInput;
+    if (body.costPriceOutput !== undefined) updateData.costPriceOutput = body.costPriceOutput;
+    if (body.sellPriceInput !== undefined) updateData.sellPriceInput = body.sellPriceInput;
+    if (body.sellPriceOutput !== undefined) updateData.sellPriceOutput = body.sellPriceOutput;
 
     if (Object.keys(updateData).length === 0) {
       return reply.status(400).send({ code: 400, data: null, message: "无变更内容" });
