@@ -162,6 +162,10 @@ export const vendorKeyGroupItems = pgTable(
     status: boolean("status").notNull().default(true),
     isDown: boolean("is_down").notNull().default(false),
     consecutiveFailures: integer("consecutive_failures").notNull().default(0),
+    // 备注（辅助跨供应商核对）
+    notes: text("notes"),
+    // 软删除标记
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
     totalCalls: integer("total_calls").notNull().default(0),
     successCalls: integer("success_calls").notNull().default(0),
@@ -169,6 +173,30 @@ export const vendorKeyGroupItems = pgTable(
   },
   (table) => ({
     groupIdIdx: index("key_group_items_group_idx").on(table.groupId),
+  })
+);
+
+// ── Key-Model 交叉价格（同 Key 不同模型不同折扣）──
+
+export const vendorKeyGroupModelPrices = pgTable(
+  "vendor_key_group_model_prices",
+  {
+    id: serial("id").primaryKey(),
+    keyGroupItemId: integer("key_group_item_id")
+      .notNull()
+      .references(() => vendorKeyGroupItems.id, { onDelete: "cascade" }),
+    vendorModelId: integer("vendor_model_id")
+      .notNull()
+      .references(() => vendorModels.id, { onDelete: "cascade" }),
+    type: varchar("type", { length: 10 }).notNull().default("percent"),
+    inputValue: numeric("input_value", { precision: 18, scale: 6 }),
+    outputValue: numeric("output_value", { precision: 18, scale: 6 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    uniqueKeyModel: uniqueIndex("key_model_prices_key_model_idx").on(table.keyGroupItemId, table.vendorModelId),
+    modelIdx: index("key_model_prices_model_idx").on(table.vendorModelId),
   })
 );
 

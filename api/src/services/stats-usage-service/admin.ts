@@ -6,7 +6,7 @@
 import { eq, and, gte, lt, desc, sql } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { callLogs } from "../../db/schema.js";
-import { AggregatedQuery, AggregationItem } from "./types.js";
+import { AggregatedQuery, AggregationItem, AggregatedResult } from "./types.js";
 import { aggregateUsage } from "./aggregate.js";
 
 /**

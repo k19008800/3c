@@ -1,0 +1,177 @@
+import { useMemo } from 'react'
+import { TrendingUp, DollarSign, Users, PhoneCall } from 'lucide-react'
+import type { DaySeries } from './types'
+import { fmtMoney, fmtNum, calcChange } from './types'
+
+/* ═══════════════════════════════════════════════════
+   MiniChart — inline sparkline for each card
+   ═══════════════════════════════════════════════════ */
+
+interface MiniChartProps {
+  data: { value: number }[]
+  color: string
+}
+
+function MiniChart({ data, color }: MiniChartProps) {
+  const polyline = useMemo(() => {
+    const values = data.map((d) => d.value)
+    const max = Math.max(...values, 1)
+    if (data.length < 2) return null
+    const w = 80
+    const h = 24
+    return data
+      .map((d, i) => {
+        const x = (i / (data.length - 1)) * w
+        const y = h - (d.value / max) * (h - 2) - 1
+        return `${x},${y}`
+      })
+      .join(' ')
+  }, [data])
+
+  if (!polyline) return null
+
+  return (
+    <svg width={80} height={24} viewBox="0 0 80 24" className="flex-shrink-0" aria-label="趋势图">
+      <polyline
+        points={polyline}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={0.6}
+      />
+    </svg>
+  )
+}
+
+/* ═══════════════════════════════════════════════════
+   Summary Card
+   ═══════════════════════════════════════════════════ */
+
+interface SummaryCardProps {
+  label: string
+  value: string
+  sub: string
+  icon: React.ElementType
+  color: string
+  delta?: { text: string; up: boolean } | null
+  trendData: { value: number }[]
+  trendColor: string
+}
+
+function SummaryCard({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  color,
+  delta,
+  trendData,
+  trendColor,
+}: SummaryCardProps) {
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+      <div className="flex items-start justify-between mb-1">
+        <p className="text-xs text-slate-500">{label}</p>
+        <div className={`p-1.5 rounded-lg ${color}`}>
+          <Icon size={14} />
+        </div>
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="min-w-0">
+          <p
+            className={`text-xl font-bold truncate ${
+              delta ? (delta.up ? 'text-slate-900' : 'text-red-700') : 'text-slate-900'
+            }`}
+          >
+            {value}
+          </p>
+          <p className="text-[11px] text-slate-400 mt-0.5 truncate">{sub}</p>
+          {delta && (
+            <p
+              className={`text-[11px] mt-1 font-medium ${
+                delta.up ? 'text-green-600' : 'text-red-600'
+              }`}
+            >
+              {delta.up ? '↑' : '↓'} {delta.text}
+            </p>
+          )}
+        </div>
+        <MiniChart data={trendData} color={trendColor} />
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════
+   TrendsCards — 4 summary cards with sparklines
+   ═══════════════════════════════════════════════════ */
+
+interface TrendsCardsProps {
+  series: DaySeries[]
+}
+
+export default function TrendsCards({ series }: TrendsCardsProps) {
+  const cards = useMemo(() => {
+    if (series.length === 0) return []
+    const latest = series[series.length - 1]
+    const prev = series.length > 1 ? series[series.length - 2] : undefined
+
+    return [
+      {
+        label: '今日调用',
+        value: latest?.calls.total.toLocaleString() || '0',
+        sub: `成功率 ${latest?.calls.successRate ?? 100}%`,
+        icon: PhoneCall,
+        color: 'text-violet-600 bg-violet-50',
+        trendColor: '#8b5cf6',
+        delta: calcChange(latest.calls.total, prev?.calls.total),
+        trendData: series.map((s) => ({ value: s.calls.total })),
+      },
+      {
+        label: '今日 Token',
+        value: fmtNum(latest?.calls.totalTokens ?? 0),
+        sub: `¥${fmtMoney(latest?.calls.totalCost ?? '0')}`,
+        icon: TrendingUp,
+        color: 'text-blue-600 bg-blue-50',
+        trendColor: '#3b82f6',
+        delta: null,
+        trendData: series.map((s) => ({ value: s.calls.totalTokens })),
+      },
+      {
+        label: '今日收入',
+        value: `¥${fmtMoney(latest?.revenue.total ?? '0')}`,
+        sub: `${latest?.revenue.count ?? 0} 笔充值`,
+        icon: DollarSign,
+        color: 'text-emerald-600 bg-emerald-50',
+        trendColor: '#10b981',
+        delta: calcChange(
+          parseFloat(latest.revenue.total),
+          prev ? parseFloat(prev.revenue.total) : undefined,
+        ),
+        trendData: series.map((s) => ({ value: parseFloat(s.revenue.total) })),
+      },
+      {
+        label: '今日新增用户',
+        value: `${latest?.newUsers ?? 0}`,
+        sub: `累计 ${series.reduce((a, s) => a + s.newUsers, 0)}`,
+        icon: Users,
+        color: 'text-amber-600 bg-amber-50',
+        trendColor: '#f59e0b',
+        delta: calcChange(latest.newUsers, prev?.newUsers),
+        trendData: series.map((s) => ({ value: s.newUsers })),
+      },
+    ]
+  }, [series])
+
+  if (cards.length === 0) return null
+
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {cards.map((card) => (
+        <SummaryCard key={card.label} {...card} />
+      ))}
+    </div>
+  )
+}

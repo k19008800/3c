@@ -5,10 +5,12 @@ import {
   users,
   balanceLogs,
   auditLogs,
+  rechargeOrders,
 } from "../../../db/schema.js";
 import { requirePerm, Perm } from "../../../middleware/auth.js";
 
 import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
 import { config } from "../../../config.js";
 import {
   adminBatchDisableSchema,
@@ -52,6 +54,7 @@ export async function actionsRoutes(app: FastifyInstance) {
     }
 
     const amountNum = parseFloat(amount);
+    const REVIEW_THRESHOLD = 1000;
 
     const [user] = await db
       .select({ balance: users.balance, id: users.id })
@@ -65,6 +68,43 @@ export async function actionsRoutes(app: FastifyInstance) {
     }
 
     const balanceBefore = parseFloat(user.balance);
+
+    // ── 大额调整阈值检查 ──
+    // 金额绝对值 > 1000 元时，创建待审核充值订单，不走直接调整
+    if (Math.abs(amountNum) > REVIEW_THRESHOLD) {
+      const orderNo = `ADM${crypto.randomUUID().replace(/-/g, "").slice(0, 20).toUpperCase()}`;
+
+      await db.insert(rechargeOrders).values({
+        userId,
+        orderNo,
+        amount: amountNum.toFixed(6),
+        channel: "bank_transfer",
+        status: "pending",
+        remark: description
+          ? `管理员大额余额调整，待审核: ${description}`
+          : `管理员大额余额调整 (${amountNum >= 0 ? "+" : ""}${amountNum.toFixed(6)})，待审核`,
+      });
+
+      await db.insert(auditLogs).values({
+        operatorId,
+        action: "balance_adjust",
+        targetType: "user",
+        targetId: userId,
+        before: { balance: balanceBefore.toFixed(6) },
+        after: { pendingReview: true, amount: amountNum.toFixed(6), orderNo },
+        ip: request.ip,
+        description: `大额余额调整已创建待审核订单: ${amountNum >= 0 ? "+" : ""}${amountNum.toFixed(6)}${description ? ` (${description})` : ""}`,
+      });
+
+      reply.status(200).send({
+        code: 0,
+        data: { orderNo },
+        message: "金额超过 1000 元，需要审核确认",
+      });
+      return;
+    }
+
+    // ── 小额直接调整 ──
     const newBalance = balanceBefore + amountNum;
     const newBalanceStr = newBalance.toFixed(6);
 

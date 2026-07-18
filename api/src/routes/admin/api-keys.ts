@@ -146,7 +146,7 @@ export async function adminApiKeyRoutes(app: FastifyInstance) {
       return;
     }
 
-    await db.delete(apiKeys).where(eq(apiKeys.id, kId));
+    await db.update(apiKeys).set({ status: false }).where(eq(apiKeys.id, kId));
 
     await db.insert(auditLogs).values({
       operatorId: request.user!.userId,

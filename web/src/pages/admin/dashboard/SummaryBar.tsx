@@ -66,7 +66,7 @@ export default function SummaryBar({ data }: SummaryBarProps) {
         value={data ? (data.todayCalls >= 10000
           ? `${(data.todayCalls / 10000).toFixed(1)}万`
           : String(data.todayCalls)) : '—'}
-        sub={data ? `¥${data.todayCost}` : undefined}
+        sub={data && data.todayCost != null ? `¥${data.todayCost}` : undefined}
         color="bg-emerald-500"
       />
       <StatCard
@@ -82,7 +82,7 @@ export default function SummaryBar({ data }: SummaryBarProps) {
       <StatCard
         icon={DollarSign}
         label="今日消耗"
-        value={data ? `¥${data.todayCost}` : '—'}
+        value={data && data.todayCost != null ? `¥${data.todayCost}` : '—'}
         color="bg-amber-500"
       />
       <StatCard

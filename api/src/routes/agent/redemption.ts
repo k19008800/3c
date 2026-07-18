@@ -20,7 +20,7 @@ import {
   codeTemplates,
 } from "../../db/schema.js";
 import { authenticateJWT, requireRole } from "../../middleware/auth.js";
-import { AppError } from "../../services/auth-service.js";
+import { AppError } from "../../services/auth-service/index.js";
 
 // ── 兑换码脱敏 ──
 function maskCode(code: string): string {

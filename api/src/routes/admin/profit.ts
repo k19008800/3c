@@ -5,7 +5,7 @@
 import { FastifyInstance } from "fastify";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
-import { AppError } from "../../services/auth-service.js";
+import { AppError } from "../../services/auth-service/index.js";
 import {
   computeProfitRollup,
   getProfitSummary,

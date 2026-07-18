@@ -6,7 +6,7 @@
 import { eq, and } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { userPreferences } from "../db/schema.js";
-import { AppError } from "./auth-service.js";
+import { AppError } from "./auth-service/index.js";
 
 // ──────────────────────────────────────────────
 //  获取用户某页面的偏好

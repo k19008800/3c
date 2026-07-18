@@ -12,7 +12,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { auditLogs } from "../../db/schema.js";
 import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
-import { AppError } from "../../services/auth-service.js";
+import { AppError } from "../../services/auth-service/index.js";
 import {
   listAllAgents,
   getAgentById,

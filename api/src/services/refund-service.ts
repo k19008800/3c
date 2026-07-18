@@ -49,7 +49,7 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { refundRequests, users, balanceLogs, auditLogs } from "../db/schema.js";
-import { AppError } from "./auth-service.js";
+import { AppError } from "./auth-service/index.js";
 
 // ──────────────────────────────────────────────
 //  用户提交退款申请

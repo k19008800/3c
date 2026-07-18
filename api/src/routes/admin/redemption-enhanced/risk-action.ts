@@ -74,7 +74,7 @@ export function registerRiskActionRoute(app: FastifyInstance): void {
         await db
           .update(redemptionFraudEvents)
           .set({ acknowledged: true, acknowledgedBy: adminUserId, acknowledgedAt: new Date() })
-        conditions.push(eq(redemptionCodes.batchId, body.batchId));
+        // conditions removed - batch-level action not yet implemented
       }
 
       // 审计日志

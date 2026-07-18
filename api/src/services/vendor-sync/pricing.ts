@@ -5,6 +5,9 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { systemConfigs } from "../../db/schema/index.js";
+import { DEFAULT_PRICING_MULTIPLIER } from "../price-service.js";
+
+export { DEFAULT_PRICING_MULTIPLIER };
 
 // ── Known pricing (CNY per 1K tokens) ──
 
@@ -82,6 +85,6 @@ export async function getPricingMultiplier(): Promise<number> {
       .from(systemConfigs)
       .where(eq(systemConfigs.key, "pricing_multiplier"))
       .limit(1);
-    return cfg ? parseFloat(cfg.value) : 1.01;
-  } catch { return 1.01; }
+    return cfg ? parseFloat(cfg.value) : DEFAULT_PRICING_MULTIPLIER;
+  } catch { return DEFAULT_PRICING_MULTIPLIER; }
 }

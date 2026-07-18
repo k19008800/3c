@@ -50,10 +50,10 @@ export async function dbTransitionDegraded(vendorModelId: number): Promise<void>
   if (!vm) return;
   if (vm.circuitState !== "closed") return;
 
+  // 注意：circuitFailCount 由 recordVendorModelFailure 统一递增，此处不重复计数
   await db
     .update(vendorModels)
     .set({
-      circuitFailCount: sql`${vendorModels.circuitFailCount} + 1`,
       weight: WEIGHT_REDUCED,
     })
     .where(eq(vendorModels.id, vendorModelId));

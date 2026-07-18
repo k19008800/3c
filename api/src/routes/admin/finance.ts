@@ -11,7 +11,7 @@
 import { FastifyInstance } from "fastify";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
-import { AppError } from "../../services/auth-service.js";
+import { AppError } from "../../services/auth-service/index.js";
 import {
   // 财务工作台 & 对账
   getFinanceDashboard,
@@ -1142,7 +1142,7 @@ export async function adminFinanceRoutes(app: FastifyInstance) {
                 description: `对公转账批量到账 / ${order.orderNo} / 凭证 ${voucherNo}`,
               });
 
-              const { processRenewalCommission } = await import("../../services/billing.js");
+              const { processRenewalCommission } = await import("../../services/billing/index.js");
               await processRenewalCommission(tx, order.userId, order.id, order.amount, order.orderNo);
 
               await tx.insert(auditLogs).values({
@@ -1443,7 +1443,7 @@ export async function adminFinanceRoutes(app: FastifyInstance) {
           });
 
           // 处理续费佣金
-          const { processRenewalCommission } = await import("../../services/billing.js");
+          const { processRenewalCommission } = await import("../../services/billing/index.js");
           await processRenewalCommission(tx, order.userId, order.id, amount, order.orderNo);
 
           await tx.insert(auditLogs).values({

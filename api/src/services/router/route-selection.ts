@@ -111,32 +111,70 @@ function pickByStrategy(
     }
 
     default:
+      console.warn(`[Router] 未知路由策略 "${strategy}"，使用最低价策略 fallback`);
       return candidates[0];
   }
 }
 
 // ── 解析 Key 分组：用分组选择的实际 Key 覆盖路由的 apiKeyPlain ──
 
-async function resolveKeyGroup(
+export async function resolveKeyGroup(
   route: VendorModelRoute,
   redis: any,
 ): Promise<VendorModelRoute> {
   if (!route.keyGroupId) return route;
   try {
     const { selectKeyFromGroup } = await import("./key-group.js");
-    const result = await selectKeyFromGroup(route.keyGroupId, redis);
+    const result = await selectKeyFromGroup(route.keyGroupId, redis, route.vendorModelId);
     if (!result) {
       // Key 分组无可选 Key，沿用 vendorModel 本身的 Key
       return route;
     }
     const item = result.item;
+
+    // 价格优先级：Key-Model 交叉价 > Key 统一价 > vendorModel 基价
+    let keySellPriceInput: number | null = null;
+    let keySellPriceOutput: number | null = null;
+    let priceSource: string | null = null;
+    let priceSourceId: number | null = null;
+
+    if (item._modelPrice) {
+      // 有 Key-Model 交叉价
+      priceSource = "key_model";
+      priceSourceId = item._modelPrice.id;
+
+      if (item._modelPriceType === "absolute") {
+        // 固定价模式：直接覆盖
+        keySellPriceInput = item.modelPriceInput;
+        keySellPriceOutput = item.modelPriceOutput;
+      } else if (item._modelPriceType === "percent") {
+        // 百分比模式：basePrice * discountPercent
+        const pctInput = item.modelPriceInput != null ? Number(item.modelPriceInput) : null;
+        const pctOutput = item.modelPriceOutput != null ? Number(item.modelPriceOutput) : null;
+        keySellPriceInput = pctInput != null ? route.sellPriceInput * pctInput : null;
+        keySellPriceOutput = pctOutput != null ? route.sellPriceOutput * pctOutput : null;
+
+        // 如果百分比某维度未设，降级到 Key 统一价或 vendorModel 价
+        if (keySellPriceInput == null && item.sellPriceInput != null) {
+          keySellPriceInput = Number(item.sellPriceInput);
+        }
+        if (keySellPriceOutput == null && item.sellPriceOutput != null) {
+          keySellPriceOutput = Number(item.sellPriceOutput);
+        }
+      }
+    } else if (item.sellPriceInput != null || item.sellPriceOutput != null) {
+      // 无交叉价但有 Key 统一价
+      priceSource = "key_item";
+      keySellPriceInput = item.sellPriceInput != null ? Number(item.sellPriceInput) : null;
+      keySellPriceOutput = item.sellPriceOutput != null ? Number(item.sellPriceOutput) : null;
+    }
+
     return {
       ...route,
       apiKeyPlain: result.apiKeyPlain,
       keyGroupItemId: item.id,
-      // Key 级别有专属价格则覆盖 vendorModel 售价
-      keySellPriceInput: item.sellPriceInput != null ? Number(item.sellPriceInput) : null,
-      keySellPriceOutput: item.sellPriceOutput != null ? Number(item.sellPriceOutput) : null,
+      keySellPriceInput,
+      keySellPriceOutput,
     };
   } catch (err) {
     console.warn("[Router] KeyGroup 解析异常，降级使用 vendorModel 默认 Key:", err);

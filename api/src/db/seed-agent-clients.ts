@@ -32,7 +32,7 @@ import {
   userRoleHistory,
   auditLogs,
 } from "./schema.js";
-import { charge, type BillingInput } from "../services/billing.js";
+import { charge, type BillingInput } from "../services/billing/index.js";
 
 // ═══════════════════════════════════════════════
 //  配置

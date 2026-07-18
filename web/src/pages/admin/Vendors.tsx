@@ -53,6 +53,7 @@ export default function AdminVendors() {
   const [circuits, setCircuits] = useState<Record<number, string>>({})
   const [syncingId, setSyncingId] = useState<number | null>(null)
   const [syncMsg, setSyncMsg] = useState('')
+  const [syncVendor, setSyncVendor] = useState<Vendor | null>(null)
 
   const totalPages = Math.ceil(total / pageSize)
 
@@ -198,23 +199,11 @@ export default function AdminVendors() {
                             删除
                           </button>
                           <button
-                            onClick={async () => {
-                              const apiKey = prompt(`请输入 ${v.name} 的 API Key 用于拉取模型列表：`)
-                              if (!apiKey) return
-                              setSyncingId(v.id); setSyncMsg('')
-                              try {
-                                const res = await post(`/api/v1/admin/vendors/${v.id}/sync-models`, { apiKey })
-                                const d = res as any
-                                setSyncMsg(`✅ ${v.name}: ${d.message || '同步完成'}（${d.data?.createdMappings ?? 0} 新，${d.data?.updatedPrices ?? 0} 定价更新）`)
-                              } catch (e: any) {
-                                setSyncMsg(`❌ ${v.name}: ${e?.response?.data?.message || e.message || '同步失败'}`)
-                              } finally { setSyncingId(null) }
-                            }}
-                            disabled={syncingId === v.id}
-                            className="text-sm text-emerald-600 hover:text-emerald-800 disabled:opacity-50"
+                            onClick={() => setSyncVendor(v)}
+                            className="text-sm text-emerald-600 hover:text-emerald-800"
                             title="从上游 API 同步模型列表和定价"
                           >
-                            {syncingId === v.id ? <Loader2 className="animate-spin inline" size={14} /> : <RefreshCw size={14} />}
+                            <RefreshCw size={14} />
                             {' '}同步模型
                           </button>
                         </div>
@@ -255,6 +244,15 @@ export default function AdminVendors() {
           vendor={deleteConfirm}
           onClose={() => setDeleteConfirm(null)}
           onSuccess={() => { setDeleteConfirm(null); fetchVendors() }}
+        />
+      )}
+
+      {/* Sync Models Modal */}
+      {syncVendor && (
+        <SyncModal
+          vendor={syncVendor}
+          onClose={() => setSyncVendor(null)}
+          onSuccess={(msg: string) => { setSyncVendor(null); setSyncMsg(msg) }}
         />
       )}
     </div>
@@ -420,6 +418,106 @@ function VendorFormModal({
             >
               {saving && <Loader2 size={14} className="animate-spin" />}
               {isEdit ? '保存' : '创建'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ───────── Sync Models Modal ───────── */
+function SyncModal({
+  vendor,
+  onClose,
+  onSuccess,
+}: {
+  vendor: Vendor
+  onClose: () => void
+  onSuccess: (msg: string) => void
+}) {
+  const [apiKey, setApiKey] = useState('')
+  const [keyGroups, setKeyGroups] = useState<{ id: number; name: string }[]>([])
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [keyGroupsLoading, setKeyGroupsLoading] = useState(false)
+
+  // 加载该供应商的已有 key groups
+  useEffect(() => {
+    setKeyGroupsLoading(true)
+    get<any>(`/api/v1/admin/vendors/${vendor.id}/key-groups`)
+      .then(data => {
+        const list = Array.isArray(data) ? data : (data?.data || [])
+        setKeyGroups(list.map((g: any) => ({ id: g.id, name: g.name })))
+      })
+      .catch(() => {})
+      .finally(() => setKeyGroupsLoading(false))
+  }, [vendor.id])
+
+  const handleSync = async () => {
+    if (!apiKey.trim()) { setError('API Key 必填'); return }
+    setSaving(true); setError('')
+    try {
+      const body: any = { apiKey: apiKey.trim() }
+      if (selectedGroupId) body.keyGroupId = selectedGroupId
+      const res = await post(`/api/v1/admin/vendors/${vendor.id}/sync-models`, body) as any
+      onSuccess(`✅ ${vendor.name}: 同步完成（${res.createdMappings ?? 0} 新映射，${res.skippedMappings ?? 0} 跳过）`)
+    } catch (e: any) {
+      setError(e?.response?.data?.message || e.message || '同步失败')
+    } finally { setSaving(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+      <div className="bg-white rounded-xl w-full max-w-md shadow-xl mx-4" onClick={e => e.stopPropagation()}>
+        <div className="p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">同步模型 — {vendor.name}</h2>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 p-3 text-sm bg-red-50 text-red-600 rounded-lg">
+              <AlertCircle size={16} />{error}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs text-slate-500 mb-1">
+                API Key <span className="text-red-500">*</span>
+              </label>
+              <input type="password" value={apiKey}
+                onChange={e => setApiKey(e.target.value)}
+                placeholder="用于调用 /v1/models 拉取模型列表"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+              <p className="text-xs text-slate-400 mt-1">该 KEY 仅用于拉取模型列表，不会作为计费 KEY</p>
+            </div>
+
+            <div>
+              <label className="block text-xs text-slate-500 mb-1">关联资源池（可选）</label>
+              <select value={selectedGroupId ?? ''}
+                onChange={e => setSelectedGroupId(e.target.value ? Number(e.target.value) : null)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                <option value="">-- 不关联 --（KEY 直接写入通道）</option>
+                {keyGroups.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+              {keyGroupsLoading && <p className="text-xs text-slate-400 mt-1">加载资源池列表...</p>}
+              <p className="text-xs text-slate-400 mt-1">
+                选择资源池后，新模型将自动引用该资源池的 Key。
+                建议先在「Key 分组管理」中创建好资源池再同步。
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-2 justify-end pt-2">
+            <button onClick={onClose} disabled={saving}
+              className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 transition">取消</button>
+            <button onClick={handleSync} disabled={saving || !apiKey.trim()}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition">
+              {saving && <Loader2 size={14} className="animate-spin" />}
+              {saving ? '同步中...' : '开始同步'}
             </button>
           </div>
         </div>

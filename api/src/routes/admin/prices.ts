@@ -5,7 +5,7 @@
 import { FastifyInstance } from "fastify";
 import { eq, desc } from "drizzle-orm";
 import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
-import { AppError } from "../../services/auth-service.js";
+import { AppError } from "../../services/auth-service/index.js";
 import { getDb } from "../../db/index.js";
 import { vendorModels, models, vendors, systemConfigs } from "../../db/schema.js";
 import {
@@ -13,6 +13,7 @@ import {
   batchUpdateCostPrices,
   updatePricingMultiplier,
   getPriceChangeHistory,
+  DEFAULT_PRICING_MULTIPLIER,
 } from "../../services/price-service.js";
 
 export async function priceRoutes(app: FastifyInstance) {
@@ -59,7 +60,7 @@ export async function priceRoutes(app: FastifyInstance) {
         .where(eq(systemConfigs.key, "pricing_multiplier"))
         .limit(1);
 
-      const multiplier = cfg ? parseFloat(cfg.value) : 1.33;
+      const multiplier = cfg ? parseFloat(cfg.value) : DEFAULT_PRICING_MULTIPLIER;
 
       reply.status(200).send({
         code: 0,
@@ -157,13 +158,16 @@ export async function priceRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     try {
       const body = request.body as {
-        vendorModelIds: number[];
+        vendorModelIds?: number[];
+        modelIds?: number[];
         costPriceInput: string;
         costPriceOutput: string;
         reason: string;
       };
 
-      if (!body.vendorModelIds?.length) {
+      // 兼容前端 modelIds / vendorModelIds 两种字段名
+      const ids = body.vendorModelIds ?? body.modelIds;
+      if (!ids?.length) {
         reply.status(400).send({ code: 400, data: null, message: "请至少选择一个模型" });
         return;
       }
@@ -178,7 +182,7 @@ export async function priceRoutes(app: FastifyInstance) {
 
       const operatorId = (request as any).user.userId;
       const result = await batchUpdateCostPrices(
-        body.vendorModelIds,
+        ids,
         body.costPriceInput,
         body.costPriceOutput,
         body.reason,

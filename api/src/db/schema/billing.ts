@@ -50,6 +50,12 @@ export const callLogs = pgTable(
     // 当时生效的 Key 级别售价（可能不同于 vendor_models 的售价）
     keySellPriceInput: numeric("key_sell_price_input", { precision: 18, scale: 6 }),
     keySellPriceOutput: numeric("key_sell_price_output", { precision: 18, scale: 6 }),
+    // 定价源：vendor_model | key_item | key_model
+    priceSource: varchar("price_source", { length: 20 }),
+    // 定价源 ID：keyGroupItemId 或 vendorKeyGroupModelPrices.id
+    priceSourceId: integer("price_source_id"),
+    // 折扣类型：percent | absolute
+    discountType: varchar("discount_type", { length: 10 }),
 
     promptTokens: integer("prompt_tokens").notNull().default(0),
     completionTokens: integer("completion_tokens").notNull().default(0),

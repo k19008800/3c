@@ -1,38 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
-import { get, post, patch, del } from '@/lib/api'
+import { get } from '@/lib/api'
 import type { AdminModel, PaginatedData } from '@/types'
-import PaginationBar from '@/components/ui/PaginationBar'
-import FilterBar from '@/components/ui/FilterBar'
-import { TableSkeleton } from '@/components/ui/skeleton'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import { usePersistedFilters } from '@/hooks/use-persisted-filters'
-import {
-  Loader2,
-  AlertCircle,
-  Plus,
-  Pencil,
-  Trash2,
-  CheckCircle2,
-  Download,
-} from 'lucide-react'
-
-const TYPE_OPTIONS = [
-  { value: '', label: '全部' },
-  { value: 'chat', label: '对话', color: 'bg-blue-100 text-blue-700' },
-  { value: 'embedding', label: '嵌入', color: 'bg-green-100 text-green-700' },
-  { value: 'image', label: '图像', color: 'bg-purple-100 text-purple-700' },
-  { value: 'audio', label: '音频', color: 'bg-orange-100 text-orange-700' },
-] as const
-
-const STATUS_OPTIONS = [
-  { value: '', label: '全部' },
-  { value: 'true', label: '启用' },
-  { value: 'false', label: '停用' },
-]
-
-const TYPE_MAP: Record<string, { value: string; label: string; color?: string }> = Object.fromEntries(
-  TYPE_OPTIONS.map((t) => [t.value, t])
-)
+import { Plus } from 'lucide-react'
+import ModelStatsCards from './admin-models/ModelStatsCards'
+import ModelList from './admin-models/ModelList'
+import ModelForm from './admin-models/ModelForm'
+import type { ModelFilters } from './admin-models/types'
 
 export default function AdminModels() {
   const [models, setModels] = useState<AdminModel[]>([])
@@ -40,23 +15,17 @@ export default function AdminModels() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // ── 持久化筛选 ──
-  const { filters, setFilter, resetFilters, hasActiveFilters } = usePersistedFilters({
-    storageKey: 'admin-models',
-    defaults: { keyword: '', type: '', status: '', page: 1, pageSize: 20 },
-  })
-  const { keyword, type: typeFilter, status: statusFilter, page, pageSize } = filters as {
-    keyword: string; type: string; status: string; page: number; pageSize: number
-  }
+  const { filters, setFilter, resetFilters, hasActiveFilters } = usePersistedFilters<ModelFilters>(
+    {
+      storageKey: 'admin-models',
+      defaults: { keyword: '', type: '', status: '', page: 1, pageSize: 20 },
+    }
+  )
+  const { keyword, type: typeFilter, status: statusFilter, page, pageSize } = filters
 
-  // Modal state
   const [showFormModal, setShowFormModal] = useState(false)
   const [editingModel, setEditingModel] = useState<AdminModel | null>(null)
   const [saving, setSaving] = useState(false)
-
-  // Delete confirmation
-  const [deletingId, setDeletingId] = useState<number | null>(null)
-  const [deleting, setDeleting] = useState(false)
 
   const totalPages = Math.ceil(total / pageSize)
 
@@ -64,7 +33,7 @@ export default function AdminModels() {
     setLoading(true)
     setError('')
     try {
-      const params: any = { page, pageSize }
+      const params: Record<string, unknown> = { page, pageSize }
       if (keyword) params.keyword = keyword
       if (typeFilter) params.type = typeFilter
       if (statusFilter) params.status = statusFilter
@@ -82,400 +51,73 @@ export default function AdminModels() {
     fetchModels()
   }, [fetchModels])
 
-  const handleDelete = async (id: number) => {
-    setDeleting(true)
-    try {
-      await del(`/api/v1/admin/models/${id}`)
-      setDeletingId(null)
-      fetchModels()
-    } catch (err: any) {
-      setError(err.message || '删除失败')
-    } finally {
-      setDeleting(false)
-    }
-  }
+  const handleEdit = useCallback((model: AdminModel) => {
+    setEditingModel(model)
+    setShowFormModal(true)
+  }, [])
+
+  const handleFormSaved = useCallback(() => {
+    setShowFormModal(false)
+    setEditingModel(null)
+    fetchModels()
+  }, [fetchModels])
+
+  const handleFormClose = useCallback(() => {
+    setShowFormModal(false)
+    setEditingModel(null)
+  }, [])
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">模型管理</h1>
         <FeatureDescription page="admin/models" className="ml-2" />
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              if (models.length === 0) return
-              const headers = ['ID','模型名称','显示名称','简介','类型','状态','创建时间']
-              const rows = models.map(m => [
-                m.id, m.name, m.displayName || '', m.description || '',
-                m.type, m.status ? '启用' : '停用', m.createdAt
-              ])
-              const bom = '\uFEFF'
-              const csv = bom + headers.join(',') + '\n' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
-              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-              const a = document.createElement('a'); a.href = URL.createObjectURL(blob)
-              a.download = `admin_models_${new Date().toISOString().slice(0,10)}.csv`; a.click()
-              URL.revokeObjectURL(a.href)
-            }}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition"
-          >
-            <Download size={15} />
-            导出 CSV
-          </button>
-          <button
-            onClick={() => { setEditingModel(null); setShowFormModal(true) }}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            <Plus size={16} />
-            新增模型
-          </button>
-        </div>
+        <button
+          onClick={() => {
+            setEditingModel(null)
+            setShowFormModal(true)
+          }}
+          className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+        >
+          <Plus size={16} />
+          新增模型
+        </button>
       </div>
 
-      {/* Filters — 持久化筛选栏 */}
-      <FilterBar
-        filters={{ keyword, type: typeFilter, status: statusFilter }}
-        setFilter={(key, value) => setFilter(key as any, value)}
+      {/* Stats Cards */}
+      <ModelStatsCards models={models} loading={loading} total={total} />
+
+      {/* Table + Filters + Pagination */}
+      <ModelList
+        models={models}
+        loading={loading}
+        error={error}
+        total={total}
+        page={page}
+        pageSize={pageSize}
+        totalPages={totalPages}
+        keyword={keyword}
+        typeFilter={typeFilter}
+        statusFilter={statusFilter}
+        setFilter={setFilter as (key: string, value: unknown) => void}
         resetFilters={resetFilters}
         hasActiveFilters={hasActiveFilters}
         onSearch={fetchModels}
-        fields={[
-          { key: 'keyword', label: '搜索', type: 'text', placeholder: '搜索模型名称' },
-          { key: 'type', label: '类型', type: 'select', options: TYPE_OPTIONS.map(t => ({ value: t.value, label: t.label })) },
-          { key: 'status', label: '状态', type: 'select', options: STATUS_OPTIONS },
-        ]}
+        onEdit={handleEdit}
+        onRefresh={fetchModels}
       />
-
-      {error && (
-        <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg text-sm">
-          <AlertCircle size={16} />
-          {error}
-        </div>
-      )}
-
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-slate-50 text-left">
-                <th className="px-4 py-3 text-sm font-medium text-slate-500">ID</th>
-                <th className="px-4 py-3 text-sm font-medium text-slate-500">模型名称</th>
-                <th className="px-4 py-3 text-sm font-medium text-slate-500">显示名称</th>
-                <th className="px-4 py-3 text-sm font-medium text-slate-500">简介</th>
-                <th className="px-4 py-3 text-sm font-medium text-slate-500">类型</th>
-                <th className="px-4 py-3 text-sm font-medium text-slate-500">状态</th>
-                <th className="px-4 py-3 text-sm font-medium text-slate-500">创建时间</th>
-                <th className="px-4 py-3 text-sm font-medium text-slate-500">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {loading ? (
-                <TableSkeleton rows={5} cols={8} />
-              ) : models.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-12 text-slate-400">
-                    暂无模型数据
-                  </td>
-                </tr>
-              ) : (
-                models.map((m) => {
-                  const typeInfo = TYPE_MAP[m.type]
-                  return (
-                    <tr key={m.id} className="hover:bg-slate-50 transition">
-                      <td className="px-4 py-3 text-sm text-slate-600">{m.id}</td>
-                      <td className="px-4 py-3 text-sm text-slate-900 font-mono">{m.name}</td>
-                      <td className="px-4 py-3 text-sm text-slate-600">{m.displayName || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-slate-500 max-w-[200px] truncate" title={m.description || ''}>
-                        {m.description || '-'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${typeInfo?.color || 'bg-slate-100 text-slate-700'}`}>
-                          {typeInfo?.label || m.type}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                          m.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                          {m.status ? '启用' : '停用'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-slate-500 whitespace-nowrap">
-                        {new Date(m.createdAt).toLocaleDateString('zh-CN')}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => { setEditingModel(m); setShowFormModal(true) }}
-                            className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
-                          >
-                            <Pencil size={14} />
-                            编辑
-                          </button>
-                          <button
-                            onClick={() => setDeletingId(m.id)}
-                            className="flex items-center gap-1 text-sm text-red-600 hover:text-red-800"
-                          >
-                            <Trash2 size={14} />
-                            删除
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {total > 0 && (
-          <PaginationBar
-            page={page}
-            onPageChange={(p) => setFilter('page', p)}
-            pageSize={pageSize}
-            onPageSizeChange={(s) => { setFilter('pageSize', s); setFilter('page', 1) }}
-            total={total}
-            totalPages={totalPages}
-          />
-        )}
-      </div>
 
       {/* Create / Edit Modal */}
       {showFormModal && (
-        <ModelFormModal
+        <ModelForm
           model={editingModel}
-          onClose={() => { setShowFormModal(false); setEditingModel(null) }}
-          onSaved={() => { setShowFormModal(false); setEditingModel(null); fetchModels() }}
+          onClose={handleFormClose}
+          onSaved={handleFormSaved}
           saving={saving}
           setSaving={setSaving}
         />
       )}
-
-      {/* Delete Confirmation */}
-      {deletingId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xl w-full max-w-sm shadow-xl p-6">
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">确认删除</h3>
-            <p className="text-sm text-slate-600 mb-6">
-              确定要删除该模型吗？此操作不可撤销。
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setDeletingId(null)}
-                disabled={deleting}
-                className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 border border-slate-300 rounded-lg hover:bg-slate-50 transition"
-              >
-                取消
-              </button>
-              <button
-                onClick={() => handleDelete(deletingId)}
-                disabled={deleting}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition"
-              >
-                {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                {deleting ? '删除中...' : '确认删除'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function ModelFormModal({
-  model,
-  onClose,
-  onSaved,
-  saving,
-  setSaving,
-}: {
-  model: AdminModel | null
-  onClose: () => void
-  onSaved: () => void
-  saving: boolean
-  setSaving: (v: boolean) => void
-}) {
-  const isEdit = !!model
-  const [name, setName] = useState(model?.name || '')
-  const [displayName, setDisplayName] = useState(model?.displayName || '')
-  const [description, setDescription] = useState(model?.description || '')
-  const [type, setType] = useState(model?.type || 'chat')
-  const [status, setStatus] = useState(model?.status ?? true)
-  const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
-
-  const handleSubmit = async () => {
-    setMessage('')
-    setError('')
-
-    if (!name.trim()) {
-      setError('模型名称不能为空')
-      return
-    }
-
-    setSaving(true)
-    try {
-      if (isEdit) {
-        const body: any = {}
-        if (name !== model.name) body.name = name
-        if (displayName !== (model.displayName || '')) body.displayName = displayName || undefined
-        if (description !== (model.description || '')) body.description = description || undefined
-        if (type !== model.type) body.type = type
-        if (status !== model.status) body.status = status
-        await patch(`/api/v1/admin/models/${model.id}`, body)
-        setMessage('模型已更新')
-      } else {
-        await post('/api/v1/admin/models', {
-          name: name.trim(),
-          displayName: displayName.trim() || undefined,
-          description: description.trim() || undefined,
-          type,
-        })
-        setMessage('模型已创建')
-      }
-      setTimeout(onSaved, 800)
-    } catch (err: any) {
-      setError(err.message || (isEdit ? '更新失败' : '创建失败'))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
-        <div className="p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{isEdit ? '编辑模型' : '新增模型'}</h2>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
-          </div>
-
-          {message && (
-            <div className="flex items-center gap-2 p-3 text-sm rounded-lg bg-green-50 text-green-700">
-              <CheckCircle2 size={16} />
-              {message}
-            </div>
-          )}
-
-          {error && (
-            <div className="flex items-center gap-2 p-3 text-sm rounded-lg bg-red-50 text-red-600">
-              <AlertCircle size={16} />
-              {error}
-            </div>
-          )}
-
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs text-slate-500 mb-1">
-                模型名称 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="例如：gpt-4o"
-                disabled={isEdit}
-                className={`w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  isEdit ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''
-                }`}
-              />
-              {isEdit && (
-                <p className="text-xs text-slate-400 mt-1">创建后不可修改</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs text-slate-500 mb-1">显示名称</label>
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="例如：GPT-4o"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-slate-500 mb-1">简介</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="模型的用途和特性简介"
-                rows={3}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-slate-500 mb-1">
-                类型 <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                disabled={isEdit}
-                className={`w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  isEdit ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''
-                }`}
-              >
-                {TYPE_OPTIONS.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
-              {isEdit && (
-                <p className="text-xs text-slate-400 mt-1">创建后不可修改</p>
-              )}
-            </div>
-
-            {isEdit && (
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">状态</label>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setStatus(true)}
-                    className={`px-4 py-2 text-sm rounded-lg border transition ${
-                      status
-                        ? 'bg-green-50 border-green-300 text-green-700'
-                        : 'border-slate-300 text-slate-500 hover:bg-slate-50'
-                    }`}
-                  >
-                    启用
-                  </button>
-                  <button
-                    onClick={() => setStatus(false)}
-                    className={`px-4 py-2 text-sm rounded-lg border transition ${
-                      !status
-                        ? 'bg-red-50 border-red-300 text-red-700'
-                        : 'border-slate-300 text-slate-500 hover:bg-slate-50'
-                    }`}
-                  >
-                    停用
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              onClick={onClose}
-              disabled={saving}
-              className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 border border-slate-300 rounded-lg hover:bg-slate-50 transition"
-            >
-              取消
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={saving}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
-            >
-              {saving ? <Loader2 size={14} className="animate-spin" /> : null}
-              {saving ? (isEdit ? '更新中...' : '创建中...') : (isEdit ? '保存' : '创建')}
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }

@@ -8,7 +8,7 @@
 
 import { FastifyInstance } from "fastify";
 import { authenticateJWT, guardNotImpersonating } from "../../middleware/auth.js";
-import { AppError } from "../../services/auth-service.js";
+import { AppError } from "../../services/auth-service/index.js";
 import { getAgentReferralCode } from "../../services/agent-core.js";
 import {
   createWithdraw,

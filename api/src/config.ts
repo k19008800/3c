@@ -71,3 +71,23 @@ export const config = {
     saltRounds: 12,
   },
 } as const;
+
+// 生产环境强制校验 JWT secret，禁止使用不安全的默认值
+if (process.env.NODE_ENV === "production") {
+  if (
+    !process.env.JWT_ACCESS_SECRET ||
+    process.env.JWT_ACCESS_SECRET === "dev-access-secret"
+  ) {
+    throw new Error(
+      "JWT_ACCESS_SECRET 未配置，生产环境禁止使用默认值"
+    );
+  }
+  if (
+    !process.env.JWT_REFRESH_SECRET ||
+    process.env.JWT_REFRESH_SECRET === "dev-refresh-secret"
+  ) {
+    throw new Error(
+      "JWT_REFRESH_SECRET 未配置，生产环境禁止使用默认值"
+    );
+  }
+}

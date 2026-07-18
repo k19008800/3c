@@ -6,7 +6,7 @@
 
 import { FastifyInstance } from "fastify";
 import { authenticateJWT } from "../middleware/auth.js";
-import { AppError } from "../services/auth-service.js";
+import { AppError } from "../services/auth-service/index.js";
 import { getFileAbsolutePath, getMimeType } from "../services/real-name-service.js";
 import { OcrProviderFactory } from "../services/real-name-ocr/provider.js";
 import "../services/real-name-ocr/deepseek.js";  // 注册 DeepSeek 供应商

@@ -1,5 +1,6 @@
 // ============================================================
 //  Key 分组选择器（round_robin / weighted / failover / priority）
+//  支持 Key-Model 交叉价格：同一 Key 对不同模型有不同的折扣/定价
 // ============================================================
 
 /**
@@ -8,11 +9,16 @@
 export async function selectKeyFromGroup(
   groupId: number,
   redis: any,
+  vendorModelId?: number,
 ): Promise<{ apiKeyPlain: string; item: any } | null> {
   try {
     const { eq, and, asc } = await import("drizzle-orm");
     const { getDb } = await import("../../db/index.js");
-    const { vendorKeyGroups: vkg, vendorKeyGroupItems: vkgi } = await import("../../db/schema.js");
+    const {
+      vendorKeyGroups: vkg,
+      vendorKeyGroupItems: vkgi,
+      vendorKeyGroupModelPrices: vkgmp,
+    } = await import("../../db/schema.js");
     const { decryptApiKey } = await import("../encryption.js");
     const db = getDb();
 
@@ -51,11 +57,48 @@ export async function selectKeyFromGroup(
     }
 
     const apiKeyPlain = decryptApiKey(selected.apiKeyEncrypted);
+
+    // 查询 Key-Model 交叉价格（若指定了 vendorModelId）
+    let modelPrice: typeof vkgmp.$inferSelect | null = null;
+    if (vendorModelId) {
+      const [mp] = await db
+        .select()
+        .from(vkgmp)
+        .where(
+          and(
+            eq(vkgmp.keyGroupItemId, selected.id),
+            eq(vkgmp.vendorModelId, vendorModelId)
+          )
+        )
+        .limit(1);
+      modelPrice = mp ?? null;
+    }
+
+    // 构造返回结果，附带交叉价信息
+    const result: any = { ...selected };
+
+    // 如果有 Key-Model 交叉价，用它覆盖 Key 上的 sellPrice
+    if (modelPrice) {
+      result._modelPrice = modelPrice;
+      // 标记价格源
+      result._modelPriceType = modelPrice.type; // "percent" | "absolute"
+
+      if (modelPrice.type === "absolute") {
+        // 固定价模式 → 直接作为售价
+        result.modelPriceInput = modelPrice.inputValue != null ? Number(modelPrice.inputValue) : null;
+        result.modelPriceOutput = modelPrice.outputValue != null ? Number(modelPrice.outputValue) : null;
+      } else if (modelPrice.type === "percent") {
+        // 百分比模式 → 标记折扣率，由调用方结合 vendorModel 基价计算
+        result.modelPriceInput = modelPrice.inputValue != null ? Number(modelPrice.inputValue) : null;
+        result.modelPriceOutput = modelPrice.outputValue != null ? Number(modelPrice.outputValue) : null;
+      }
+    }
+
     await db.update(vkgi)
       .set({ lastUsedAt: new Date(), totalCalls: selected.totalCalls + 1 })
       .where(eq(vkgi.id, selected.id));
 
-    return { apiKeyPlain, item: selected };
+    return { apiKeyPlain, item: result };
   } catch (err) {
     console.warn("[Router] KeyGroup 选择失败，降级:", err);
     return null;

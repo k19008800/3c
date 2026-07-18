@@ -6,7 +6,7 @@
 import { FastifyInstance } from "fastify";
 import { eq, and, desc, sql, like } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
-import { contentFilters, filterLogs } from "../../db/schema.js";
+import { contentFilters, filterLogs, auditLogs } from "../../db/schema.js";
 import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
 
 export async function adminContentFilterRoutes(app: FastifyInstance) {
@@ -65,6 +65,25 @@ export async function adminContentFilterRoutes(app: FastifyInstance) {
       createdBy: request.user!.userId,
     }).returning();
 
+    // ── 审计日志 ──
+    await db.insert(auditLogs).values({
+      operatorId: request.user!.userId,
+      action: "content_filter_create",
+      targetType: "content_filter",
+      targetId: rule.id,
+      after: {
+        name: rule.name,
+        pattern: rule.pattern,
+        matchType: rule.matchType,
+        action: rule.action,
+        stage: rule.stage,
+        scope: rule.scope,
+        priority: rule.priority,
+      },
+      ip: request.ip,
+      description: `创建内容过滤规则: ${rule.name}`,
+    });
+
     return { code: 0, data: rule, message: "ok" };
   });
 
@@ -75,6 +94,18 @@ export async function adminContentFilterRoutes(app: FastifyInstance) {
     const { id } = request.params as any;
     const db = getDb();
     const body = request.body as any;
+
+    // ── 读取变更前快照 ──
+    const [before] = await db
+      .select({ name: contentFilters.name, pattern: contentFilters.pattern, matchType: contentFilters.matchType,
+               action: contentFilters.action, stage: contentFilters.stage, scope: contentFilters.scope,
+               priority: contentFilters.priority, status: contentFilters.status })
+      .from(contentFilters)
+      .where(eq(contentFilters.id, Number(id)))
+      .limit(1);
+    if (!before) {
+      return reply.status(404).send({ code: 404, data: null, message: "规则不存在" });
+    }
 
     const updateData: any = {};
     for (const key of ["name", "description", "stage", "scope", "matchType", "pattern",
@@ -89,6 +120,28 @@ export async function adminContentFilterRoutes(app: FastifyInstance) {
       .set(updateData)
       .where(eq(contentFilters.id, Number(id)))
       .returning();
+
+    // ── 审计日志 ──
+    await db.insert(auditLogs).values({
+      operatorId: request.user!.userId,
+      action: "content_filter_update",
+      targetType: "content_filter",
+      targetId: Number(id),
+      before,
+      after: {
+        name: updated.name,
+        pattern: updated.pattern,
+        matchType: updated.matchType,
+        action: updated.action,
+        stage: updated.stage,
+        scope: updated.scope,
+        priority: updated.priority,
+        status: updated.status,
+      },
+      ip: request.ip,
+      description: `更新内容过滤规则: ${updated.name}`,
+    });
+
     return { code: 0, data: updated, message: "ok" };
   });
 
@@ -98,7 +151,31 @@ export async function adminContentFilterRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { id } = request.params as any;
     const db = getDb();
+
+    // ── 读取变更前快照 ──
+    const [before] = await db
+      .select({ name: contentFilters.name, pattern: contentFilters.pattern, matchType: contentFilters.matchType,
+               action: contentFilters.action, stage: contentFilters.stage, scope: contentFilters.scope,
+               priority: contentFilters.priority, status: contentFilters.status })
+      .from(contentFilters)
+      .where(eq(contentFilters.id, Number(id)))
+      .limit(1);
+
     await db.delete(contentFilters).where(eq(contentFilters.id, Number(id)));
+
+    // ── 审计日志 ──
+    await db.insert(auditLogs).values({
+      operatorId: request.user!.userId,
+      action: "content_filter_delete",
+      targetType: "content_filter",
+      targetId: Number(id),
+      before: before ? { name: before.name, pattern: before.pattern, matchType: before.matchType,
+                         action: before.action, stage: before.stage, scope: before.scope,
+                         priority: before.priority, status: before.status } : null,
+      ip: request.ip,
+      description: `删除内容过滤规则: ${before?.name ?? id}`,
+    });
+
     return { code: 0, data: null, message: "ok" };
   });
 

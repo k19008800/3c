@@ -3,7 +3,7 @@
 //  抽象接口 + 工厂模式，可扩展多个供应商
 // ============================================================
 
-import { AppError } from "../auth-service.js";
+import { AppError } from "../auth-service/index.js";
 import type { AliyunIdVerifyProvider } from "./aliyun.js";
 import type { NoOpProvider } from "./noop.js";
 

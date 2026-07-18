@@ -15,7 +15,7 @@ import {
   redemptionGiftLogs,
 } from "../db/schema.js";
 import { authenticateJWT, guardNotImpersonating } from "../middleware/auth.js";
-import { AppError } from "../services/auth-service.js";
+import { AppError } from "../services/auth-service/index.js";
 import { logOperation } from "../services/operation-log.js";
 
 // ── 工具：生成 16 位随机码（数字 + 大写字母）──

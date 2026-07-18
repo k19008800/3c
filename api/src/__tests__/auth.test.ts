@@ -602,7 +602,7 @@ describe("API Keys", () => {
       expect(body.code).toBe(0);
     });
 
-    it("should no longer appear in the list after delete", async () => {
+    it("should reflect soft-deleted status in list", async () => {
       const res = await app.inject({
         method: "GET",
         url: "/api/v1/api-keys",
@@ -611,13 +611,14 @@ describe("API Keys", () => {
 
       const body = JSON.parse(res.body);
       const key = body.data.list.find((k: any) => k.id === keyId);
-      expect(key).toBeUndefined();
+      expect(key).toBeDefined();
+      expect(key.status).toBe(false);
     });
 
     it("should reject deleting non-existent key (404)", async () => {
       const res = await app.inject({
         method: "DELETE",
-        url: `/api/v1/api-keys/${keyId}`, // Already deleted
+        url: "/api/v1/api-keys/999999999", // Non-existent ID
         headers: { authorization: `Bearer ${token}` },
       });
 

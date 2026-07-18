@@ -25,7 +25,7 @@ import {
   callLogs,
   systemConfigs,
 } from "../db/schema.js";
-import { charge, type BillingInput } from "../services/billing.js";
+import { charge, type BillingInput } from "../services/billing/index.js";
 import bcrypt from "bcryptjs";
 
 // ── 配置 ──

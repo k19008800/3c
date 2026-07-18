@@ -30,7 +30,7 @@ export async function adminPerfCacheStatsRoutes(app: FastifyInstance) {
 
     // Try to get cache stats from each module (graceful fallback)
     const modules = [
-      { name: "billing", importPath: "../../services/billing.js", fn: "getBillingCacheStats" },
+      { name: "billing", importPath: "../../services/billing/index.js", fn: "getBillingCacheStats" },
       { name: "router_modelNameCache", importPath: "../../services/router.js", fn: "getModelNameCacheStats" },
       { name: "proxy", importPath: "../../routes/proxy.js", fn: "getProxyCacheStats" },
       { name: "rateLimit", importPath: "../../middleware/rate-limit.js", fn: "getRateLimitCacheStats" },

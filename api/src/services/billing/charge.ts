@@ -20,10 +20,16 @@ export async function charge(input: BillingInput): Promise<BillingResult> {
   const keySellPriceOutput = input.keySellPriceOutput ?? input.route?.keySellPriceOutput ?? null;
 
   const billingResult = await db.transaction(async (tx) => {
+    // 读取 vendorModel 基价
     const prices = await getSellPrices(input.vendorModelId);
+
+    // Key 级价格覆盖：如果请求走了 Key 分组且设了专属价，覆盖 vendorModel 基价
+    const actualInputPrice = keySellPriceInput != null ? keySellPriceInput : prices.sellPriceInput;
+    const actualOutputPrice = keySellPriceOutput != null ? keySellPriceOutput : prices.sellPriceOutput;
+
     const multiplier = await getPricingMultiplier();
     const discountRate = await getDiscountRate(input.userId);
-    const rawCost = input.promptTokens * prices.sellPriceInput + input.completionTokens * prices.sellPriceOutput;
+    const rawCost = input.promptTokens * actualInputPrice + input.completionTokens * actualOutputPrice;
     const discountedCost = rawCost * multiplier * discountRate;
     const costStr = discountedCost.toFixed(6);
 
@@ -38,6 +44,21 @@ export async function charge(input: BillingInput): Promise<BillingResult> {
     const alertStopBalance = parseFloat((await tx.select({ value: systemConfigs.value }).from(systemConfigs).where(eq(systemConfigs.key, "alert_stop_balance")).limit(1))?.[0]?.value ?? "10");
     if (balanceBefore <= 0 && discountedCost > 0 && balanceBefore < -alertStopBalance) throw new AppError("BALANCE_EXHAUSTED", "余额已耗尽，请充值", 402);
 
+    // 确定定价源
+    let priceSource: string | null = null;
+    let priceSourceId: number | null = null;
+    let discountType: string | null = null;
+    if (keySellPriceInput != null || keySellPriceOutput != null) {
+      if (input.priceSource) {
+        priceSource = input.priceSource;
+        priceSourceId = input.priceSourceId ?? null;
+        discountType = priceSource === 'key_model' ? 'percent' : null;
+      } else if (keyGroupItemId != null) {
+        priceSource = 'key_item';
+        priceSourceId = keyGroupItemId;
+      }
+    }
+
     const [log] = await tx.insert(callLogs).values({
       userId: input.userId, apiKeyId: input.apiKeyId, modelId: input.modelId, vendorModelId: input.vendorModelId,
       vendorName: input.vendorName, modelName: input.modelName, promptTokens: input.promptTokens,
@@ -47,6 +68,9 @@ export async function charge(input: BillingInput): Promise<BillingResult> {
       keyGroupItemId: keyGroupItemId ?? null,
       keySellPriceInput: keySellPriceInput != null ? String(keySellPriceInput) : null,
       keySellPriceOutput: keySellPriceOutput != null ? String(keySellPriceOutput) : null,
+      priceSource,
+      priceSourceId,
+      discountType,
     }).returning({ id: callLogs.id });
     const callLogId = log.id;
 

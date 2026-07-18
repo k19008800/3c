@@ -10,6 +10,9 @@ export interface BillingInput {
   keyGroupItemId?: number | null;
   keySellPriceInput?: number | null;
   keySellPriceOutput?: number | null;
+  // 定价源（记录来源，用于审计）
+  priceSource?: string | null;
+  priceSourceId?: number | null;
 }
 
 export interface BillingResult { cost: string; balanceBefore: string; balanceAfter: string; callLogId: number; }

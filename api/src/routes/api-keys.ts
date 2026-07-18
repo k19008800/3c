@@ -191,7 +191,7 @@ export async function apiKeyRoutes(app: FastifyInstance) {
         return;
       }
 
-      await db.delete(apiKeys).where(eq(apiKeys.id, id));
+      await db.update(apiKeys).set({ status: false }).where(eq(apiKeys.id, id));
 
       logOperation({
         userId: request.user!.userId,

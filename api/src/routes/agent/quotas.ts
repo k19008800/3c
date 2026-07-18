@@ -6,7 +6,7 @@
 
 import { FastifyInstance } from "fastify";
 import { authenticateJWT } from "../../middleware/auth.js";
-import { AppError } from "../../services/auth-service.js";
+import { AppError } from "../../services/auth-service/index.js";
 
 export async function agentQuotaRoutes(app: FastifyInstance) {
   // ── POST /api/v1/agent/quotas — 代理商为下级用户设置额度 ──

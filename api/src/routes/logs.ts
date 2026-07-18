@@ -11,7 +11,7 @@ import { getDb } from "../db/index.js";
 import { callLogs } from "../db/schema.js";
 import { authenticateJWT } from "../middleware/auth.js";
 import { logFilterSchema } from "../schemas.js";
-import { AppError } from "../services/auth-service.js";
+import { AppError } from "../services/auth-service/index.js";
 import { getCallGeoEnrichment, lookupGeo } from "../services/geo-check.js";
 
 // ── 带 Geo 富化的调用记录项 ──

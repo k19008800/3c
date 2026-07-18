@@ -112,7 +112,7 @@ export async function adminSystemRoutes(app: FastifyInstance) {
 
     // 清除相关缓存（如果有）
     try {
-      const { clearPricingMultiplierCache } = await import("../../services/billing.js");
+      const { clearPricingMultiplierCache } = await import("../../services/billing/index.js");
       if (key.startsWith("pricing_") || key === "enterprise_discount_rate") {
         clearPricingMultiplierCache();
       }

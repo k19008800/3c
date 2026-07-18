@@ -4,7 +4,7 @@
 // ============================================================
 
 import { FastifyRequest, FastifyReply } from "fastify";
-import { verifyAccessToken, AppError } from "../services/auth-service.js";
+import { verifyAccessToken, AppError } from "../services/auth-service/index.js";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { getRedis } from "../redis.js";

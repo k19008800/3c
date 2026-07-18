@@ -35,7 +35,7 @@ export async function quickConnectRoutes(app: FastifyInstance) {
       data: {
         token,
         expiresIn: minutes * 60,
-        playgroundUrl: `/admin/playground?token=${token}`,
+        playgroundUrl: `/console/admin/playground?token=${token}`,
       },
       message: "ok",
     };

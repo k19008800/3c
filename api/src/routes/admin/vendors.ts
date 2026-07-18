@@ -8,9 +8,9 @@
 // ============================================================
 
 import { FastifyInstance } from "fastify";
-import { eq, asc, sql } from "drizzle-orm";
+import { eq, and, asc, sql } from "drizzle-orm";
 import { createHash, randomBytes } from "node:crypto";
-import { vendors, vendorModels, vendorApiKeys, auditLogs, models } from "../../db/schema.js";
+import { vendors, vendorModels, vendorApiKeys, auditLogs, models, vendorKeyGroups, vendorKeyGroupItems, systemConfigs } from "../../db/schema.js";
 import { getDb } from "../../db/index.js";
 import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
 import { syncVendorModels } from "../../services/vendor-sync.js";
@@ -592,7 +592,7 @@ export async function adminVendorRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const db = getDb();
     const vendorId = parseInt((request.params as any).id);
-    const body = request.body as { apiKey?: string; apiEndpoint?: string } | undefined;
+    const body = request.body as { apiKey?: string; apiEndpoint?: string; keyGroupId?: number } | undefined;
 
     // 查供应商信息
     const [vendor] = await db
@@ -600,6 +600,19 @@ export async function adminVendorRoutes(app: FastifyInstance) {
       .from(vendors)
       .where(eq(vendors.id, vendorId))
       .limit(1);
+
+    // 如果有 keyGroupId，校验它属于该供应商
+    if (body?.keyGroupId) {
+      const [kg] = await db
+        .select({ id: vendorKeyGroups.id })
+        .from(vendorKeyGroups)
+        .where(and(eq(vendorKeyGroups.id, body.keyGroupId), eq(vendorKeyGroups.vendorId, vendorId)))
+        .limit(1);
+      if (!kg) {
+        reply.status(400).send({ code: 400, data: null, message: "指定的 Key 分组不属于该供应商" });
+        return;
+      }
+    }
 
     if (!vendor) {
       reply.status(404).send({ code: 404, data: null, message: "供应商不存在" });
@@ -647,7 +660,7 @@ export async function adminVendorRoutes(app: FastifyInstance) {
     const typeHints: Record<string, string> = {
       embedding: "embedding", embed: "embedding",
       rerank: "rerank", reranker: "rerank",
-      image: "image", dalle: "image",
+      image: "image", dalle: "image", dall: "image", dale: "image",
       video: "video", happyhorse: "video", seedance: "video",
       audio: "audio", tts: "audio", whisper: "audio", speech: "audio",
       moderation: "moderation",
@@ -665,8 +678,73 @@ export async function adminVendorRoutes(app: FastifyInstance) {
     const encryptedKey = encryptApiKey(apiKey);
     const apiEndpoint = baseEndpoint.replace(/\/models$/, "/chat/completions");
 
+    // ── 自动管理 Key 分组：将同步的 API Key 纳入 Key 分组管理 ──
+    // 如果用户没有手动指定 keyGroupId，则自动创建/复用默认分组
+    let resolvedKeyGroupId = body?.keyGroupId ?? null;
+    if (!resolvedKeyGroupId) {
+      // 查找该供应商是否已有默认 Key 分组
+      const [existingGroup] = await db
+        .select({ id: vendorKeyGroups.id })
+        .from(vendorKeyGroups)
+        .where(
+          and(
+            eq(vendorKeyGroups.vendorId, vendorId),
+            eq(vendorKeyGroups.name, "default"),
+            eq(vendorKeyGroups.status, true),
+          )
+        )
+        .limit(1);
+
+      if (existingGroup) {
+        resolvedKeyGroupId = existingGroup.id;
+      } else {
+        // 创建默认 Key 分组（round_robin 策略，后续可手工改）
+        const [newGroup] = await db
+          .insert(vendorKeyGroups)
+          .values({
+            vendorId,
+            name: "default",
+            strategy: "round_robin",
+            description: `同步 ${vendor.name} 上游模型时自动创建`,
+          })
+          .returning({ id: vendorKeyGroups.id });
+        resolvedKeyGroupId = newGroup.id;
+      }
+
+    }
+
+    // 将 API Key 添加到 Key 分组（无论手动还是自动分组都执行，避免重复：同前缀的不重复添加）
+    const keyPrefix = apiKey.slice(0, 8);
+    const [existingKeyItem] = await db
+      .select({ id: vendorKeyGroupItems.id })
+      .from(vendorKeyGroupItems)
+      .where(
+        and(
+          eq(vendorKeyGroupItems.groupId, resolvedKeyGroupId),
+          eq(vendorKeyGroupItems.apiKeyPrefix, keyPrefix),
+          eq(vendorKeyGroupItems.deletedAt, null as any),
+        )
+      )
+      .limit(1);
+
+    if (!existingKeyItem) {
+      await db.insert(vendorKeyGroupItems).values({
+        groupId: resolvedKeyGroupId,
+        apiKeyEncrypted: encryptedKey,
+        apiKeyPrefix: keyPrefix,
+        weight: 1,
+        priority: 0,
+      });
+    }
+
     // ── 定价数据 ──（CNY per 1K tokens，cost price 从上游获取/使用默认值）
-    const pricingMultiplier = 1.01; // 默认利润倍率（由系统配置 pricing_multiplier 控制，后台价格管理页可维护）
+    // 从 system_configs 读取全局定价倍率，没有则 fallback 1.15
+    const [multiplierCfg] = await db
+      .select({ value: systemConfigs.value })
+      .from(systemConfigs)
+      .where(eq(systemConfigs.key, "pricing_multiplier"))
+      .limit(1);
+    const pricingMultiplier = multiplierCfg ? parseFloat(multiplierCfg.value) : 1.15;
     const KNOWN_PRICES: Record<string, { input: number; output: number }> = {
       'claude-opus-4-8':  { input: 0.1045, output: 0.5223 },
       'claude-opus-4.7':  { input: 0.1045, output: 0.5223 },
@@ -697,6 +775,7 @@ export async function adminVendorRoutes(app: FastifyInstance) {
     let createdModels = 0;
     let skippedModels = 0;
     let createdMappings = 0;
+    let reenabledMappings = 0;
     let skippedMappings = 0;
     let updatedPrices = 0;
 
@@ -732,7 +811,7 @@ export async function adminVendorRoutes(app: FastifyInstance) {
 
       // Check existing mapping
       const [existingMapping] = await db
-        .select({ id: vendorModels.id, costPriceInput: vendorModels.costPriceInput, costPriceOutput: vendorModels.costPriceOutput, sellPriceInput: vendorModels.sellPriceInput, sellPriceOutput: vendorModels.sellPriceOutput })
+        .select({ id: vendorModels.id, status: vendorModels.status, costPriceInput: vendorModels.costPriceInput, costPriceOutput: vendorModels.costPriceOutput, sellPriceInput: vendorModels.sellPriceInput, sellPriceOutput: vendorModels.sellPriceOutput })
         .from(vendorModels)
         .where(sql`${vendorModels.vendorId} = ${vendorId} AND ${vendorModels.modelId} = ${modelId}`)
         .limit(1);
@@ -742,6 +821,22 @@ export async function adminVendorRoutes(app: FastifyInstance) {
       const sellOutput = String((prices.output * pricingMultiplier).toFixed(6));
 
       if (existingMapping) {
+        // 如果已有映射被停用（status=false），重新启用 + 更新凭据/价格
+        if (!existingMapping.status) {
+          await db.update(vendorModels).set({
+            status: true,
+            apiKeyEncrypted: encryptedKey,
+            apiEndpoint,
+            keyGroupId: resolvedKeyGroupId,
+            costPriceInput: String(prices.input),
+            costPriceOutput: String(prices.output),
+            sellPriceInput: sellInput,
+            sellPriceOutput: sellOutput,
+          }).where(eq(vendorModels.id, existingMapping.id));
+          reenabledMappings++;
+          continue;
+        }
+
         // Update pricing if existing mapping has zero/outdated prices
         const hasNoPrice = Number(existingMapping.sellPriceInput) === 0 && Number(existingMapping.sellPriceOutput) === 0;
         if (hasNoPrice) {
@@ -758,6 +853,7 @@ export async function adminVendorRoutes(app: FastifyInstance) {
       await db.insert(vendorModels).values({
         vendorId, modelId, upstreamModelName: modelName, apiEndpoint,
         apiKeyEncrypted: encryptedKey,
+        keyGroupId: resolvedKeyGroupId,
         costPriceInput: String(prices.input), costPriceOutput: String(prices.output),
         sellPriceInput: sellInput, sellPriceOutput: sellOutput,
         weight: 100,
@@ -775,10 +871,11 @@ export async function adminVendorRoutes(app: FastifyInstance) {
         createdModels,
         skippedModels,
         createdMappings,
+        reenabledMappings,
         skippedMappings,
       },
       ip: request.ip,
-      description: `${vendor.name}: 同步 ${upstreamModels.length} 个上游模型 (新增模型 ${createdModels}, 新增映射 ${createdMappings}, 跳过 ${skippedMappings})`,
+      description: `${vendor.name}: 同步 ${upstreamModels.length} 个上游模型 (新增模型 ${createdModels}, 新增映射 ${createdMappings}, 重新启用 ${reenabledMappings}, 跳过 ${skippedMappings})`,
     });
 
     reply.status(200).send({
@@ -790,9 +887,11 @@ export async function adminVendorRoutes(app: FastifyInstance) {
         createdModels,
         skippedModels,
         createdMappings,
+        reenabledMappings,
         skippedMappings,
+        keyGroupId: resolvedKeyGroupId,
       },
-      message: `成功同步 ${createdMappings} 个新映射，跳过 ${skippedMappings} 个已有映射${updatedPrices > 0 ? `，${updatedPrices} 个定价更新` : ''}`,
+      message: `成功同步 ${createdMappings} 个新映射，重新启用 ${reenabledMappings} 个旧映射，跳过 ${skippedMappings} 个已有映射${updatedPrices > 0 ? `，${updatedPrices} 个定价更新` : ''}`,
     });
   });
 

@@ -15,7 +15,7 @@ import {
   redemptionBatches,
 } from "../../db/schema.js";
 import { authenticateJWT } from "../../middleware/auth.js";
-import { AppError } from "../../services/auth-service.js";
+import { AppError } from "../../services/auth-service/index.js";
 
 export async function agentFinanceRoutes(app: FastifyInstance) {
   app.addHook("preHandler", authenticateJWT);

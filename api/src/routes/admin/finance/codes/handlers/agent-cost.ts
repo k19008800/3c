@@ -40,7 +40,7 @@ export async function agentCostRoutes(app: FastifyInstance) {
       const year = parseInt(yearStr, 10);
       const month = parseInt(monthStr, 10);
       if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
-        reply.status(400).send({ code: 400, data: null, message: "无效的月份格式，请使�?YYYY-MM" });
+        reply.status(400).send({ code: 400, data: null, message: "无效的月份格式，请使�?YYYY-MM" });
         return;
       }
 
@@ -52,7 +52,7 @@ export async function agentCostRoutes(app: FastifyInstance) {
 
       const AGENT_COST_RATE = 0.85;
 
-      // ── 1. 查出所有活跃的代理商（�?role='agent' 的）──
+      // ── 1. 查出所有活跃的代理商（�?role='agent' 的）──
       let agentsList = await db
         .select({
           agentId: agents.id,
@@ -87,7 +87,7 @@ export async function agentCostRoutes(app: FastifyInstance) {
         }
       }
 
-      // ── 2. 为每�?agent 聚合批次和消耗数�?──
+      // ── 2. 为每�?agent 聚合批次和消耗数�?──
       type AgentCostRow = {
         agentId: number;
         agentName: string;
@@ -149,7 +149,8 @@ export async function agentCostRoutes(app: FastifyInstance) {
 
         const batchIds = batches.map(b => b.id);
 
-        // 查这些批次中在当月被兑换的记�?        let monthlyLogTotal = 0;
+        // ��ٛy!-(S�Qb��U
+        let monthlyLogTotal = 0;
         if (batchIds.length > 0) {
           const logResult = await db
             .select({
@@ -222,7 +223,7 @@ export async function agentCostRoutes(app: FastifyInstance) {
         return sortMultiplier * (aVal - bVal);
       });
 
-      // ── 4. 汇�?──
+      // ── 4. 汇�?──
       const summary = {
         agentCount: rows.length,
         totalFaceValue: rows.reduce((sum, r) => sum + r.totalFaceValue, 0),

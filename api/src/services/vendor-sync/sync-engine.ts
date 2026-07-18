@@ -6,7 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { models, vendors, vendorModels } from "../../db/schema/index.js";
 import { getVendorApiKey, fetchUpstreamModels } from "./api-client.js";
-import { getModelPrices, guessModelType, getPricingMultiplier, DEFAULT_PRICE } from "./pricing.js";
+import { getModelPrices, guessModelType, getPricingMultiplier, DEFAULT_PRICE, DEFAULT_PRICING_MULTIPLIER } from "./pricing.js";
 import type { SyncReport } from "./types.js";
 
 // ── In-memory sync status ──
@@ -61,8 +61,8 @@ export async function syncVendorModels(
     const upstreamIds = upstreamModels.map(m => m.id);
     report.pricingSource = 'known_price_map';
 
-    // 5. Get pricing multiplier from system_configs (default 1.01)
-    const pricingMult = options?.apiKeyOverride ? 1.01 : await getPricingMultiplier();
+    // 5. Get pricing multiplier from system_configs
+    const pricingMult = options?.apiKeyOverride ? DEFAULT_PRICING_MULTIPLIER : await getPricingMultiplier();
 
     // 5. Upsert models + vendor_model mappings in a transaction
     if (!options?.dryRun) {

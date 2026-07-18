@@ -7,7 +7,7 @@
 
 import { FastifyInstance } from "fastify";
 import { authenticateJWT, guardNotImpersonating, guardNotImpersonatingWrite } from "../middleware/auth.js";
-import { AppError } from "../services/auth-service.js";
+import { AppError } from "../services/auth-service/index.js";
 import {
   createRefundRequest,
   getUserRefunds,

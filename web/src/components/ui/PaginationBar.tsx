@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react'
 
 interface PaginationBarProps {
   page: number
@@ -83,10 +83,17 @@ export default function PaginationBar({
                 handleJump()
               }
             }}
-            onBlur={handleJump}
             className="w-14 px-2 py-1 border border-slate-300 rounded text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <span>页</span>
+          <button
+            onClick={handleJump}
+            disabled={totalPages <= 0}
+            className="p-1.5 rounded hover:bg-slate-200 disabled:opacity-30 transition"
+            title="跳转"
+          >
+            <ArrowRight size={14} />
+          </button>
         </div>
         <button
           onClick={() => onPageChange(Math.max(1, page - 1))}

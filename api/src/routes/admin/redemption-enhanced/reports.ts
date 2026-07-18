@@ -36,6 +36,7 @@ export function registerReportsRoute(app: FastifyInstance): void {
 
   //  POST /api/v1/admin/redemption/batch-action — 批量操作
       const periodEnd = new Date(Date.UTC(year, month, 1));
+      const periodStart = new Date(Date.UTC(year, month - 1, 1));
 
       let csv = "";
 

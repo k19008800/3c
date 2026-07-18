@@ -22,7 +22,7 @@ import {
   auditLogs,
 } from "../../db/schema.js";
 import { authenticateJWT, requireRole, requirePerm, Perm } from "../../middleware/auth.js";
-import { AppError } from "../../services/auth-service.js";
+import { AppError } from "../../services/auth-service/index.js";
 
 // ── 辅助：兑换码脱敏（显示前4后4，中间*）──
 function maskCode(code: string): string {

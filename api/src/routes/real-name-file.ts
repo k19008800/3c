@@ -9,7 +9,7 @@ import { authenticateJWT, requirePerm, Perm } from "../middleware/auth.js";
 import { getFileAbsolutePath, getMimeType } from "../services/real-name-service.js";
 import fs from "node:fs";
 import path from "node:path";
-import { AppError } from "../services/auth-service.js";
+import { AppError } from "../services/auth-service/index.js";
 
 export async function realNameFileRoutes(app: FastifyInstance) {
   // ── 管理员查看实名证件文件 ──

@@ -18,7 +18,7 @@ import {
   campaigns,
 } from "../db/schema.js";
 import { authenticateJWT, guardNotImpersonating, guardNotImpersonatingWrite } from "../middleware/auth.js";
-import { AppError } from "../services/auth-service.js";
+import { AppError } from "../services/auth-service/index.js";
 
 export async function redemptionUserRoutes(app: FastifyInstance) {
 

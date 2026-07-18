@@ -20,7 +20,7 @@ import {
 import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
 import { getRedis } from "../../redis.js";
 import { banIp, unbanIp } from "../../services/redemption-fraud.js";
-import { AppError } from "../../services/auth-service.js";
+import { AppError } from "../../services/auth-service/index.js";
 
 export async function adminRedemptionFraudRoutes(app: FastifyInstance) {
   app.addHook("preHandler", authenticateJWT);

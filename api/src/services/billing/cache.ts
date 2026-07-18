@@ -2,6 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { vendorModels, users, userDiscounts, systemConfigs } from "../../db/schema.js";
 import { AppError } from "../auth-service/index.js";
+import { DEFAULT_PRICING_MULTIPLIER } from "../price-service.js";
 import type { SellPrices, BillingCacheStats } from "./types.js";
 
 let pricingMultiplierCache: { value: number; expiresAt: number } | null = null;
@@ -11,7 +12,7 @@ export async function getPricingMultiplier(): Promise<number> {
   if (pricingMultiplierCache && now < pricingMultiplierCache.expiresAt) return pricingMultiplierCache.value;
   const db = getDb();
   const [cfg] = await db.select({ value: systemConfigs.value }).from(systemConfigs).where(eq(systemConfigs.key, "pricing_multiplier")).limit(1);
-  const value = cfg ? parseFloat(cfg.value) : 1.01;
+  const value = cfg ? parseFloat(cfg.value) : DEFAULT_PRICING_MULTIPLIER;
   pricingMultiplierCache = { value, expiresAt: now + 60_000 };
   return value;
 }

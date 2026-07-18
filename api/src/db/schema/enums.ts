@@ -172,6 +172,9 @@ export const auditActionEnum = pgEnum("audit_action", [
   "email_template_create",
   "email_template_update",
   "email_template_delete",
+  "content_filter_create",
+  "content_filter_update",
+  "content_filter_delete",
 ]);
 
 // ── 通知 ──

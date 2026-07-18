@@ -6,7 +6,7 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { agents } from "../db/schema.js";
-import { AppError } from "./auth-service.js";
+import { AppError } from "./auth-service/index.js";
 
 // ── Agent 查询辅助 ──
 
@@ -88,9 +88,3 @@ export interface ReconParams {
   granularity?: 'day' | 'week' | 'month'
 }
 
-export interface AgentIntegrityParams {
-  agentId?: number;        // 指定代理商 ID (agents.id)
-  agentSearch?: string;    // 搜索邮箱/昵称
-  page?: number;
-  pageSize?: number;
-}

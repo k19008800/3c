@@ -111,26 +111,46 @@ async function getTokenSum(redisKey: string): Promise<number> {
   return total;
 }
 
-// ── 记录请求到窗口 ──
+// ── 记录请求到窗口（含冷启动优化） ──
 
 async function recordRequest(redisKey: string): Promise<void> {
   const redis = getRedis();
   const now = Date.now();
-  const member = `${now}:${Math.random().toString(36).slice(2, 8)}`;
+
+  // 冷启动优化：首次创建 key 时，将时间戳回退 0-30 秒
+  // 避免突发流量在窗口初期直接填满整个容量
+  let timestamp = now;
+  const exists = await redis.exists(redisKey);
+  if (!exists) {
+    const offset = Math.floor(Math.random() * 30_000); // 0 ~ 30000 ms
+    timestamp = now - offset;
+  }
+
+  const member = `${timestamp}:${Math.random().toString(36).slice(2, 8)}`;
 
   await redis
     .multi()
-    .zadd(redisKey, now, member)
+    .zadd(redisKey, timestamp, member)
     .expire(redisKey, WINDOW_SECONDS * 2) // TTL 2 倍窗口
     .exec();
 }
 
-// ── 记录 Token 消耗到窗口 ──
+// ── 记录 Token 消耗到窗口（含冷启动优化） ──
 
 async function recordTokens(redisKey: string, tokens: number): Promise<void> {
   const redis = getRedis();
   const now = Date.now();
-  const member = `${now}:${Math.random().toString(36).slice(2, 8)}`;
+
+  // 冷启动优化：首次创建 key 时，将时间戳回退 0-30 秒
+  // 避免突发流量在窗口初期直接填满整个容量
+  let timestamp = now;
+  const exists = await redis.exists(redisKey);
+  if (!exists) {
+    const offset = Math.floor(Math.random() * 30_000); // 0 ~ 30000 ms
+    timestamp = now - offset;
+  }
+
+  const member = `${timestamp}:${Math.random().toString(36).slice(2, 8)}`;
 
   await redis
     .multi()

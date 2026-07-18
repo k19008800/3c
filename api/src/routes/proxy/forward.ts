@@ -841,6 +841,12 @@ async function handleNonTokenBilling(
 
     } catch {}
 
+
+    if (result.status >= 500) {
+      const fallbackResult = await tryFallback(model, request, route, userId, apiKeyId, startTime);
+      if (fallbackResult) return fallbackResult;
+    }
+
     await charge({
 
       userId, apiKeyId, modelId: model.id,
@@ -1300,6 +1306,12 @@ async function handleVideoGeneration(
       } catch {}
 
 
+
+
+      if (result.status >= 500) {
+        const fallbackResult = await tryFallback(model, request, route, userId, apiKeyId, startTime);
+        if (fallbackResult) return fallbackResult;
+      }
 
       await charge({
 
