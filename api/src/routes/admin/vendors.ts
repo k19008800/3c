@@ -625,8 +625,15 @@ export async function adminVendorRoutes(app: FastifyInstance) {
       return;
     }
 
-    // 默认从供应商 baseUrl 推导 models 接口，也可手动指定覆盖
-    const baseEndpoint = (body?.apiEndpoint?.trim() || vendor.baseUrl.replace(/\/+$/, "")) + "/models";
+    // 默认从供应商 baseUrl 推导 /v1/models 接口，也可手动指定覆盖
+    let baseEndpoint = (body?.apiEndpoint?.trim() || vendor.baseUrl.replace(/\/+$/, ""));
+    if (baseEndpoint.endsWith("/v1/chat/completions")) {
+      baseEndpoint = baseEndpoint.replace("/v1/chat/completions", "/v1/models");
+    } else if (baseEndpoint.endsWith("/chat/completions")) {
+      baseEndpoint = baseEndpoint.replace("/chat/completions", "/models");
+    } else {
+      baseEndpoint += "/models";
+    }
 
     // 拉取上游模型列表
     let upstreamModels: { id: string; owned_by?: string }[] = [];
