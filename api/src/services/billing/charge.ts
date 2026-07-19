@@ -29,7 +29,8 @@ export async function charge(input: BillingInput): Promise<BillingResult> {
 
     const multiplier = await getPricingMultiplier();
     const discountRate = await getDiscountRate(input.userId);
-    const rawCost = input.promptTokens * actualInputPrice + input.completionTokens * actualOutputPrice;
+    // 价格单位为 元/百万tokens，÷1,000,000 得到 元/token
+const rawCost = (input.promptTokens * actualInputPrice + input.completionTokens * actualOutputPrice) / 1_000_000;
     const discountedCost = rawCost * multiplier * discountRate;
     const costStr = discountedCost.toFixed(6);
 

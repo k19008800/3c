@@ -9,44 +9,45 @@ import { DEFAULT_PRICING_MULTIPLIER } from "../price-service.js";
 
 export { DEFAULT_PRICING_MULTIPLIER };
 
-// ── Known pricing (CNY per 1K tokens) ──
+// ── Known pricing (CNY per 1M tokens) ──
+// 元/百万tokens，计费时系统自动 ÷1,000,000 得到元/token
 
 const KNOWN_PRICES: Record<string, { input: number; output: number }> = {
   // Claude
-  'claude-opus-4-8':    { input: 0.1045, output: 0.5223 },
-  'claude-opus-4.7':    { input: 0.1045, output: 0.5223 },
-  'claude-sonnet-5':    { input: 0.0209, output: 0.1045 },
-  'claude-sonnet-4.6':  { input: 0.0209, output: 0.1045 },
-  'claude-sonnet-4.5':  { input: 0.0209, output: 0.1045 },
-  'claude-haiku-4-5':   { input: 0.0052, output: 0.0261 },
-  'claude-fable-5':     { input: 0.0209, output: 0.1045 },
+  'claude-opus-4-8':    { input: 104500, output: 522300 },
+  'claude-opus-4.7':    { input: 104500, output: 522300 },
+  'claude-sonnet-5':    { input: 20900, output: 104500 },
+  'claude-sonnet-4.6':  { input: 20900, output: 104500 },
+  'claude-sonnet-4.5':  { input: 20900, output: 104500 },
+  'claude-haiku-4-5':   { input: 5200, output: 26100 },
+  'claude-fable-5':     { input: 20900, output: 104500 },
   // GPT
-  'gpt-5.4':            { input: 0.0365, output: 0.1460 },
-  'gpt-5.5':            { input: 0.0522, output: 0.2088 },
-  'gpt-4o':             { input: 0.0157, output: 0.0626 },
-  'gpt-4o-mini':        { input: 0.0010, output: 0.0042 },
-  // DeepSeek (official prices per 1K tokens as of 2026-07)
-  // V4 Flash: 入¥1/百万→0.001/千  出¥2/百万→0.002/千
-  // V4 Pro:   入¥3/百万→0.003/千  出¥6/百万→0.006/千
-  'deepseek-chat':      { input: 0.0010, output: 0.0020 },
-  'deepseek-v4-pro':    { input: 0.0030, output: 0.0060 },
-  'deepseek-v4-flash':  { input: 0.0010, output: 0.0020 },
-  'deepseek-reasoner':  { input: 0.0010, output: 0.0020 },
+  'gpt-5.4':            { input: 36500, output: 146000 },
+  'gpt-5.5':            { input: 52200, output: 208800 },
+  'gpt-4o':             { input: 15700, output: 62600 },
+  'gpt-4o-mini':        { input: 1000, output: 4200 },
+  // DeepSeek (official prices as of 2026-07)
+  // V4 Flash: 入¥1/百万  出¥2/百万
+  // V4 Pro:   入¥3/百万  出¥6/百万
+  'deepseek-chat':      { input: 1000, output: 2000 },
+  'deepseek-v4-pro':    { input: 3000, output: 6000 },
+  'deepseek-v4-flash':  { input: 1000, output: 2000 },
+  'deepseek-reasoner':  { input: 1000, output: 2000 },
   // Gemini
-  'gemini-2.5-pro':     { input: 0.0083, output: 0.0333 },
-  'gemini-2.5-flash':   { input: 0.0015, output: 0.0060 },
+  'gemini-2.5-pro':     { input: 8300, output: 33300 },
+  'gemini-2.5-flash':   { input: 1500, output: 6000 },
   // Qwen
-  'qwen-3.6':           { input: 0.0020, output: 0.0080 },
-  'qwen-3.6-plus':      { input: 0.0035, output: 0.0140 },
+  'qwen-3.6':           { input: 2000, output: 8000 },
+  'qwen-3.6-plus':      { input: 3500, output: 14000 },
   // Kimi
-  'kimi-k2.6':          { input: 0.0050, output: 0.0200 },
+  'kimi-k2.6':          { input: 5000, output: 20000 },
   // Minimax
-  'minimax-m2.7':       { input: 0.0040, output: 0.0160 },
+  'minimax-m2.7':       { input: 4000, output: 16000 },
   // GLM
-  'glm-5.1':            { input: 0.0030, output: 0.0120 },
+  'glm-5.1':            { input: 3000, output: 12000 },
 };
 
-export const DEFAULT_PRICE = { input: 0.0030, output: 0.0150 };
+export const DEFAULT_PRICE = { input: 3000, output: 15000 };
 
 export function getModelPrices(modelId: string): { input: number; output: number } {
   const direct = KNOWN_PRICES[modelId];

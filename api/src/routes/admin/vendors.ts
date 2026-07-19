@@ -753,22 +753,22 @@ export async function adminVendorRoutes(app: FastifyInstance) {
       .limit(1);
     const pricingMultiplier = multiplierCfg ? parseFloat(multiplierCfg.value) : 1.15;
     const KNOWN_PRICES: Record<string, { input: number; output: number }> = {
-      'claude-opus-4-8':  { input: 0.1045, output: 0.5223 },
-      'claude-opus-4.7':  { input: 0.1045, output: 0.5223 },
-      'claude-sonnet-5':  { input: 0.0209, output: 0.1045 },
-      'claude-sonnet-4.6':{ input: 0.0209, output: 0.1045 },
-      'claude-haiku-4-5': { input: 0.0052, output: 0.0261 },
-      'gpt-5.4':          { input: 0.0365, output: 0.1460 },
-      'gpt-4o':           { input: 0.0157, output: 0.0626 },
-      'gpt-4o-mini':      { input: 0.0010, output: 0.0042 },
-      // DeepSeek (updated 2026-07: official post-price-cut prices)
-      'deepseek-chat':    { input: 0.0010, output: 0.0020 },
-      'deepseek-v4-pro':  { input: 0.0030, output: 0.0060 },
-      'deepseek-v4-flash':{ input: 0.0010, output: 0.0020 },
-      'gemini-2.5-pro':   { input: 0.0083, output: 0.0333 },
-      'gemini-2.5-flash': { input: 0.0015, output: 0.0060 },
+      'claude-opus-4-8':  { input: 104500, output: 522300 },
+      'claude-opus-4.7':  { input: 104500, output: 522300 },
+      'claude-sonnet-5':  { input: 20900, output: 104500 },
+      'claude-sonnet-4.6':{ input: 20900, output: 104500 },
+      'claude-haiku-4-5': { input: 5200, output: 26100 },
+      'gpt-5.4':          { input: 36500, output: 146000 },
+      'gpt-4o':           { input: 15700, output: 62600 },
+      'gpt-4o-mini':      { input: 1000, output: 4200 },
+      // DeepSeek (updated 2026-07: 元/百万tokens)
+      'deepseek-chat':    { input: 1000, output: 2000 },
+      'deepseek-v4-pro':  { input: 3000, output: 6000 },
+      'deepseek-v4-flash':{ input: 1000, output: 2000 },
+      'gemini-2.5-pro':   { input: 8300, output: 33300 },
+      'gemini-2.5-flash': { input: 1500, output: 6000 },
     };
-    const defaultPrice = { input: 0.0030, output: 0.0150 };
+    const defaultPrice = { input: 3000, output: 15000 };
 
     function getPrices(name: string) {
       const direct = KNOWN_PRICES[name];

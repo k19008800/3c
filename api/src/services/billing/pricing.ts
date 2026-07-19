@@ -16,7 +16,8 @@ export async function calculateCost(promptTokens: number, completionTokens: numb
   const prices = await getSellPrices(vendorModelId);
   const multiplier = await getPricingMultiplier();
   const discountRate = await getDiscountRate(userId);
-  const rawCost = promptTokens * prices.sellPriceInput + completionTokens * prices.sellPriceOutput;
+  // 价格单位为 元/百万tokens，÷1,000,000 得到 元/token
+  const rawCost = (promptTokens * prices.sellPriceInput + completionTokens * prices.sellPriceOutput) / 1_000_000;
   const discountedCost = rawCost * multiplier * discountRate;
   return { rawCost, discountedCost, pricingMultiplier: multiplier, discountRate, sellPriceInput: prices.sellPriceInput, sellPriceOutput: prices.sellPriceOutput };
 }
