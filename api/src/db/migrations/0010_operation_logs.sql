@@ -4,9 +4,11 @@
 -- ============================================================
 
 -- 1. 枚举类型
-DO $$ BEGIN
-  CREATE TYPE operation_category AS ENUM ('auth','api_key','finance','profile','agent','system');
-EXCEPTION WHEN duplicate_object THEN NULL;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'operation_category') THEN
+    CREATE TYPE operation_category AS ENUM ('auth','api_key','finance','profile','agent','system');
+  END IF;
 END $$;
 
 -- 2. 表
