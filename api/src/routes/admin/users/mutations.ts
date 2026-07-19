@@ -68,6 +68,9 @@ export async function mutationsRoutes(app: FastifyInstance) {
         description: `管理员创建用户: ${parsed.email}${parsed.remark ? ` (${parsed.remark})` : ""}`,
       });
 
+      // 事务内保存结果，send 放外面确保 COMMIT 先完成
+      return newUser;
+    }).then((newUser) => {
       reply.status(200).send({
         code: 0,
         data: { id: newUser.id, email: newUser.email },

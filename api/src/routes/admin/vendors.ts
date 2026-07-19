@@ -619,10 +619,15 @@ export async function adminVendorRoutes(app: FastifyInstance) {
       return;
     }
 
-    const apiKey = body?.apiKey?.trim();
+    const apiKeyRaw = body?.apiKey?.trim() || "";
+    // 自动清除非 ASCII 字符（如 Unicode 省略号 …、长破折号等常见粘贴污染）
+    const apiKey = apiKeyRaw.replace(/[^\x20-\x7E]/g, "").trim();
     if (!apiKey) {
       reply.status(400).send({ code: 400, data: null, message: "apiKey 必填" });
       return;
+    }
+    if (apiKey !== apiKeyRaw) {
+      request.log.warn({ apiKeyRaw, apiKeySanitized: apiKey }, "API Key 包含非 ASCII 字符，已自动清理");
     }
 
     // 默认从供应商 baseUrl 推导 /v1/models 接口，也可手动指定覆盖
@@ -631,8 +636,12 @@ export async function adminVendorRoutes(app: FastifyInstance) {
       baseEndpoint = baseEndpoint.replace("/v1/chat/completions", "/v1/models");
     } else if (baseEndpoint.endsWith("/chat/completions")) {
       baseEndpoint = baseEndpoint.replace("/chat/completions", "/models");
-    } else {
+    } else if (baseEndpoint.endsWith("/v1")) {
+      // 标准 OpenAI 兼容 baseUrl (如 api.openai.com/v1)，追加 /models
       baseEndpoint += "/models";
+    } else {
+      // 裸域名或非标准路径，追加 /v1/models（标准 OpenAI 格式）
+      baseEndpoint = baseEndpoint.replace(/\/+$/, "") + "/v1/models";
     }
 
     // 拉取上游模型列表
