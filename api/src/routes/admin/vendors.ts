@@ -761,9 +761,10 @@ export async function adminVendorRoutes(app: FastifyInstance) {
       'gpt-5.4':          { input: 0.0365, output: 0.1460 },
       'gpt-4o':           { input: 0.0157, output: 0.0626 },
       'gpt-4o-mini':      { input: 0.0010, output: 0.0042 },
-      'deepseek-chat':    { input: 0.0027, output: 0.0110 },
-      'deepseek-v4-pro':  { input: 0.0055, output: 0.0219 },
-      'deepseek-v4-flash':{ input: 0.0027, output: 0.0110 },
+      // DeepSeek (updated 2026-07: official post-price-cut prices)
+      'deepseek-chat':    { input: 0.0010, output: 0.0020 },
+      'deepseek-v4-pro':  { input: 0.0030, output: 0.0060 },
+      'deepseek-v4-flash':{ input: 0.0010, output: 0.0020 },
       'gemini-2.5-pro':   { input: 0.0083, output: 0.0333 },
       'gemini-2.5-flash': { input: 0.0015, output: 0.0060 },
     };

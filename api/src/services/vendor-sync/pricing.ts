@@ -25,11 +25,13 @@ const KNOWN_PRICES: Record<string, { input: number; output: number }> = {
   'gpt-5.5':            { input: 0.0522, output: 0.2088 },
   'gpt-4o':             { input: 0.0157, output: 0.0626 },
   'gpt-4o-mini':        { input: 0.0010, output: 0.0042 },
-  // DeepSeek
-  'deepseek-chat':      { input: 0.0027, output: 0.0110 },
-  'deepseek-v4-pro':    { input: 0.0055, output: 0.0219 },
-  'deepseek-v4-flash':  { input: 0.0027, output: 0.0110 },
-  'deepseek-reasoner':  { input: 0.0038, output: 0.0152 },
+  // DeepSeek (official prices per 1K tokens as of 2026-07)
+  // V4 Flash: 入¥1/百万→0.001/千  出¥2/百万→0.002/千
+  // V4 Pro:   入¥3/百万→0.003/千  出¥6/百万→0.006/千
+  'deepseek-chat':      { input: 0.0010, output: 0.0020 },
+  'deepseek-v4-pro':    { input: 0.0030, output: 0.0060 },
+  'deepseek-v4-flash':  { input: 0.0010, output: 0.0020 },
+  'deepseek-reasoner':  { input: 0.0010, output: 0.0020 },
   // Gemini
   'gemini-2.5-pro':     { input: 0.0083, output: 0.0333 },
   'gemini-2.5-flash':   { input: 0.0015, output: 0.0060 },
