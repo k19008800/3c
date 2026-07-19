@@ -117,6 +117,9 @@ function checkFile(filePath) {
         var match = line.match(pattern);
         if (match) {
           var hex = match[0].charCodeAt(0).toString(16).toUpperCase();
+          var relPath = path.relative(ROOT, filePath).replace(/\\/g, '/');
+          var isKnownCorrupted = KNOWN_CORRUPTED.some(function(k) { return relPath.indexOf(k) >= 0; });
+
           var isHard = false;
           var isWarn = false;
 
@@ -124,35 +127,27 @@ function checkFile(filePath) {
           if (pattern === SUSPICIOUS_PATTERNS[0]) {
             // Surrogate halves
             if (!isSurrogatePartOfEmoji(line, match.index)) {
-              isHard = true;
+              isHard = !isKnownCorrupted;
             } else {
               isWarn = true;
               surrogateWarning = true;
             }
           } else if (p >= 1 && p <= 3) {
             // PUA (patterns 1, 2, 3)
-            isHard = true;
-            puaError = true;
+            isHard = !isKnownCorrupted;
+            if (!isKnownCorrupted) puaError = true;
           } else if (p === 4) {
             // Replacement char
-            isHard = true;
-            replaceError = true;
+            isHard = !isKnownCorrupted;
+            if (!isKnownCorrupted) replaceError = true;
           } else if (p === 5) {
             // Zero-width / BOM
             if (isBomInStringLiteral(line, match.index)) {
               isWarn = true;
               bomWarning = true;
             } else {
-              isHard = true;
+              isHard = !isKnownCorrupted;
             }
-          }
-
-          // Check if file is in known-corrupted list (downgrade to warning)
-          var relPath = path.relative(ROOT, filePath).replace(/\\/g, '/');
-          var isKnownCorrupted = KNOWN_CORRUPTED.some(function(k) { return relPath.indexOf(k) >= 0; });
-          if (isHard && isKnownCorrupted) {
-            isHard = false;
-            isWarn = true;
           }
 
           var tag = isHard ? '⚠️' : (isWarn ? 'ℹ️' : 'ℹ️');
