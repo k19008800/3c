@@ -80,8 +80,8 @@ async function runMigration(migration: MigrationFile): Promise<void> {
 
   const statements = migration.sql
     .split(/;\s*\n/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0 && !s.startsWith("--"));
+    .map((s) => s.replace(/^(?:--[^\n]*\n?\s*)+/, "").trim())
+    .filter((s) => s.length > 0);
 
   for (const stmt of statements) {
     try {
