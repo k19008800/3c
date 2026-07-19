@@ -50,12 +50,12 @@ export default function PriceConfigForm({
     <div className="bg-slate-50 rounded-lg p-3 space-y-3">
       <p className="text-xs text-slate-500 font-medium">价格设置</p>
       <div className="grid grid-cols-2 gap-3">
-        {renderField('成本价 (输入)', 'costPriceInput', costPriceInput)}
-        {renderField('成本价 (输出)', 'costPriceOutput', costPriceOutput)}
+        {renderField('成本价(输入)(元/百万token)', 'costPriceInput', costPriceInput)}
+        {renderField('成本价(输出)(元/百万token)', 'costPriceOutput', costPriceOutput)}
       </div>
       <div className="grid grid-cols-2 gap-3">
-        {renderField('售价 (输入)', 'sellPriceInput', sellPriceInput)}
-        {renderField('售价 (输出)', 'sellPriceOutput', sellPriceOutput)}
+        {renderField('售价(输入)(元/百万token)', 'sellPriceInput', sellPriceInput)}
+        {renderField('售价(输出)(元/百万token)', 'sellPriceOutput', sellPriceOutput)}
       </div>
       {showProfitPreview &&
         (profitMargin.inputMargin !== 0 || profitMargin.outputMargin !== 0) && (

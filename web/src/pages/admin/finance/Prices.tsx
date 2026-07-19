@@ -188,16 +188,16 @@ export default function AdminPrices() {
                 <th className="px-6 py-3 font-medium text-slate-500">厂商</th>
                 <th className="px-6 py-3 font-medium text-slate-500">模型名称</th>
                 <th className="px-6 py-3 font-medium text-slate-500 text-right whitespace-nowrap">
-                  成本 Input
+                  成本 Input (元/百万token)
                 </th>
                 <th className="px-6 py-3 font-medium text-slate-500 text-right whitespace-nowrap">
-                  成本 Output
+                  成本 Output (元/百万token)
                 </th>
                 <th className="px-6 py-3 font-medium text-slate-500 text-right whitespace-nowrap">
-                  售价 Input
+                  售价 Input (元/百万token)
                 </th>
                 <th className="px-6 py-3 font-medium text-slate-500 text-right whitespace-nowrap">
-                  售价 Output
+                  售价 Output (元/百万token)
                 </th>
                 <th className="px-6 py-3 font-medium text-slate-500 text-right whitespace-nowrap">
                   实际倍率
@@ -456,7 +456,7 @@ function EditSellPriceModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-slate-500 mb-1">成本 Input</label>
+              <label className="block text-xs text-slate-500 mb-1">成本 Input (元/百万token)</label>
               <input
                 type="text"
                 value={costInput}
@@ -465,7 +465,7 @@ function EditSellPriceModal({
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-500 mb-1">成本 Output</label>
+              <label className="block text-xs text-slate-500 mb-1">成本 Output (元/百万token)</label>
               <input
                 type="text"
                 value={costOutput}
@@ -474,7 +474,7 @@ function EditSellPriceModal({
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-500 mb-1">售价 Input</label>
+              <label className="block text-xs text-slate-500 mb-1">售价 Input (元/百万token)</label>
               <input
                 type="text"
                 value={inputPrice}
@@ -483,7 +483,7 @@ function EditSellPriceModal({
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-500 mb-1">售价 Output</label>
+              <label className="block text-xs text-slate-500 mb-1">售价 Output (元/百万token)</label>
               <input
                 type="text"
                 value={outputPrice}
@@ -654,7 +654,7 @@ function BatchPriceModal({
           {/* Price inputs */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-slate-500 mb-1">新 Input {label} <span className="text-red-500">*</span></label>
+              <label className="block text-xs text-slate-500 mb-1">新 Input {label} (元/百万token) <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 value={inputPrice}
@@ -664,7 +664,7 @@ function BatchPriceModal({
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-500 mb-1">新 Output {label} <span className="text-red-500">*</span></label>
+              <label className="block text-xs text-slate-500 mb-1">新 Output {label} (元/百万token) <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 value={outputPrice}

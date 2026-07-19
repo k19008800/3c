@@ -232,7 +232,7 @@ export default function ModelTable({
                 接口地址
               </th>
               <th className="px-3 py-3 text-sm font-medium text-slate-500">
-                成本价 / 售价
+                成本价 / 售价 (元/百万token)
               </th>
               <th className="px-3 py-3 text-sm font-medium text-slate-500">
                 权重
