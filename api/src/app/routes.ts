@@ -30,6 +30,7 @@ import { adminAgentRoutes } from "../routes/admin/agents.js";
 import { adminCampaignRoutes } from "../routes/admin/campaigns.js";
 import { adminDashboardRoutes } from "../routes/admin/dashboard/index.js";
 import { adminLogRoutes } from "../routes/admin/logs.js";
+import { promptAuditRoutes } from "../routes/admin/prompt-audit.js";
 import { adminFinanceRoutes } from "../routes/admin/finance.js";
 import { adminAuditLogRoutes } from "../routes/admin/audit-logs.js";
 import { adminOperationLogRoutes } from "../routes/admin/operation-logs.js";
@@ -166,6 +167,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
   // ── Admin 调用日志 ──
   await app.register(adminLogRoutes, { prefix: "" });
+
+  // ── Admin 提示词审计 ──
+  await app.register(promptAuditRoutes, { prefix: "" });
 
   // ── Admin 财务管理 ──
   await app.register(adminFinanceRoutes, { prefix: "" });

@@ -130,54 +130,60 @@ export async function computeDailyCommissionRollup(targetDate?: string): Promise
     return 0;
   }
 
-  // 分批写入 rollup 表（Upsert）
-  let updatedCount = 0;
-  for (const row of rollupRows) {
-    await db.insert(commissionDailyRollup).values({
-      agentId: row.agentId,
-      reportDate: date,
-      totalRecords: row.totalRecords,
-      totalCallCost: row.totalCallCost,
-      totalCommissionAmount: row.totalCommissionAmount,
-      totalFeeAmount: row.totalFeeAmount,
-      totalNetAmount: row.totalNetAmount,
-      pendingCount: row.pendingCount,
-      settledCount: row.settledCount,
-      cancelledCount: row.cancelledCount,
-      pendingAmount: row.pendingAmount,
-      settledAmount: row.settledAmount,
-      cancelledAmount: row.cancelledAmount,
-      saleCount: row.saleCount,
-      renewalCount: row.renewalCount,
-      activityCount: row.activityCount,
-      saleAmount: row.saleAmount,
-      renewalAmount: row.renewalAmount,
-      activityAmount: row.activityAmount,
-    }).onConflictDoUpdate({
-      target: [commissionDailyRollup.agentId, commissionDailyRollup.reportDate],
-      set: {
-        totalRecords: sql`excluded.total_records`,
-        totalCallCost: sql`excluded.total_call_cost`,
-        totalCommissionAmount: sql`excluded.total_commission_amount`,
-        totalFeeAmount: sql`excluded.total_fee_amount`,
-        totalNetAmount: sql`excluded.total_net_amount`,
-        pendingCount: sql`excluded.pending_count`,
-        settledCount: sql`excluded.settled_count`,
-        cancelledCount: sql`excluded.cancelled_count`,
-        pendingAmount: sql`excluded.pending_amount`,
-        settledAmount: sql`excluded.settled_amount`,
-        cancelledAmount: sql`excluded.cancelled_amount`,
-        saleCount: sql`excluded.sale_count`,
-        renewalCount: sql`excluded.renewal_count`,
-        activityCount: sql`excluded.activity_count`,
-        saleAmount: sql`excluded.sale_amount`,
-        renewalAmount: sql`excluded.renewal_amount`,
-        activityAmount: sql`excluded.activity_amount`,
-        updatedAt: new Date(),
-      },
+  // 批量写入 rollup 表（Upsert）— 使用 Drizzle 批量 insert + onConflictDoUpdate
+  // Drizzle 不支持批量 onConflictDoUpdate，改用单条事务批量提交
+  const batchSize = 50;
+  for (let i = 0; i < rollupRows.length; i += batchSize) {
+    const batch = rollupRows.slice(i, i + batchSize);
+    await db.transaction(async (tx) => {
+      for (const row of batch) {
+        await tx.insert(commissionDailyRollup).values({
+          agentId: row.agentId,
+          reportDate: date,
+          totalRecords: row.totalRecords,
+          totalCallCost: row.totalCallCost,
+          totalCommissionAmount: row.totalCommissionAmount,
+          totalFeeAmount: row.totalFeeAmount,
+          totalNetAmount: row.totalNetAmount,
+          pendingCount: row.pendingCount,
+          settledCount: row.settledCount,
+          cancelledCount: row.cancelledCount,
+          pendingAmount: row.pendingAmount,
+          settledAmount: row.settledAmount,
+          cancelledAmount: row.cancelledAmount,
+          saleCount: row.saleCount,
+          renewalCount: row.renewalCount,
+          activityCount: row.activityCount,
+          saleAmount: row.saleAmount,
+          renewalAmount: row.renewalAmount,
+          activityAmount: row.activityAmount,
+        }).onConflictDoUpdate({
+          target: [commissionDailyRollup.agentId, commissionDailyRollup.reportDate],
+          set: {
+            totalRecords: sql`excluded.total_records`,
+            totalCallCost: sql`excluded.total_call_cost`,
+            totalCommissionAmount: sql`excluded.total_commission_amount`,
+            totalFeeAmount: sql`excluded.total_fee_amount`,
+            totalNetAmount: sql`excluded.total_net_amount`,
+            pendingCount: sql`excluded.pending_count`,
+            settledCount: sql`excluded.settled_count`,
+            cancelledCount: sql`excluded.cancelled_count`,
+            pendingAmount: sql`excluded.pending_amount`,
+            settledAmount: sql`excluded.settled_amount`,
+            cancelledAmount: sql`excluded.cancelled_amount`,
+            saleCount: sql`excluded.sale_count`,
+            renewalCount: sql`excluded.renewal_count`,
+            activityCount: sql`excluded.activity_count`,
+            saleAmount: sql`excluded.sale_amount`,
+            renewalAmount: sql`excluded.renewal_amount`,
+            activityAmount: sql`excluded.activity_amount`,
+            updatedAt: new Date(),
+          },
+        });
+      }
     });
-    updatedCount++;
   }
+  const updatedCount = rollupRows.length;
 
   logger.info({ date, updatedCount, totalRecords: rollupRows.reduce((s, r) => s + r.totalRecords, 0) }, "[CommissionRollup] 聚合完成");
   return updatedCount;

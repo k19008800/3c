@@ -26,6 +26,9 @@ export * from "./roles.js";
 // ── 安全 ──
 export * from "./security.js";
 
+// ── 提示词审计 ──
+export * from "./prompt-audit.js";
+
 // ── 通知 ──
 export * from "./notification.js";
 

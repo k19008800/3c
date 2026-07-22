@@ -94,10 +94,21 @@ export async function sendDailySecuritySummary(): Promise<boolean> {
       .orderBy(sql`created_at desc`)
       .limit(10);
 
-    // 5. 当前封禁状态
+    // 5. 当前封禁状态（【优化】使用 SCAN 替代 KEYS 避免阻塞）
+    const scanKeys = async (pattern: string): Promise<string[]> => {
+      const keys: string[] = [];
+      let cursor = '0';
+      do {
+        const [nextCursor, batch] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        cursor = nextCursor;
+        keys.push(...batch);
+      } while (cursor !== '0');
+      return keys;
+    };
+
     const [ipKeys, userKeys] = await Promise.all([
-      redis.keys("risk:ban:ip:*"),
-      redis.keys("risk:ban:user:*"),
+      scanKeys("risk:ban:ip:*"),
+      scanKeys("risk:ban:user:*"),
     ]);
 
     // 构建邮件 HTML

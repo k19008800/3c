@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { get, post } from '@/lib/api'
 import { Bug } from 'lucide-react'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 import type { ModelItem, PlaygroundResponse, ChatMessage } from './playground/types'
 import RequestPanel from './playground/RequestPanel'
 import ResponsePanel from './playground/ResponsePanel'
@@ -97,6 +98,7 @@ export default function Playground() {
         <div className="flex items-center gap-2">
           <Bug size={22} className="text-blue-500" />
           <h1 className="text-xl font-bold text-slate-800">在线调试</h1>
+          <FeatureDescription page="admin/playground" className="ml-2" />
           <span className="px-2 py-0.5 text-[10px] bg-amber-100 text-amber-700 rounded-full font-medium">
             不计费 · 链路追踪
           </span>

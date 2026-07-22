@@ -136,17 +136,28 @@ export function usePersistedFilters<T extends FilterRecord>({
     }
   }, [storageKey, urlKeys, defaults, setSearchParams, persistToServer])
 
-  // ── setFilter ──
+  // ── 函数式更新：避免闭包陷阱 ──
+  // 使用 ref 追踪最新 filters，确保连续调用时拿到正确值
+  const filtersRef = useRef(filters)
+  useEffect(() => { filtersRef.current = filters }, [filters])
+
   const setFilter = useCallback((key: keyof T, value: FilterValue) => {
-    const next = { ...filters, [key]: value } as T
+    const next = { ...filtersRef.current, [key]: value } as T
+    // 如果修改的是筛选条件（非 page），自动重置页码
+    if (key !== 'page' && key !== 'pageSize' && 'page' in defaults) {
+      next.page = 1
+    }
     persist(next)
-    // Force re-render by updating search params (filters is memo'd from searchParams)
-  }, [filters, persist])
+  }, [persist, defaults])
 
   const setFilters = useCallback((partial: Partial<T>) => {
-    const next = { ...filters, ...partial } as T
+    const next = { ...filtersRef.current, ...partial } as T
+    // 如果修改了 pageSize 但没有显式设置 page，自动重置
+    if ('pageSize' in partial && !('page' in partial) && 'page' in defaults) {
+      next.page = 1
+    }
     persist(next)
-  }, [filters, persist])
+  }, [persist, defaults])
 
   const resetFilters = useCallback(() => {
     persist(defaults)

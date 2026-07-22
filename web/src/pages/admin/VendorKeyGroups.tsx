@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { get, post, patch, del } from '@/lib/api'
 import { usePagination } from '@/hooks/use-pagination'
 import PaginationBar from '@/components/ui/PaginationBar'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 import type { Vendor } from '@/types'
 import {
   Plus, Edit3, Trash2, Cable, CheckCircle2, AlertCircle, Loader2,
@@ -553,6 +554,7 @@ export default function VendorKeyGroups() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">Key 分组管理</h1>
+        <FeatureDescription page="admin/vendor-key-groups" className="ml-2" />
       </div>
 
       {error && (

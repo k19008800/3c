@@ -157,6 +157,8 @@ const adminGroups: AdminGroup[] = [
       { to: '/console/admin/audit-logs', icon: FileSearch, label: '审计日志', requiredPerms: [Perm.AUDIT_VIEW] },
       { to: '/console/admin/operation-logs', icon: Activity, label: '操作日志', requiredPerms: [Perm.AUDIT_VIEW] },
       { to: '/console/admin/logs', icon: ScrollText, label: '调用日志', requiredPerms: [Perm.LOG_VIEW] },
+      { to: '/console/admin/prompt-audit', icon: FileText, label: '提示词审计', requiredPerms: [Perm.AUDIT_VIEW] },
+      { to: '/console/admin/sensitive-words', icon: AlertTriangle, label: '敏感词库', requiredPerms: [Perm.AUDIT_VIEW] },
       { to: '/console/admin/announcements', icon: Megaphone, label: '全站公告', requiredPerms: [Perm.MODEL_MANAGE] },
       { to: '/console/admin/campaigns', icon: Megaphone, label: '营销活动', requiredPerms: [Perm.MODEL_MANAGE] },
     ],

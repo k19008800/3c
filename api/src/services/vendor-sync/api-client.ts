@@ -27,7 +27,8 @@ export async function getVendorApiKey(vendorId: number): Promise<string | null> 
 // ── Fetch upstream model list ──
 
 export async function fetchUpstreamModels(baseUrl: string, apiKey: string | null): Promise<UpstreamModel[]> {
-  const url = baseUrl.replace(/\/+$/, '') + '/v1/models';
+  // 修复：移除 baseUrl 末尾的 /v1，避免拼接后变成 /v1/v1/models
+  const url = baseUrl.replace(/\/+$/, '').replace(/\/v1$/, '') + '/v1/models';
   const headers: Record<string, string> = { 'Accept': 'application/json' };
   if (apiKey) {
     headers['Authorization'] = `Bearer ${apiKey}`;

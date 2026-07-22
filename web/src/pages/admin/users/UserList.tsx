@@ -191,7 +191,7 @@ export default function UserList({
           page={page}
           onPageChange={onPageChange}
           pageSize={pageSize}
-          onPageSizeChange={(s) => { onPageSizeChange(s); onPageChange(1) }}
+          onPageSizeChange={onPageSizeChange}
           total={total}
           totalPages={totalPages}
         />

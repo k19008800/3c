@@ -118,8 +118,10 @@ export async function resetCircuit(vendorModelId: number): Promise<void> {
 export async function getActiveCircuitCount(): Promise<number> {
   try {
     const redis = getRedis();
-    const keys = await redis.keys("cb:v2:open:*");
-    return keys.length;
+    // 【优化】使用 SCAN 替代 KEYS
+    let count = 0, cursor = '0';
+    do { const [nc, batch] = await redis.scan(cursor, 'MATCH', 'cb:v2:open:*', 'COUNT', 100); cursor = nc; count += batch.length; } while (cursor !== '0');
+    return count;
   } catch {
     const db = getDb();
     const [result] = await db

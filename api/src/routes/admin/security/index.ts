@@ -54,8 +54,17 @@ export async function adminSecurityRoutes(app: FastifyInstance) {
     ] = await Promise.all([
       getUnacknowledgedHighRiskCount(),
       getActiveCircuitCount(),
-      (async () => (await redis.keys("risk:ban:ip:*")).length)(),
-      (async () => (await redis.keys("risk:ban:user:*")).length)(),
+      // 【优化】使用 SCAN 替代 KEYS
+      (async () => {
+        let count = 0, cursor = '0';
+        do { const [nc, batch] = await redis.scan(cursor, 'MATCH', 'risk:ban:ip:*', 'COUNT', 100); cursor = nc; count += batch.length; } while (cursor !== '0');
+        return count;
+      })(),
+      (async () => {
+        let count = 0, cursor = '0';
+        do { const [nc, batch] = await redis.scan(cursor, 'MATCH', 'risk:ban:user:*', 'COUNT', 100); cursor = nc; count += batch.length; } while (cursor !== '0');
+        return count;
+      })(),
       querySecurityEvents({ page: 1, pageSize: 5 }),
       db
         .select({ count: sql<number>`count(*)` })

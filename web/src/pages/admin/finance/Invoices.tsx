@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { FileText, Search, CheckCircle, XCircle, FileCheck } from 'lucide-react';
 import PaginationBar from '@/components/ui/PaginationBar';
 import FeatureDescription from '@/components/admin/FeatureDescription';
-import api from '@/lib/api';
+import api, { get, post } from '@/lib/api';
 
 interface Invoice {
   id: number;
@@ -41,19 +41,22 @@ const AdminInvoices: React.FC = () => {
   const [search, setSearch] = useState('');
   const [pagination, setPagination] = useState<PaginationMeta>({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [issueModal, setIssueModal] = useState<{ id: number; invoiceNo: string; file: File | null } | null>(null);
 
   const fetchInvoices = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const res = await api.get('/api/v1/admin/finance/invoices', {
-        params: { page, pageSize: 20, search },
+      const data = await get<{ list: Invoice[]; page: number; pageSize: number; total: number }>(
+        '/api/v1/admin/finance/invoices',
+        { page, pageSize: 20, search }
+      );
+      setInvoices(data.list ?? []);
+      setPagination({
+        page: data.page,
+        pageSize: data.pageSize,
+        total: data.total,
+        totalPages: Math.ceil(data.total / (data.pageSize || 20)),
       });
-      setInvoices(res.data.data?.list ?? res.data.data ?? res.data.items ?? []);
-      if (res.data.data?.pagination || res.data.data?.meta) {
-        setPagination(res.data.data.pagination ?? res.data.data.meta);
-      } else if (res.data.data && typeof res.data.data.total === 'number') {
-        setPagination({ page: res.data.data.page, pageSize: res.data.data.pageSize, total: res.data.data.total, totalPages: Math.ceil(res.data.data.total / (res.data.data.pageSize || 20)) });
-      }
     } catch {
       // Silently handle
     } finally {
@@ -65,11 +68,26 @@ const AdminInvoices: React.FC = () => {
     fetchInvoices(1);
   }, [fetchInvoices]);
 
-  const handleAction = async (id: number, action: 'approve' | 'reject' | 'issue') => {
+  const handleAction = async (id: number, action: 'approve' | 'reject') => {
     setActionLoading(id);
     try {
-      await api.post(`/api/v1/admin/finance/invoices/${id}/${action}`);
+      await post(`/api/v1/admin/finance/invoices/${id}/${action}`);
       fetchInvoices(pagination.page);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleIssue = async () => {
+    if (!issueModal) return;
+    setActionLoading(issueModal.id);
+    try {
+      const formData = new FormData();
+      if (issueModal.invoiceNo) formData.append('invoiceNo', issueModal.invoiceNo);
+      if (issueModal.file) formData.append('invoiceFile', issueModal.file);
+      await post(`/api/v1/admin/finance/invoices/${issueModal.id}/issue`, formData);
+      fetchInvoices(pagination.page);
+      setIssueModal(null);
     } finally {
       setActionLoading(null);
     }
@@ -182,7 +200,7 @@ const AdminInvoices: React.FC = () => {
                         )}
                         {invoice.status === 'approved' && (
                           <button
-                            onClick={() => handleAction(invoice.id, 'issue')}
+                            onClick={() => setIssueModal({ id: invoice.id, invoiceNo: '', file: null })}
                             disabled={actionLoading === invoice.id}
                             className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors disabled:opacity-50"
                           >
@@ -210,6 +228,54 @@ const AdminInvoices: React.FC = () => {
           totalPages={pagination.totalPages}
           onPageChange={handlePageChange}
         />
+      )}
+
+      {/* 开票弹窗 */}
+      {issueModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">标记已开票</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">发票号码</label>
+                <input
+                  type="text"
+                  value={issueModal.invoiceNo}
+                  onChange={e => setIssueModal({ ...issueModal, invoiceNo: e.target.value })}
+                  placeholder="请输入发票号码"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">发票附件（PDF/图片）</label>
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={e => setIssueModal({ ...issueModal, file: e.target.files?.[0] ?? null })}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                />
+                {issueModal.file && (
+                  <p className="mt-1 text-xs text-gray-500">已选择: {issueModal.file.name}</p>
+                )}
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setIssueModal(null)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleIssue}
+                  disabled={actionLoading === issueModal.id}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  确认开票
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

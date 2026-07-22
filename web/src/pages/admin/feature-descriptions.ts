@@ -823,6 +823,94 @@ const FEATURE_DESCRIPTIONS: Record<string, FeatureDesc> = {
     ],
     usage: "代理商发展新客户后在此页面绑定，客户转出时解绑。",
   },
+
+  // ════════════════════════════════════════════
+  //  🤖 资源管理（续）
+  // ════════════════════════════════════════════
+
+  "admin/vendor-key-groups": {
+    title: "Key 分组管理",
+    summary: "管理供应商 API Key 的资源分组，支持策略配置、Key 级价格覆盖和批量连通性测试。",
+    details: [
+      "分组策略：weight（权重轮询）、priority（优先级优先）、fallback（故障转移）三种路由策略",
+      "Key 管理：每个分组下的 API Key 列表，支持查看状态（活跃/宕机/禁用）、权重、优先级",
+      "价格覆盖：可为单个 Key 单独设置 Input/Output 售价和成本价",
+      "连通性测试：支持对分组下的 Key 进行批量连通性测试",
+      "通道管理：查看 Key 关联的通道（Channel Ref），了解哪些模型使用了该 Key",
+      "【状态流转】group status: true（启用）↔ false（禁用）；Key status: true（活跃）↔ false（禁用）；连通性测试不修改状态，仅记录测试结果",
+      "【权限要求】MODEL_MANAGE（bit 12）管理分组/Key",
+      "【数据校验】创建分组时 vendorId + name 必填，name 在同一供应商下唯一；Key 创建时 apiKey 必填（AES-256-GCM 加密存储）；售卖价按 DECIMAL(18,6) 精度",
+      "【关联影响】分组启用状态变更影响路由引擎的 Key 选择范围；Key 禁用后通过该 Key 的调用返回 401；Priority 策略的分组中 Key 的 priority 字段影响调度顺序",
+      "【触发条件】供应商接入后需在分组中配置 Key 才能实际使用",
+      "【API 端点】GET /admin/vendor-key-groups, POST /admin/vendor-key-groups, GET /admin/vendor-key-groups/:groupId/keys, POST /admin/vendor-key-groups/:groupId/keys, PATCH/DELETE /admin/vendor-key-groups/:id, PATCH /admin/vendor-key-groups/:groupId/keys/:keyId, DELETE /admin/vendor-key-groups/:groupId/keys/:keyId, POST /admin/vendor-key-groups/:groupId/test-all, POST /admin/vendor-key-groups/:groupId/keys/:keyId/test, GET /admin/vendor-key-groups/:groupId/channels",
+    ],
+    usage: "新增供应商 Key 后在此页面创建 Key 分组，配置价格覆盖和路由策略。",
+  },
+
+  // ════════════════════════════════════════════
+  //  🛡️ 安全风控（续）
+  // ════════════════════════════════════════════
+
+  "admin/security/auto-rules": {
+    title: "自动处置规则",
+    summary: "配置安全事件的自动响应规则，当特定安全事件达到阈值时自动执行封禁/通知等操作。",
+    details: [
+      "规则要素：事件类型（eventType）、触发阈值（countThreshold + timeWindowSeconds）、执行动作（action）",
+      "支持的动作：ban_ip（封禁 IP）、ban_user（封禁用户）、notify（发送通知）",
+      "规则状态：可启用/禁用，灵活的规则管理",
+      "【状态流转】rule status: true（启用）↔ false（禁用）；规则触发后按 action 类型执行拦截/通知",
+      "【权限要求】SECURITY_VIEW（bit 19）查看规则列表、SECURITY_ACTION（bit 20）创建/编辑/删除规则",
+      "【数据校验】eventType 必须为合法事件类型（brute_force/unusual_location/new_device 等）；countThreshold ≥ 1（正整数）；timeWindowSeconds ≥ 60；action 必须为 ban_ip/ban_user/notify 之一",
+      "【关联影响】自动规则触发时自动执行 ban_ip 或 ban_user，与手动封禁共享同一底层 Redis 封禁存储",
+      "【触发条件】安全事件发生时，自动规则引擎按顺序匹配规则，满足条件即执行",
+      "【API 端点】GET /admin/security/auto-rules, POST /admin/security/auto-rules, PUT /admin/security/auto-rules/:id, PATCH /admin/security/auto-rules/:id/status, DELETE /admin/security/auto-rules/:id",
+    ],
+    usage: "上线初期配置暴力破解自动封禁规则，减少人工干预。",
+  },
+
+  // ════════════════════════════════════════════
+  //  🛠️ 调试工具
+  // ════════════════════════════════════════════
+
+  "admin/playground": {
+    title: "在线调试",
+    summary: "管理员在线测试模型转发连通性，展示链路追踪（_chain）和调试信息。",
+    details: [
+      "调试模式：请求不计费，可验证模型路由和供应商连通性",
+      "链路追踪（_chain）：展示请求经过的路由步骤、供应商选择、熔断状态等",
+      "支持 System Prompt 设置，模拟真实调用场景",
+      "展示详细的 Usage 统计和响应延迟",
+      "【状态流转】N/A（调试工具，无状态变更）",
+      "【权限要求】仅管理员（admin/super_admin）可见",
+      "【数据校验】model 必填，messages 至少含一条 user 消息",
+      "【关联影响】调试请求不计费，不会写入 call_logs",
+      "【API 端点】POST /api/v1/playground/chat/completions",
+    ],
+    usage: "新增供应商或模型后在此测试连通性；排查调用异常时验证请求链路。",
+  },
+
+  // ════════════════════════════════════════════
+  //  ⚙️ 运维配置（续）
+  // ════════════════════════════════════════════
+
+  "admin/site-settings": {
+    title: "站点设置",
+    summary: "集中管理平台各项系统配置，包括基本设置、邮件配置、安全参数、API 参数和计费配置。",
+    details: [
+      "基本设置：站点名称、联系邮箱、注册开关、维护模式等",
+      "邮件配置：SMTP 服务器、发件人地址、邮件发送参数",
+      "安全参数：密码策略、登录保护、会话超时等",
+      "API 参数：API 调用限制、超时时间、Token 上限等",
+      "计费配置：定价倍率、默认折扣率、企业折扣率等",
+      "【状态流转】N/A（配置即时生效，无状态流转）",
+      "【权限要求】CONFIG_VIEW（bit 17）查看配置、CONFIG_EDIT（bit 18）编辑配置",
+      "【数据校验】各配置项按 key 类型进行格式校验（邮箱、URL、数字范围等）",
+      "【关联影响】维护模式影响全站 API 访问；定价倍率影响所有模型的售价计算",
+      "【触发条件】系统上线前配置基本参数，日常按需修改",
+      "【API 端点】GET /admin/configs, PATCH /admin/configs/:key（通过系统配置 API 管理）",
+    ],
+    usage: "系统上线前逐项配置基本参数，日常维护时调整邮件和安全策略。",
+  },
 }
 
 // 自动注册到全局

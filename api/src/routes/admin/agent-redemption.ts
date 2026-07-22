@@ -75,86 +75,90 @@ export async function adminAgentRedemptionRoutes(app: FastifyInstance) {
         return;
       }
 
-      // ── 2. 查出每个代理的批次汇总 ──
+      // ── 2. 【优化】一次性查询所有代理的批次汇总（消除 N+1）──
+      // 批量查询：按 creator_id 分组聚合
+      const userIds = allAgents.map(a => a.userId);
+      const batchAggregates = await db
+        .select({
+          creatorId: redemptionBatches.creatorId,
+          batchCount: sql<number>`count(*)::int`,
+          totalIssued: sql<number>`coalesce(sum(${redemptionBatches.totalCount}), 0)::int`,
+          totalUsed: sql<number>`coalesce(sum(${redemptionBatches.usedCount}), 0)::int`,
+        })
+        .from(redemptionBatches)
+        .where(sql`${redemptionBatches.creatorId} = ANY(ARRAY[${sql.join(userIds.map(id => sql`${id}::int`), sql`, `)}])`)
+        .groupBy(redemptionBatches.creatorId);
+
       const agentBatchMap = new Map<number, {
         batchCount: number;
         totalIssued: number;
         totalUsed: number;
       }>();
-
+      // 初始化所有代理为 0
       for (const agent of allAgents) {
-        // 该代理创建的批次
-        const [batchAgg] = await db
-          .select({
-            batchCount: sql<number>`count(*)::int`,
-            totalIssued: sql<number>`coalesce(sum(${redemptionBatches.totalCount}), 0)::int`,
-            totalUsed: sql<number>`coalesce(sum(${redemptionBatches.usedCount}), 0)::int`,
-          })
-          .from(redemptionBatches)
-          .where(eq(redemptionBatches.creatorId, agent.userId));
-
-        agentBatchMap.set(agent.agentId, {
-          batchCount: batchAgg?.batchCount ?? 0,
-          totalIssued: batchAgg?.totalIssued ?? 0,
-          totalUsed: batchAgg?.totalUsed ?? 0,
-        });
+        agentBatchMap.set(agent.agentId, { batchCount: 0, totalIssued: 0, totalUsed: 0 });
+      }
+      // 填充有批次的代理数据
+      for (const agg of batchAggregates) {
+        const agent = allAgents.find(a => a.userId === agg.creatorId);
+        if (agent) {
+          agentBatchMap.set(agent.agentId, {
+            batchCount: agg.batchCount,
+            totalIssued: agg.totalIssued,
+            totalUsed: agg.totalUsed,
+          });
+        }
       }
 
-      // ── 3. 查出每个代理的充值带动金额（revenueDriven）──
-      // 通过兑换记录所关联的用户，统计这些用户在兑换之后的充值总额（简化版：查该代理发放的码对应的 user 的充值订单）
-      // 更精确的做法：通过 redemption_logs 找到所有使用了该代理码的用户，查这些用户的充值记录
+      // ── 3. 【优化】一次性查询所有代理的充值带动金额（消除 N+1）──
+      // 通过 redemption_logs -> redemption_batches 关联，按批次创建者聚合
+      const revenueAggregates = await db
+        .select({
+          creatorId: redemptionBatches.creatorId,
+          totalAmount: sql<string>`coalesce(sum(${redemptionLogs.amount}), '0')`,
+        })
+        .from(redemptionLogs)
+        .innerJoin(redemptionBatches, eq(redemptionLogs.batchId, redemptionBatches.id))
+        .where(sql`${redemptionBatches.creatorId} = ANY(ARRAY[${sql.join(userIds.map(id => sql`${id}::int`), sql`, `)}])`)
+        .groupBy(redemptionBatches.creatorId);
+
       const revenueMap = new Map<number, number>();
-
       for (const agent of allAgents) {
-        // 找出该代理创建的所有批次 ID
-        const agentBatches = await db
-          .select({ id: redemptionBatches.id })
-          .from(redemptionBatches)
-          .where(eq(redemptionBatches.creatorId, agent.userId));
-
-        const batchIds = agentBatches.map(b => b.id);
-        if (batchIds.length === 0) {
-          revenueMap.set(agent.agentId, 0);
-          continue;
-        }
-
-        // 查使用了这些批次码的用户
-        const batchIdArr = batchIds.map(id => sql`${id}::int`);
-        const redeemUsers = await db
-          .select({
-            userId: redemptionLogs.userId,
-            amount: sql<string>`coalesce(sum(${redemptionLogs.amount}), '0')`,
-          })
-          .from(redemptionLogs)
-          .where(sql`${redemptionLogs.batchId} = ANY(ARRAY[${sql.join(batchIdArr, sql`, `)}])`)
-          .groupBy(redemptionLogs.userId);
-
-        // 简化：将兑换金额×系数作为"带动充值"估算
-        // 实际项目中可以查这些用户兑换后的充值总额
-        let revenue = 0;
-        for (const ru of redeemUsers) {
-          const redeemAmount = parseFloat(ru.amount);
+        revenueMap.set(agent.agentId, 0);
+      }
+      for (const rev of revenueAggregates) {
+        const agent = allAgents.find(a => a.userId === rev.creatorId);
+        if (agent) {
           // 带动充值按兑换金额 × 1.5 估算（用户获得免费额度后，额外充值）
-          // 如果有 rechargeOrders 可精确查询
-          revenue += Math.round(redeemAmount * 150); // amount 是元×10^6，转分为×100，乘以1.5
+          const redeemAmount = parseFloat(rev.totalAmount);
+          revenueMap.set(agent.agentId, Math.round(redeemAmount * 150));
         }
-        revenueMap.set(agent.agentId, revenue);
       }
 
-      // ── 4. 异常标记统计（用于风险等级判定）──
+      // ── 4. 【优化】一次性查询所有批次数据，在内存中计算异常（消除 N+1）──
+      // 拉取所有批次，按 creator_id 分组后在内存计算异常
+      const allBatches = await db
+        .select({
+          creatorId: redemptionBatches.creatorId,
+          totalCount: redemptionBatches.totalCount,
+          usedCount: redemptionBatches.usedCount,
+          createdAt: redemptionBatches.createdAt,
+        })
+        .from(redemptionBatches)
+        .where(sql`${redemptionBatches.creatorId} = ANY(ARRAY[${sql.join(userIds.map(id => sql`${id}::int`), sql`, `)}])`)
+        .orderBy(redemptionBatches.creatorId, redemptionBatches.createdAt);
+
+      // 按 creatorId 分组
+      const batchesByCreator = new Map<number, typeof allBatches>();
+      for (const batch of allBatches) {
+        const list = batchesByCreator.get(batch.creatorId) ?? [];
+        list.push(batch);
+        batchesByCreator.set(batch.creatorId, list);
+      }
+
       const anomalyMap = new Map<number, number>();
-
       for (const agent of allAgents) {
-        const batches = await db
-          .select({
-            totalCount: redemptionBatches.totalCount,
-            usedCount: redemptionBatches.usedCount,
-            createdAt: redemptionBatches.createdAt,
-          })
-          .from(redemptionBatches)
-          .where(eq(redemptionBatches.creatorId, agent.userId))
-          .orderBy(redemptionBatches.createdAt);
-
+        const batches = batchesByCreator.get(agent.userId) ?? [];
         let anomalyCount = 0;
         for (let i = 1; i < batches.length; i++) {
           const prev = batches[i - 1];
@@ -679,36 +683,43 @@ export async function adminAgentRedemptionRoutes(app: FastifyInstance) {
         .where(eq(redemptionLogs.codeId, codeId))
         .orderBy(redemptionLogs.createdAt);
 
-      // ── 3. 兑换前后余额 ──
-      const redeemRecordsWithBalance = await Promise.all(
-        redeemRecords.map(async (rec) => {
-          // 查兑换前后余额
-          const beforeLog = await db
-            .select({ balanceAfter: balanceLogs.balanceAfter })
-            .from(balanceLogs)
-            .where(
-              and(
-                eq(balanceLogs.userId, rec.userId),
-                eq(balanceLogs.refType, "redemption_code"),
-                eq(balanceLogs.refId, sql`${codeId}::int`)
-              )
-            )
-            .limit(1);
-
-          // 兑换前的余额 = 兑换后的余额 - 兑换金额
-          const afterBalance = beforeLog.length > 0 ? parseFloat(beforeLog[0].balanceAfter as string) : 0;
-          const redeemAmount = parseFloat(rec.amount as string);
-          const beforeBalance = afterBalance - redeemAmount;
-
-          return {
-            ...rec,
-            amount: rec.amount,
-            balanceBefore: beforeBalance.toFixed(6),
-            balanceAfter: afterBalance.toFixed(6),
-            createdAt: rec.createdAt.toISOString(),
-          };
+      // ── 3. 【优化】兑换前后余额（批量查询消除 N+1）──
+      // 先批量查询所有相关用户的余额日志
+      const userIdsForBalance = [...new Set(redeemRecords.map(r => r.userId))];
+      const allBalanceLogs = await db
+        .select({
+          userId: balanceLogs.userId,
+          refId: balanceLogs.refId,
+          balanceAfter: balanceLogs.balanceAfter,
         })
-      );
+        .from(balanceLogs)
+        .where(
+          and(
+            sql`${balanceLogs.userId} = ANY(ARRAY[${sql.join(userIdsForBalance.map(id => sql`${id}::int`), sql`, `)}])`,
+            eq(balanceLogs.refType, "redemption_code"),
+            eq(balanceLogs.refId, sql`${codeId}::int`)
+          )
+        );
+
+      // 构建 userId -> balanceAfter 映射
+      const balanceMap = new Map<number, string>();
+      for (const bl of allBalanceLogs) {
+        balanceMap.set(bl.userId, bl.balanceAfter as string);
+      }
+
+      const redeemRecordsWithBalance = redeemRecords.map((rec) => {
+        const afterBalance = balanceMap.has(rec.userId) ? parseFloat(balanceMap.get(rec.userId)!) : 0;
+        const redeemAmount = parseFloat(rec.amount as string);
+        const beforeBalance = afterBalance - redeemAmount;
+
+        return {
+          ...rec,
+          amount: rec.amount,
+          balanceBefore: beforeBalance.toFixed(6),
+          balanceAfter: afterBalance.toFixed(6),
+          createdAt: rec.createdAt.toISOString(),
+        };
+      });
 
       // ── 4. 用户后续行为（兑换后 7 天 / 30 天消费和充值金额）──
       let userPostBehavior: Record<string, any> = {};

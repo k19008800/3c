@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { get, post, put, del } from '@/lib/api'
 import { Loader2, Plus } from 'lucide-react'
+import FeatureDescription from '@/components/admin/FeatureDescription'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import type { AutoRule, RuleFormData } from './security-rules/types'
 import { emptyForm } from './security-rules/types'
@@ -110,6 +111,7 @@ export default function SecurityAutoRules() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-slate-900">自动处置规则</h1>
+          <FeatureDescription page="admin/security/auto-rules" className="ml-2" />
           <p className="text-sm text-slate-500 mt-1">
             配置安全事件的自动响应规则，支持按事件类型+触发条件自动执行封禁/通知等操作
           </p>

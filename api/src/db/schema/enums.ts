@@ -259,3 +259,18 @@ export const adminApiKeyStatusEnum = pgEnum("admin_api_key_status", [
 
 export const quotaTypeEnum = pgEnum("quota_type", ["monthly", "total", "per_key"]);
 export const setByRoleEnum = pgEnum("set_by_role", ["agent", "admin"]);
+
+// ── 提示词审计 ──
+
+export const auditStatusEnum = pgEnum("audit_status", [
+  "pending",    // 待审核
+  "reviewed",   // 已审核正常
+  "flagged",    // 已标记异常
+  "ignored",    // 已忽略
+]);
+export const responseStatusEnum = pgEnum("response_status", [
+  "success",
+  "error",
+  "filtered",
+  "timeout",
+]);

@@ -27,11 +27,12 @@ export async function charge(input: BillingInput): Promise<BillingResult> {
     const actualInputPrice = keySellPriceInput != null ? keySellPriceInput : prices.sellPriceInput;
     const actualOutputPrice = keySellPriceOutput != null ? keySellPriceOutput : prices.sellPriceOutput;
 
-    const multiplier = await getPricingMultiplier();
+    // 全局倍率已在 sync 阶段应用到 sellPrice，此处不再重复应用
+    // 修复：移除 multiplier，避免倍率被应用两次（sync × charge）
     const discountRate = await getDiscountRate(input.userId);
     // 价格单位为 元/百万tokens，÷1,000,000 得到 元/token
-const rawCost = (input.promptTokens * actualInputPrice + input.completionTokens * actualOutputPrice) / 1_000_000;
-    const discountedCost = rawCost * multiplier * discountRate;
+    const rawCost = (input.promptTokens * actualInputPrice + input.completionTokens * actualOutputPrice) / 1_000_000;
+    const discountedCost = rawCost * discountRate;
     const costStr = discountedCost.toFixed(6);
 
     const [user] = await tx.select({ balance: users.balance, userType: users.userType, status: users.status, disabledUntil: users.disabledUntil })

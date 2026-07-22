@@ -61,7 +61,11 @@ function buildHourRanges(startDate: Date, endDate: Date): { label: string; start
   cursor.setMinutes(0, 0, 0);
   while (cursor < endDate) {
     const hourEnd = new Date(cursor.getTime() + 3600000);
-    const label = cursor.toISOString().slice(0, 13).replace("T", " ") + ":00";
+    // 生成北京时间标签（UTC +8）
+    const utcHour = cursor.getUTCHours();
+    const beijingHour = (utcHour + 8) % 24;
+    const datePart = cursor.toISOString().slice(0, 10);
+    const label = `${datePart} ${beijingHour.toString().padStart(2, '0')}:00`;
     ranges.push({ label, start: new Date(cursor), end: hourEnd });
     cursor.setTime(cursor.getTime() + 3600000);
   }
@@ -131,8 +135,13 @@ async function queryHourSeries(
     .orderBy(sql`date_trunc('hour', ${callLogs.createdAt}) asc`);
 
   const callsMap = new Map<string, any>(hourlyCalls.map((r) => { 
-    // date_trunc ISO → label like "2026-07-14 08:00"
-    const bucket = r.bucket.slice(0, 13).replace("T", " ") + ":00";
+    // date_trunc 返回 UTC 时间，需要转换为北京时间
+    // 格式: "2026-07-14 08:00:00+00" → 提取小时并 +8
+    const utcHour = parseInt(r.bucket.slice(11, 13), 10);
+    const beijingHour = (utcHour + 8) % 24;
+    // 重新构造北京时间标签
+    const datePart = r.bucket.slice(0, 10);
+    const bucket = `${datePart} ${beijingHour.toString().padStart(2, '0')}:00`;
     return [bucket, { ...r, bucket }];
   }));
   return callsMap;
@@ -161,19 +170,35 @@ async function queryFlexibleSeries(
     callsMap = await queryHourSeries(db, startDate, endDate, extraFilters);
     hasUserFilter = extraFilters.some((f) => (f as any)?.config?.fieldName === "user_id");
   } else {
-    timeRanges = buildDayRanges(Math.max(1, Math.ceil(rangeHours / 24)));
     // 用原始的 start/end 确保范围准确
+    // 使用本地时间构建日期范围，避免 UTC 时区问题
     timeRanges = [];
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const cursor = new Date(startDate);
+    // 将 cursor 对齐到本地时间的 00:00
     cursor.setHours(0, 0, 0, 0);
     while (cursor < endDate) {
       const dayEnd = new Date(cursor.getTime() + 86400000);
+      // 使用本地日期格式化，避免 UTC 时区问题
+      const label = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
       timeRanges.push({
-        label: cursor.toISOString().slice(0, 10),
+        label,
         start: new Date(cursor),
         end: dayEnd,
       });
       cursor.setTime(cursor.getTime() + 86400000);
+    }
+    // 确保包含今天（如果 endDate 还在今天范围内）
+    // 使用本地日期格式化，避免 UTC 时区问题
+    const todayLabel = `${todayStart.getFullYear()}-${String(todayStart.getMonth() + 1).padStart(2, '0')}-${String(todayStart.getDate()).padStart(2, '0')}`;
+    if (endDate > todayStart && !timeRanges.some(tr => tr.label === todayLabel)) {
+      const todayEnd = new Date(todayStart.getTime() + 86400000);
+      timeRanges.push({
+        label: todayLabel,
+        start: todayStart,
+        end: todayEnd,
+      });
     }
     callsMap = await queryDaySeries(db, startDate, endDate, extraFilters);
     hasUserFilter = extraFilters.some((f) => (f as any)?.config?.fieldName === "user_id");
@@ -268,7 +293,10 @@ function parseTimeRange(query: Record<string, string>): { startDate: Date; endDa
   // 回退到 days 参数
   const days = Math.min(365, Math.max(1, parseInt(query.days ?? "30", 10) || 30));
   const now = new Date();
-  const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days);
+  // days=1 表示"今日"，从今天 00:00 开始；days>1 表示过去 N 天
+  const startDate = days === 1
+    ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    : new Date(now.getFullYear(), now.getMonth(), now.getDate() - days + 1);
   return { startDate, endDate: now, rangeHours: days * 24 };
 }
 
@@ -354,6 +382,7 @@ export async function trendsRoutes(app: FastifyInstance) {
 
     const hourlyCalls = await db
       .select({
+        // 提取 UTC 小时，后续转换为北京时间
         hour: sql<number>`extract(hour from ${callLogs.createdAt})::int`,
         total: sql<number>`count(*)::int`,
         success: sql<number>`count(*) filter (where ${callLogs.status} = 'success')::int`,
@@ -379,7 +408,8 @@ export async function trendsRoutes(app: FastifyInstance) {
       .orderBy(sql`count(*) desc`)
       .limit(10);
 
-    const hourMap = new Map(hourlyCalls.map((r) => [r.hour, r]));
+    // 将 UTC 小时转换为北京时间小时（+8）
+    const hourMap = new Map(hourlyCalls.map((r) => [(r.hour + 8) % 24, r]));
     const hours: {
       hour: number;
       total: number;
@@ -403,7 +433,9 @@ export async function trendsRoutes(app: FastifyInstance) {
     }
 
     const peakHour = hours.reduce((a, b) => (a.total >= b.total ? a : b));
-    const peakHourStart = new Date(dayStart.getTime() + peakHour.hour * 3600000);
+    // peakHour.hour 是北京时间，需要转换回 UTC 来查询数据库
+    const peakHourUtc = (peakHour.hour - 8 + 24) % 24;
+    const peakHourStart = new Date(dayStart.getTime() + peakHourUtc * 3600000);
     const peakHourEnd = new Date(peakHourStart.getTime() + 3600000);
     const peakTopModels = await db
       .select({

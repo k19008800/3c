@@ -796,87 +796,177 @@ export async function adminVendorRoutes(app: FastifyInstance) {
     let skippedMappings = 0;
     let updatedPrices = 0;
 
+    // ── 【优化】批量查询已存在的 models 和 mappings（消除 N+1）──
+    const modelNames = upstreamModels.map(um => um.id?.trim()).filter(Boolean) as string[];
+    const existingModelsList = await db
+      .select({ id: models.id, name: models.name })
+      .from(models)
+      .where(sql`${models.name} = ANY(ARRAY[${sql.join(modelNames.map(n => sql`${n}`), sql`, `)}])`);
+
+    const existingModelsMap = new Map<string, number>();
+    for (const m of existingModelsList) {
+      existingModelsMap.set(m.name, m.id);
+    }
+
+    // 批量查询已存在的 vendor_models 映射
+    const existingMappingsList = existingModelsList.length > 0 ? await db
+      .select({
+        id: vendorModels.id,
+        modelId: vendorModels.modelId,
+        status: vendorModels.status,
+        costPriceInput: vendorModels.costPriceInput,
+        costPriceOutput: vendorModels.costPriceOutput,
+        sellPriceInput: vendorModels.sellPriceInput,
+        sellPriceOutput: vendorModels.sellPriceOutput,
+      })
+      .from(vendorModels)
+      .where(
+        and(
+          eq(vendorModels.vendorId, vendorId),
+          sql`${vendorModels.modelId} = ANY(ARRAY[${sql.join(existingModelsList.map(m => sql`${m.id}::int`), sql`, `)}])`
+        )
+      ) : [];
+
+    const existingMappingsMap = new Map<number, typeof existingMappingsList[0]>();
+    for (const m of existingMappingsList) {
+      existingMappingsMap.set(m.modelId, m);
+    }
+
+    // ── 在内存中处理所有模型 ──
+    const modelsToCreate: { name: string; displayName: string; type: any }[] = [];
+    const mappingsToCreate: typeof vendorModels.$inferInsert[] = [];
+    const mappingsToReenable: { id: number; data: typeof vendorModels.$inferInsert }[] = [];
+    const mappingsToUpdatePrice: { id: number; data: Partial<typeof vendorModels.$inferInsert> }[] = [];
+    const modelIdMap = new Map<string, number>(); // 新创建的 model ID 映射
+
+    // 先处理已存在的 models
+    for (const [name, id] of existingModelsMap) {
+      modelIdMap.set(name, id);
+    }
+
     for (const um of upstreamModels) {
       const modelName = um.id?.trim();
       if (!modelName) continue;
 
       const modelType = guessModelType(modelName);
-
-      // Upsert model
-      let modelId: number;
-      const [existingModel] = await db
-        .select({ id: models.id })
-        .from(models)
-        .where(eq(models.name, modelName))
-        .limit(1);
-
-      if (existingModel) {
-        modelId = existingModel.id;
-        skippedModels++;
-      } else {
-        const [newModel] = await db
-          .insert(models)
-          .values({
-            name: modelName,
-            displayName: modelName,
-            type: modelType as any,
-          })
-          .returning({ id: models.id });
-        modelId = newModel.id;
-        createdModels++;
-      }
-
-      // Check existing mapping
-      const [existingMapping] = await db
-        .select({ id: vendorModels.id, status: vendorModels.status, costPriceInput: vendorModels.costPriceInput, costPriceOutput: vendorModels.costPriceOutput, sellPriceInput: vendorModels.sellPriceInput, sellPriceOutput: vendorModels.sellPriceOutput })
-        .from(vendorModels)
-        .where(sql`${vendorModels.vendorId} = ${vendorId} AND ${vendorModels.modelId} = ${modelId}`)
-        .limit(1);
-
       const prices = getPrices(modelName);
       const sellInput = String((prices.input * pricingMultiplier).toFixed(6));
       const sellOutput = String((prices.output * pricingMultiplier).toFixed(6));
 
+      // 确定 modelId
+      let modelId = modelIdMap.get(modelName);
+      if (!modelId) {
+        // 需要创建新 model（稍后批量创建）
+        modelsToCreate.push({
+          name: modelName,
+          displayName: modelName,
+          type: modelType as any,
+        });
+        skippedModels++; // 这里先计数，实际创建后修正
+        continue; // 稍后处理新 model 的映射
+      }
+
+      // 检查是否已存在映射
+      const existingMapping = existingMappingsMap.get(modelId);
       if (existingMapping) {
-        // 如果已有映射被停用（status=false），重新启用 + 更新凭据/价格
+        // 如果已有映射被停用（status=false），标记重新启用
         if (!existingMapping.status) {
-          await db.update(vendorModels).set({
-            status: true,
-            apiKeyEncrypted: encryptedKey,
-            apiEndpoint,
-            keyGroupId: resolvedKeyGroupId,
-            costPriceInput: String(prices.input),
-            costPriceOutput: String(prices.output),
-            sellPriceInput: sellInput,
-            sellPriceOutput: sellOutput,
-          }).where(eq(vendorModels.id, existingMapping.id));
-          reenabledMappings++;
+          mappingsToReenable.push({
+            id: existingMapping.id,
+            data: {
+              status: true,
+              apiKeyEncrypted: encryptedKey,
+              apiEndpoint,
+              keyGroupId: resolvedKeyGroupId,
+              costPriceInput: String(prices.input),
+              costPriceOutput: String(prices.output),
+              sellPriceInput: sellInput,
+              sellPriceOutput: sellOutput,
+            } as any, // 部分更新，其他字段保持不变
+          });
           continue;
         }
 
-        // Update pricing if existing mapping has zero/outdated prices
+        // 检查是否需要更新价格
         const hasNoPrice = Number(existingMapping.sellPriceInput) === 0 && Number(existingMapping.sellPriceOutput) === 0;
         if (hasNoPrice) {
-          await db.update(vendorModels).set({
-            costPriceInput: String(prices.input), costPriceOutput: String(prices.output),
-            sellPriceInput: sellInput, sellPriceOutput: sellOutput,
-          }).where(eq(vendorModels.id, existingMapping.id));
-          updatedPrices++;
+          mappingsToUpdatePrice.push({
+            id: existingMapping.id,
+            data: {
+              costPriceInput: String(prices.input),
+              costPriceOutput: String(prices.output),
+              sellPriceInput: sellInput,
+              sellPriceOutput: sellOutput,
+            } as any, // 部分更新
+          });
         }
         skippedMappings++;
         continue;
       }
 
-      await db.insert(vendorModels).values({
-        vendorId, modelId, upstreamModelName: modelName, apiEndpoint,
+      // 需要创建新映射
+      mappingsToCreate.push({
+        vendorId,
+        modelId,
+        upstreamModelName: modelName,
+        apiEndpoint,
         apiKeyEncrypted: encryptedKey,
         keyGroupId: resolvedKeyGroupId,
-        costPriceInput: String(prices.input), costPriceOutput: String(prices.output),
-        sellPriceInput: sellInput, sellPriceOutput: sellOutput,
+        costPriceInput: String(prices.input),
+        costPriceOutput: String(prices.output),
+        sellPriceInput: sellInput,
+        sellPriceOutput: sellOutput,
         weight: 100,
       });
-      createdMappings++;
     }
+
+    // ── 批量写入 ──
+    // 批量创建新 models
+    if (modelsToCreate.length > 0) {
+      const newModels = await db.insert(models).values(modelsToCreate).returning({ id: models.id, name: models.name });
+      for (const nm of newModels) {
+        modelIdMap.set(nm.name, nm.id);
+      }
+      createdModels = newModels.length;
+
+      // 为新创建的 models 创建映射
+      for (const nm of newModels) {
+        const prices = getPrices(nm.name);
+        const sellInput = String((prices.input * pricingMultiplier).toFixed(6));
+        const sellOutput = String((prices.output * pricingMultiplier).toFixed(6));
+        mappingsToCreate.push({
+          vendorId,
+          modelId: nm.id,
+          upstreamModelName: nm.name,
+          apiEndpoint,
+          apiKeyEncrypted: encryptedKey,
+          keyGroupId: resolvedKeyGroupId,
+          costPriceInput: String(prices.input),
+          costPriceOutput: String(prices.output),
+          sellPriceInput: sellInput,
+          sellPriceOutput: sellOutput,
+          weight: 100,
+        });
+      }
+    }
+
+    // 批量创建新映射
+    if (mappingsToCreate.length > 0) {
+      await db.insert(vendorModels).values(mappingsToCreate);
+      createdMappings = mappingsToCreate.length;
+    }
+
+    // 批量重新启用映射
+    for (const item of mappingsToReenable) {
+      await db.update(vendorModels).set(item.data).where(eq(vendorModels.id, item.id));
+    }
+    reenabledMappings = mappingsToReenable.length;
+
+    // 批量更新价格
+    for (const item of mappingsToUpdatePrice) {
+      await db.update(vendorModels).set(item.data).where(eq(vendorModels.id, item.id));
+    }
+    updatedPrices = mappingsToUpdatePrice.length;
 
     await db.insert(auditLogs).values({
       operatorId: request.user!.userId,

@@ -373,6 +373,7 @@ export const Perm = {
   OPS_READ:             1n << 25n,
   RECONCILIATION_VIEW:  1n << 26n,
   SECURITY_EDIT:        1n << 27n,
+  AUDIT_REVIEW:         1n << 28n,
 } as const;
 
 // Role -> Permission map
@@ -389,7 +390,7 @@ export const ROLE_PERMISSIONS: Record<string, bigint> = {
     Perm.MODEL_MANAGE | Perm.AGENT_LIST | Perm.AGENT_MANAGE |
     Perm.SECURITY_VIEW | Perm.SECURITY_ACTION |
     Perm.CONFIG_VIEW | Perm.CONFIG_EDIT |
-    Perm.LOG_VIEW | Perm.AUDIT_VIEW |
+    Perm.LOG_VIEW | Perm.AUDIT_VIEW | Perm.AUDIT_REVIEW |
     Perm.FINANCE_VIEW | Perm.FINANCE_COMMISSION |
     Perm.FINANCE_WITHDRAW | Perm.FINANCE_RECHARGE |
     Perm.RECONCILIATION_VIEW,
@@ -423,7 +424,7 @@ export const ROLE_PERMISSIONS: Record<string, bigint> = {
 
   // auditor: 审计员 — 审计日志 + 对账 + 用户查看 + 日志 + 代理商查看
   auditor:
-    Perm.AUDIT_VIEW | Perm.RECONCILIATION_VIEW |
+    Perm.AUDIT_VIEW | Perm.AUDIT_REVIEW | Perm.RECONCILIATION_VIEW |
     Perm.USER_LIST | Perm.USER_VIEW |
     Perm.LOG_VIEW | Perm.AGENT_LIST,
 

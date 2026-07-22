@@ -1,3 +1,5 @@
+import { memo } from 'react'
+
 interface EmptyStateProps {
   icon?: string
   title?: string
@@ -5,7 +7,7 @@ interface EmptyStateProps {
   action?: { label: string; onClick: () => void }
 }
 
-export default function EmptyState({
+function EmptyStateInner({
   icon = '📭',
   title = '暂无数据',
   description,
@@ -33,3 +35,5 @@ export default function EmptyState({
     </tr>
   )
 }
+
+export default memo(EmptyStateInner)

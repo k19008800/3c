@@ -86,13 +86,17 @@ export async function settleCommissions(agentId?: number): Promise<number> {
       }
     });
 
-    // 批量更新凭证号（非事务，可容忍部分失败）
-    for (const [id, no] of voucherMap) {
-      try {
-        await db.update(commissionLogs).set({ voucherNo: no }).where(eq(commissionLogs.id, id));
-      } catch (err) {
-        console.error(`[Voucher] 凭证号更新失败 (id=${id}, no=${no}):`, err);
-      }
+    // 批量更新凭证号（使用 CASE WHEN 批量 UPDATE）
+    if (voucherMap.size > 0) {
+      const idList = Array.from(voucherMap.keys());
+      const caseExpr = idList.map((id, idx) => 
+        `WHEN id = ${id} THEN '${voucherMap.get(id)}'`
+      ).join(' ');
+      await db.execute(sql.raw(`
+        UPDATE commission_logs 
+        SET voucher_no = CASE ${caseExpr} END 
+        WHERE id IN (${idList.join(',')})
+      `));
     }
 
     // PERF: 事务内只做状态更新 + 余额累加，凭证号更新在事务外（可容忍部分失败）

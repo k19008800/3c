@@ -13,26 +13,37 @@ export { DEFAULT_PRICING_MULTIPLIER };
 // 元/百万tokens，计费时系统自动 ÷1,000,000 得到元/token
 
 const KNOWN_PRICES: Record<string, { input: number; output: number }> = {
-  // Claude
-  'claude-opus-4-8':    { input: 104500, output: 522300 },
-  'claude-opus-4.7':    { input: 104500, output: 522300 },
-  'claude-sonnet-5':    { input: 20900, output: 104500 },
-  'claude-sonnet-4.6':  { input: 20900, output: 104500 },
-  'claude-sonnet-4.5':  { input: 20900, output: 104500 },
-  'claude-haiku-4-5':   { input: 5200, output: 26100 },
-  'claude-fable-5':     { input: 20900, output: 104500 },
-  // GPT
-  'gpt-5.4':            { input: 36500, output: 146000 },
-  'gpt-5.5':            { input: 52200, output: 208800 },
-  'gpt-4o':             { input: 15700, output: 62600 },
-  'gpt-4o-mini':        { input: 1000, output: 4200 },
-  // DeepSeek (official prices as of 2026-07)
-  // V4 Flash: 入¥1/百万  出¥2/百万
-  // V4 Pro:   入¥3/百万  出¥6/百万
-  'deepseek-chat':      { input: 1000, output: 2000 },
-  'deepseek-v4-pro':    { input: 3000, output: 6000 },
-  'deepseek-v4-flash':  { input: 1000, output: 2000 },
-  'deepseek-reasoner':  { input: 1000, output: 2000 },
+  // Claude (official prices 2026-07, USD→CNY @7.2)
+  // Opus 4.8: $5/$25 → ¥36/¥180
+  // Sonnet 5: $2/$10 → ¥14/¥72 (intro pricing)
+  // Sonnet 4.6: $3/$15 → ¥22/¥108
+  // Haiku 4.5: $1/$5 → ¥7/¥36
+  // Fable 5: $10/$50 → ¥72/¥360
+  'claude-opus-4-8':    { input: 36, output: 180 },
+  'claude-opus-4.7':    { input: 36, output: 180 },
+  'claude-opus-4.6':    { input: 36, output: 180 },
+  'claude-sonnet-5':    { input: 14, output: 72 },
+  'claude-sonnet-4.6':  { input: 22, output: 108 },
+  'claude-sonnet-4.5':  { input: 22, output: 108 },
+  'claude-haiku-4-5':   { input: 7, output: 36 },
+  'claude-fable-5':     { input: 72, output: 360 },
+  // GPT (official prices 2026-07, USD→CNY @7.2)
+  // GPT-4o: $2.5/$10 → ¥18/¥72
+  // GPT-4o mini: $0.15/$0.6 → ¥1/¥4
+  // GPT-5.5: $5/$30 → ¥36/¥216
+  // GPT-5.4: $2.5/$15 → ¥18/¥108
+  'gpt-5.5':            { input: 36, output: 216 },
+  'gpt-5.4':            { input: 18, output: 108 },
+  'gpt-4o':             { input: 18, output: 72 },
+  'gpt-4o-mini':        { input: 1, output: 4 },
+  // DeepSeek (official prices as of 2026-07, USD→CNY @7.2)
+  // V4 Pro: $0.44/$0.87 → ¥3.17/¥6.26
+  // V4 Flash: $0.09/$0.19 → ¥0.65/¥1.37
+  // V3.2: $0.27/$0.40 → ¥1.94/¥2.88
+  'deepseek-chat':      { input: 194, output: 288 },  // V3.2
+  'deepseek-v4-pro':    { input: 317, output: 626 },
+  'deepseek-v4-flash':  { input: 65, output: 137 },
+  'deepseek-reasoner':  { input: 360, output: 1584 },  // R1: $0.50/$2.20
   // Gemini
   'gemini-2.5-pro':     { input: 8300, output: 33300 },
   'gemini-2.5-flash':   { input: 1500, output: 6000 },

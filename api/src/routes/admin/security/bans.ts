@@ -25,9 +25,21 @@ export async function securityBansRoutes(app: FastifyInstance) {
     const redis = getRedis();
     const db = getDb();
 
+    // 【优化】使用 SCAN 替代 KEYS 避免阻塞
+    const scanKeys = async (pattern: string): Promise<string[]> => {
+      const keys: string[] = [];
+      let cursor = '0';
+      do {
+        const [nextCursor, batch] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        cursor = nextCursor;
+        keys.push(...batch);
+      } while (cursor !== '0');
+      return keys;
+    };
+
     const [ipKeys, userKeys] = await Promise.all([
-      redis.keys("risk:ban:ip:*"),
-      redis.keys("risk:ban:user:*"),
+      scanKeys("risk:ban:ip:*"),
+      scanKeys("risk:ban:user:*"),
     ]);
 
     // IP 封禁详情

@@ -47,6 +47,8 @@ const AdminVendorModels = lazy(() => import('@/pages/admin/VendorModels'))
 const AdminAgents = lazy(() => import('@/pages/admin/Agents'))
 const AdminAgentDetail = lazy(() => import('@/pages/admin/AgentDetail'))
 const AdminLogs = lazy(() => import('@/pages/admin/AdminLogs'))
+const AdminPromptAudit = lazy(() => import('@/pages/admin/PromptAudit'))
+const AdminSensitiveWords = lazy(() => import('@/pages/admin/SensitiveWords'))
 const AdminRechargeOrders = lazy(() => import('@/pages/admin/RechargeOrders'))
 const AdminConfigs = lazy(() => import('@/pages/admin/Configs'))
 const AdminRealNameReview = lazy(() => import('@/pages/admin/RealNameReview'))
@@ -210,6 +212,8 @@ export default function App() {
               <Route path="admin/page-contents" element={withSuspense(<AdminPageContents />)} />
               <Route path="admin/site-settings" element={withSuspense(<AdminSiteSettings />)} />
               <Route path="admin/playground" element={withSuspense(<AdminPlayground />)} />
+              <Route path="admin/prompt-audit" element={withSuspense(<AdminPromptAudit />)} />
+              <Route path="admin/sensitive-words" element={withSuspense(<AdminSensitiveWords />)} />
             </Route>
 
             {/* User routes */}

@@ -3,6 +3,7 @@ import { getDb } from "../../db/index.js";
 import { vendorModels, users, userDiscounts, systemConfigs } from "../../db/schema.js";
 import { AppError } from "../auth-service/index.js";
 import { DEFAULT_PRICING_MULTIPLIER } from "../price-service.js";
+import { LRUCache } from "../../utils/lru-cache.js";
 import type { SellPrices, BillingCacheStats } from "./types.js";
 
 let pricingMultiplierCache: { value: number; expiresAt: number } | null = null;
@@ -19,43 +20,41 @@ export async function getPricingMultiplier(): Promise<number> {
 
 export function clearPricingMultiplierCache() { pricingMultiplierCache = null; }
 
-const discountRateCache = new Map<number, { value: number; expiresAt: number }>();
+const discountRateCache = new LRUCache<number, number>(5000, 60_000); // 最多 5000 用户，60s TTL
 
 export async function getDiscountRate(userId: number): Promise<number> {
-  const now = Date.now();
   const cached = discountRateCache.get(userId);
-  if (cached && now < cached.expiresAt) return cached.value;
+  if (cached !== undefined) return cached;
 
   const db = getDb();
   const [discount] = await db.select({ discountRate: userDiscounts.discountRate }).from(userDiscounts)
     .where(sql`${eq(userDiscounts.userId, userId)} AND ${userDiscounts.effectiveFrom} <= NOW() AND (${userDiscounts.effectiveUntil} IS NULL OR ${userDiscounts.effectiveUntil} > NOW())`).limit(1);
 
-  if (discount) { const value = Number(discount.discountRate); discountRateCache.set(userId, { value, expiresAt: now + 60_000 }); return value; }
+  if (discount) { const value = Number(discount.discountRate); discountRateCache.set(userId, value); return value; }
 
   const [user] = await db.select({ discountRate: users.discountRate, userType: users.userType }).from(users).where(eq(users.id, userId)).limit(1);
-  if (!user) { discountRateCache.set(userId, { value: 1.0, expiresAt: now + 60_000 }); return 1.0; }
-  if (user.discountRate) { const value = Number(user.discountRate); discountRateCache.set(userId, { value, expiresAt: now + 60_000 }); return value; }
+  if (!user) { discountRateCache.set(userId, 1.0); return 1.0; }
+  if (user.discountRate) { const value = Number(user.discountRate); discountRateCache.set(userId, value); return value; }
   if (user.userType === "enterprise") {
     const [cfg] = await db.select({ value: systemConfigs.value }).from(systemConfigs).where(eq(systemConfigs.key, "enterprise_discount_rate")).limit(1);
     const value = cfg ? parseFloat(cfg.value) : 0.95;
-    discountRateCache.set(userId, { value, expiresAt: now + 60_000 }); return value;
+    discountRateCache.set(userId, value); return value;
   }
-  discountRateCache.set(userId, { value: 1.0, expiresAt: now + 60_000 }); return 1.0;
+  discountRateCache.set(userId, 1.0); return 1.0;
 }
 
 export function clearDiscountRateCache(userId?: number) { if (userId !== undefined) discountRateCache.delete(userId); else discountRateCache.clear(); }
 
-const sellPriceCache = new Map<number, { value: SellPrices; expiresAt: number }>();
+const sellPriceCache = new LRUCache<number, SellPrices>(2000, 60_000); // 最多 2000 模型，60s TTL
 
 export async function getSellPrices(vendorModelId: number): Promise<SellPrices> {
-  const now = Date.now();
   const cached = sellPriceCache.get(vendorModelId);
-  if (cached && now < cached.expiresAt) return cached.value;
+  if (cached !== undefined) return cached;
   const db = getDb();
   const [vm] = await db.select({ sellPriceInput: vendorModels.sellPriceInput, sellPriceOutput: vendorModels.sellPriceOutput }).from(vendorModels).where(eq(vendorModels.id, vendorModelId)).limit(1);
   if (!vm) throw new AppError("VENDOR_MODEL_NOT_FOUND", `厂商模型关联 (ID ${vendorModelId}) 不存在`, 404);
   const value: SellPrices = { sellPriceInput: Number(vm.sellPriceInput), sellPriceOutput: Number(vm.sellPriceOutput) };
-  sellPriceCache.set(vendorModelId, { value, expiresAt: now + 60_000 });
+  sellPriceCache.set(vendorModelId, value);
   return value;
 }
 

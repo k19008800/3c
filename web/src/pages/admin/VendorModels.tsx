@@ -60,7 +60,7 @@ export default function AdminVendorModels() {
       setItems(data.list)
       setTotal(data.total)
     } catch (err: any) {
-      setError(err.message || '获取供应商模型映射列表失败')
+      setError(err.message || '获取供应商模型映射列表失�?)
     } finally { setLoading(false) }
   }, [page, pageSize, keyword, vf, mf, sf])
 
@@ -72,7 +72,7 @@ export default function AdminVendorModels() {
       await patch(`/api/v1/admin/vendor-models/${item.id}`, { status: s })
       setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: s } : i))
     } catch (err: any) {
-      setError(err.message || '状态切换失败')
+      setError(err.message || '状态切换失�?)
     }
   }, [])
 
@@ -85,10 +85,10 @@ export default function AdminVendorModels() {
       if (sf) params.status = sf
       const data = await get<PaginatedData<VendorModel>>('/api/v1/admin/vendor-models', params)
       const rows = [
-        ['ID','供应商','模型','上游名称','接口地址','成本价入','成本价出','售价入','售价出','权重','RPM','TPM','健康分','宕机','状态'],
+        ['ID','供应�?,'模型','上游名称','接口地址','成本价入','成本价出','售价�?,'售价�?,'权重','RPM','TPM','健康�?,'宕机','状�?],
         ...data.list.map(i => [i.id, i.vendorName??'', i.modelName??'', i.upstreamModelName, i.apiEndpoint,
           i.costPriceInput, i.costPriceOutput, i.sellPriceInput, i.sellPriceOutput,
-          i.weight, i.rpmLimit??'', i.tpmLimit??'', i.healthScore??'', i.isDown?'是':'否', i.status?'启用':'禁用']),
+          i.weight, i.rpmLimit??'', i.tpmLimit??'', i.healthScore??'', i.isDown?'�?:'�?, i.status?'启用':'禁用']),
       ]
       const bom = '\uFEFF'
       const csv = bom + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
@@ -98,12 +98,12 @@ export default function AdminVendorModels() {
       a.href = url; a.download = `vendor-models-${new Date().toISOString().slice(0, 10)}.csv`
       a.click(); URL.revokeObjectURL(url)
     } catch (err: any) {
-      setError('导出失败：' + (err.message || ''))
+      setError('导出失败�? + (err.message || ''))
     }
   }, [keyword, vf, mf, sf])
 
   const vendorOptions = useMemo(() => [
-    { value: '', label: '全部供应商' },
+    { value: '', label: '全部供应�? },
     ...vendors.map(v => ({ value: String(v.id), label: v.name })),
   ], [vendors])
 
@@ -115,7 +115,7 @@ export default function AdminVendorModels() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">供应商模型映射</h1>
+        <h1 className="text-2xl font-bold text-slate-900">供应商模型映�?/h1>
         <FeatureDescription page="admin/vendor-models" className="ml-2" />
         <div className="flex items-center gap-2">
           <button onClick={handleExport}
@@ -139,9 +139,9 @@ export default function AdminVendorModels() {
         onSearch={fetchItems}
         fields={[
           { key: 'keyword', label: '搜索', type: 'text', placeholder: '搜索供应商、模型或上游名称' },
-          { key: 'vendorId', label: '供应商', type: 'select', options: vendorOptions },
+          { key: 'vendorId', label: '供应�?, type: 'select', options: vendorOptions },
           { key: 'modelId', label: '模型', type: 'select', options: modelOptions },
-          { key: 'status', label: '状态', type: 'select', options: [
+          { key: 'status', label: '状�?, type: 'select', options: [
             { value: '', label: '全部' }, { value: 'true', label: '启用' }, { value: 'false', label: '禁用' },
           ]},
         ]}
@@ -152,7 +152,7 @@ export default function AdminVendorModels() {
         page={page} pageSize={pageSize} total={total} totalPages={totalPages}
         onEdit={setEditItem} onDelete={setDeleteItem} onToggleStatus={toggleStatus}
         onPageChange={p => setFilter('page', p)}
-        onPageSizeChange={s => setFilters({ pageSize: s, page: 1 })}
+        onPageSizeChange={s => setFilters({ pageSize: s })}
       />
 
       {showCreate && (

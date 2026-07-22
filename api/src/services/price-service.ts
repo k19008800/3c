@@ -340,16 +340,22 @@ export async function updatePricingMultiplier(
       }
     }
 
-    // 4) 批量 UPDATE vendor_models.sell_price
-    for (const u of updateData) {
-      await tx
-        .update(vendorModels)
-        .set({
-          sellPriceInput: u.newInput,
-          sellPriceOutput: u.newOutput,
-          updatedAt: new Date(),
-        })
-        .where(eq(vendorModels.id, u.id));
+    // 4) 【优化】批量 UPDATE vendor_models.sell_price（使用 CASE WHEN 替代循环）
+    if (updateData.length > 0) {
+      // PostgreSQL 支持批量 UPDATE with CASE WHEN
+      const idList = updateData.map(u => u.id);
+      const inputCases = updateData.map(u => `WHEN id = ${u.id} THEN '${u.newInput}'`).join(' ');
+      const outputCases = updateData.map(u => `WHEN id = ${u.id} THEN '${u.newOutput}'`).join(' ');
+      const idListStr = idList.join(',');
+
+      await tx.execute(sql`
+        UPDATE vendor_models
+        SET
+          sell_price_input = CASE ${sql.raw(inputCases)} END,
+          sell_price_output = CASE ${sql.raw(outputCases)} END,
+          updated_at = NOW()
+        WHERE id IN (${sql.raw(idListStr)})
+      `);
     }
 
     // 5) 写倍率变更历史

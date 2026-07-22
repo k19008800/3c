@@ -37,6 +37,8 @@ interface FilterBarProps {
   extra?: React.ReactNode
   /** 搜索时按回车触发（仅 text 类型） */
   onSearch?: () => void
+  /** 筛选条件变化时触发（用于重置页码等） */
+  onFilterChange?: () => void
 }
 
 export default function FilterBar({
@@ -47,10 +49,12 @@ export default function FilterBar({
   fields,
   extra,
   onSearch,
+  onFilterChange,
 }: FilterBarProps) {
   // 处理 text 类型按回车
   const handleKeyDown = (e: React.KeyboardEvent, key: string) => {
     if (e.key === 'Enter') {
+      // 移除 onFilterChange 调用，setFilter 已自动处理页码重置
       if (onSearch) {
         onSearch()
       } else {
@@ -100,7 +104,11 @@ export default function FilterBar({
                 <label className="block text-xs text-slate-500 mb-1">{field.label}</label>
                 <select
                   value={value}
-                  onChange={(e) => setFilter(field.key, e.target.value)}
+                  onChange={(e) => {
+                    setFilter(field.key, e.target.value)
+                    // 移除 onFilterChange 调用，避免重复调用
+                    // setFilter 已自动处理页码重置
+                  }}
                   className="px-3 py-2 border border-slate-300 rounded-lg text-sm 
                              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400
                              transition-colors min-w-[120px]"
@@ -122,7 +130,10 @@ export default function FilterBar({
                 <input
                   type="number"
                   value={value}
-                  onChange={(e) => setFilter(field.key, e.target.value ? Number(e.target.value) : '')}
+                  onChange={(e) => {
+                    setFilter(field.key, e.target.value ? Number(e.target.value) : '')
+                    // 移除 onFilterChange 调用，setFilter 已自动处理页码重置
+                  }}
                   placeholder={field.placeholder}
                   className="px-3 py-2 border border-slate-300 rounded-lg text-sm w-24
                              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400

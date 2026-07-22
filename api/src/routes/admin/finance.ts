@@ -1082,84 +1082,122 @@ export async function adminFinanceRoutes(app: FastifyInstance) {
 
     const results = { confirmed: 0, rejected: 0, errors: [] as { id: number; message: string }[] };
 
+    // ── 【优化】先批量查询所有订单（消除 N+1）──
+    const orders = await db
+      .select()
+      .from(rechargeOrders)
+      .where(sql`${rechargeOrders.id} = ANY(ARRAY[${sql.join(body.ids.map(id => sql`${id}::int`), sql`, `)}])`);
+
+    // 构建 id -> order 映射
+    const orderMap = new Map<number, typeof orders[0]>();
+    for (const order of orders) {
+      orderMap.set(order.id, order);
+    }
+
+    const isSecondReview = body.isSecond === true;
+    const ip = request.ip;
+
+    // ── 在内存中验证和分组 ──
+    const validOrders: typeof orders = [];
+    const invalidOrders: { id: number; message: string }[] = [];
+
     for (const orderId of body.ids) {
-      try {
-        const [order] = await db
-          .select()
-          .from(rechargeOrders)
-          .where(eq(rechargeOrders.id, orderId))
-          .limit(1);
+      const order = orderMap.get(orderId);
+      if (!order) {
+        invalidOrders.push({ id: orderId, message: "订单不存在" });
+        continue;
+      }
+      if (order.channel !== "bank_transfer") {
+        invalidOrders.push({ id: orderId, message: `订单 ${order.orderNo} 非对公转账` });
+        continue;
+      }
 
-        if (!order) {
-          results.errors.push({ id: orderId, message: "订单不存在" });
+      if (isSecondReview) {
+        // 复审验证
+        if (!order.firstConfirmedBy) {
+          invalidOrders.push({ id: orderId, message: `订单 ${order.orderNo} 尚未初审` });
           continue;
         }
-        if (order.channel !== "bank_transfer") {
-          results.errors.push({ id: orderId, message: `订单 ${order.orderNo} 非对公转账` });
+        if (order.secondConfirmedBy || order.status !== "pending") {
+          invalidOrders.push({ id: orderId, message: `订单 ${order.orderNo} 状态无法复审` });
           continue;
         }
+      } else {
+        // 初审验证
+        if (order.firstConfirmedBy) {
+          invalidOrders.push({ id: orderId, message: `订单 ${order.orderNo} 已初审` });
+          continue;
+        }
+        if (order.status !== "pending") {
+          invalidOrders.push({ id: orderId, message: `订单 ${order.orderNo} 状态无法初审` });
+          continue;
+        }
+      }
 
-        const isSecondReview = body.isSecond === true;
+      validOrders.push(order);
+    }
 
-        if (isSecondReview) {
-          // 批量复审
-          if (!order.firstConfirmedBy) {
-            results.errors.push({ id: orderId, message: `订单 ${order.orderNo} 尚未初审` });
-            continue;
-          }
-          if (order.secondConfirmedBy || order.status !== "pending") {
-            results.errors.push({ id: orderId, message: `订单 ${order.orderNo} 状态无法复审` });
-            continue;
-          }
+    results.errors = invalidOrders;
 
-          if (body.action === "confirm") {
-            const voucherNo = await generateVoucherNo('C');
-            await db.transaction(async (tx) => {
-              await tx
-                .update(rechargeOrders)
-                .set({
-                  status: "confirmed",
-                  secondConfirmedBy: operatorId,
-                  secondConfirmedAt: new Date(),
-                  confirmedBy: operatorId,
-                  confirmedAt: new Date(),
-                  voucherNo,
-                })
-                .where(eq(rechargeOrders.id, orderId));
+    // ── 批量处理有效订单 ──
+    if (validOrders.length > 0) {
+      if (isSecondReview) {
+        if (body.action === "confirm") {
+          // ── 复审确认：需要逐个处理（因为涉及余额更新和佣金计算）──
+          for (const order of validOrders) {
+            try {
+              const voucherNo = await generateVoucherNo('C');
+              await db.transaction(async (tx) => {
+                await tx
+                  .update(rechargeOrders)
+                  .set({
+                    status: "confirmed",
+                    secondConfirmedBy: operatorId,
+                    secondConfirmedAt: new Date(),
+                    confirmedBy: operatorId,
+                    confirmedAt: new Date(),
+                    voucherNo,
+                  })
+                  .where(eq(rechargeOrders.id, order.id));
 
-              await tx
-                .update(users)
-                .set({ balance: sql`${users.balance} + ${order.amount}` })
-                .where(eq(users.id, order.userId));
+                await tx
+                  .update(users)
+                  .set({ balance: sql`${users.balance} + ${order.amount}` })
+                  .where(eq(users.id, order.userId));
 
-              await tx.insert(balanceLogs).values({
-                userId: order.userId,
-                amount: order.amount,
-                balanceAfter: sql`(SELECT balance FROM ${users} WHERE id = ${order.userId})`,
-                type: "recharge",
-                refType: "recharge",
-                refId: order.id,
-                description: `对公转账批量到账 / ${order.orderNo} / 凭证 ${voucherNo}`,
+                await tx.insert(balanceLogs).values({
+                  userId: order.userId,
+                  amount: order.amount,
+                  balanceAfter: sql`(SELECT balance FROM ${users} WHERE id = ${order.userId})`,
+                  type: "recharge",
+                  refType: "recharge",
+                  refId: order.id,
+                  description: `对公转账批量到账 / ${order.orderNo} / 凭证 ${voucherNo}`,
+                });
+
+                const { processRenewalCommission } = await import("../../services/billing/index.js");
+                await processRenewalCommission(tx, order.userId, order.id, order.amount, order.orderNo);
+
+                await tx.insert(auditLogs).values({
+                  operatorId,
+                  action: "recharge_second_confirm",
+                  targetType: "recharge_orders",
+                  targetId: order.id,
+                  before: { status: "pending", first_confirmed: true },
+                  after: { status: "confirmed", voucherNo },
+                  ip,
+                  description: `批量复审确认 #${order.id} (${order.orderNo})`,
+                });
               });
-
-              const { processRenewalCommission } = await import("../../services/billing/index.js");
-              await processRenewalCommission(tx, order.userId, order.id, order.amount, order.orderNo);
-
-              await tx.insert(auditLogs).values({
-                operatorId,
-                action: "recharge_second_confirm",
-                targetType: "recharge_orders",
-                targetId: orderId,
-                before: { status: "pending", first_confirmed: true },
-                after: { status: "confirmed", voucherNo },
-                ip: request.ip,
-                description: `批量复审确认 #${orderId} (${order.orderNo})`,
-              });
-            });
-            results.confirmed++;
-          } else {
-            // 批量复审拒绝
-            await db.transaction(async (tx) => {
+              results.confirmed++;
+            } catch (err: any) {
+              results.errors.push({ id: order.id, message: err.message || "处理失败" });
+            }
+          }
+        } else {
+          // ── 复审拒绝：可批量处理 ──
+          await db.transaction(async (tx) => {
+            for (const order of validOrders) {
               await tx
                 .update(rechargeOrders)
                 .set({
@@ -1168,33 +1206,26 @@ export async function adminFinanceRoutes(app: FastifyInstance) {
                   secondConfirmedAt: new Date(),
                   remark: body.rejectReason || "批量复审拒绝",
                 })
-                .where(eq(rechargeOrders.id, orderId));
+                .where(eq(rechargeOrders.id, order.id));
 
               await tx.insert(auditLogs).values({
                 operatorId,
                 action: "order_cancel",
                 targetType: "recharge_orders",
-                targetId: orderId,
+                targetId: order.id,
                 before: { status: "pending", first_confirmed: true },
                 after: { status: "cancelled" },
-                ip: request.ip,
-                description: `批量复审拒绝 #${orderId}: ${body.rejectReason ?? "无原因"}`,
+                ip,
+                description: `批量复审拒绝 #${order.id}: ${body.rejectReason ?? "无原因"}`,
               });
-            });
-            results.rejected++;
-          }
-        } else {
-          // 批量初审
-          if (order.firstConfirmedBy) {
-            results.errors.push({ id: orderId, message: `订单 ${order.orderNo} 已初审` });
-            continue;
-          }
-          if (order.status !== "pending") {
-            results.errors.push({ id: orderId, message: `订单 ${order.orderNo} 状态无法初审` });
-            continue;
-          }
-
-          await db.transaction(async (tx) => {
+            }
+          });
+          results.rejected = validOrders.length;
+        }
+      } else {
+        // ── 初审：可批量处理（不涉及余额变更）──
+        await db.transaction(async (tx) => {
+          for (const order of validOrders) {
             if (body.action === "confirm") {
               await tx
                 .update(rechargeOrders)
@@ -1202,17 +1233,17 @@ export async function adminFinanceRoutes(app: FastifyInstance) {
                   firstConfirmedBy: operatorId,
                   firstConfirmedAt: new Date(),
                 })
-                .where(eq(rechargeOrders.id, orderId));
+                .where(eq(rechargeOrders.id, order.id));
 
               await tx.insert(auditLogs).values({
                 operatorId,
                 action: "recharge_first_confirm",
                 targetType: "recharge_orders",
-                targetId: orderId,
+                targetId: order.id,
                 before: { status: "pending" },
                 after: { first_confirmed: true },
-                ip: request.ip,
-                description: `批量初审确认 #${orderId} (${order.orderNo})`,
+                ip,
+                description: `批量初审确认 #${order.id} (${order.orderNo})`,
               });
             } else {
               await tx
@@ -1221,25 +1252,23 @@ export async function adminFinanceRoutes(app: FastifyInstance) {
                   status: "cancelled",
                   remark: body.rejectReason || "批量初审拒绝",
                 })
-                .where(eq(rechargeOrders.id, orderId));
+                .where(eq(rechargeOrders.id, order.id));
 
               await tx.insert(auditLogs).values({
                 operatorId,
                 action: "order_cancel",
                 targetType: "recharge_orders",
-                targetId: orderId,
+                targetId: order.id,
                 before: { status: "pending" },
                 after: { status: "cancelled" },
-                ip: request.ip,
-                description: `批量初审拒绝 #${orderId}: ${body.rejectReason ?? "无原因"}`,
+                ip,
+                description: `批量初审拒绝 #${order.id}: ${body.rejectReason ?? "无原因"}`,
               });
             }
-          });
-          if (body.action === "confirm") results.confirmed++;
-          else results.rejected++;
-        }
-      } catch (err: any) {
-        results.errors.push({ id: orderId, message: err.message || "未知错误" });
+          }
+        });
+        if (body.action === "confirm") results.confirmed = validOrders.length;
+        else results.rejected = validOrders.length;
       }
     }
 

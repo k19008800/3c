@@ -193,17 +193,20 @@ export async function getUnacknowledgedHighRiskCount(): Promise<number> {
 
 export async function getBannedIpCount(): Promise<number> {
   const redis = (await import("../redis.js")).getRedis();
-  // 扫描 risk:ban:ip:* 前缀
-  const keys = await redis.keys("risk:ban:ip:*");
-  return keys.length;
+  // 【优化】使用 SCAN 替代 KEYS
+  let count = 0, cursor = '0';
+  do { const [nc, batch] = await redis.scan(cursor, 'MATCH', 'risk:ban:ip:*', 'COUNT', 100); cursor = nc; count += batch.length; } while (cursor !== '0');
+  return count;
 }
 
 // ── 获取当前封禁中的用户数 ──
 
 export async function getBannedUserCount(): Promise<number> {
   const redis = (await import("../redis.js")).getRedis();
-  const keys = await redis.keys("risk:ban:user:*");
-  return keys.length;
+  // 【优化】使用 SCAN 替代 KEYS
+  let count = 0, cursor = '0';
+  do { const [nc, batch] = await redis.scan(cursor, 'MATCH', 'risk:ban:user:*', 'COUNT', 100); cursor = nc; count += batch.length; } while (cursor !== '0');
+  return count;
 }
 
 // ── 导出配置读取函数别名 ──

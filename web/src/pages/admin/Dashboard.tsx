@@ -49,7 +49,7 @@ export default function AdminDashboard() {
         get<{ series: DaySeries[] }>('/api/v1/admin/dashboard/trends', { days }),
       ])
       setStats(s)
-      setSummary(summaryData?.data || summaryData)
+      setSummary(summaryData)
       setRevenue(r)
       setTopConsumers(tc)
       setTodoQueue(tq)
@@ -84,7 +84,7 @@ export default function AdminDashboard() {
           <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />刷新
         </button>
       </div>
-      <SummaryBar data={summary} />
+      <SummaryBar data={summary?.stats ?? summary} />
       <QuickActions />
       {summary?.recentAnomalies?.length > 0 && (
         <div className="bg-white rounded-xl p-4 shadow-sm border border-red-100">

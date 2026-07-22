@@ -105,11 +105,17 @@ export async function clearPermissionCache(userId: number): Promise<void> {
 }
 
 /**
- * 清除所有用户的权限缓存
+ * 清除所有用户的权限缓存（【优化】使用 SCAN 替代 KEYS）
  */
 export async function clearAllPermissionCache(): Promise<void> {
   const redis = getRedis();
-  const keys = await redis.keys("perm:user:*");
+  let cursor = '0';
+  const keys: string[] = [];
+  do {
+    const [nextCursor, batch] = await redis.scan(cursor, 'MATCH', 'perm:user:*', 'COUNT', 100);
+    cursor = nextCursor;
+    keys.push(...batch);
+  } while (cursor !== '0');
   if (keys.length > 0) await redis.del(keys);
 }
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { RotateCcw, Search, CheckCircle, XCircle } from 'lucide-react';
 import PaginationBar from '@/components/ui/PaginationBar';
 import FeatureDescription from '@/components/admin/FeatureDescription';
-import api from '@/lib/api';
+import api, { get, post } from '@/lib/api';
 
 interface Refund {
   id: number;
@@ -38,19 +38,22 @@ const AdminRefunds: React.FC = () => {
   const [search, setSearch] = useState('');
   const [pagination, setPagination] = useState<PaginationMeta>({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [rejectModal, setRejectModal] = useState<{ id: number; reason: string } | null>(null);
 
   const fetchRefunds = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const res = await api.get('/api/v1/admin/finance/refunds', {
-        params: { page, pageSize: 20, search },
+      const data = await get<{ list: Refund[]; page: number; pageSize: number; total: number }>(
+        '/api/v1/admin/finance/refunds',
+        { page, pageSize: 20, search }
+      );
+      setRefunds(data.list ?? []);
+      setPagination({
+        page: data.page,
+        pageSize: data.pageSize,
+        total: data.total,
+        totalPages: Math.ceil(data.total / (data.pageSize || 20)),
       });
-      setRefunds(res.data.data?.list ?? res.data.data ?? res.data.items ?? []);
-      if (res.data.data?.pagination || res.data.data?.meta) {
-        setPagination(res.data.data.pagination ?? res.data.data.meta);
-      } else if (res.data.data && typeof res.data.data.total === 'number') {
-        setPagination({ page: res.data.data.page, pageSize: res.data.data.pageSize, total: res.data.data.total, totalPages: Math.ceil(res.data.data.total / (res.data.data.pageSize || 20)) });
-      }
     } catch {
       // Silently handle
     } finally {
@@ -62,11 +65,12 @@ const AdminRefunds: React.FC = () => {
     fetchRefunds(1);
   }, [fetchRefunds]);
 
-  const handleAction = async (id: number, action: 'approve' | 'reject') => {
+  const handleAction = async (id: number, action: 'approve' | 'reject', reason?: string) => {
     setActionLoading(id);
     try {
-      await api.post(`/api/v1/admin/finance/refunds/${id}/${action}`);
+      await post(`/api/v1/admin/finance/refunds/${id}/${action}`, action === 'reject' ? { reason } : {});
       fetchRefunds(pagination.page);
+      setRejectModal(null);
     } finally {
       setActionLoading(null);
     }
@@ -164,7 +168,7 @@ const AdminRefunds: React.FC = () => {
                               确认退款
                             </button>
                             <button
-                              onClick={() => handleAction(refund.id, 'reject')}
+                              onClick={() => setRejectModal({ id: refund.id, reason: '' })}
                               disabled={actionLoading === refund.id}
                               className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
                             >
@@ -193,6 +197,42 @@ const AdminRefunds: React.FC = () => {
           totalPages={pagination.totalPages}
           onPageChange={handlePageChange}
         />
+      )}
+
+      {/* 拒绝原因弹窗 */}
+      {rejectModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">拒绝退款</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">拒绝原因</label>
+                <textarea
+                  value={rejectModal.reason}
+                  onChange={e => setRejectModal({ ...rejectModal, reason: e.target.value })}
+                  placeholder="请输入拒绝原因（必填）"
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setRejectModal(null)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => handleAction(rejectModal.id, 'reject', rejectModal.reason)}
+                  disabled={!rejectModal.reason.trim() || actionLoading === rejectModal.id}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  确认拒绝
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
