@@ -1,11 +1,12 @@
-﻿// ============================================================
-
-//  3cloud (3C) 鈥斿疄鍚嶈的璇佽矾鐢?
-//  POST  /api/v1/auth/real-name/upload                鈥斾笂浼犺瘉浠?
-//  POST  /api/v1/auth/real-name/personal               鈥斾釜浜哄疄鍚?
-//  POST  /api/v1/auth/real-name/enterprise              鈥斾紒涓氬疄鍚?
-//  GET   /api/v1/auth/real-name/status                 鈥斿疄鍚嶇姸鈥?/  GET   /api/v1/auth/real-name/file/:filename          鈥旀煡鐪嬭瘉浠舵枃浠?
-//  GET   /api/v1/auth/real-name/last-submission         鈥旀渶杩戣路鎷掕证褰?/  GET   /api/v1/auth/real-name/history                 鈥斿名鏍稿巻鍙?
+// ============================================================
+//  3cloud (3C) — 实名认证路由
+//  POST  /api/v1/auth/real-name/upload                — 上传证件
+//  POST  /api/v1/auth/real-name/personal               — 个人实名
+//  POST  /api/v1/auth/real-name/enterprise              — 企业实名
+//  GET   /api/v1/auth/real-name/status                 — 实名状态
+//  GET   /api/v1/auth/real-name/file/:filename          — 查看证件文件
+//  GET   /api/v1/auth/real-name/last-submission         — 最近提交记录
+//  GET   /api/v1/auth/real-name/history                 — 审核历史
 // ============================================================
 
 
