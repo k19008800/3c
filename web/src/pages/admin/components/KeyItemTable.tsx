@@ -399,8 +399,9 @@ function KeyItemTable({
       {totalPages > 1 && (
         <div className="px-4 py-2 border-t">
           <PaginationBar
-            currentPage={page}
+            page={page}
             totalPages={totalPages}
+            total={filteredItems.length}
             onPageChange={setPage}
           />
         </div>

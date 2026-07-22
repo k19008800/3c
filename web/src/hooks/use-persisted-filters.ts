@@ -145,7 +145,7 @@ export function usePersistedFilters<T extends FilterRecord>({
     const next = { ...filtersRef.current, [key]: value } as T
     // 如果修改的是筛选条件（非 page），自动重置页码
     if (key !== 'page' && key !== 'pageSize' && 'page' in defaults) {
-      next.page = 1
+      ;(next as Record<string, unknown>).page = 1
     }
     persist(next)
   }, [persist, defaults])
@@ -154,7 +154,7 @@ export function usePersistedFilters<T extends FilterRecord>({
     const next = { ...filtersRef.current, ...partial } as T
     // 如果修改了 pageSize 但没有显式设置 page，自动重置
     if ('pageSize' in partial && !('page' in partial) && 'page' in defaults) {
-      next.page = 1
+      ;(next as Record<string, unknown>).page = 1
     }
     persist(next)
   }, [persist, defaults])

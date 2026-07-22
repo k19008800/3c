@@ -6,7 +6,8 @@ import type {
   AdminUser, PaginatedData, LoginHistoryRecord, UserNote,
   UserIpWhitelistEntry, UserCallStats, AdminApiKey, OAuthBinding,
   RoleHistoryRecord, AuditLogRecord, BalanceLogRecord, ImpersonateResult,
-  UserRealNameHistoryRecord
+  UserRealNameHistoryRecord, UserCallTrends, AdminCallLogItem,
+  ApiKeyCallStats, ApiKeyCallTrends
 } from '@/types'
 import {
   Loader2, AlertCircle, ChevronLeft, ChevronRight, ChevronDown,
@@ -617,7 +618,7 @@ function RealNameAdminSection({ user, onMsg }: { user: AdminUser; onMsg: (s: str
       <div className="border-t pt-4 space-y-3">
         <h3 className="text-sm font-medium text-slate-700">实名管理</h3>
         <div className="flex items-center gap-2 mb-2">
-          <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${statusStyle[user.realNameStatus] || statusStyle.unverified}`}>
+          <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${statusStyle[user.realNameStatus ?? 'unverified']}`}>
             {realNameLabel[user.realNameStatus || 'unverified']}
           </span>
           {user.rejectReason && isRejected && (

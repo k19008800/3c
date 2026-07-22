@@ -427,7 +427,7 @@ export default function SensitiveWords() {
           setEditWord(null)
         }}
         title={editWord?.id ? '编辑敏感词' : '新增敏感词'}
-        width="max-w-md"
+        size="sm"
       >
         {editWord && (
           <div className="space-y-4">
@@ -503,7 +503,7 @@ export default function SensitiveWords() {
         isOpen={batchModalOpen}
         onClose={() => setBatchModalOpen(false)}
         title="批量导入敏感词"
-        width="max-w-lg"
+        size="md"
       >
         <div className="space-y-4">
           <div>

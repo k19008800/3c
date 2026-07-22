@@ -88,7 +88,8 @@ export async function agentSettlementDetailRoutes(app: FastifyInstance) {
         )
         .orderBy(desc(agentBalanceLedger.createdAt));
 
-      // 本月汇总      let monthDeduction = 0;
+      // 本月汇总
+      let monthDeduction = 0;
       let monthFreeze = 0;
       let monthUnfreeze = 0;
       let monthRefund = 0;

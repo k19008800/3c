@@ -149,7 +149,8 @@ export async function agentCostRoutes(app: FastifyInstance) {
 
         const batchIds = batches.map(b => b.id);
 
-        // 查这些批次中在当月被兑换的记录        let monthlyLogTotal = 0;
+        // 查这些批次中在当月被兑换的记录
+        let monthlyLogTotal = 0;
         if (batchIds.length > 0) {
           const logResult = await db
             .select({

@@ -88,7 +88,8 @@ export async function codeCostRoutes(app: FastifyInstance) {
         .limit(pageSize)
         .offset(offset);
 
-      // 获取 batch creator 角色来判断成本类型      const creatorIds = [...new Set(rows.map(r => r.batchCreatorId).filter(Boolean))] as number[];
+      // 获取 batch creator 角色来判断成本类型
+      const creatorIds = [...new Set(rows.map(r => r.batchCreatorId).filter(Boolean))] as number[];
       let creatorRoleMap = new Map<number, string>();
       if (creatorIds.length > 0) {
         const creatorRows = await db

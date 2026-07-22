@@ -502,7 +502,7 @@ export default function PromptAudit() {
         isOpen={!!selectedLog}
         onClose={() => setSelectedLog(null)}
         title="提示词详情"
-        width="max-w-4xl"
+        size="lg"
       >
         {detailLoading ? (
           <div className="p-8 text-center text-sm text-slate-500">加载中...</div>
@@ -611,7 +611,7 @@ export default function PromptAudit() {
         isOpen={auditModalOpen}
         onClose={() => setAuditModalOpen(false)}
         title={auditAction === 'reviewed' ? '标记为正常' : auditAction === 'flagged' ? '标记为异常' : '忽略'}
-        width="max-w-md"
+        size="sm"
       >
         <div className="space-y-4">
           {auditAction === 'flagged' && (

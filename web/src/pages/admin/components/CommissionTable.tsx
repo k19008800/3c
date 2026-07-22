@@ -130,8 +130,9 @@ function CommissionTable({ rows, loading, onExpand, onExport }: CommissionTableP
       {totalPages > 1 && (
         <div className="px-4 py-2 border-t">
           <PaginationBar
-            currentPage={page}
+            page={page}
             totalPages={totalPages}
+            total={filteredRows.length}
             onPageChange={setPage}
           />
         </div>
