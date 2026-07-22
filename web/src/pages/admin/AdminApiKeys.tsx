@@ -283,7 +283,7 @@ export default function AdminApiKeys() {
             <p className="text-sm text-slate-600">
               确定要删除 API Key{' '}
               <span className="font-semibold text-slate-900">{deleteConfirm.name}</span>{' '}
-              吗？此操作不可撤销。
+              吗?此操作不可撤销。
             </p>
             <div className="flex gap-2 justify-end">
               <button

@@ -163,7 +163,7 @@ function DeleteConfirmDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-xl w-full max-w-sm shadow-xl p-6">
         <h3 className="text-lg font-semibold text-slate-900 mb-2">确认删除</h3>
-        <p className="text-sm text-slate-600 mb-6">确定要删除该公告吗？此操作不可撤销。</p>
+        <p className="text-sm text-slate-600 mb-6">确定要删除该公告吗?此操作不可撤销。</p>
         <div className="flex justify-end gap-3">
           <button
             onClick={onCancel}

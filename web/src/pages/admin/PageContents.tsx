@@ -55,7 +55,7 @@ export default function AdminPageContents() {
   }, [])
 
   const handleDelete = useCallback(async (page: PageContent) => {
-    if (!confirm(`确认删除页面 "${page.title_zh}"？此操作不可恢复。`)) return
+    if (!confirm(`确认删除页面 "${page.title_zh}"?此操作不可恢复。`)) return
     try {
       await api.delete(`/api/v1/admin/page-contents/${page.id}`)
       setPages(prev => prev.filter(p => p.id !== page.id))

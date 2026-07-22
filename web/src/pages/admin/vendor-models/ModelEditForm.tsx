@@ -260,7 +260,7 @@ export function DeleteModal({ item, onClose, onSuccess }: {
           {message && <div className="flex items-center gap-2 p-3 text-sm rounded-lg bg-red-50 text-red-600"><AlertCircle size={16} />{message}</div>}
           <p className="text-sm text-slate-600">
             确定要下架 <strong>{item.vendorName || `供应商#${item.vendorId}`}</strong> 的
-            <strong>{item.upstreamModelName}</strong>（{item.modelName || `模型#${item.modelId}`}）映射吗？
+            <strong>{item.upstreamModelName}</strong>（{item.modelName || `模型#${item.modelId}`}）映射吗?
             下架后该路由将不再生效，但数据保留。
           </p>
           <div className="flex gap-2 justify-end">

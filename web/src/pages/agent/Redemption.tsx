@@ -88,7 +88,7 @@ export default function AgentRedemption() {
 
   const handleBatchAction = useCallback(async (action: 'disable' | 'enable') => {
     const actionLabel = action === 'disable' ? '停用' : '启用'
-    if (selectedCodeIds.length === 0 || !confirm(`确认批量 ${actionLabel} 所选 ${selectedCodeIds.length} 个兑换码？`)) return
+    if (selectedCodeIds.length === 0 || !confirm(`确认批量 ${actionLabel} 所选 ${selectedCodeIds.length} 个兑换码?`)) return
     setBatchActionRunning(true)
     try { await post('/api/v1/agent/redemption/batch-action', { action, codeIds: selectedCodeIds }); setSelectedCodeIds([]); fetchCodes(); fetchStats(); fetchWallet() }
     catch (err: any) { alert(err.message || `批量${actionLabel}失败`) }
@@ -106,7 +106,7 @@ export default function AgentRedemption() {
   }, [templateForm, fetchTemplates])
 
   const handleQuickCreate = useCallback(async (tmpl: CodeTemplate) => {
-    if (!confirm(`使用模板 "${tmpl.name}" 快速创建兑换码批次？`)) return
+    if (!confirm(`使用模板 "${tmpl.name}" 快速创建兑换码批次?`)) return
     setSubmitting(true)
     try { await post('/api/v1/redemption/codes/batch', { name: `[模板] ${tmpl.name}`, amount: tmpl.tokenAmount, count: 1, note: `来自模板 ${tmpl.name}` }); fetchCodes(); fetchStats(); fetchWallet() }
     catch (err: any) { alert(err.message || '创建失败') } finally { setSubmitting(false) }

@@ -52,7 +52,7 @@ export default function InlineToggle({
     // 有关键操作确认
     if (confirm) {
       const confirmed = window.confirm(
-        `${confirm.title}\n\n${confirm.description}\n\n确定要继续吗？`
+        `${confirm.title}\n\n${confirm.description}\n\n确定要继续吗?`
       )
       if (!confirmed) return
     }

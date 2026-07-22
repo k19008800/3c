@@ -17,8 +17,8 @@ import {
   Download,
   Filter,
 } from 'lucide-react'
-import PaginationBar from '@/components/PaginationBar'
-import Badge from '@/components/ui/badge'
+import PaginationBar from '@/components/ui/PaginationBar'
+import { Badge } from '@/components/ui/badge'
 import Modal from '@/components/ui/Modal'
 
 interface PromptAuditItem {

@@ -32,7 +32,7 @@ export function registerAuditLogsRoute(app: FastifyInstance): void {
       const pageSize = Math.min(100, Math.max(1, parseInt(query.pageSize ?? "20", 10) || 20));
       const offset = (page - 1) * pageSize;
 
-      // �?audit_logs 表查询关联兑换码的操�?
+      // 从 audit_logs 表查询关联兑换码的操作
       const conditions: any[] = [
         sql`CAST(${auditLogs.action} AS text) LIKE 'code_%' OR CAST(${auditLogs.action} AS text) LIKE 'fraud_%' OR CAST(${auditLogs.action} AS text) LIKE '%redemption%' OR CAST(${auditLogs.action} AS text) LIKE '%campaign%'`,
       ];

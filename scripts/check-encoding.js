@@ -36,13 +36,7 @@ const IGNORE_DIRS = new Set(['node_modules', 'dist', 'build', '.git']);
 
 // 已知编码腐烂文件列表（待修复），仅警告不阻塞
 const KNOWN_CORRUPTED = [
-  'routes/admin/campaigns/',
-  'routes/admin/finance/codes/handlers/',
-  'routes/admin/redemption-enhanced/',
-  'routes/auth/realname.ts',
-  'routes/auth/reset.ts',
-  'routes/proxy/logging.ts',
-  'routes/redemption/',
+  // 2026-07-22 已全部修复
 ];
 
 // 允许的文件扩展名

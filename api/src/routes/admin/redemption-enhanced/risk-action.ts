@@ -31,7 +31,7 @@ export function registerRiskActionRoute(app: FastifyInstance): void {
       };
 
       if (!body.action || !body.eventIds?.length) {
-        reply.status(400).send({ code: 400, data: null, message: "action �?eventIds 必填" });
+        reply.status(400).send({ code: 400, data: null, message: "action 和 eventIds 必填" });
         return;
       }
 

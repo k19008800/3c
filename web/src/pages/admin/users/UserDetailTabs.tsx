@@ -137,7 +137,7 @@ export function OAuthTab({ userId, onMsg }: OAuthTabProps) {
   useEffect(() => { fetch() }, [fetch])
 
   const unbind = async (provider: string) => {
-    if (!confirm(`确定解绑 ${provider}？`)) return
+    if (!confirm(`确定解绑 ${provider}?`)) return
     try { await post(`/api/v1/admin/users/${userId}/unbind-oauth`, { provider }); fetch(); onMsg(`✅ ${provider} 已解绑`) }
     catch (err: any) { onMsg('❌ ' + (err.message || '')) }
   }

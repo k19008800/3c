@@ -86,7 +86,7 @@ export default function AgentWithdraw() {
     if (!amt || amt <= 0) { setError('请输入有效的提现金额'); return }
     if (!bankCardNo.trim()) { setError('请输入银行卡号'); return }
     if (!bankName.trim()) { setError('请输入银行名称'); return }
-    if (!window.confirm(`确认提现 ¥${amt.toFixed(2)} 至 ${bankName}(${bankCardNo.slice(-4)})？`)) return
+    if (!window.confirm(`确认提现 ¥${amt.toFixed(2)} 至 ${bankName}(${bankCardNo.slice(-4)})?`)) return
     setSubmitting(true)
     setError('')
     try {

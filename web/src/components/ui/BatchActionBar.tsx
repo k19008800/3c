@@ -10,7 +10,7 @@
  *   actions={[
  *     { key: 'enable', label: '批量启用', icon: <Power />, action: async (ids) => { ... } },
  *     { key: 'delete', label: '批量删除', icon: <Trash2 />, variant: 'danger',
- *       confirm: `确定删除 ${selectedIds.length} 项？`, action: async (ids) => { ... } },
+ *       confirm: `确定删除 ${selectedIds.length} 项?`, action: async (ids) => { ... } },
  *   ]}
  *   total={total}
  * />

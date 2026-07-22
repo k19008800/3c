@@ -80,7 +80,7 @@ export default function AdminEmailTemplates() {
 
   const handleDelete = useCallback(async (tmpl: EmailTemplate) => {
     const label = TEMPLATE_LABELS[tmpl.name] || tmpl.name
-    if (!confirm(`确认删除邮件模板 "${label}"（${tmpl.name}）？此操作不可恢复。`)) return
+    if (!confirm(`确认删除邮件模板 "${label}"（${tmpl.name}）?此操作不可恢复。`)) return
     setError('')
     try {
       await del(`/api/v1/admin/email-templates/${encodeURIComponent(tmpl.name)}`)

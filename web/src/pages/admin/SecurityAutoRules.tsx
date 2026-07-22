@@ -158,7 +158,7 @@ export default function SecurityAutoRules() {
       <ConfirmDialog
         open={!!deleteTarget}
         title="删除规则"
-        message={`确定删除规则「${deleteTarget?.name}」？此操作不可撤销。`}
+        message={`确定删除规则「${deleteTarget?.name}」?此操作不可撤销。`}
         variant="danger"
         confirmLabel="删除"
         onConfirm={handleDelete}

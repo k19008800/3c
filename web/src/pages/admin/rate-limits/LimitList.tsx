@@ -172,7 +172,7 @@ export default function LimitList({ onEdit, onAdd, onMsg, onError }: LimitListPr
   }, [fetchOverrides])
 
   const handleDelete = useCallback(async (quotaId: number) => {
-    if (!confirm('确定清除该用户的限流覆盖？')) return
+    if (!confirm('确定清除该用户的限流覆盖?')) return
     try {
       await del(`/api/v1/admin/rate-limits/overrides/${quotaId}`)
       onMsg('限流覆盖已清除')

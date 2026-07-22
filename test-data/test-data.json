@@ -1,0 +1,109 @@
+{
+  "users": [
+    {
+      "id": 1001,
+      "email": "developer@test.local",
+      "name": "开发者张三",
+      "role": "user",
+      "balance": 500,
+      "createdAt": "2026-07-20T10:00:00Z",
+      "status": "active"
+    },
+    {
+      "id": 1002,
+      "email": "enterprise@test.local",
+      "name": "科技公司A",
+      "role": "enterprise",
+      "balance": 10000,
+      "createdAt": "2026-07-19T14:30:00Z",
+      "status": "active",
+      "company": "科技公司A"
+    },
+    {
+      "id": 1003,
+      "email": "agent@test.local",
+      "name": "渠道代理商",
+      "role": "agent",
+      "balance": 2000,
+      "createdAt": "2026-07-18T09:15:00Z",
+      "status": "active",
+      "commissionRate": 0.1
+    }
+  ],
+  "apiKeys": [
+    {
+      "id": "key_001",
+      "userId": 1001,
+      "name": "开发环境密钥",
+      "prefix": "sk-dev-",
+      "lastUsed": "2026-07-22T15:30:00Z",
+      "totalCalls": 1250
+    },
+    {
+      "id": "key_002",
+      "userId": 1002,
+      "name": "生产环境密钥",
+      "prefix": "sk-prod-",
+      "lastUsed": "2026-07-22T16:45:00Z",
+      "totalCalls": 5600
+    }
+  ],
+  "rechargeOrders": [
+    {
+      "id": "order_001",
+      "userId": 1001,
+      "amount": 300,
+      "status": "confirmed",
+      "paymentMethod": "alipay",
+      "createdAt": "2026-07-21T11:20:00Z",
+      "confirmedAt": "2026-07-21T11:25:00Z"
+    },
+    {
+      "id": "order_002",
+      "userId": 1002,
+      "amount": 2000,
+      "status": "pending_review",
+      "paymentMethod": "bank_transfer",
+      "createdAt": "2026-07-22T14:00:00Z",
+      "bankAccount": "招商银行 6225 8888 6666 1234",
+      "transferDate": "2026-07-22"
+    }
+  ],
+  "apiCalls": [
+    {
+      "id": "call_001",
+      "apiKeyId": "key_001",
+      "userId": 1001,
+      "model": "deepseek-chat",
+      "promptTokens": 1200,
+      "completionTokens": 800,
+      "totalTokens": 2000,
+      "cost": 2.5,
+      "status": "success",
+      "timestamp": "2026-07-22T15:31:00Z"
+    },
+    {
+      "id": "call_002",
+      "apiKeyId": "key_002",
+      "userId": 1002,
+      "model": "gpt-4",
+      "promptTokens": 2500,
+      "completionTokens": 1500,
+      "totalTokens": 4000,
+      "cost": 12,
+      "status": "success",
+      "timestamp": "2026-07-22T16:46:00Z"
+    }
+  ],
+  "commissions": [
+    {
+      "id": "comm_001",
+      "agentId": 1003,
+      "userId": 1001,
+      "orderId": "order_001",
+      "amount": 30,
+      "status": "pending_settlement",
+      "createdAt": "2026-07-21T11:25:00Z"
+    }
+  ]
+}

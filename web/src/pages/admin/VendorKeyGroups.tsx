@@ -264,7 +264,7 @@ export default function VendorKeyGroups() {
   }
 
   const handleDeleteGroup = async (g: KeyGroup) => {
-    if (!confirm(`确定删除分组「${g.name}」？`)) return
+    if (!confirm(`确定删除分组「${g.name}」?`)) return
     try {
       await del(`/api/v1/admin/key-groups/${g.id}`)
       if (selectedGroupId === g.id) { setSelectedGroupId(null); setItems([]) }
@@ -331,7 +331,7 @@ export default function VendorKeyGroups() {
   }
 
   const handleDeleteItem = async (item: KeyItem) => {
-    if (!confirm(`确定删除 Key #${item.id}（${item.apiKeyPrefix || ''}）？`)) return
+    if (!confirm(`确定删除 Key #${item.id}（${item.apiKeyPrefix || ''}）?`)) return
     try {
       await del(`/api/v1/admin/key-group-items/${item.id}`)
       loadItems(selectedGroupId!)
@@ -504,7 +504,7 @@ export default function VendorKeyGroups() {
 
   const handleBatchDelete = async () => {
     if (!selectedGroupId || selectedItems.length === 0) return
-    if (!confirm(`确定删除选中的 ${selectedItems.length} 个 Key？此操作不可恢复。`)) return
+    if (!confirm(`确定删除选中的 ${selectedItems.length} 个 Key?此操作不可恢复。`)) return
     setBatchDeleting(true)
     let failed = 0
     try {

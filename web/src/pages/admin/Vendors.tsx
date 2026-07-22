@@ -576,7 +576,7 @@ function DeleteConfirmModal({
           )}
 
           <p className="text-sm text-slate-600">
-            确定要删除供应商 <span className="font-semibold text-slate-900">{vendor.name}</span> 吗？此操作不可撤销。
+            确定要删除供应商 <span className="font-semibold text-slate-900">{vendor.name}</span> 吗?此操作不可撤销。
           </p>
 
           <div className="flex gap-2 justify-end">

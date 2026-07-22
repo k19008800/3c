@@ -370,7 +370,7 @@ export default function AdminRedemptionCodes() {
   const handleRiskBatchAction = async (action: 'revoke_codes' | 'ban_ip' | 'acknowledge') => {
     if (selectedFraudEventIds.length === 0) return
     const actionLabel = action === 'revoke_codes' ? '作废关联码' : action === 'ban_ip' ? '封禁关联IP' : '批量确认'
-    if (!confirm(`确认执行 "${actionLabel}" 操作，涉及 ${selectedFraudEventIds.length} 个事件？`)) return
+    if (!confirm(`确认执行 "${actionLabel}" 操作，涉及 ${selectedFraudEventIds.length} 个事件?`)) return
     setRiskActionRunning(true)
     try { await post('/api/v1/admin/redemption/risk-action', { action, eventIds: selectedFraudEventIds, reason: `管理员批量${actionLabel}` }); setSelectedFraudEventIds([]); fetchFraudEvents(); fetchFraudStats() }
     catch (err: any) { alert(err.message || `${actionLabel}失败`) } finally { setRiskActionRunning(false) }

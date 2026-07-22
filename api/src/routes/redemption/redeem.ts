@@ -47,11 +47,8 @@ import { redeemRateLimitKey } from "./types.js";
 export function registerRedeemRoute(app: FastifyInstance): void {
 
   // ════════════════════════════════════════════════
-
-  //  POST /api/v1/redemption/redeem �d用户兑换
-
-  //  输入�r� 校验 �.余额到账 �s记录日志
-
+  //  POST /api/v1/redemption/redeem 用户兑换
+  //  输入码 → 校验 → 余额到账 → 记录日志
   //  Redis 限流：5次/分钟/IP
   //  幂等保护：X-Idempotency-Key（自动生成或客户端指定）
 

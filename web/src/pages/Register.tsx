@@ -118,7 +118,7 @@ export default function Register() {
           </button>
 
           <p className="text-center text-sm text-slate-500">
-            已有账号？{' '}
+            已有账号?{' '}
             <Link to="/login" className="text-blue-600 hover:underline">
               立即登录
             </Link>

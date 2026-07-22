@@ -130,7 +130,7 @@ export default function AdminQuotas() {
   // ── Delete ──
   const handleDelete = useCallback(
     async (record: QuotaRecord) => {
-      if (!window.confirm('确认删除该额度规则？')) return
+      if (!window.confirm('确认删除该额度规则?')) return
       try {
         await del('/api/v1/admin/quotas/' + record.id)
         fetchQuotas()

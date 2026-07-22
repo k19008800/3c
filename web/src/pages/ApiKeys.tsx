@@ -346,7 +346,7 @@ export default function ApiKeys() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('确定要删除此 API 密钥吗？此操作不可撤销。')) return
+    if (!window.confirm('确定要删除此 API 密钥吗?此操作不可撤销。')) return
     try {
       await del(`/api/v1/api-keys/${id}`)
       setKeys(prev => prev.filter(k => k.id !== id))

@@ -336,7 +336,7 @@ export default function RegistrationForm({ onRegister }: Props) {
 
       <div className="text-center">
         <p className="text-sm text-slate-500">
-          已有供应商账号？{' '}
+          已有供应商账号?{' '}
           <Link to="/vendor/login" className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
             立即登录
           </Link>

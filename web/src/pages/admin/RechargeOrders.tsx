@@ -38,7 +38,7 @@ export default function AdminRechargeOrders() {
   }, [fetchOrders])
 
   const handleConfirm = async (id: number) => {
-    if (!window.confirm('确认此订单已到账？')) return
+    if (!window.confirm('确认此订单已到账?')) return
     try {
       await post(`/api/v1/admin/recharge-orders/${id}/confirm`)
       setMsg('订单已确认')

@@ -278,7 +278,7 @@ export default function AdminRealNameReview() {
                       <CheckCircle2 size={16} /> 通过认证
                     </button>
                     <button onClick={() => {
-                      if (!rejectReason.trim() && !confirm('确定拒绝此认证？')) return
+                      if (!rejectReason.trim() && !confirm('确定拒绝此认证?')) return
                       handleReview('reject')
                     }}
                       className="flex-1 flex items-center justify-center gap-1 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium">

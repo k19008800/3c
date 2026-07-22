@@ -182,7 +182,7 @@ export default function ModelList({ models, loading, vendorKey, onRefresh }: {
   const [error, setError] = useState('')
 
   const handleDelete = useCallback(async (id: number, name: string) => {
-    if (!confirm(`确认删除模型映射 "${name}" ？`)) return
+    if (!confirm(`确认删除模型映射 "${name}" ?`)) return
     try {
       const res = await api.delete(`/api/vendor/models/${id}`, {
         headers: { 'X-Vendor-Key': vendorKey },

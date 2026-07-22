@@ -23,7 +23,8 @@ import { isAdminRole } from "./types.js";
 
 export function registerQueryRoutes(app: FastifyInstance): void {
   // ════════════════════════════════════════════════
-  //  GET /api/v1/redemption/codes �i查询兑换码列�j  //  管理员看全量，代理商看自己创建的
+  //  GET /api/v1/redemption/codes 查询兑换码列表
+  //  管理员看全量，代理商看自己创建的
   // ════════════════════════════════════════════════
   app.get("/api/v1/redemption/codes", {
     preHandler: [authenticateJWT, guardNotImpersonatingWrite],
@@ -121,7 +122,8 @@ export function registerQueryRoutes(app: FastifyInstance): void {
   });
 
   // ════════════════════════════════════════════════
-  //  GET /api/v1/redemption/codes/:id �e查看单个兑换�?  // ════════════════════════════════════════════════
+  //  GET /api/v1/redemption/codes/:id 查看单个兑换码
+  // ════════════════════════════════════════════════
   app.get("/api/v1/redemption/codes/:id", {
     preHandler: [authenticateJWT, guardNotImpersonatingWrite],
     handler: async (request, reply) => {
@@ -179,7 +181,7 @@ export function registerQueryRoutes(app: FastifyInstance): void {
   });
 
   // ════════════════════════════════════════════════
-  //  GET /api/v1/redemption/logs �?用户兑换记录
+  //  GET /api/v1/redemption/logs 用户兑换记录
   // ════════════════════════════════════════════════
   app.get("/api/v1/redemption/logs", {
     preHandler: [authenticateJWT, guardNotImpersonatingWrite],
@@ -246,7 +248,7 @@ export function registerQueryRoutes(app: FastifyInstance): void {
   });
 
   // ════════════════════════════════════════════════
-  //  GET /api/v1/redemption/stats �?兑换统计
+  //  GET /api/v1/redemption/stats 兑换统计
   // ════════════════════════════════════════════════
   app.get("/api/v1/redemption/stats", {
     preHandler: [authenticateJWT, guardNotImpersonatingWrite],
@@ -343,7 +345,9 @@ export function registerQueryRoutes(app: FastifyInstance): void {
   });
 
   // ════════════════════════════════════════════════
-  //  GET /api/v1/redemption/admin-logs �I管理员全量兑换流�?  //  仅管理员可访�?  // ════════════════════════════════════════════════
+  //  GET /api/v1/redemption/admin-logs 管理员全量兑换流水
+  //  仅管理员可访问
+  // ════════════════════════════════════════════════
   app.get("/api/v1/redemption/admin-logs", {
     preHandler: [authenticateJWT, guardNotImpersonatingWrite],
     handler: async (request, reply) => {
@@ -462,7 +466,8 @@ export function registerQueryRoutes(app: FastifyInstance): void {
   });
 
   // ════════════════════════════════════════════════
-  //  GET /api/v1/redemption/batches/:id �?批次详情（含统计�?  //  管理员或创建者可查看
+  //  GET /api/v1/redemption/batches/:id 批次详情（含统计）
+  //  管理员或创建者可查看
   // ════════════════════════════════════════════════
   app.get("/api/v1/redemption/batches/:id", {
     preHandler: [authenticateJWT, guardNotImpersonatingWrite],

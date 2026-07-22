@@ -129,7 +129,7 @@ function KeyItemTable({
   }
 
   const handleDelete = async (item: KeyItem) => {
-    if (!confirm('确定删除此 Key？')) return
+    if (!confirm('确定删除此 Key?')) return
     try {
       await del(`/api/v1/admin/key-group-items/${item.id}`)
       onRefresh()

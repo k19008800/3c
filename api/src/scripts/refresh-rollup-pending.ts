@@ -29,7 +29,7 @@ async function main() {
 
   console.log(`commission_logs 实际 pending: ${actualPending?.cnt ?? 0} 条, ¥${actualPending?.amt ?? 0}\n`);
 
-  // 用 refreshRollupForAgentDate 逐一更新？太慢。直接用 SQL 批量更新所有行的统计数据
+  // 用 refreshRollupForAgentDate 逐一更新?太慢。直接用 SQL 批量更新所有行的统计数据
   const updateResult = await db.execute(sql`
     UPDATE commission_daily_rollup r
     SET

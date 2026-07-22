@@ -231,7 +231,7 @@ export default function AdminCampaigns() {
               确认提前结束
             </h3>
             <p className="text-sm text-slate-600 mb-6">
-              确定要提前结束该活动吗？结束后将无法重新激活。
+              确定要提前结束该活动吗?结束后将无法重新激活。
             </p>
             <div className="flex justify-end gap-3">
               <button

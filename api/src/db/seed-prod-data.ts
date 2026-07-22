@@ -199,7 +199,7 @@ async function main() {
     { slug: 'privacy', titleZh: '隐私政策', content: '## 隐私政策\n\n我们重视您的隐私。本政策说明我们如何收集、使用和保护您的个人信息...' },
     { slug: 'api_docs', titleZh: 'API 文档', content: '## API 文档\n\n### 基础 URL\n\n`https://api.unmisa.com/v1`\n\n### 认证\n\n使用 Bearer Token...' },
     { slug: 'about', titleZh: '关于我们', content: '## 关于 3cloud\n\n3cloud 是新一代 AI API 聚合平台，对接多家顶级模型供应商...' },
-    { slug: 'faq', titleZh: '常见问题', content: '## 常见问题\n\n### 如何注册？\n\n...\n\n### 如何充值？\n\n...' },
+    { slug: 'faq', titleZh: '常见问题', content: '## 常见问题\n\n### 如何注册?\n\n...\n\n### 如何充值?\n\n...' },
   ];
   for (const p of pages) {
     await db.execute(sql.raw(`

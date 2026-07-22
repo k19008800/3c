@@ -251,7 +251,7 @@ export default function AdminRoles() {
   const handleRemoveUser = async (userId: number) => {
     if (!selectedRoleId) return
     const u = roleUsers.find((ru) => ru.userId === userId)
-    if (!window.confirm(`确认将用户 "${u?.email || userId}" 移除该角色？`)) return
+    if (!window.confirm(`确认将用户 "${u?.email || userId}" 移除该角色?`)) return
     try {
       await del(`/api/v1/admin/roles/${selectedRoleId}/users/${userId}`)
       setMsg('用户已移除')
@@ -342,7 +342,7 @@ export default function AdminRoles() {
 
   // ── Delete role ──
   const handleDelete = async (role: RoleItem) => {
-    if (!window.confirm(`确认删除角色 "${role.label}"？此操作不可撤销。`)) return
+    if (!window.confirm(`确认删除角色 "${role.label}"?此操作不可撤销。`)) return
     try {
       await del(`/api/v1/admin/roles/${role.id}`)
       setMsg(`角色 "${role.label}" 已删除`)

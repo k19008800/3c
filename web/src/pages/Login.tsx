@@ -98,7 +98,7 @@ export default function Login() {
             />
             <div className="text-right mt-1">
               <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
-                忘记密码？
+                忘记密码?
               </Link>
             </div>
           </div>
@@ -113,7 +113,7 @@ export default function Login() {
           </button>
 
           <p className="text-center text-sm text-slate-500">
-            还没有账号？{' '}
+            还没有账号?{' '}
             <Link to="/register" className="text-blue-600 hover:underline">
               立即注册
             </Link>

@@ -1,0 +1,43 @@
+{
+  "generatedAt": "2026-07-22T13:06:00.151Z",
+  "testDataSummary": {
+    "totalUsers": 3,
+    "totalApiKeys": 2,
+    "totalRechargeOrders": 2,
+    "totalApiCalls": 2,
+    "totalCommissions": 1
+  },
+  "testScenarios": [
+    {
+      "name": "新用户注册流程",
+      "stepCount": 5,
+      "verificationPoints": 4
+    },
+    {
+      "name": "API密钥管理流程",
+      "stepCount": 6,
+      "verificationPoints": 4
+    },
+    {
+      "name": "充值审核流程",
+      "stepCount": 6,
+      "verificationPoints": 4
+    },
+    {
+      "name": "代理商佣金结算",
+      "stepCount": 6,
+      "verificationPoints": 4
+    }
+  ],
+  "verificationChecklist": [
+    "✅ 用户管理功能正常",
+    "✅ API密钥管理正常",
+    "✅ 充值流程完整",
+    "✅ 计费准确性验证",
+    "✅ 佣金计算正确",
+    "✅ 权限控制有效",
+    "✅ 数据一致性检查",
+    "✅ 错误处理机制",
+    "✅ 审计日志完整"
+  ]
+}

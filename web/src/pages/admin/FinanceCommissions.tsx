@@ -108,7 +108,7 @@ function DetailPanel({
   }
 
   const handleBatchCancel = async () => {
-    if (!confirm('确定作废选中的佣金记录？')) return
+    if (!confirm('确定作废选中的佣金记录?')) return
     setOperating(true)
     setError('')
     setSuccess('')
@@ -128,7 +128,7 @@ function DetailPanel({
   const handleSettleByFilters = async () => {
     const parts: string[] = [date]
     if (typeFilter) parts.push(`类型:${typeFilter}`)
-    if (!confirm(`确定结算代理商「${agentLabel}」${parts.join(' ')}下的所有待结算佣金？不可撤销。`))
+    if (!confirm(`确定结算代理商「${agentLabel}」${parts.join(' ')}下的所有待结算佣金?不可撤销。`))
       return
     setSettleAllLoading(true)
     setError('')

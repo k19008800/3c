@@ -1,11 +1,11 @@
 ﻿// ============================================================
 
-//  3cloud (3C) 鈥斿疄鍚嶈璇佽矾鐢?
+//  3cloud (3C) 鈥斿疄鍚嶈的璇佽矾鐢?
 //  POST  /api/v1/auth/real-name/upload                鈥斾笂浼犺瘉浠?
 //  POST  /api/v1/auth/real-name/personal               鈥斾釜浜哄疄鍚?
 //  POST  /api/v1/auth/real-name/enterprise              鈥斾紒涓氬疄鍚?
 //  GET   /api/v1/auth/real-name/status                 鈥斿疄鍚嶇姸鈥?/  GET   /api/v1/auth/real-name/file/:filename          鈥旀煡鐪嬭瘉浠舵枃浠?
-//  GET   /api/v1/auth/real-name/last-submission         鈥旀渶杩戣鎷掕褰?/  GET   /api/v1/auth/real-name/history                 鈥斿鏍稿巻鍙?
+//  GET   /api/v1/auth/real-name/last-submission         鈥旀渶杩戣路鎷掕证褰?/  GET   /api/v1/auth/real-name/history                 鈥斿名鏍稿巻鍙?
 // ============================================================
 
 
@@ -146,7 +146,7 @@ export async function authRealNameRoutes(app: FastifyInstance) {
 
 
 
-  // 鈹€鈹€ 鎻愪氦涓汉瀹炲悕 鈹€鈹€
+  // 鈹€鈹€ 鎻愪氦涓实汉瀹炲悕 鈹€鈹€
 
   // POST /api/v1/auth/real-name/personal
 
@@ -212,7 +212,7 @@ export async function authRealNameRoutes(app: FastifyInstance) {
 
       if (user.realNameStatus === "pending_review") {
 
-        reply.status(400).send({ code: 400, data: null, message: "宸叉湁瀹炲悕鐢宠姝ｅ湪瀹℃牳涓紝璇风瓑寰呭鏍哥粨鏋?" });
+        reply.status(400).send({ code: 400, data: null, message: "宸叉湁瀹炲悕鐢宠上姝ｅ湪瀹℃牳涓传紝璇风瓑寰呭名鏍哥粨鏋?" });
 
         return;
 
@@ -290,13 +290,13 @@ export async function authRealNameRoutes(app: FastifyInstance) {
 
         if (result.autoVerified) {
 
-          console.log(`[RealName] 鐢ㄦ埛 ${userId} 瀹炲悕鑷姩${result.passed ? "閫氳繃" : "鏍搁獙鏈€氳繃锛岃浆浜哄伐瀹℃牳"}`);
+          console.log(`[RealName] 鐢ㄦ埛 ${userId} 瀹炲悕鑷文姩${result.passed ? "閫氳繃" : "鏍搁獙鏈件€氳繃锛岃浆浜哄伐瀹℃牳"}`);
 
         }
 
       }).catch((err) => {
 
-        console.error(`[RealName] 鑷姩鏍搁獙鍑洪敊 (userId=${userId}):`, err);
+        console.error(`[RealName] 鑷文姩鏍搁獙鍑洪敊 (userId=${userId}):`, err);
 
       });
 
@@ -404,7 +404,7 @@ export async function authRealNameRoutes(app: FastifyInstance) {
 
       if (user.realNameStatus === "pending_review") {
 
-        reply.status(400).send({ code: 400, data: null, message: "宸叉湁瀹炲悕鐢宠姝ｅ湪瀹℃牳涓紝璇风瓑寰呭鏍哥粨鏋?" });
+        reply.status(400).send({ code: 400, data: null, message: "宸叉湁瀹炲悕鐢宠上姝ｅ湪瀹℃牳涓传紝璇风瓑寰呭名鏍哥粨鏋?" });
 
         return;
 
@@ -516,13 +516,13 @@ export async function authRealNameRoutes(app: FastifyInstance) {
 
         if (result.autoVerified) {
 
-          console.log(`[RealName] 鐢ㄦ埛 ${userId} 浼佷笟瀹炲悕鑷姩${result.passed ? "閫氳繃" : "鏍搁獙鏈€氳繃锛岃浆浜哄伐瀹℃牳"}`);
+          console.log(`[RealName] 鐢ㄦ埛 ${userId} 浼佷笟瀹炲悕鑷文姩${result.passed ? "閫氳繃" : "鏍搁獙鏈件€氳繃锛岃浆浜哄伐瀹℃牳"}`);
 
         }
 
       }).catch((err) => {
 
-        console.error(`[RealName] 鑷姩鏍搁獙鍑洪敊 (userId=${userId}):`, err);
+        console.error(`[RealName] 鑷文姩鏍搁獙鍑洪敊 (userId=${userId}):`, err);
 
       });
 
@@ -564,7 +564,7 @@ export async function authRealNameRoutes(app: FastifyInstance) {
 
 
 
-  // 鈹€鈹€ 鏌ヨ瀹炲悕璁よ瘉鐘舵€佲攢鈹€
+  // 鈹€鈹€ 鏌ヨ息瀹炲悕璁よ瘉鐘舵€佲攢鈹€
 
   // GET /api/v1/auth/real-name/status
 
@@ -666,7 +666,7 @@ export async function authRealNameRoutes(app: FastifyInstance) {
 
 
 
-  // 鈹€鈹€ 鏌ョ湅鑷繁鐨勫疄鍚嶈瘉浠舵枃浠垛攢鈹€
+  // 鈹€鈹€ 鏌ョ湅鑷文繁鐨勫疄鍚嶈瘉浠舵枃浠垛攢鈹€
 
   // GET /api/v1/auth/real-name/file/:filename
 
@@ -744,7 +744,7 @@ export async function authRealNameRoutes(app: FastifyInstance) {
 
 
 
-  // 鈹€鈹€ 鏈€杩戜竴娆¤鎷掓彁浜も攢鈹€
+  // 鈹€鈹€ 鏈€杩戜竴娆¤路鎷掓彁浜も攢鈹€
 
   // GET /api/v1/auth/real-name/last-submission
 
@@ -822,7 +822,7 @@ export async function authRealNameRoutes(app: FastifyInstance) {
 
       if (!last) {
 
-        reply.status(200).send({ code: 0, data: null, message: "鏃犳渶杩戣鎷掕褰? " });
+        reply.status(200).send({ code: 0, data: null, message: "鏃犳渶杩戣路鎷掕证褰? " });
 
         return;
 

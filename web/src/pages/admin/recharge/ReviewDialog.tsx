@@ -149,7 +149,7 @@ export default function ReviewDialog({
         {/* 取消订单提示 */}
         {isCancel && (
           <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
-            确定要取消此订单吗？取消后不可恢复。
+            确定要取消此订单吗?取消后不可恢复。
           </div>
         )}
 

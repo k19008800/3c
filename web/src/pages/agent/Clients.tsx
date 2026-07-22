@@ -66,7 +66,7 @@ export default function AgentClients() {
 
   const handleUnbind = useCallback(
     async (clientUserId: number, email: string) => {
-      if (!confirm(`确认解绑客户「${email}」？\n解绑后该客户的消费数据仍保留。`)) return
+      if (!confirm(`确认解绑客户「${email}」?\n解绑后该客户的消费数据仍保留。`)) return
       try {
         await del(`/api/v1/agent/clients/${clientUserId}`)
         fetchClients()

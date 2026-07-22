@@ -876,7 +876,7 @@ function DeleteModal({ item, onClose, onSuccess }: { item: VendorModel; onClose:
 
           <p className="text-sm text-slate-600">
             确定要删除供应商 <strong>{item.vendorName || `#${item.vendorId}`}</strong> 下的模型映射
-            <strong>{item.upstreamModelName}</strong>（{item.modelName || `#${item.modelId}`}）吗？
+            <strong>{item.upstreamModelName}</strong>（{item.modelName || `#${item.modelId}`}）吗?
             此操作不可撤销。
           </p>
 

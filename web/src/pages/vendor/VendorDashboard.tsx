@@ -86,7 +86,7 @@ export default function VendorDashboard() {
   }
 
   const handleDeleteModel = async (id: number, name: string) => {
-    if (!confirm(`确认删除模型映射 "${name}" ？`)) return
+    if (!confirm(`确认删除模型映射 "${name}" ?`)) return
     try { await del(`/api/vendor/models/${id}`); fetchModels() }
     catch (e: any) { setError(e?.response?.data?.message || e.message || '删除失败') }
   }

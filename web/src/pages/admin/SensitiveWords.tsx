@@ -14,8 +14,8 @@ import {
   Download,
   Filter,
 } from 'lucide-react'
-import PaginationBar from '@/components/PaginationBar'
-import Badge from '@/components/ui/badge'
+import PaginationBar from '@/components/ui/PaginationBar'
+import { Badge } from '@/components/ui/badge'
 import Modal from '@/components/ui/Modal'
 
 interface SensitiveWord {
@@ -108,7 +108,7 @@ export default function SensitiveWords() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('确定删除此敏感词？')) return
+    if (!confirm('确定删除此敏感词?')) return
     try {
       await del(`/api/v1/admin/sensitive-words/${id}`)
       fetchWords()

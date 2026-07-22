@@ -120,7 +120,7 @@ export default function VendorLogin() {
 
           <div className="text-center pt-2 border-t border-slate-100">
             <p className="text-sm text-slate-500">
-              还没有供应商账号？{' '}
+              还没有供应商账号?{' '}
               <Link to="/vendor/register" className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
                 立即注册
               </Link>

@@ -1034,7 +1034,7 @@ function ApiKeysTab({ userId, onMsg }: { userId: number; onMsg: (s: string) => v
   }
 
   const deleteKey = async (keyId: number) => {
-    if (!confirm('确定删除此 API Key？')) return
+    if (!confirm('确定删除此 API Key?')) return
     try {
       await del(`/api/v1/admin/users/${userId}/api-keys/${keyId}`)
       fetch(); onMsg('✅ 已删除')
@@ -1273,7 +1273,7 @@ function OAuthTab({ userId, onMsg }: { userId: number; onMsg: (s: string) => voi
   useEffect(() => { fetch() }, [fetch])
 
   const unbind = async (provider: string) => {
-    if (!confirm(`确定解绑 ${provider}？`)) return
+    if (!confirm(`确定解绑 ${provider}?`)) return
     try {
       await post(`/api/v1/admin/users/${userId}/unbind-oauth`, { provider })
       fetch(); onMsg(`✅ ${provider} 已解绑`)

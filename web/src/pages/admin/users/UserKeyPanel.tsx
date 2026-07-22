@@ -119,7 +119,7 @@ export default function ApiKeysTab({ userId, onMsg }: ApiKeysTabProps) {
   }
 
   const deleteKey = async (keyId: number) => {
-    if (!confirm('确定删除此 API Key？')) return
+    if (!confirm('确定删除此 API Key?')) return
     try { await del(`/api/v1/admin/users/${userId}/api-keys/${keyId}`); fetch(); onMsg('✅ 已删除') }
     catch (err: any) { onMsg('❌ ' + (err.message || '')) }
   }

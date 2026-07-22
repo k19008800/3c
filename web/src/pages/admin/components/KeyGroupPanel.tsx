@@ -78,7 +78,7 @@ export default function KeyGroupPanel({
   }
 
   const handleDelete = async (g: KeyGroup) => {
-    if (!confirm(`确定删除分组「${g.name}」？`)) return
+    if (!confirm(`确定删除分组「${g.name}」?`)) return
     try {
       await del(`/api/v1/admin/key-groups/${g.id}`)
       if (selectedGroupId === g.id) onSelectGroup(null)
