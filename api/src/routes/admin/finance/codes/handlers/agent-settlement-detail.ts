@@ -88,8 +88,7 @@ export async function agentSettlementDetailRoutes(app: FastifyInstance) {
         )
         .orderBy(desc(agentBalanceLedger.createdAt));
 
-      // ,G;
-      let monthDeduction = 0;
+      // 本月汇�?      let monthDeduction = 0;
       let monthFreeze = 0;
       let monthUnfreeze = 0;
       let monthRefund = 0;
@@ -107,7 +106,7 @@ export async function agentSettlementDetailRoutes(app: FastifyInstance) {
         data: {
           period: periodStr,
           agentId: aId,
-          agentName: agent.nickname ?? agent.email ?? `代理�?#${aId}`,
+          agentName: agent.nickname ?? agent.email ?? `代理�?#${aId}`,
           email: agent.email,
           openingBalance,
           monthDeduction,
