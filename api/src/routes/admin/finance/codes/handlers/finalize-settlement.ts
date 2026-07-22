@@ -1,5 +1,6 @@
 // ============================================================
-//  C. POST 锁定当月结算�?//  POST /api/v1/admin/finance/codes/finalize-settlement
+//  C. POST 锁定当月结算单
+//  POST /api/v1/admin/finance/codes/finalize-settlement
 // ============================================================
 
 import { FastifyInstance } from "fastify";
@@ -30,7 +31,7 @@ export async function finalizeSettlementRoutes(app: FastifyInstance) {
       const year = parseInt(yearStr, 10);
       const month = parseInt(monthStr, 10);
       if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
-        reply.status(400).send({ code: 400, data: null, message: "无效的月份格式，请使�?YYYY-MM" });
+        reply.status(400).send({ code: 400, data: null, message: "无效的月份格式，请使用 YYYY-MM" });
         return;
       }
 
@@ -147,7 +148,7 @@ export async function finalizeSettlementRoutes(app: FastifyInstance) {
         });
       }
 
-      // Platform subsidy record (汇�?
+      // Platform subsidy record (汇总补贴)
       const totalSubsidy = adminSubsidy + agentSubsidy;
       if (totalSubsidy > 0) {
         records.push({
