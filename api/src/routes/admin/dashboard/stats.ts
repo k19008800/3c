@@ -17,6 +17,7 @@ export async function statsRoutes(app: FastifyInstance) {
     const redis = getRedis();
 
     // PERF: 复用 service 层缓存（buildStats 内部已实现 120s TTL Redis 缓存），避免路由层和服务层双缓存
+    // PERF: 此接口为统计类接口，查询超时已设置为 30 秒（通过 query-timeout 插件）
     const result = await buildStats(db, redis);
 
     reply.send(result);

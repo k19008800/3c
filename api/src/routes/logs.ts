@@ -13,6 +13,7 @@ import { authenticateJWT } from "../middleware/auth.js";
 import { logFilterSchema } from "../schemas.js";
 import { AppError } from "../services/auth-service/index.js";
 import { getCallGeoEnrichment, lookupGeo } from "../services/geo-check.js";
+import { getPaginationCount, buildCacheKey } from "../utils/count-optimizer.js";
 
 // ── 带 Geo 富化的调用记录项 ──
 
@@ -163,11 +164,27 @@ export async function logRoutes(app: FastifyInstance) {
 
       let total = 0;
       if (!useCursor) {
-        const [totalResult] = await db
-          .select({ count: sql<number>`count(*)` })
-          .from(callLogs)
-          .where(and(...conditions));
-        total = Number(totalResult?.count ?? 0);
+        const countQuery = async () => {
+          const [totalResult] = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(callLogs)
+            .where(and(...conditions));
+          return Number(totalResult?.count ?? 0);
+        };
+        
+        // 构建过滤条件用于缓存键
+        const filters: Record<string, any> = {
+          userId: userId
+        };
+        if (parsed.modelId) filters.modelId = parsed.modelId;
+        if (parsed.vendorName) filters.vendorName = parsed.vendorName;
+        if (parsed.status) filters.status = parsed.status;
+        if (parsed.startDate) filters.startDate = parsed.startDate;
+        if (parsed.endDate) filters.endDate = parsed.endDate;
+        if (parsed.apiKeyId) filters.apiKeyId = parsed.apiKeyId;
+        if (parsed.modelName) filters.modelName = parsed.modelName;
+        
+        total = await getPaginationCount("call_logs", countQuery, filters);
       }
 
       // 构建排序

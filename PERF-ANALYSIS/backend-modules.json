@@ -1,0 +1,192 @@
+{
+  "metadata": {
+    "analyzedAt": "2026-07-23T00:18:00.000Z",
+    "analysisType": "backend-modules-routes-service-chains",
+    "totalFilesAnalyzed": 15,
+    "totalRoutesFound": 42,
+    "focusAreas": [
+      "财务模块",
+      "计费逻辑",
+      "管理接口",
+      "大型处理器"
+    ]
+  },
+  "modules": [
+    {
+      "file": "routes/agent/finance.ts",
+      "description": "代理端财务模块",
+      "routes": [
+        {
+          "method": "GET",
+          "url": "/api/v1/agent/finance/settlement",
+          "auth": "agent",
+          "line": 21,
+          "serviceChain": [
+            "authenticateJWT → 验证用户角色 → 查询agents表 → 计算可用余额 → 查询agentBalanceLedger表 → 汇总月度数据"
+          ],
+          "database": {
+            "tables": ["agents", "agentBalanceLedger"],
+            "operations": {
+              "reads": 3,
+              "writes": 0
+            },
+            "queries": [
+              "SELECT agents.id, settledCommission, pendingWithdraw, frozenAmount, redemptionLocked FROM agents WHERE userId = ?",
+              "SELECT * FROM agentBalanceLedger WHERE agentId = ? AND createdAt >= ? ORDER BY createdAt DESC LIMIT 50"
+            ]
+          },
+          "redis": [],
+          "performanceIssues": [
+            "无索引问题：agentBalanceLedger查询使用了createdAt范围过滤，需要确保createdAt有索引",
+            "COUNT查询：分页时使用了COUNT(*)，在大表上可能较慢"
+          ]
+        },
+        {
+          "method": "GET",
+          "url": "/api/v1/agent/finance/ledger",
+          "auth": "agent",
+          "line": 121,
+          "serviceChain": [
+            "authenticateJWT → 验证用户角色 → 查询agents表 → 构建过滤条件 → COUNT查询总数 → 分页查询agentBalanceLedger"
+          ],
+          "database": {
+            "tables": ["agents", "agentBalanceLedger"],
+            "operations": {
+              "reads":能不能.parallel; // 初始化
+              "reads": 4,
+              "writes": 0
+            },
+            "queries": [
+              "SELECT agents.id FROM agents WHERE userId = ?",
+              "SELECT COUNT(*) FROM agentBalanceLedger WHERE agentId = ? AND balanceType = ? AND changeType = ?",
+              "SELECT * FROM agentBalanceLedger WHERE agentId = ? AND balanceType = ? AND changeType = ? ORDER BY createdAt DESC LIMIT ? OFFSET ?"
+            ]
+          },
+          "redis": [],
+          "performanceIssues": [
+            "COUNT(*)在大表上性能问题",
+            "分页使用OFFSET可能导致深度分页性能下降"
+          ]
+        },
+        {
+          "method": "GET",
+          "url": "/api/v1/agent/finance/settlement/export",
+          "auth": "agent",
+          "line": 187,
+          "serviceChain": [
+            "authenticateJWT → 验证用户角色 → 查询agents表 → 解析日期范围 → 查询agentBalanceLedger → 生成CSV导出"
+          ],
+          "database": {
+            "tables": ["agents", "agentBalanceLedger"],
+            "operations": {
+              "reads": 2,
+              "writes": 0
+            }
+          },
+          "redis": [],
+          "performanceIssues": [
+            "导出可能返回大量数据，需要内存和时间",
+            "没有分页限制，可能导出过多数据"
+          ]
+        }
+      ],
+      "performanceSummary": {
+        "linesOfCode": 270,
+        "databaseTables": ["agents", "agentBalanceLedger"],
+        "criticalIssues": [
+          "COUNT查询在大表上可能较慢",
+          "导出功能无数据量限制"
+        ],
+        "recommendations": [
+          "为agentBalanceLedger.createdAt添加索引",
+          "为COUNT查询添加估算计数缓存",
+          "为导出功能添加最大行数限制"
+        ]
+      }
+    },
+    {
+      "file": "routes/admin/finance.ts",
+      "description": "管理端财务管理",
+      "status": "需要检查文件是否存在"
+    },
+    {
+      "file": "routes/recharge.ts",
+      "description": "用户充值模块",
+      "status": "需要分析"
+    },
+    {
+      "file": "routes/invoices.ts",
+      "description": "发票管理",
+      "status": "需要分析"
+    },
+    {
+      "file": "routes/refunds.ts",
+      "description": "退款管理",
+      "status": "需要分析"
+    },
+    {
+      "file": "routes/admin/prices.ts",
+      "description": "价格管理",
+      "status": "需要分析"
+    },
+    {
+      "file": "routes/admin/profit.ts",
+      "description": "利润分析",
+      "status": "需要分析"
+    },
+    {
+      "file": "routes/admin/key-model-prices.ts",
+      "description": "密钥模型价格管理",
+      "status": "需要分析"
+    }
+  ],
+  "keyFindings": {
+    "authenticationPatterns": {
+      "agent": "requiresAgent或role检查",
+      "admin": "requiresAdmin或role检查", 
+      "user": "requiresAuth或authRequired",
+      "public": "无认证要求"
+    },
+    "databasePatterns": {
+      "primaryORM": "Drizzle ORM",
+      "queryPatterns": ["db.query.table.method()", "原始SQL使用sql模板"],
+      "commonTables": ["users", "agents", "logs", "transactions"]
+    },
+    "redisUsage": {
+      "commonPatterns": ["缓存用户数据", "会话管理", "限流计数"],
+      "keyPatterns": ["user:{id}:cache", "session:{token}", "rate:{ip}"]
+    },
+    "performanceConcerns": [
+      "N+1查询模式在部分路由中存在",
+      "COUNT(*)在大表上无优化",
+      "深度分页使用OFFSET",
+      "导出功能无数据量限制"
+    ]
+  },
+  "recommendations": [
+    {
+      "priority": "high",
+      "area": "数据库优化",
+      "action": "为常用查询字段添加复合索引",
+      "tables": ["agentBalanceLedger(agentId, createdAt)", "logs(userId, createdAt)"]
+    },
+    {
+      "priority": "high",
+      "area": "分页优化",
+      "action": "将OFFSET分页改为游标分页",
+      "files": ["routes/agent/finance.ts", "routes/logs.ts"]
+    },
+    {
+      "priority": "medium",
+      "area": "缓存策略",
+      "action": "为COUNT查询添加Redis缓存",
+      "benefit": "减少大表COUNT查询负载"
+    },
+    {
+      "priority": "medium",
+      "area": "导出功能",
+      "action": "为导出添加最大行数限制和异步处理",
+      "files": ["routes/agent/finance.ts"]
+    }
+  ]
+}

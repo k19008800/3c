@@ -3,8 +3,8 @@
  */
 
 import { useMemo } from 'react'
-import {
-  Activity, Zap, DollarSign, BarChart3, Loader2,
+import React from 'react';
+import {Activity, Zap, DollarSign, BarChart3, Loader2,
 } from 'lucide-react'
 import type { VendorStats } from './types'
 import { fmtTokens, fmtCost } from './types'
@@ -65,7 +65,7 @@ function MiniChart({ data, width = 200, height = 48 }: {
 
 // ── 主导出 ──
 
-export default function OverviewCards({ stats, loading }: {
+const OverviewCardsBase = React.memo(function OverviewCardsBase({ stats, loading }: {
   stats: VendorStats | null
   loading: boolean
 }) {
@@ -130,3 +130,5 @@ export default function OverviewCards({ stats, loading }: {
     </div>
   )
 }
+
+export default OverviewCardsBase;

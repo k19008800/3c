@@ -357,19 +357,131 @@ export async function batchReviewWithdraws(
   rejectReason?: string | null,
 ) {
   const db = getDb();
+  
+  // 批量查询所有提现订单（消除N+1）
+  const orders = await db
+    .select()
+    .from(withdrawOrders)
+    .where(sql`${withdrawOrders.id} = ANY(ARRAY[${sql.join(ids.map(id => sql`${id}::int`), sql`, `)}])`);
+  
+  // 构建映射
+  const orderMap = new Map(orders.map(order => [order.id, order]));
+  
+  // 在内存中验证
+  const validOrders: typeof orders = [];
+  const invalidOrders: { id: number; reason: string }[] = [];
+  
+  for (const id of ids) {
+    const order = orderMap.get(id);
+    if (!order) {
+      invalidOrders.push({ id, reason: "提现订单不存在" });
+      continue;
+    }
+    
+    if (order.status !== "pending_first_review") {
+      invalidOrders.push({ id, reason: `当前状态为 ${order.status}，无法初审` });
+      continue;
+    }
+    
+    validOrders.push(order);
+  }
+  
+  // 批量处理
   let approved = 0;
   let rejected = 0;
-  const errors: { id: number; reason: string }[] = [];
-
-  for (const withdrawId of ids) {
-    try {
-      const result = await firstReviewWithdraw(operatorId, withdrawId, action, rejectReason);
-      if (result.status === "pending_second_review") approved++;
-      else if (result.status === "rejected") rejected++;
-    } catch (err: any) {
-      errors.push({ id: withdrawId, reason: err.message || "未知错误" });
-    }
+  
+  if (validOrders.length > 0) {
+    await db.transaction(async (tx) => {
+      if (action === "approve") {
+        // 批量初审通过
+        for (const order of validOrders) {
+          const firstVoucherNo = await generateVoucherNo('B');
+          
+          await tx
+            .update(withdrawOrders)
+            .set({
+              status: "pending_second_review",
+              auditLevel: 2,
+              firstAuditorId: operatorId,
+              firstAuditedAt: new Date(),
+              voucherNo: firstVoucherNo,
+            })
+            .where(eq(withdrawOrders.id, order.id));
+            
+          await tx.insert(auditLogs).values({
+            operatorId,
+            action: "withdraw_first_approve",
+            targetType: "withdraw_orders",
+            targetId: order.id,
+            before: { status: "pending_first_review" },
+            after: { status: "pending_second_review", voucherNo: firstVoucherNo },
+            ip: null,
+            description: `批量初审通过提现 #${order.id}，金额 ${order.amount}`,
+          });
+        }
+        approved = validOrders.length;
+      } else {
+        // 批量初审拒绝
+        // 需要分组处理，因为需要更新代理商冻结金额
+        const agentAmounts = new Map<number, string>();
+        for (const order of validOrders) {
+          const current = agentAmounts.get(order.agentId) || "0.000000";
+          // 累加金额
+          const newAmount = (parseFloat(current) + parseFloat(order.amount)).toFixed(6);
+          agentAmounts.set(order.agentId, newAmount);
+        }
+        
+        // 批量更新代理商冻结金额
+        for (const [agentId, totalAmount] of agentAmounts) {
+          await tx
+            .update(agents)
+            .set({
+              pendingWithdraw: sql`${agents.pendingWithdraw} + ${totalAmount}`,
+            })
+            .where(eq(agents.id, agentId));
+        }
+        
+        // 批量更新提现订单状态
+        const validOrderIds = validOrders.map(o => o.id);
+        await tx
+          .update(withdrawOrders)
+          .set({
+            status: "rejected",
+            auditLevel: 1,
+            firstAuditorId: operatorId,
+            firstAuditedAt: new Date(),
+            rejectReason: rejectReason ?? null,
+          })
+          .where(sql`${withdrawOrders.id} = ANY(ARRAY[${sql.join(
+            validOrderIds.map(id => sql`${id}::int`), 
+            sql`, `
+          )}])`);
+          
+        // 批量插入审计日志（优化为单次批量插入）
+        const auditLogsData = validOrders.map(order => ({
+          operatorId,
+          action: "withdraw_reject",
+          targetType: "withdraw_orders",
+          targetId: order.id,
+          before: { status: "pending_first_review" },
+          after: { status: "rejected", rejectReason },
+          ip: null,
+          description: `批量初审拒绝提现 #${order.id}: ${rejectReason ?? "无原因"}`,
+        }));
+        
+        if (auditLogsData.length > 0) {
+          await tx.insert(auditLogs).values(auditLogsData);
+        }
+        
+        rejected = validOrders.length;
+      }
+    });
   }
-
-  return { approved, rejected, total: ids.length, errors };
+  
+  return { 
+    approved, 
+    rejected, 
+    total: ids.length, 
+    errors: invalidOrders 
+  };
 }

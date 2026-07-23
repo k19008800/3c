@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Activity, Cpu, DollarSign, Clock, CheckCircle2, XCircle } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -89,7 +89,7 @@ function TrendMiniChart() {
 
 /* ── Main ── */
 
-export default function LogStatsCards({ summary, loading }: LogStatsCardsProps) {
+const LogStatsCardsBase = React.memo(function LogStatsCardsBase({ summary, loading }: LogStatsCardsProps) {
   if (loading || !summary) return null
 
   return (
@@ -139,4 +139,6 @@ export default function LogStatsCards({ summary, loading }: LogStatsCardsProps) 
       <TrendMiniChart />
     </>
   )
-}
+})
+
+export default LogStatsCardsBase;

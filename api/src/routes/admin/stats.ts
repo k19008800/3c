@@ -6,6 +6,9 @@
 //  GET /api/v1/admin/stats/by-user      — 按用户统计
 //  GET /api/v1/admin/stats/hourly       — 按小时分布
 //  GET /api/v1/admin/stats/trend        — 趋势数据
+// 
+// PERF: 此模块包含统计类接口，查询超时已通过 query-timeout 插件设置为 30 秒
+//       支持复杂聚合查询，避免因数据量大导致超时中断
 // ============================================================
 
 import { FastifyInstance } from "fastify";

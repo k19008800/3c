@@ -16,6 +16,7 @@ import {
 } from "../../db/schema.js";
 import { AppError } from "../auth-service/index.js";
 import { num, fmt } from "../agent-helpers.js";
+import { getPaginationCount, getSmartCount } from "../../utils/count-optimizer.js";
 
 /**
  * 获取单个代理商详情（含实时可用余额）
@@ -83,12 +84,23 @@ export async function listAllAgents(page: number, pageSize: number, status?: str
     conditions.push(eq(agents.status, statusBool));
   }
 
-  const [totalResult] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(agents)
-    .innerJoin(users, eq(agents.userId, users.id))
-    .where(and(...conditions));
-  const total = Number(totalResult?.count ?? 0);
+  const countQuery = async () => {
+    const [totalResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(agents)
+      .innerJoin(users, eq(agents.userId, users.id))
+      .where(and(...conditions));
+    return Number(totalResult?.count ?? 0);
+  };
+  
+  // 构建过滤条件用于智能计数
+  const filters: Record<string, any> = {};
+  if (status !== undefined && status !== "") {
+    const statusBool = status === "true" || status === "active";
+    filters.status = statusBool;
+  }
+  
+  const total = await getPaginationCount("agents", countQuery, filters);
 
   const rows = await db
     .select({
@@ -289,42 +301,54 @@ export async function deleteAgent(operatorId: number, agentId: number): Promise<
     throw new AppError("AGENT_NOT_FOUND", "代理商不存在", 404);
   }
 
-  // 检查待结算佣金
-  const [pendingResult] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(commissionLogs)
-    .where(
-      and(
-        eq(commissionLogs.agentId, agentId),
-        eq(commissionLogs.status, "pending"),
-      ),
-    );
-  const pendingCount = Number(pendingResult?.count ?? 0);
+  // 检查待结算佣金（使用智能计数）
+  const pendingCountQuery = async () => {
+    const [pendingResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(commissionLogs)
+      .where(
+        and(
+          eq(commissionLogs.agentId, agentId),
+          eq(commissionLogs.status, "pending"),
+        ),
+      );
+    return Number(pendingResult?.count ?? 0);
+  };
+  
+  const pendingCount = await getSmartCount("commission_logs", pendingCountQuery, true);
   if (pendingCount > 0) {
     throw new AppError("HAS_PENDING_COMMISSION", "该代理商有待结算佣金，请先结算再删除", 400);
   }
 
-  // 检查是否有下级代理
-  const [subResult] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(agents)
-    .where(eq(agents.parentAgentId, agentId));
-  const subCount = Number(subResult?.count ?? 0);
+  // 检查是否有下级代理（使用智能计数）
+  const subCountQuery = async () => {
+    const [subResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(agents)
+      .where(eq(agents.parentAgentId, agentId));
+    return Number(subResult?.count ?? 0);
+  };
+  
+  const subCount = await getSmartCount("agents", subCountQuery, true);
   if (subCount > 0) {
     throw new AppError("HAS_SUB_AGENTS", "该代理商有下级代理，请先转移或解除关系", 400);
   }
 
-  // 检查待处理提现
-  const [pendingWithdrawResult] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(withdrawOrders)
-    .where(
-      and(
-        eq(withdrawOrders.agentId, agentId),
-        sql`${withdrawOrders.status} NOT IN ('paid', 'rejected')`,
-      ),
-    );
-  const pendingWithdrawCount = Number(pendingWithdrawResult?.count ?? 0);
+  // 检查待处理提现（使用智能计数）
+  const pendingWithdrawCountQuery = async () => {
+    const [pendingWithdrawResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(withdrawOrders)
+      .where(
+        and(
+          eq(withdrawOrders.agentId, agentId),
+          sql`${withdrawOrders.status} NOT IN ('paid', 'rejected')`,
+        ),
+      );
+    return Number(pendingWithdrawResult?.count ?? 0);
+  };
+  
+  const pendingWithdrawCount = await getSmartCount("withdraw_orders", pendingWithdrawCountQuery, true);
   if (pendingWithdrawCount > 0) {
     throw new AppError("HAS_PENDING_WITHDRAW", "该代理商有待处理提现，请先处理", 400);
   }

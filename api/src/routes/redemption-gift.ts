@@ -157,6 +157,7 @@ export async function redemptionGiftRoutes(app: FastifyInstance) {
 
         let newCodeId = 0;
 
+        // ⚠️ PERF: 确保响应在事务外发送，避免 Race Condition
         await db.transaction(async (tx) => {
           // 1. 原码作废
           await tx

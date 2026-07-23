@@ -191,18 +191,22 @@ export async function batchSettleCommissions(ids: number[]): Promise<number> {
       }
     });
 
-    // 批量更新凭证号
+    // 批量更新凭证号（需要优化：当前循环单条更新）
+    // TODO: 重构为真正的批量更新
     for (const [id, no] of voucherMap) {
       await db.update(commissionLogs).set({ voucherNo: no }).where(eq(commissionLogs.id, id));
     }
 
-    // 刷新 rollup（同步状态分布）
+    // 刷新 rollup（同步状态分布）- 优化：批量执行
+    const refreshPromises: Promise<void>[] = [];
     for (const [key, agentSet] of affectedRows) {
       const date = key.split("|")[1];
       for (const aid of agentSet) {
-        await refreshRollupForAgentDate(aid, date);
+        refreshPromises.push(refreshRollupForAgentDate(aid, date));
       }
     }
+    // 并行执行所有刷新任务
+    await Promise.all(refreshPromises);
 
     totalSettled += pendingList.length;
     console.log(`[BatchSettle] Batch ${offset / BATCH_SIZE + 1}: ${pendingList.length} records`);
@@ -268,15 +272,18 @@ export async function batchCancelCommissions(ids: number[]): Promise<number> {
     .set({ status: "cancelled" })
     .where(and(eq(commissionLogs.status, "pending"), inArray(commissionLogs.id, ids)));
 
-  // 刷新 rollup
+  // 刷新 rollup - 优化：批量去重后并行执行
   const seen = new Set<string>();
+  const refreshPromises: Promise<void>[] = [];
   for (const r of affected) {
     const date = r.createdAt.toISOString().slice(0, 10);
     const key = `${r.agentId}|${date}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    await refreshRollupForAgentDate(r.agentId, date);
+    refreshPromises.push(refreshRollupForAgentDate(r.agentId, date));
   }
+  // 并行执行所有刷新任务
+  await Promise.all(refreshPromises);
 
   return ids.length;
 }

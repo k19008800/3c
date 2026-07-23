@@ -1029,6 +1029,8 @@ export async function adminFinanceRoutes(app: FastifyInstance) {
       return;
     }
 
+    // ⚠️ PERF: 确保响应在事务外发送，避免 Race Condition
+    //     如果事务提交失败，用户不应收到成功响应
     await db.transaction(async (tx) => {
       await tx
         .update(rechargeOrders)

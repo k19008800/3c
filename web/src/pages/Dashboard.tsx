@@ -263,6 +263,36 @@ export default function Dashboard() {
     }
   }, [timeRange])
 
+  // 并行加载所有初始数据
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        // 并行执行所有独立的数据请求
+        const [loginHistoryResult, quotaResult] = await Promise.allSettled([
+          get<{ list: LoginHistoryItem[] }>('/api/v1/auth/security/login-history?limit=5'),
+          get<{ userQuota: QuotaInfo | null; keyQuotas: any[] }>('/api/v1/me/quota')
+        ])
+        
+        // 处理登录历史
+        if (loginHistoryResult.status === 'fulfilled') {
+          setLoginHistory(loginHistoryResult.value.list || [])
+        }
+        
+        // 处理额度信息
+        if (quotaResult.status === 'fulfilled' && quotaResult.value.userQuota) {
+          const q = quotaResult.value.userQuota;
+          setQuota({ ...q, usagePercent: q.quotaAmount ? Number((Number(q.usedAmount) / Number(q.quotaAmount)) * 100) : 0 });
+        }
+      } catch {
+        // 静默失败
+      } finally {
+        setQuotaLoading(false)
+      }
+    }
+    
+    loadInitialData()
+  }, [])
+
   useEffect(() => {
     fetchSummary()
   }, [fetchSummary])
@@ -274,22 +304,6 @@ export default function Dashboard() {
   useEffect(() => {
     if (usageOpen) fetchAggregatedUsage()
   }, [usageOpen, fetchAggregatedUsage])
-
-  useEffect(() => {
-    get<{ list: LoginHistoryItem[] }>('/api/v1/auth/security/login-history?limit=5')
-      .then((d) => setLoginHistory(d.list))
-      .catch(() => {})
-
-    get<{ userQuota: QuotaInfo | null; keyQuotas: any[] }>('/api/v1/me/quota')
-      .then((d) => {
-        if (d.userQuota) {
-          const q = d.userQuota;
-          setQuota({ ...q, usagePercent: q.quotaAmount ? Number((Number(q.usedAmount) / Number(q.quotaAmount)) * 100) : 0 });
-        }
-      })
-      .catch(() => {})
-      .finally(() => setQuotaLoading(false))
-  }, [])
 
   const handleCopyCurl = async () => {
     const activeApiKey = keyActivities.find((k) => k.keyPrefix)

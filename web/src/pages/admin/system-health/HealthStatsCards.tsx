@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { DashboardHealth } from '@/types'
-import {
-  AlertTriangle,
+import React from 'react';
+import {AlertTriangle,
   CheckCircle2,
   Server,
   Database,
@@ -20,7 +20,7 @@ interface Props {
    HealthStatsCards
    System Status + Rate Limit + Recent Errors
    ════════════════════════════════════════ */
-export default function HealthStatsCards({ health }: Props) {
+const HealthStatsCardsBase = React.memo(function HealthStatsCardsBase({ health }: Props) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <SystemStatusCard health={health} />
@@ -220,3 +220,5 @@ function StatBlock({
     </div>
   )
 }
+
+export default HealthStatsCardsBase;

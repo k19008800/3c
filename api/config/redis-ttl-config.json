@@ -1,0 +1,33 @@
+{
+  "patterns": {
+    "session:*": 604800,
+    "risk:ban:*": 86400,
+    "rl:*": 60,
+    "rate:*": 60,
+    "cache:*": 300,
+    "dashboard:*": 300,
+    "undo:*": 3600,
+    "verify:*": 300,
+    "captcha:*": 300,
+    "reset:*": 1800,
+    "geocache:*": 86400,
+    "fraud:*": 86400,
+    "permission:*": 300,
+    "circuit:*": 600,
+    "alert:*": 3600,
+    "user:*:cache": 3600,
+    "agent:*:data": 300,
+    "count:*": 60,
+    "default": 3600
+  },
+  "scanBatchSize": 100,
+  "reportOnly": false,
+  "logLevel": "info",
+  "excludePatterns": [
+    "internal:*",
+    "temp:*",
+    "test:*"
+  ],
+  "dryRun": false,
+  "maxKeysToFix": 1000
+}

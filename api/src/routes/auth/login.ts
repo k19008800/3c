@@ -52,7 +52,15 @@ export async function authLoginRoutes(app: FastifyInstance) {
 
   // POST /api/v1/auth/login
 
-  app.post("/api/v1/auth/login", async (request, reply) => {
+  app.post("/api/v1/auth/login", {
+    // 分级限流：登录接口非常敏感，每分钟最多 5 次尝试
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '1 minute'
+      }
+    }
+  }, async (request, reply) => {
 
     try {
 
@@ -184,7 +192,15 @@ export async function authLoginRoutes(app: FastifyInstance) {
 
   // POST /api/v1/auth/refresh
 
-  app.post("/api/v1/auth/refresh", async (request, reply) => {
+  app.post("/api/v1/auth/refresh", {
+    // 分级限流：刷新接口防止滥用，每分钟最多 ?, 次尝试
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 minute'
+      }
+    }
+  }, async (request, reply) => {
 
     try {
 

@@ -2,6 +2,9 @@
 //  3cloud (3C) — 用户端用量聚合统计路由
 //  GET /api/v1/stats/usage/aggregated  — 用量聚合查询
 //  GET /api/v1/stats/usage/detail      — 用量明细（含模型/供应商细分）
+// 
+// PERF: 此模块包含统计类接口，查询超时已通过 query-timeout 插件设置为 30 秒
+//       支持复杂聚合查询，避免因数据量大导致超时中断
 // ============================================================
 
 import { FastifyInstance } from "fastify";

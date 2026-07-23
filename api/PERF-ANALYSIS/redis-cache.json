@@ -1,0 +1,332 @@
+{
+  "analysis_timestamp": "2026-07-23T00:15:00+08:00",
+  "environment": "development",
+  "redis_instance": "localhost:6379",
+  
+  "key_statistics": {
+    "total_keys_found": 2,
+    "key_patterns_detected": [
+      {
+        "pattern": "session:*",
+        "count": 1,
+        "description": "用户会话存储"
+      },
+      {
+        "pattern": "other",
+        "count": 1,
+        "description": "其他键"
+      }
+    ]
+  },
+  
+  "memory_usage": {
+    "used_memory_human": "1.28M",
+    "used_memory_rss_human": "1.19M",
+    "used_memory_peak_human": "1.41M",
+    "mem_fragmentation_ratio": 1.00,
+    "dataset_memory_human": "571.35K",
+    "overhead_memory_human": "734.88K"
+  },
+  
+  "key_pattern_analysis": {
+    "code_based_patterns": [
+      {
+        "pattern": "dashboard:*",
+        "examples": [
+          "dashboard:enterprise-overview",
+          "dashboard:summary",
+          "dashboard:todo-queue"
+        ],
+        "ttl_seconds": 300,
+        "type": "string",
+        "purpose": "仪表板数据缓存",
+        "risk": "低"
+      },
+      {
+        "pattern": "rl:* (rate_limit)",
+        "examples": [
+          "rl:rpm:global:0",
+          "rl:rpm:user:*",
+          "rl:tpm:user:*",
+          "rl:rpm:key:*"
+        ],
+        "ttl_seconds": "滑动窗口，自动清理",
+        "type": "zset",
+        "purpose": "限流计数器",
+        "risk": "中 - 可能产生大量键"
+      },
+      {
+        "pattern": "session:*",
+        "examples": [
+          "session:{jwt_token}"
+        ],
+        "ttl_seconds": "JWT过期时间",
+        "type": "string",
+        "purpose": "用户会话管理",
+        "risk": "低"
+      },
+      {
+        "pattern": "perm:user:*",
+        "examples": [
+          "perm:user:{userId}"
+        ],
+        "ttl_seconds": "PERM_CACHE_TTL",
+        "type": "string",
+        "purpose": "用户权限缓存",
+        "risk": "低"
+      },
+      {
+        "pattern": "risk:*",
+        "examples": [
+          "risk:ban:ip:*",
+          "risk:ban:user:*",
+          "risk:proxy:*"
+        ],
+        "ttl_seconds": "可变，从分钟到数天",
+        "type": "string",
+        "purpose": "安全风险控制",
+        "risk": "低"
+      },
+      {
+        "pattern": "fraud:*",
+        "examples": [
+          "fraud:banned:ips",
+          "fraud:user:{userId}:ips"
+        ],
+        "ttl_seconds": "600-3600",
+        "type": "set/string",
+        "purpose": "反欺诈系统",
+        "risk": "低"
+      },
+      {
+        "pattern": "cb:v2:* (circuit_breaker)",
+        "examples": [
+          "cb:v2:open:*",
+          "cb:v2:halfOpen:*",
+          "cb:v2:failures:*",
+          "cb:v2:weightReduced:*"
+        ],
+        "ttl_seconds": "120-300",
+        "type": "string",
+        "purpose": "熔断器状态",
+        "risk": "中 - 供应商模型越多键越多"
+      },
+      {
+        "pattern": "geo:*",
+        "examples": [
+          "geo:enrich:{userId}:{ip}",
+          "geo:cache:{ip}",
+          "geo:lastGeo:{userId}"
+        ],
+        "ttl_seconds": "300-604800",
+        "type": "string",
+        "purpose": "地理位置缓存",
+        "risk": "低"
+      },
+      {
+        "pattern": "ref:*",
+        "examples": [
+          "ref:link:{code}",
+          "ref:uid:{userId}"
+        ],
+        "ttl_seconds": "7776000 (90天)",
+        "type": "string",
+        "purpose": "推荐链接缓存",
+        "risk": "低"
+      },
+      {
+        "pattern": "verify:*",
+        "examples": [
+          "verify:email:{userId}"
+        ],
+        "ttl_seconds": 300,
+        "type": "string",
+        "purpose": "验证码存储",
+        "risk": "低"
+      },
+      {
+        "pattern": "reset:*",
+        "examples": [
+          "reset:token:{token}"
+        ],
+        "ttl_seconds": 1800,
+        "type": "string",
+        "purpose": "密码重置令牌",
+        "risk": "低"
+      },
+      {
+        "pattern": "undo:*",
+        "examples": [
+          "undo:{tokenId}"
+        ],
+        "ttl_seconds": "UNDO_TTL",
+        "type": "string",
+        "purpose": "操作撤销令牌",
+        "risk": "低"
+      },
+      {
+        "pattern": "scheduling:*",
+        "examples": [
+          "scheduling:rpm:{bucket}",
+          "scheduling:tpm:{bucket}",
+          "scheduling:lat:{bucket}"
+        ],
+        "ttl_seconds": 10,
+        "type": "hash",
+        "purpose": "调度统计数据",
+        "risk": "低 - 高频更新"
+      }
+    ]
+  },
+  
+  "ttl_analysis": {
+    "ttl_distribution": {
+      "short_term": {
+        "range": "0-300秒",
+        "patterns": [
+          "scheduling:* (10秒)",
+          "dashboard:* (60-300秒)",
+          "verify:* (300秒)"
+        ],
+        "risk": "缓存穿透风险低"
+      },
+      "medium_term": {
+        "range": "300-3600秒",
+        "patterns": [
+          "risk:* (分钟级)",
+          "cb:* (120-300秒)",
+          "fraud:* (600-3600秒)",
+          "reset:* (1800秒)"
+        ],
+        "risk": "合理"
+      },
+      "long_term": {
+        "range": ">3600秒",
+        "patterns": [
+          "ref:* (7776000秒/90天)",
+          "geo:* (最长604800秒/7天)",
+          "session:* (JWT过期时间)"
+        ],
+        "risk": "内存泄漏风险低"
+      },
+      "no_ttl_identified": false,
+      "no_ttl_patterns_in_code": [
+        "无明显的永久性键模式"
+      ]
+    }
+  },
+  
+  "risk_assessment": {
+    "cache_penetration_risk": "低",
+    "cache_avalanche_risk": "中",
+    "big_key_risk": "低",
+    "memory_leak_risk": "低",
+    "blocking_commands_risk": "低",
+    
+    "details": {
+      "cache_penetration": {
+        "risk_level": "低",
+        "reason": "大部分缓存都有合理的TTL，且有数据库回退机制",
+        "recommendation": "保持现有设计"
+      },
+      "cache_avalanche": {
+        "risk_level": "中",
+        "reason": "部分dashboard缓存TTL相同(300秒)，可能同时过期",
+        "recommendation": "为dashboard缓存添加随机TTL抖动"
+      },
+      "big_keys": {
+        "risk_level": "低",
+        "reason": "目前未发现大键问题，hgetall使用合理",
+        "recommendation": "持续监控scheduling:*的hash大小"
+      },
+      "memory_leak": {
+        "risk_level": "低",
+        "reason": "所有键都有TTL，无永久性缓存",
+        "recommendation": "保持现有设计"
+      },
+      "blocking_commands": {
+        "risk_level": "低",
+        "reason": "代码中使用SCAN而非KEYS，hgetall限制在合理范围",
+        "recommendation": "继续保持良好实践"
+      }
+    }
+  },
+  
+  "performance_recommendations": [
+    {
+      "priority": "高",
+      "recommendation": "为dashboard缓存添加TTL抖动",
+      "reason": "防止缓存雪崩",
+      "implementation": "在设置dashboard缓存时，TTL = base_ttl + random(0, 30)"
+    },
+    {
+      "priority": "中",
+      "recommendation": "监控rl:*键的增长",
+      "reason": "限流键可能随用户增长而快速增长",
+      "implementation": "定期清理过期rl键，使用更高效的存储结构"
+    },
+    {
+      "priority": "中",
+      "recommendation": "优化circuit breaker键命名",
+      "reason": "cb:v2:*模式可能随供应商模型增多而膨胀",
+      "implementation": "考虑使用hash存储多个供应商状态"
+    },
+    {
+      "priority": "低",
+      "recommendation": "添加Redis监控",
+      "reason": "当前内存使用较低，但需要监控增长趋势",
+      "implementation": "监控used_memory, key数量, eviction数量"
+    },
+    {
+      "priority": "低",
+      "recommendation": "统一TTL常量",
+      "reason": "TTL值分散在不同文件中",
+      "implementation": "创建统一的TTL配置常量文件"
+    }
+  ],
+  
+  "key_naming_conventions": {
+    "current_conventions": {
+      "prefix_colon_pattern": "广泛使用，如dashboard:, rl:, session:",
+      "consistency": "良好",
+      "readability": "良好"
+    },
+    "improvement_opportunities": [
+      "考虑添加版本前缀，如v1:session:",
+      "为agent相关缓存统一前缀，如agent:cache:, agent:stats:"
+    ]
+  },
+  
+  "memory_distribution_estimate": {
+    "based_on_code_patterns": {
+      "session_storage": "~10-20%",
+      "rate_limiting": "~20-30%",
+      "dashboard_cache": "~5-10%",
+      "security_risk": "~10-15%",
+      "circuit_breaker": "~15-20%",
+      "geo_caching": "~5-10%",
+      "other": "~10-15%"
+    }
+  },
+  
+  "monitoring_suggestions": [
+    "监控rl:*键数量增长趋势",
+    "监控cb:v2:*键数量(与供应商模型数量相关)",
+    "设置内存使用告警阈值(如>500MB)",
+    "监控key驱逐(eviction)率",
+    "定期审计无TTL键"
+  ],
+  
+  "summary": {
+    "overall_health": "良好",
+    "memory_usage": "健康(1.28MB)",
+    "key_naming": "规范统一",
+    "ttl_management": "良好",
+    "blocking_commands": "无风险",
+    "recommended_actions": [
+      "实施TTL抖动防止缓存雪崩",
+      "监控限流和熔断器键增长",
+      "定期运行此分析报告"
+    ]
+  }
+}

@@ -4,8 +4,8 @@ import { usePagination } from '@/hooks/use-pagination'
 import PaginationBar from '@/components/ui/PaginationBar'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import type { Vendor } from '@/types'
-import {
-  Plus, Edit3, Trash2, Cable, CheckCircle2, AlertCircle, Loader2,
+import React from 'react';
+import {Plus, Edit3, Trash2, Cable, CheckCircle2, AlertCircle, Loader2,
   DollarSign, RefreshCw, ToggleLeft, ToggleRight, Eye, EyeOff,
   Search, Download, FileText, Copy, X, Info,
   Square, CheckSquare,
@@ -55,7 +55,7 @@ function calcHealth(item: KeyItem): { level: 'healthy' | 'warn' | 'danger'; rate
   return { level: 'danger', rate }
 }
 
-export default function VendorKeyGroups() {
+const VendorKeyGroupsBase = React.memo(function VendorKeyGroupsBase() {
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [vendorSummaries, setVendorSummaries] = useState<VendorSummary[]>([])
   const [selectedVendorId, setSelectedVendorId] = useState<number | null>(null)
@@ -1200,3 +1200,5 @@ export default function VendorKeyGroups() {
     </div>
   )
 }
+
+export default VendorKeyGroupsBase;

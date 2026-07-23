@@ -1,0 +1,297 @@
+{
+  "timestamp": "2026-07-23T00:30:00+08:00",
+  "project": "3cloud-web-frontend",
+  "statistics": {
+    "total_pages": 301,
+    "total_components": 51,
+    "ui_components": 5,
+    "business_components": 46,
+    "large_pages": 26,
+    "large_components": 1,
+    "problematic_pages": 5,
+    "problematic_components": 0,
+    "pages_needing_memo": 218,
+    "components_needing_memo": 41
+  },
+  "large_components_list": [
+    {
+      "file": "pages\\Dashboard.tsx",
+      "line_count": 747,
+      "type": "page"
+    },
+    {
+      "file": "pages\\Logs.tsx",
+      "line_count": 797,
+      "type": "page"
+    },
+    {
+      "file": "pages\\Models.tsx",
+      "line_count": 646,
+      "type": "page"
+    },
+    {
+      "file": "pages\\Notifications.tsx",
+      "line_count": 524,
+      "type": "page"
+    },
+    {
+      "file": "pages\\RealName.tsx",
+      "line_count": 651,
+      "type": "page"
+    },
+    {
+      "file": "pages\\Recharge.tsx",
+      "line_count": 673,
+      "type": "page"
+    },
+    {
+      "file": "pages\\Redemption.tsx",
+      "line_count": 1107,
+      "type": "page"
+    },
+    {
+      "file": "pages\\Settings.tsx",
+      "line_count": 822,
+      "type": "page"
+    },
+    {
+      "file": "pages\\Stats.tsx",
+      "line_count": 801,
+      "type": "page"
+    },
+    {
+      "file": "pages\\admin\\AgentsList.tsx",
+      "line_count": 634,
+      "type": "page"
+    },
+    {
+      "file": "pages\\admin\\FinanceCommissions.tsx",
+      "line_count": 1064,
+      "type": "page"
+    },
+    {
+      "file": "pages\\admin\\FinanceDashboard.tsx",
+      "line_count": 539,
+      "type": "page"
+    },
+    {
+      "file": "pages\\admin\\FinanceReconciliation.tsx",
+      "line_count": 585,
+      "type": "page"
+    },
+    {
+      "file": "pages\\admin\\ProfitAnalysis.tsx",
+      "line_count": 681,
+      "type": "page"
+    },
+    {
+      "file": "pages\\admin\\PromptAudit.tsx",
+      "line_count": 648,
+      "type": "page"
+    },
+    {
+      "file": "pages\\admin\\RedemptionCodes.tsx",
+      "line_count": 1032,
+      "type": "page"
+    },
+    {
+      "file": "pages\\admin\\Roles.tsx",
+      "line_count": 740,
+      "type": "page"
+    },
+    {
+      "file": "pages\\admin\\SensitiveWords.tsx",
+      "line_count": 568,
+      "type": "page"
+    },
+    {
+      "file": "pages\\admin\\Users.tsx",
+      "line_count": 1582,
+      "type": "page"
+    },
+    {
+      "file": "pages\\admin\\VendorKeyGroups.tsx",
+      "line_count": 1203,
+      "type": "page"
+    },
+    {
+      "file": "pages\\admin\\VendorModels.tsx",
+      "line_count": 904,
+      "type": "page"
+    },
+    {
+      "file": "pages\\admin\\Vendors.tsx",
+      "line_count": 604,
+      "type": "page"
+    },
+    {
+      "file": "pages\\admin\\dashboard\\ModelSchedulingRealtime.tsx",
+      "line_count": 773,
+      "type": "page"
+    },
+    {
+      "file": "pages\\admin\\dashboard\\OverviewTrends.tsx",
+      "line_count": 831,
+      "type": "page"
+    },
+    {
+      "file": "pages\\admin\\enterprise-analysis\\index.tsx",
+      "line_count": 530,
+      "type": "page"
+    },
+    {
+      "file": "pages\\admin\\finance\\Prices.tsx",
+      "line_count": 814,
+      "type": "page"
+    },
+    {
+      "file": "components\\layout\\Sidebar.tsx",
+      "line_count": 572,
+      "type": "component"
+    }
+  ],
+  "performance_issues_summary": {
+    "pages_with_issues": [
+      {
+        "file": "pages\\admin\\AdminApiKeys.tsx",
+        "issues": [
+          "列表渲染可能缺少key属性"
+        ],
+        "line_count": 308
+      },
+      {
+        "file": "pages\\admin\\FinanceCommissions.tsx",
+        "issues": [
+          "过多内联函数 (12个)"
+        ],
+        "line_count": 1064
+      },
+      {
+        "file": "pages\\admin\\RedemptionCodes.tsx",
+        "issues": [
+          "过多内联函数 (12个)"
+        ],
+        "line_count": 1032
+      },
+      {
+        "file": "pages\\admin\\SecurityDashboard.tsx",
+        "issues": [
+          "过多内联样式 (6个)"
+        ],
+        "line_count": 286
+      },
+      {
+        "file": "pages\\admin\\vendor-self\\OverviewCards.tsx",
+        "issues": [
+          "列表渲染可能缺少key属性"
+        ],
+        "line_count": 133
+      }
+    ],
+    "components_with_issues": []
+  },
+  "optimization_recommendations": {
+    "components_needing_memo": [
+      {
+        "file": "pages\\Announcements.tsx",
+        "line_count": 187,
+        "type": "page"
+      },
+      {
+        "file": "pages\\ApiKeys.tsx",
+        "line_count": 489,
+        "type": "page"
+      },
+      {
+        "file": "pages\\Dashboard.tsx",
+        "line_count": 747,
+        "type": "page"
+      },
+      {
+        "file": "pages\\Docs.tsx",
+        "line_count": 351,
+        "type": "page"
+      },
+      {
+        "file": "pages\\Login.tsx",
+        "line_count": 135,
+        "type": "page"
+      },
+      {
+        "file": "pages\\Logs.tsx",
+        "line_count": 797,
+        "type": "page"
+      },
+      {
+        "file": "pages\\Models.tsx",
+        "line_count": 646,
+        "type": "page"
+      },
+      {
+        "file": "pages\\Notifications.tsx",
+        "line_count": 524,
+        "type": "page"
+      },
+      {
+        "file": "pages\\OperationLogs.tsx",
+        "line_count": 274,
+        "type": "page"
+      },
+      {
+        "file": "pages\\RealName.tsx",
+        "line_count": 651,
+        "type": "page"
+      },
+      {
+        "file": "pages\\Recharge.tsx",
+        "line_count": 673,
+        "type": "page"
+      },
+      {
+        "file": "pages\\Redemption.tsx",
+        "line_count": 1107,
+        "type": "page"
+      },
+      {
+        "file": "pages\\Register.tsx",
+        "line_count": 131,
+        "type": "page"
+      },
+      {
+        "file": "pages\\ResetPassword.tsx",
+        "line_count": 143,
+        "type": "page"
+      },
+      {
+        "file": "pages\\Security.tsx",
+        "line_count": 246,
+        "type": "page"
+      },
+      {
+        "file": "pages\\Settings.tsx",
+        "line_count": 822,
+        "type": "page"
+      },
+      {
+        "file": "pages\\Stats.tsx",
+        "line_count": 801,
+        "type": "page"
+      },
+      {
+        "file": "pages\\Transactions.tsx",
+        "line_count": 280,
+        "type": "page"
+      },
+      {
+        "file": "pages\\admin\\AdminApiKeys.tsx",
+        "line_count": 308,
+        "type": "page"
+      },
+      {
+        "file": "pages\\admin\\AdminLogs.tsx",
+        "line_count": 177,
+        "type": "page"
+      }
+    ]
+  }
+}

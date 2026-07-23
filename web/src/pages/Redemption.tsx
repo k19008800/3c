@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { get, post } from '@/lib/api'
 import PaginationBar from '@/components/ui/PaginationBar'
-import {
-  Loader2, Gift, CheckCircle2, AlertCircle, Clock, Send, Inbox, MessageSquare, X,
+import React from 'react';
+import {Loader2, Gift, CheckCircle2, AlertCircle, Clock, Send, Inbox, MessageSquare, X,
   Zap, Megaphone, Calendar, Eye, User, Info, History,
 } from 'lucide-react'
 
@@ -389,7 +389,7 @@ function GiftModal({
 // 【权限要求】登录即可兑换；转赠需接收方邮箱验证
 // 【数据来源】POST /api/v1/redemption/redeem, GET /api/v1/redemption/codes, POST /api/v1/redemption/codes/:id/gift
 
-export default function Redemption() {
+const RedemptionBase = React.memo(function RedemptionBase() {
   const [code, setCode] = useState('')
   const [redeeming, setRedeeming] = useState(false)
   const [redeemError, setRedeemError] = useState('')
@@ -1104,3 +1104,5 @@ export default function Redemption() {
     </div>
   )
 }
+
+export default RedemptionBase;

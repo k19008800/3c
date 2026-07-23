@@ -8,6 +8,7 @@ import { eq, desc, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { announcements, users } from "../db/schema.js";
 import { authenticateJWT } from "../middleware/auth.js";
+import { getPaginationCount } from "../utils/count-optimizer.js";
 
 export async function announcementRoutes(app: FastifyInstance) {
   // 用户端只需要登录，不需要管理员权限
@@ -22,11 +23,15 @@ export async function announcementRoutes(app: FastifyInstance) {
     const offset = (page - 1) * pageSize;
 
     // 只返回 status = true（已发布）的公告
-    const [totalResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(announcements)
-      .where(eq(announcements.status, true));
-    const total = Number(totalResult?.count ?? 0);
+    const countQuery = async () => {
+      const [totalResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(announcements)
+        .where(eq(announcements.status, true));
+      return Number(totalResult?.count ?? 0);
+    };
+    
+    const total = await getPaginationCount("announcements", countQuery, { status: true });
 
     const rows = await db
       .select({

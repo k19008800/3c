@@ -1,0 +1,457 @@
+{
+  "total": 327,
+  "unmemoized": 327,
+  "memoized": 0,
+  "topComponents": [
+    {
+      "path": "pages\\admin\\system-health\\HealthStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\system-health\\HealthStatsCards.tsx",
+      "size": 223,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\dashboard\\StatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\dashboard\\StatsCards.tsx",
+      "size": 188,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\trends\\TrendsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\trends\\TrendsCards.tsx",
+      "size": 178,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\redemption\\StatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\redemption\\StatsCards.tsx",
+      "size": 165,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\rate-limits\\LimitStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\rate-limits\\LimitStatsCards.tsx",
+      "size": 156,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\stats\\OverviewCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\stats\\OverviewCards.tsx",
+      "size": 149,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\dashboard\\KpiCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\dashboard\\KpiCards.tsx",
+      "size": 146,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\admin-logs\\LogStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\admin-logs\\LogStatsCards.tsx",
+      "size": 143,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\vendor-self\\OverviewCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\vendor-self\\OverviewCards.tsx",
+      "size": 133,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\security-events\\EventStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\security-events\\EventStatsCards.tsx",
+      "size": 130,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\users\\UserStatsCard.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\users\\UserStatsCard.tsx",
+      "size": 130,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\audit-logs\\AuditStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\audit-logs\\AuditStatsCards.tsx",
+      "size": 126,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\recharge\\OrderStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\recharge\\OrderStatsCards.tsx",
+      "size": 120,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\api-keys\\UsageExampleRow.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\api-keys\\UsageExampleRow.tsx",
+      "size": 117,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\real-name\\ReviewStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\real-name\\ReviewStatsCards.tsx",
+      "size": 113,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\campaigns\\CampaignStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\campaigns\\CampaignStatsCards.tsx",
+      "size": 112,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\vendor-models\\ModelStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\vendor-models\\ModelStatsCards.tsx",
+      "size": 110,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\withdraws\\WithdrawStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\withdraws\\WithdrawStatsCards.tsx",
+      "size": 106,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\security-rules\\RuleStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\security-rules\\RuleStatsCards.tsx",
+      "size": 105,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\admin-models\\ModelStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\admin-models\\ModelStatsCards.tsx",
+      "size": 102,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\agent\\finance\\FinanceStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\agent\\finance\\FinanceStatsCards.tsx",
+      "size": 98,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\api-keys\\KeyStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\api-keys\\KeyStatsCards.tsx",
+      "size": 96,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\quotas\\QuotaStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\quotas\\QuotaStatsCards.tsx",
+      "size": 96,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\agent\\agent-dashboard\\KpiCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\agent\\agent-dashboard\\KpiCards.tsx",
+      "size": 78,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\agent\\redemption\\RedemptionStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\agent\\redemption\\RedemptionStatsCards.tsx",
+      "size": 78,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "components\\logs\\LogStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\components\\logs\\LogStatsCards.tsx",
+      "size": 72,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\security-bans\\BanStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\security-bans\\BanStatsCards.tsx",
+      "size": 70,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\page-contents\\ContentStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\page-contents\\ContentStatsCards.tsx",
+      "size": 59,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\agent\\clients\\ClientStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\agent\\clients\\ClientStatsCards.tsx",
+      "size": 52,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\vendor\\vendor-dashboard\\VendorStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\vendor\\vendor-dashboard\\VendorStatsCards.tsx",
+      "size": 47,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\finance\\invoices\\InvoiceStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\finance\\invoices\\InvoiceStatsCards.tsx",
+      "size": 41,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\finance\\refunds\\RefundStatsCards.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\finance\\refunds\\RefundStatsCards.tsx",
+      "size": 39,
+      "isMemo": false,
+      "isPure": true,
+      "renderFrequency": "high",
+      "priority": "P1"
+    },
+    {
+      "path": "pages\\admin\\Users.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\Users.tsx",
+      "size": 1582,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "medium",
+      "priority": "P2"
+    },
+    {
+      "path": "pages\\admin\\VendorKeyGroups.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\VendorKeyGroups.tsx",
+      "size": 1203,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "medium",
+      "priority": "P2"
+    },
+    {
+      "path": "pages\\Redemption.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\Redemption.tsx",
+      "size": 1107,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "medium",
+      "priority": "P2"
+    },
+    {
+      "path": "pages\\admin\\FinanceCommissions.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\FinanceCommissions.tsx",
+      "size": 1064,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "medium",
+      "priority": "P2"
+    },
+    {
+      "path": "pages\\admin\\RedemptionCodes.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\RedemptionCodes.tsx",
+      "size": 1032,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "medium",
+      "priority": "P2"
+    },
+    {
+      "path": "pages\\admin\\VendorModels.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\VendorModels.tsx",
+      "size": 904,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "medium",
+      "priority": "P2"
+    },
+    {
+      "path": "pages\\admin\\dashboard\\OverviewTrends.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\dashboard\\OverviewTrends.tsx",
+      "size": 831,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "medium",
+      "priority": "P2"
+    },
+    {
+      "path": "pages\\Settings.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\Settings.tsx",
+      "size": 822,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "medium",
+      "priority": "P2"
+    },
+    {
+      "path": "pages\\admin\\finance\\Prices.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\finance\\Prices.tsx",
+      "size": 814,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "medium",
+      "priority": "P2"
+    },
+    {
+      "path": "pages\\Stats.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\Stats.tsx",
+      "size": 801,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "medium",
+      "priority": "P2"
+    },
+    {
+      "path": "pages\\Logs.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\Logs.tsx",
+      "size": 797,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "medium",
+      "priority": "P2"
+    },
+    {
+      "path": "pages\\admin\\dashboard\\ModelSchedulingRealtime.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\dashboard\\ModelSchedulingRealtime.tsx",
+      "size": 773,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "medium",
+      "priority": "P2"
+    },
+    {
+      "path": "pages\\Dashboard.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\Dashboard.tsx",
+      "size": 747,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "medium",
+      "priority": "P2"
+    },
+    {
+      "path": "pages\\admin\\Roles.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\Roles.tsx",
+      "size": 740,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "medium",
+      "priority": "P2"
+    },
+    {
+      "path": "pages\\admin\\ProfitAnalysis.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\ProfitAnalysis.tsx",
+      "size": 681,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "medium",
+      "priority": "P2"
+    },
+    {
+      "path": "pages\\Recharge.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\Recharge.tsx",
+      "size": 673,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "medium",
+      "priority": "P2"
+    },
+    {
+      "path": "pages\\RealName.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\RealName.tsx",
+      "size": 651,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "medium",
+      "priority": "P2"
+    },
+    {
+      "path": "pages\\admin\\PromptAudit.tsx",
+      "fullPath": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\web\\src\\pages\\admin\\PromptAudit.tsx",
+      "size": 648,
+      "isMemo": false,
+      "isPure": false,
+      "renderFrequency": "medium",
+      "priority": "P2"
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import React from 'react'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 import type { AdminDashboardStats } from '@/types'
 
@@ -17,7 +18,7 @@ function pct(a: number, b: number): string {
   return (diff >= 0 ? '+' : '') + diff.toFixed(1) + '%'
 }
 
-export default function KpiCards({ stats: s }: Props) {
+const KpiCardsBase = React.memo(function KpiCardsBase({ stats: s }: Props) {
   const todayCalls = s.calls.today
   const yesterdayCalls = s.calls.yesterday
   const successRate = todayCalls.total > 0
@@ -142,4 +143,6 @@ export default function KpiCards({ stats: s }: Props) {
       </div>
     </>
   )
-}
+})
+
+export default KpiCardsBase;

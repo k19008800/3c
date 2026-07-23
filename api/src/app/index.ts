@@ -176,6 +176,18 @@ function registerCronJobs(app: Fastify.FastifyInstance) {
   });
   app.log.info("[Cron] Audit log archival scheduled: daily at 02:00 (purge >90d)");
 
+  // ── 分区表自动清理（03:30 每天）──
+  cron.schedule("30 3 * * *", async () => {
+    try {
+      const { cleanupOldPartitions } = await import("../cron/partition-cleanup.js");
+      await cleanupOldPartitions();
+      app.log.info("[Cron] Partition cleanup completed");
+    } catch (err) {
+      app.log.error({ err }, "[Cron] Partition cleanup error");
+    }
+  });
+  app.log.info("[Cron] Partition cleanup scheduled: daily at 03:30");
+
   // ── 兑换码过期检查（每小时）──
   setTimeout(async () => {
     const { runCodeExpiryCheck } = await import("../cron/code-expiry.js");

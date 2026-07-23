@@ -54,6 +54,7 @@ export async function handlePaymentNotify(
 
   const now = new Date();
 
+  // ⚠️ PERF: 事务一致性 - 此函数被路由层调用，确保路由在事务后才响应
   await db.transaction(async (tx) => {
     // 更新订单状态
     await tx

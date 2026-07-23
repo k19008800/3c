@@ -51,6 +51,18 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
   const { default: dbPlugin } = await import("../plugins/db.js");
   await app.register(dbPlugin, {});
 
+  // ── 数据库查询超时保护（必须在 DB 插件之后注册）──
+  const { default: queryTimeoutPlugin } = await import("../plugins/query-timeout.js");
+  await app.register(queryTimeoutPlugin, {});
+
+  // ── 响应压缩 ──
+  const { default: compressPlugin } = await import("../plugins/compress.js");
+  await app.register(compressPlugin, {});
+
+  // ── 全局限流保护 ──
+  const { default: rateLimitPlugin } = await import("../plugins/rate-limit.js");
+  await app.register(rateLimitPlugin, {});
+
   // ── 静态文件服务（用于上传图片访问）──
   await app.register(import("@fastify/static"), {
     root: join(import.meta.dirname, "../public"),

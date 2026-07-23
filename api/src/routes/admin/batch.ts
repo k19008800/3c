@@ -17,6 +17,13 @@ export async function adminBatchRoutes(app: FastifyInstance) {
   // ── 供应商：批量启停 ──
   app.post("/api/v1/admin/vendors/batch-toggle", {
     preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+    // 分级限流：批量操作容易造成负载，每分钟最多 10 次
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 minute'
+      }
+    }
   }, async (request, reply) => {
     const { ids, action } = request.body as any;
     if (!ids?.length || !['enable', 'disable'].includes(action)) {
@@ -33,6 +40,13 @@ export async function adminBatchRoutes(app: FastifyInstance) {
   // ── 供应商：批量删除 ──
   app.post("/api/v1/admin/vendors/batch-delete", {
     preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+    // 分级限流：批量删除操作敏感，每分钟最多 5 次
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '1 minute'
+      }
+    }
   }, async (request, reply) => {
     const { ids } = request.body as any;
     if (!ids?.length) return reply.status(400).send({ code: 400, data: null, message: "参数错误" });

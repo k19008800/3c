@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Loader2, Activity } from 'lucide-react'
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+import React from 'react';
+import {AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { OverviewStats, TrendItem } from './types'
@@ -132,7 +132,7 @@ function OverviewTrendChart({ data, loading, periodLabel }: { data: TrendItem[];
 
 // ──── Main ────
 
-export default function OverviewCards({ overview, loading, trendData, trendLoading, period }: OverviewCardsProps) {
+const OverviewCardsBase = React.memo(function OverviewCardsBase({ overview, loading, trendData, trendLoading, period }: OverviewCardsProps) {
   const periodLabel = useMemo(() => {
     if (period === '7d') return '7天'
     if (period === '30d') return '30天'
@@ -146,3 +146,5 @@ export default function OverviewCards({ overview, loading, trendData, trendLoadi
     </div>
   )
 }
+
+export default OverviewCardsBase;

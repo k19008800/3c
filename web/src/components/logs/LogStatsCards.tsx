@@ -1,3 +1,4 @@
+import React from 'react'
 import { Activity, Cpu, DollarSign, Clock, CheckCircle2, XCircle } from 'lucide-react'
 import type { LogSummary } from '@/types'
 
@@ -23,7 +24,7 @@ function StatCard({ icon: Icon, label, value, sub, color }: { icon: any; label: 
   )
 }
 
-export default function LogStatsCards({ summary, loading }: LogStatsCardsProps) {
+const LogStatsCardsBase = React.memo(function LogStatsCardsBase({ summary, loading }: LogStatsCardsProps) {
   if (loading || !summary) return null
 
   return (
@@ -68,4 +69,6 @@ export default function LogStatsCards({ summary, loading }: LogStatsCardsProps) 
       />
     </div>
   )
-}
+})
+
+export default LogStatsCardsBase;

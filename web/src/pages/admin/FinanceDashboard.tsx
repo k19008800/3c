@@ -131,18 +131,20 @@ export default function AdminFinanceDashboard() {
   }, [])
 
   const fetchAll = useCallback(async () => {
-    await fetchDashboard()
-    fetchOverview(period)
-    // Fire-and-forget parallel fetches for other sub-data
-    get<StatsTrend>('/api/v1/admin/stats/trend?days=30')
-      .then(setTrend)
-      .catch(() => {})
-    get<ModelStats[]>('/api/v1/admin/stats/by-model?limit=10')
-      .then(setByModel)
-      .catch(() => {})
-    get<TopConsumersData>('/api/v1/admin/dashboard/top-consumers')
-      .then(setTopData)
-      .catch(() => {})
+    // 并行执行所有数据请求
+    await Promise.allSettled([
+      fetchDashboard(),
+      fetchOverview(period),
+      get<StatsTrend>('/api/v1/admin/stats/trend?days=30')
+        .then(setTrend)
+        .catch(() => {}),
+      get<ModelStats[]>('/api/v1/admin/stats/by-model?limit=10')
+        .then(setByModel)
+        .catch(() => {}),
+      get<TopConsumersData>('/api/v1/admin/dashboard/top-consumers')
+        .then(setTopData)
+        .catch(() => {})
+    ])
   }, [fetchDashboard, fetchOverview, period])
 
   useEffect(() => { fetchAll() }, []) // eslint-disable-line react-hooks/exhaustive-deps

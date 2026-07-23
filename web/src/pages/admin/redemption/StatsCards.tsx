@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import {
-  Package, Hash, Users, DollarSign, Loader2,
+import React from 'react';
+import {Package, Hash, Users, DollarSign, Loader2,
 } from 'lucide-react'
 import MiniChart from '@/components/ui/MiniChart'
 import type { MiniChartDataPoint } from '@/components/ui/MiniChart'
@@ -72,7 +72,7 @@ function useTrendData(stats: RedemptionStats | null): {
 
 // ── Stats Cards Panel ──
 
-export default function StatsCards({ stats, loading }: StatsCardsProps) {
+const StatsCardsBase = React.memo(function StatsCardsBase({ stats, loading }: StatsCardsProps) {
   const { usageData, amountData, userData } = useTrendData(stats)
 
   if (loading) {
@@ -162,3 +162,5 @@ export default function StatsCards({ stats, loading }: StatsCardsProps) {
     </div>
   )
 }
+
+export default StatsCardsBase;
