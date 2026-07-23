@@ -111,7 +111,7 @@ const VendorKeyGroupsPage: React.FC = () => {
   }
 
   const handleGroupDelete = async (group: any) => {
-    if (window.confirm(`确定删除分组 "${group.name}"？`)) {
+    if (window.confirm(`确定删除分组 "${group.name}"?`)) {
       // TODO: Implement group deletion
       console.log('Delete group:', group)
     }
@@ -123,7 +123,7 @@ const VendorKeyGroupsPage: React.FC = () => {
   }
 
   const handleItemDelete = async (item: any) => {
-    if (window.confirm(`确定删除密钥 #${item.id}？`)) {
+    if (window.confirm(`确定删除密钥 #${item.id}?`)) {
       // TODO: Implement item deletion
       console.log('Delete item:', item)
     }
@@ -153,7 +153,7 @@ const VendorKeyGroupsPage: React.FC = () => {
   }
 
   const handleBatchDelete = () => {
-    if (window.confirm(`确定删除 ${selectedIds.size} 个选中的密钥？`)) {
+    if (window.confirm(`确定删除 ${selectedIds.size} 个选中的密钥?`)) {
       // TODO: Implement batch delete
       console.log('Batch delete:', Array.from(selectedIds))
     }
@@ -179,7 +179,7 @@ const VendorKeyGroupsPage: React.FC = () => {
     <div className="space-y-6">
       {/* Page header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">供应商密钥管�?/h1>
+        <h1 className="text-2xl font-bold text-slate-900">供应商密钥管理</h1>
         <div className="flex items-center gap-2">
           {selectedGroupId && (
             <button
@@ -282,14 +282,14 @@ const VendorKeyGroupsPage: React.FC = () => {
           {pagination.totalPages > 1 && (
             <div className="flex items-center justify-between pt-4 border-t border-slate-200">
               <div className="text-sm text-slate-600">
-                �?{filteredItems.length} 条记录，�?{pagination.page}/{pagination.totalPages} �?              </div>
+                共 {filteredItems.length} 条记录, 第 {pagination.page}/{pagination.totalPages} 页 </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => pagination.setPage(Math.max(1, pagination.page - 1))}
                   disabled={pagination.page <= 1}
                   className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm hover:bg-slate-50 disabled:opacity-50"
                 >
-                  上一�?                </button>
+                  上一页</button>
                 <div className="flex items-center gap-1">
                   {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
                     let pageNum = i + 1
@@ -318,7 +318,7 @@ const VendorKeyGroupsPage: React.FC = () => {
                   disabled={pagination.page >= pagination.totalPages}
                   className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm hover:bg-slate-50 disabled:opacity-50"
                 >
-                  下一�?                </button>
+                  下一页</button>
               </div>
             </div>
           )}
@@ -360,9 +360,9 @@ const VendorKeyGroupsPage: React.FC = () => {
                 <div>
                   <span className="font-mono text-sm">Key #{result.itemId}</span>
                   {result.success ? (
-                    <span className="text-green-700 ml-2">�?连接成功</span>
+                    <span className="text-green-700 ml-2">✓ 连接成功</span>
                   ) : (
-                    <span className="text-red-700 ml-2">�?连接失败</span>
+                    <span className="text-red-700 ml-2">✗ 连接失败</span>
                   )}
                 </div>
                 <div className="text-sm text-slate-600">

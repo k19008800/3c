@@ -132,7 +132,7 @@ function OverviewTrendChart({ data, loading, periodLabel }: { data: TrendItem[];
 
 // ──── Main ────
 
-const OverviewCardsBase = React.memo(function OverviewCardsBase({ overview, loading, trendData, trendLoading, period }: OverviewCardsProps) {
+function OverviewCardsBaseImpl({ overview, loading, trendData, trendLoading, period }: OverviewCardsProps) {
   const periodLabel = useMemo(() => {
     if (period === '7d') return '7天'
     if (period === '30d') return '30天'
@@ -147,4 +147,5 @@ const OverviewCardsBase = React.memo(function OverviewCardsBase({ overview, load
   )
 }
 
+const OverviewCardsBase = React.memo(OverviewCardsBaseImpl)
 export default OverviewCardsBase;

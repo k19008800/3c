@@ -389,7 +389,7 @@ function GiftModal({
 // 【权限要求】登录即可兑换；转赠需接收方邮箱验证
 // 【数据来源】POST /api/v1/redemption/redeem, GET /api/v1/redemption/codes, POST /api/v1/redemption/codes/:id/gift
 
-const RedemptionBase = React.memo(function RedemptionBase() {
+function RedemptionBaseImpl() {
   const [code, setCode] = useState('')
   const [redeeming, setRedeeming] = useState(false)
   const [redeemError, setRedeemError] = useState('')
@@ -1105,4 +1105,5 @@ const RedemptionBase = React.memo(function RedemptionBase() {
   )
 }
 
+const RedemptionBase = React.memo(RedemptionBaseImpl)
 export default RedemptionBase;

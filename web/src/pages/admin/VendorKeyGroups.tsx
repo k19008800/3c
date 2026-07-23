@@ -55,7 +55,7 @@ function calcHealth(item: KeyItem): { level: 'healthy' | 'warn' | 'danger'; rate
   return { level: 'danger', rate }
 }
 
-const VendorKeyGroupsBase = React.memo(function VendorKeyGroupsBase() {
+function VendorKeyGroupsBaseImpl() {
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [vendorSummaries, setVendorSummaries] = useState<VendorSummary[]>([])
   const [selectedVendorId, setSelectedVendorId] = useState<number | null>(null)
@@ -1201,4 +1201,5 @@ const VendorKeyGroupsBase = React.memo(function VendorKeyGroupsBase() {
   )
 }
 
+const VendorKeyGroupsBase = React.memo(VendorKeyGroupsBaseImpl)
 export default VendorKeyGroupsBase;
