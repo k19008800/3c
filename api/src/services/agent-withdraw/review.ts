@@ -460,7 +460,7 @@ export async function batchReviewWithdraws(
         // 批量插入审计日志（优化为单次批量插入）
         const auditLogsData = validOrders.map(order => ({
           operatorId,
-          action: "withdraw_reject",
+          action: "withdraw_reject" as const,
           targetType: "withdraw_orders",
           targetId: order.id,
           before: { status: "pending_first_review" },
