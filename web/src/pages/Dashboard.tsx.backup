@@ -1,42 +1,309 @@
-import { useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
+import { get } from '@/lib/api'
+import type { LogSummary, LoginHistoryItem, ApiKey, PaginatedData, ApiKeyCallStats } from '@/types'
 import QuickConnectPanel from '@/components/portal/QuickConnectPanel'
 import {
   Loader2, DollarSign, Activity, Cpu, Wallet, Key, FileText, AlertCircle, Shield,
   CheckCircle2, XCircle, Gauge, Copy, Terminal, BarChart3, TrendingUp,
   PieChart, ChevronDown, ChevronRight, Clock,
 } from 'lucide-react'
-import { StatCard } from './dashboard/components/StatCard'
-import { useDashboard } from './dashboard/hooks/useDashboard'
-import { TIME_RANGE_LABELS } from './dashboard/constants'
-import { fmtCost, fmtTokens, pct } from './dashboard/utils'
-import type { TimeRange } from './dashboard/types'
+
+// ── Stat Card ──
+
+function StatCard({ icon: Icon, label, value, sub, color }: { icon: any; label: string; value: string; sub?: string; color: string }) {
+  return (
+    <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm text-slate-500">{label}</p>
+          <p className="text-2xl font-bold mt-1">{value}</p>
+          {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
+        </div>
+        <div className={`p-3 rounded-lg ${color}`}>
+          <Icon size={24} className="text-white" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Types ──
+
+interface QuotaInfo {
+  quotaType?: string
+  quotaAmount: string
+  usedAmount: string
+  alertPercent?: string
+  periodStart: string
+  periodEnd: string
+  usagePercent?: number
+}
+
+type TimeRange = 'today' | 'week' | 'month'
+
+const TIME_RANGE_LABELS: Record<TimeRange, string> = {
+  today: '今日',
+  week: '本周',
+  month: '本月',
+}
+
+function getDateRange(range: TimeRange): { startDate: string; endDate: string } {
+  const now = new Date()
+  const endDate = now.toISOString().slice(0, 10)
+
+  if (range === 'today') {
+    return { startDate: endDate, endDate }
+  }
+
+  const start = new Date(now)
+  if (range === 'week') {
+    const dayOfWeek = now.getDay()
+    const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+    start.setDate(now.getDate() - mondayOffset)
+  } else {
+    start.setDate(1)
+  }
+  return { startDate: start.toISOString().slice(0, 10), endDate }
+}
+
+// ── Helpers ──
+
+function fmtCost(cost: string | number): string {
+  const n = typeof cost === 'string' ? parseFloat(cost) : cost
+  if (isNaN(n)) return '¥0'
+  if (n < 0.01) return `¥${n.toFixed(6)}`
+  if (n >= 1000) return `¥${(n / 1000).toFixed(1)}k`
+  return `¥${n.toFixed(2)}`
+}
+
+function fmtTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 10000) return `${(n / 10000).toFixed(1)}万`
+  return n.toLocaleString()
+}
+
+function pct(a: number, b: number): string {
+  if (b === 0) return '—'
+  return `${((a / b) * 100).toFixed(1)}%`
+}
+
+// ── Types for aggregated usage ──
+
+interface AggUsageStats {
+  totalCalls: number
+  totalTokens: number
+  totalCost: string
+  successCalls: number
+  failedCalls: number
+  successRate: number
+}
+
+interface AggDailySeries {
+  date: string
+  totalCalls: number
+  totalTokens: number
+  totalCost: string
+}
+
+interface AggModelBreakdown {
+  modelName: string
+  totalCalls: number
+  totalTokens: number
+  totalCost: string
+  successCount: number
+  failedCount: number
+}
+
+interface KeyActivity {
+  id: number
+  name: string
+  keyPrefix: string
+  callCount: number
+  totalTokens: number
+  totalCost: string
+  successCount: number
+  failedCount: number
+}
+
+// ── 用户仪表盘 ──
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const [summary, setSummary] = useState<LogSummary | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [loginHistory, setLoginHistory] = useState<LoginHistoryItem[]>([])
+  const [quota, setQuota] = useState<QuotaInfo | null>(null)
+  const [quotaLoading, setQuotaLoading] = useState(true)
+
   const [timeRange, setTimeRange] = useState<TimeRange>('today')
+
+  // Usage overview panel
+  const [usageOpen, setUsageOpen] = useState(false)
+  const [usageTab, setUsageTab] = useState<'overview' | 'trends' | 'models' | 'compare'>('overview')
+
+  // Aggregated usage state
+  const [aggStats, setAggStats] = useState<AggUsageStats | null>(null)
+  const [aggDaily, setAggDaily] = useState<AggDailySeries[]>([])
+  const [aggModels, setAggModels] = useState<AggModelBreakdown[]>([])
+  const [aggLoading, setAggLoading] = useState(false)
+
+  // Key activities state
+  const [keyActivities, setKeyActivities] = useState<KeyActivity[]>([])
+  const [keyActivityLoading, setKeyActivityLoading] = useState(true)
+  const [apiKeyList, setApiKeyList] = useState<ApiKey[]>([])
+
   const [curlCopied, setCurlCopied] = useState(false)
 
-  const {
-    summary,
-    loading,
-    error,
-    loginHistory,
-    quota,
-    quotaLoading,
-    usageOpen,
-    setUsageOpen,
-    usageTab,
-    setUsageTab,
-    aggStats,
-    aggDaily,
-    aggModels,
-    aggLoading,
-    keyActivities,
-    keyActivityLoading,
-    apiKeyList,
-  } = useDashboard(timeRange)
+  const fetchSummary = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const { startDate, endDate } = getDateRange(timeRange)
+      const params: Record<string, any> = { startDate, endDate }
+      const data = await get<LogSummary>('/api/v1/logs/summary', params)
+      setSummary(data)
+    } catch (err: any) {
+      setError(err.message || '获取统计数据失败')
+    } finally {
+      setLoading(false)
+    }
+  }, [timeRange])
+
+  const fetchKeyActivities = useCallback(async () => {
+    setKeyActivityLoading(true)
+    try {
+      const { startDate, endDate } = getDateRange(timeRange)
+      const keysData = await get<PaginatedData<ApiKey>>('/api/v1/api-keys')
+      const allKeys = keysData.list || []
+      setApiKeyList(allKeys)
+      const activeKeys = allKeys.filter((k) => k.status)
+
+      if (activeKeys.length === 0) {
+        setKeyActivities([])
+        setKeyActivityLoading(false)
+        return
+      }
+
+      const statsResults = await Promise.allSettled(
+        activeKeys.map((key) =>
+          get<ApiKeyCallStats>(`/api/v1/api-keys/${key.id}/stats`, { startDate, endDate })
+        )
+      )
+
+      const activities: KeyActivity[] = []
+      statsResults.forEach((result, idx) => {
+        const key = activeKeys[idx]
+        if (result.status === 'fulfilled' && result.value?.summary) {
+          activities.push({
+            id: key.id,
+            name: key.name,
+            keyPrefix: key.keyPrefix,
+            callCount: result.value.summary.totalCalls || 0,
+            totalTokens: result.value.summary.totalTokens || 0,
+            totalCost: result.value.summary.totalCost || '0',
+            successCount: result.value.summary.successCalls || 0,
+            failedCount: result.value.summary.failedCalls || 0,
+          })
+        } else {
+          activities.push({
+            id: key.id,
+            name: key.name,
+            keyPrefix: key.keyPrefix,
+            callCount: 0,
+            totalTokens: 0,
+            totalCost: '0',
+            successCount: 0,
+            failedCount: 0,
+          })
+        }
+      })
+
+      activities.sort((a, b) => b.callCount - a.callCount)
+      setKeyActivities(activities)
+    } catch {
+      // silent
+    } finally {
+      setKeyActivityLoading(false)
+    }
+  }, [timeRange])
+
+  // Fetch aggregated usage for the usage panel
+  const fetchAggregatedUsage = useCallback(async () => {
+    setAggLoading(true)
+    try {
+      const days = timeRange === 'today' ? 1 : timeRange === 'week' ? 7 : 30
+      const period = days === 1 ? '1d' : days === 7 ? '7d' : '30d'
+      const [statsData, dailyData, modelData] = await Promise.all([
+        get<any>('/api/v1/me/stats/usage', { period }),
+        get<{ series: AggDailySeries[] }>('/api/v1/me/stats/daily', { days }),
+        get<{ items: AggModelBreakdown[] }>('/api/v1/me/stats/by-model', { period, limit: 20 }),
+      ])
+      const stats: AggUsageStats = {
+        totalCalls: statsData.totalCalls || 0,
+        totalTokens: statsData.totalTokens || 0,
+        totalCost: statsData.totalCost || '0',
+        successCalls: statsData.successCalls || 0,
+        failedCalls: (statsData.totalCalls || 0) - (statsData.successCalls || 0),
+        successRate: statsData.successRate || 100,
+      }
+      setAggStats(stats)
+      setAggDaily(dailyData.series || [])
+      setAggModels(
+        (modelData.items || []).sort((a: any, b: any) => Number(b.totalTokens) - Number(a.totalTokens))
+      )
+    } catch {
+      setAggStats(null)
+      setAggDaily([])
+      setAggModels([])
+    } finally {
+      setAggLoading(false)
+    }
+  }, [timeRange])
+
+  // 并行加载所有初始数据
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        // 并行执行所有独立的数据请求
+        const [loginHistoryResult, quotaResult] = await Promise.allSettled([
+          get<{ list: LoginHistoryItem[] }>('/api/v1/auth/security/login-history?limit=5'),
+          get<{ userQuota: QuotaInfo | null; keyQuotas: any[] }>('/api/v1/me/quota')
+        ])
+        
+        // 处理登录历史
+        if (loginHistoryResult.status === 'fulfilled') {
+          setLoginHistory(loginHistoryResult.value.list || [])
+        }
+        
+        // 处理额度信息
+        if (quotaResult.status === 'fulfilled' && quotaResult.value.userQuota) {
+          const q = quotaResult.value.userQuota;
+          setQuota({ ...q, usagePercent: q.quotaAmount ? Number((Number(q.usedAmount) / Number(q.quotaAmount)) * 100) : 0 });
+        }
+      } catch {
+        // 静默失败
+      } finally {
+        setQuotaLoading(false)
+      }
+    }
+    
+    loadInitialData()
+  }, [])
+
+  useEffect(() => {
+    fetchSummary()
+  }, [fetchSummary])
+
+  useEffect(() => {
+    fetchKeyActivities()
+  }, [fetchKeyActivities])
+
+  useEffect(() => {
+    if (usageOpen) fetchAggregatedUsage()
+  }, [usageOpen, fetchAggregatedUsage])
 
   const handleCopyCurl = async () => {
     const activeApiKey = keyActivities.find((k) => k.keyPrefix)
