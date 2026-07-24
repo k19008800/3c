@@ -1,7 +1,7 @@
 import React, { memo } from 'react'
 import type { KeyItem } from '../hooks/useVendorKeyGroups'
 import {
-  calcHealth,
+  calcHealthInfo,
   fmtDate,
   fmtPercent,
   fmtPrice,
@@ -105,7 +105,7 @@ const KeyItemsTable: React.FC<KeyItemsTableProps> = memo(({
         </thead>
         <tbody className="divide-y divide-slate-100">
           {items.map(item => {
-            const health = calcHealth(item)
+            const health = calcHealthInfo(item)
             const statusColors = getStatusColors(item.status, item.isDown, item.deletedAt)
             const statusLabel = getStatusLabel(item.status, item.isDown, item.deletedAt)
             const isRevealed = revealedIds[item.id]
@@ -159,10 +159,10 @@ const KeyItemsTable: React.FC<KeyItemsTableProps> = memo(({
                 {/* Health status */}
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${health.bgColor.replace('bg-', 'bg-')}`}></div>
+                    <div className={`w-2 h-2 rounded-full ${health.bgColor?.replace('bg-', 'bg-') ?? 'bg-slate-200'}`}></div>
                     <div>
-                      <div className={`text-xs font-medium ${health.color}`}>
-                        {health.label}
+                      <div className={`text-xs font-medium ${health.color ?? 'text-slate-600'}`}>
+                        {health.label ?? '—'}
                       </div>
                       {health.rate !== null && (
                         <div className="text-xs text-slate-500">
@@ -182,7 +182,7 @@ const KeyItemsTable: React.FC<KeyItemsTableProps> = memo(({
                 <td className="py-3 px-4">
                   <div className="space-y-1">
                     <div className="text-xs">
-                      {fmtCalls(item.totalCalls, item.successCalls)}
+                      {fmtCalls(item.totalCalls)}
                     </div>
                     <div className="text-xs text-slate-500">
                       总调用: {item.totalCalls.toLocaleString()}
@@ -205,7 +205,7 @@ const KeyItemsTable: React.FC<KeyItemsTableProps> = memo(({
                 {/* Weight/Priority */}
                 <td className="py-3 px-4">
                   <div className="text-xs">
-                    {fmtWeight(item.weight, item.priority)}
+                    {fmtWeight(item.weight)}
                   </div>
                 </td>
                 
@@ -217,7 +217,7 @@ const KeyItemsTable: React.FC<KeyItemsTableProps> = memo(({
                 {/* Status */}
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${statusColors.bgColor} ${statusColors.text}`}>
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${statusColors.bg} ${statusColors.text}`}>
                       {statusLabel}
                     </span>
                     <button

@@ -43,13 +43,11 @@ const UsersList: React.FC<UsersListProps> = memo(({
   onResetPassword,
   loading = false
 }) => {
-  const { impersonate } = useImpersonate()
+  // impersonate 功能通过 onImpersonate 回调实现
 
   const handleImpersonate = async (userId: number) => {
-    try {
-      await impersonate(userId)
-    } catch (err) {
-      console.error('Impersonate failed:', err)
+    if (onImpersonate) {
+      onImpersonate(userId)
     }
   }
 
@@ -140,7 +138,7 @@ const UsersList: React.FC<UsersListProps> = memo(({
               <td className="py-3 px-4">
                 <div className="flex items-center gap-1">
                   <Wallet size={14} className="text-slate-400" />
-                  <span className="font-mono text-sm">¥{user.balance.toFixed(2)}</span>
+                  <span className="font-mono text-sm">¥{Number(user.balance).toFixed(2)}</span>
                 </div>
               </td>
               <td className="py-3 px-4 text-xs text-slate-500">{fmtDate(user.lastLoginAt)}</td>

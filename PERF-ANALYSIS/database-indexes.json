@@ -1,0 +1,64 @@
+{
+  "analysis_time": "2026-07-23 21:48:00",
+  "index_analysis": {
+    "unused_indexes_issue": {
+      "severity": "high",
+      "description": "检测到分区表有大量未使用的索引",
+      "details": [
+        {
+          "table_type": "partition_table",
+          "table_name": "call_logs",
+          "unused_index_count": 52,
+          "affected_partitions": [
+            "call_logs_202606",
+            "call_logs_202607",
+            "call_logs_202608",
+            "call_logs_202609",
+            "call_logs_202610",
+            "call_logs_202611",
+            "call_logs_202612"
+          ],
+          "recommendation": "检查查询模式，删除确认未使用的索引"
+        },
+        {
+          "table_type": "partition_table",
+          "table_name": "commission_logs",
+          "unused_index_count": 8,
+          "affected_partitions": [
+            "commission_logs_2026_05",
+            "commission_logs_202606",
+            "commission_logs_202607",
+            "commission_logs_202608",
+            "commission_logs_202609",
+            "commission_logs_202610",
+            "commission_logs_202611",
+            "commission_logs_202612"
+          ],
+          "recommendation": "优化分区表索引设计"
+        }
+      ]
+    },
+    "index_usage_patterns": {
+      "high_usage_tables": ["users", "api_keys", "agents", "vendors"],
+      "low_usage_tables": ["call_logs_*", "commission_logs_*", "balance_logs"],
+      "observation": "核心业务表索引使用频繁，日志表索引使用率较低"
+    }
+  },
+  "recommendations": [
+    {
+      "priority": "high",
+      "action": "清理未使用索引",
+      "description": "删除分区表中确认未使用的索引，减少存储和维护成本"
+    },
+    {
+      "priority": "medium",
+      "action": "优化日志表索引",
+      "description": "分析日志表的查询模式，设计更合理的索引策略"
+    },
+    {
+      "priority": "low",
+      "action": "监控索引命中率",
+      "description": "建立索引使用率监控，定期评估索引效果"
+    }
+  ]
+}

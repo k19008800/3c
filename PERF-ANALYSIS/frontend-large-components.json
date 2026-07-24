@@ -1,0 +1,119 @@
+{
+  "large_components": [
+    {
+      "file": "src/pages/admin/Users.tsx",
+      "lines": 1584
+    },
+    {
+      "file": "src/pages/admin/VendorKeyGroups.tsx",
+      "lines": 1205
+    },
+    {
+      "file": "src/pages/Redemption.tsx",
+      "lines": 1109
+    },
+    {
+      "file": "src/pages/admin/FinanceCommissions.tsx",
+      "lines": 1063
+    },
+    {
+      "file": "src/pages/admin/RedemptionCodes.tsx",
+      "lines": 1031
+    },
+    {
+      "file": "src/pages/admin/VendorModels.tsx",
+      "lines": 903
+    },
+    {
+      "file": "src/pages/admin/dashboard/OverviewTrends.tsx",
+      "lines": 830
+    },
+    {
+      "file": "src/pages/Settings.tsx",
+      "lines": 821
+    },
+    {
+      "file": "src/pages/admin/finance/Prices.tsx",
+      "lines": 813
+    },
+    {
+      "file": "src/pages/Stats.tsx",
+      "lines": 800
+    },
+    {
+      "file": "src/pages/Logs.tsx",
+      "lines": 796
+    },
+    {
+      "file": "src/pages/Logs-virtual.tsx",
+      "lines": 788
+    },
+    {
+      "file": "src/pages/admin/dashboard/ModelSchedulingRealtime.tsx",
+      "lines": 772
+    },
+    {
+      "file": "src/pages/Dashboard.tsx",
+      "lines": 760
+    },
+    {
+      "file": "src/pages/admin/Roles.tsx",
+      "lines": 740
+    },
+    {
+      "file": "src/pages/admin/ProfitAnalysis.tsx",
+      "lines": 680
+    },
+    {
+      "file": "src/pages/Recharge.tsx",
+      "lines": 672
+    },
+    {
+      "file": "src/pages/RealName.tsx",
+      "lines": 650
+    },
+    {
+      "file": "src/pages/admin/PromptAudit.tsx",
+      "lines": 647
+    },
+    {
+      "file": "src/pages/Models.tsx",
+      "lines": 645
+    },
+    {
+      "file": "src/pages/admin/AgentsList.tsx",
+      "lines": 633
+    },
+    {
+      "file": "src/pages/admin/Vendors.tsx",
+      "lines": 603
+    },
+    {
+      "file": "src/pages/admin/FinanceReconciliation.tsx",
+      "lines": 584
+    },
+    {
+      "file": "src/components/layout/Sidebar.tsx",
+      "lines": 571
+    },
+    {
+      "file": "src/pages/admin/SensitiveWords.tsx",
+      "lines": 567
+    },
+    {
+      "file": "src/pages/admin/FinanceDashboard.tsx",
+      "lines": 540
+    },
+    {
+      "file": "src/pages/admin/enterprise-analysis/index.tsx",
+      "lines": 530
+    },
+    {
+      "file": "src/pages/Notifications.tsx",
+      "lines": 523
+    }
+  ],
+  "threshold": 500,
+  "total_files_analyzed": 371,
+  "files_above_threshold": 28
+}

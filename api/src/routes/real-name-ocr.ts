@@ -13,8 +13,8 @@ import "../services/real-name-ocr/deepseek.js";  // 注册 DeepSeek 供应商
 import fs from "node:fs";
 import path from "node:path";
 
-function readImageAsBase64(filePath: string): string {
-  const buffer = fs.readFileSync(filePath);
+async function readImageAsBase64(filePath: string): Promise<string> {
+  const buffer = await fs.promises.readFile(filePath);
   return buffer.toString('base64');
 }
 
@@ -54,13 +54,15 @@ export async function realNameOcrRoutes(app: FastifyInstance) {
         // 获取文件绝对路径
         const absolutePath = getFileAbsolutePath(body.filePath);
 
-        if (!fs.existsSync(absolutePath)) {
+        try {
+          await fs.promises.access(absolutePath);
+        } catch {
           reply.status(404).send({ code: 404, data: null, message: "文件不存在，请重新上传" });
           return;
         }
 
         // 读取图片为 base64
-        const imageBase64 = readImageAsBase64(absolutePath);
+        const imageBase64 = await readImageAsBase64(absolutePath);
 
         // 调用 OCR 识别
         const provider = OcrProviderFactory.create('deepseek');

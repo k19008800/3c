@@ -28,7 +28,7 @@ const HealthStatsCardsBase = React.memo(function HealthStatsCardsBase({ health }
       <RecentErrorsCard health={health} />
     </div>
   )
-}
+})
 
 /* ── System Status ── */
 function SystemStatusCard({ health }: Props) {

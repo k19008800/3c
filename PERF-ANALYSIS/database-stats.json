@@ -1,0 +1,57 @@
+{
+  "analysis_time": "2026-07-23 21:48:00",
+  "database_statistics": {
+    "basic_info": {
+      "database_name": "threecloud",
+      "postgres_version": "PostgreSQL 17.10 on x86_64-windows, compiled by msvc-19.44.35227, 64-bit",
+      "table_count": 83,
+      "total_rows": 2232959,
+      "database_size": "1221 MB",
+      "database_size_mb": 1221
+    },
+    "performance_metrics": {
+      "largest_table_size_mb": 875,
+      "second_largest_table_size_mb": 267,
+      "avg_table_size_mb": 14.7,
+      "median_table_size_mb": 0.064,
+      "table_size_distribution": {
+        "over_100mb": 2,
+        "10mb_to_100mb": 1,
+        "1mb_to_10mb": 2,
+        "100kb_to_1mb": 10,
+        "under_100kb": 68
+      }
+    },
+    "data_growth_pattern": {
+      "observation": "日志表占主要存储空间",
+      "call_logs_percentage": "71.6%",
+      "balance_logs_percentage": "21.9%",
+      "other_tables_percentage": "6.5%"
+    },
+    "analysis_tools_used": [
+      "pg_stat_user_tables",
+      "pg_stat_user_indexes",
+      "information_schema",
+      "pg_stat_statements",
+      "pg_inherits"
+    ]
+  },
+  "summary": {
+    "database_health": "fair",
+    "major_issues": [
+      "未使用索引过多（分区表）",
+      "缺少外键约束",
+      "日志表占存储空间过大"
+    ],
+    "strengths": [
+      "分区表设计合理",
+      "schema组织良好",
+      "核心表索引使用率高"
+    ],
+    "recommended_next_steps": [
+      "清理未使用索引",
+      "添加关键外键约束",
+      "制定日志数据归档策略"
+    ]
+  }
+}

@@ -115,3 +115,34 @@ export function generateTrendData(
     label: `d${i + 1}`,
   }))
 }
+
+/* ── Props for new components ── */
+
+export interface ModelTableProps {
+  items: VendorModel[]
+  loading: boolean
+  onEdit: (item: VendorModel) => void
+  onDelete: (item: VendorModel) => void
+}
+
+export interface CreateModalProps {
+  onClose: () => void
+  onSuccess: () => void
+}
+
+export interface EditModalProps {
+  item: VendorModel
+  onClose: () => void
+  onSuccess: () => void
+}
+
+export interface DeleteModalProps {
+  item: VendorModel
+  onClose: () => void
+  onSuccess: () => void
+}
+
+export interface ModelOptions {
+  vendors: Vendor[]
+  models: AdminModel[]
+}

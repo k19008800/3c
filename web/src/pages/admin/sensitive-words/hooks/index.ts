@@ -1,0 +1,1 @@
+export { useSensitiveWords } from './useSensitiveWords'

@@ -1,193 +1,102 @@
-import type { KeyItem } from './hooks/useVendorKeyGroups'
+import type { KeyItem, HealthStatus } from './types'
 
-// Health calculation
-export type HealthLevel = 'healthy' | 'warn' | 'danger'
+/** 计算健康状态 */
+export function calcHealth(item: KeyItem): HealthStatus {
+  if (item.totalCalls < 10) return { level: 'warn', rate: null } // 数据不足
+  const rate = item.totalCalls > 0 ? (item.successCalls / item.totalCalls) * 100 : 0
+  if (rate >= 90 && item.consecutiveFailures < 3) return { level: 'healthy', rate }
+  if (rate >= 70 && item.consecutiveFailures < 10) return { level: 'warn', rate }
+  return { level: 'danger', rate }
+}
 
+/** 格式化价格 */
+export function fmtPrice(val: string | number | null): string {
+  if (val === null || val === '') return '—'
+  const n = Number(val)
+  if (n === 0) return '—'
+  if (n < 0.0001) return '<0.0001'
+  return n.toFixed(4)
+}
+
+/** 格式化日期 */
+export function fmtDate(date: string | null): string {
+  if (!date) return '—'
+  return new Date(date).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+/** 格式化百分比 */
+export function fmtPercent(rate: number | null): string {
+  if (rate === null) return '—'
+  return rate.toFixed(1) + '%'
+}
+
+/** 格式化 API Key 前缀 */
+export function fmtApiKeyPrefix(prefix: string | null): string {
+  if (!prefix) return '—'
+  return prefix
+}
+
+/** 格式化调用次数 */
+export function fmtCalls(n: number): string {
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K'
+  return String(n)
+}
+
+/** 格式化权重 */
+export function fmtWeight(w: number): string {
+  return String(w)
+}
+
+/** 获取状态标签 */
+/** 获取状态标签（兼容多参数调用） */
+export function getStatusLabel(status: boolean, isDown?: boolean, deletedAt?: string | null): string {
+  if (deletedAt) return '已删除'
+  if (isDown) return '故障'
+  if (!status) return '禁用'
+  return '活跃'
+}
+
+/** 获取状态标签（KeyItem 版本） */
+export function getStatusLabelFromItem(item: KeyItem): string {
+  return getStatusLabel(item.status, item.isDown, item.deletedAt)
+}
+
+/** 获取状态颜色（兼容多参数调用） */
+export function getStatusColors(status: boolean, isDown?: boolean, deletedAt?: string | null): { bg: string; text: string } {
+  if (deletedAt) return { bg: 'bg-slate-100', text: 'text-slate-600' }
+  if (isDown) return { bg: 'bg-red-100', text: 'text-red-700' }
+  if (!status) return { bg: 'bg-yellow-100', text: 'text-yellow-700' }
+  return { bg: 'bg-green-100', text: 'text-green-700' }
+}
+
+/** 获取状态颜色（KeyItem 版本） */
+export function getStatusColorsFromItem(item: KeyItem): { bg: string; text: string } {
+  return getStatusColors(item.status, item.isDown, item.deletedAt)
+}
+
+/** 健康状态扩展信息 */
 export interface HealthInfo {
-  level: HealthLevel
+  level: 'healthy' | 'warn' | 'danger'
   rate: number | null
   label: string
   color: string
   bgColor: string
 }
 
-export function calcHealth(item: KeyItem): HealthInfo {
-  if (item.totalCalls < 10) {
-    return {
-      level: 'warn',
-      rate: null,
-      label: '数据不足',
-      color: 'text-yellow-700',
-      bgColor: 'bg-yellow-100'
-    }
+/** 计算健康状态（扩展） */
+export function calcHealthInfo(item: KeyItem): HealthInfo {
+  const base = calcHealth(item)
+  if (base.level === 'healthy') {
+    return { ...base, label: '健康', color: 'text-green-600', bgColor: 'bg-green-100' }
   }
-  
-  const rate = item.totalCalls > 0 ? (item.successCalls / item.totalCalls) * 100 : 0
-  
-  let level: HealthLevel = 'danger'
-  let label = '危险'
-  
-  if (rate >= 90 && item.consecutiveFailures < 3) {
-    level = 'healthy'
-    label = '健康'
-  } else if (rate >= 70 && item.consecutiveFailures < 10) {
-    level = 'warn'
-    label = '警告'
+  if (base.level === 'warn') {
+    return { ...base, label: '警告', color: 'text-yellow-600', bgColor: 'bg-yellow-100' }
   }
-  
-  const colors = {
-    healthy: { text: 'text-green-700', bg: 'bg-green-100' },
-    warn: { text: 'text-yellow-700', bg: 'bg-yellow-100' },
-    danger: { text: 'text-red-700', bg: 'bg-red-100' }
-  }
-  
-  return {
-    level,
-    rate,
-    label,
-    color: colors[level].text,
-    bgColor: colors[level].bg
-  }
-}
-
-// Format date
-export function fmtDate(v: string | null | undefined): string {
-  if (!v) return '-'
-  try {
-    return new Date(v).toLocaleString('zh-CN')
-  } catch {
-    return v
-  }
-}
-
-// Format percentage
-export function fmtPercent(value: number | null | undefined): string {
-  if (value == null) return '-'
-  return `${value.toFixed(1)}%`
-}
-
-// Format price
-export function fmtPrice(value: string | number | null | undefined): string {
-  if (value == null) return '-'
-  const num = typeof value === 'string' ? parseFloat(value) : value
-  if (isNaN(num)) return '-'
-  return `¥${num.toFixed(4)}`
-}
-
-// Format API key prefix
-export function fmtApiKeyPrefix(prefix: string | null): string {
-  if (!prefix) return '-'
-  return `${prefix}...`
-}
-
-// Format call statistics
-export function fmtCalls(total: number, success: number): string {
-  if (total === 0) return '0/0 (0%)'
-  const rate = (success / total) * 100
-  return `${success}/${total} (${rate.toFixed(1)}%)`
-}
-
-// Format weight with priority
-export function fmtWeight(weight: number, priority: number): string {
-  let result = `权重: ${weight}`
-  if (priority !== 0) {
-    result += `, 优先级: ${priority}`
-  }
-  return result
-}
-
-// Status labels
-export const statusLabels = {
-  active: '正常',
-  down: '故障',
-  disabled: '禁用',
-  deleted: '已删除'
-} as const
-
-export const statusColors = {
-  active: { text: 'text-green-700', bg: 'bg-green-100' },
-  down: { text: 'text-red-700', bg: 'bg-red-100' },
-  disabled: { text: 'text-yellow-700', bg: 'bg-yellow-100' },
-  deleted: { text: 'text-slate-500', bg: 'bg-slate-200' }
-} as const
-
-// Strategy labels
-export const strategyLabels = {
-  round_robin: '轮询',
-  weight_round_robin: '加权轮询',
-  least_connections: '最少连接',
-  least_response_time: '最快响应'
-} as const
-
-// Vendor type labels
-export const vendorTypeLabels = {
-  openai: 'OpenAI',
-  anthropic: 'Anthropic',
-  google: 'Google',
-  azure: 'Azure',
-  alibaba: '阿里云',
-  tencent: '腾讯云',
-  baidu: '百度',
-  deepseek: '深度求索',
-  zhipu: '智谱AI',
-  moonshot: '月之暗面',
-  stepfun: '阶跃星辰',
-  other: '其他'
-} as const
-
-// Get status label
-export function getStatusLabel(status: boolean, isDown: boolean, deletedAt: string | null): string {
-  if (deletedAt) return statusLabels.deleted
-  if (isDown) return statusLabels.down
-  return status ? statusLabels.active : statusLabels.disabled
-}
-
-// Get status colors
-export function getStatusColors(status: boolean, isDown: boolean, deletedAt: string | null) {
-  if (deletedAt) return statusColors.deleted
-  if (isDown) return statusColors.down
-  return status ? statusColors.active : statusColors.disabled
-}
-
-// Debounce utility
-export function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null
-  
-  return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout)
-    timeout = setTimeout(() => func(...args), wait)
-  }
-}
-
-// Throttle utility
-export function throttle<T extends (...args: any[]) => any>(
-  func: T,
-  limit: number
-): (...args: Parameters<T>) => void {
-  let inThrottle = false
-  
-  return (...args: Parameters<T>) => {
-    if (!inThrottle) {
-      func(...args)
-      inThrottle = true
-      setTimeout(() => (inThrottle = false), limit)
-    }
-  }
-}
-
-// Safe parse JSON
-export function safeParseJson<T>(json: string, fallback: T): T {
-  try {
-    return JSON.parse(json) as T
-  } catch {
-    return fallback
-  }
-}
-
-// Generate unique ID
-export function generateId(): string {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36)
+  return { ...base, label: '危险', color: 'text-red-600', bgColor: 'bg-red-100' }
 }

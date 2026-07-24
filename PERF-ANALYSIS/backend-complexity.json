@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-07-23T13:45:30.000Z",
+  "analysis_tool": "eslint",
+  "rules_applied": ["complexity:20", "max-lines-per-function:100"],
+  "summary": {
+    "total_files_analyzed": 224,
+    "files_with_errors": 65,
+    "total_errors": 132,
+    "total_warnings":勾0
+  },
+  "high_complexity_functions": [],
+  "long_functions": []
+}

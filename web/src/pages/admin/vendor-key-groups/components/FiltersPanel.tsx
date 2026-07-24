@@ -1,9 +1,10 @@
 import React, { memo } from 'react'
 import { Search, Filter, Trash2 } from 'lucide-react'
+import type { StatusTab } from '../hooks/useVendorKeyGroups'
 
 interface FiltersPanelProps {
   searchQuery: string
-  statusTab: string
+  statusTab: StatusTab
   showDeleted: boolean
   tabCounts: {
     all: number
@@ -13,7 +14,7 @@ interface FiltersPanelProps {
     deleted: number
   }
   onSearchChange: (query: string) => void
-  onStatusTabChange: (tab: string) => void
+  onStatusTabChange: (tab: StatusTab) => void
   onShowDeletedChange: (show: boolean) => void
   onClearFilters: () => void
 }
@@ -83,7 +84,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = memo(({
             {statusTabs.map(tab => (
               <button
                 key={tab.id}
-                onClick={() => onStatusTabChange(tab.id)}
+                onClick={() => onStatusTabChange(tab.id as StatusTab)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition ${
                   statusTab === tab.id
                     ? `${tab.color} ring-2 ring-opacity-50 ${

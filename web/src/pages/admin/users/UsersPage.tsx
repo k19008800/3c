@@ -21,6 +21,7 @@ const UsersPage: React.FC = () => {
     pageSize,
     filters,
     selectedIds,
+    setSelectedIds,
     totalPages,
     setPage,
     setFilters,

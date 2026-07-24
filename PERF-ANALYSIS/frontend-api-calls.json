@@ -1,0 +1,235 @@
+{
+  "api_calls_by_page": {
+    "src/pages/admin/AuditLogs.tsx": {
+      "fetch_calls": [
+        {
+          "line": 100,
+          "context": "t token = localStorage.getItem('accessToken')     fetch(`/api/v1/admin/audit-logs/export?${params.toString()}`, {       headers: token ? { Authorization: `B"
+        }
+      ],
+      "axios_calls": [],
+      "useQuery_calls": [],
+      "useMutation_calls": [],
+      "total_calls": 1
+    },
+    "src/pages/admin/OperationLogs.tsx": {
+      "fetch_calls": [
+        {
+          "line": 150,
+          "context": "/operation-logs/export?${params.toString()}`      fetch(url, {       headers: token ? { Authorization: `Bearer ${token}` } : {},     })       .then((res) =>"
+        }
+      ],
+      "axios_calls": [],
+      "useQuery_calls": [],
+      "useMutation_calls": [],
+      "total_calls": 1
+    },
+    "src/pages/admin/Users.tsx": {
+      "fetch_calls": [
+        {
+          "line": 113,
+          "context": "params.role = roleFilter       const res = await fetch(`/api/v1/admin/users/export?${new URLSearchParams(params)}`, {         headers: { Authorization: `Be"
+        },
+        {
+          "line": 914,
+          "context": "ding(false) }   }, [userId])    useEffect(() => { fetch() }, [fetch])    const add = async () => {     if (!content.trim()) return     try {       await pos"
+        },
+        {
+          "line": 920,
+          "context": "serId}/notes`, { content })       setContent(''); fetch(); onMsg('✅ 备注已添加')     } catch (err: any) { onMsg('❌ ' + (err.message || '')) }   }    const remove"
+        },
+        {
+          "line": 927,
+          "context": "/v1/admin/users/${userId}/notes/${noteId}`)       fetch(); onMsg('✅ 备注已删除')     } catch (err: any) { onMsg('❌ ' + (err.message || '')) }   }    if (loading)"
+        },
+        {
+          "line": 973,
+          "context": "ding(false) }   }, [userId])    useEffect(() => { fetch() }, [fetch])    const add = async () => {     if (!ip.trim()) return     try {       await post(`/a"
+        },
+        {
+          "line": 979,
+          "context": "m() || undefined })       setIp(''); setDesc(''); fetch(); onMsg('✅ IP 已加入白名单')     } catch (err: any) { onMsg('❌ ' + (err.message || '')) }   }    const re"
+        },
+        {
+          "line": 986,
+          "context": "/admin/users/${userId}/ip-whitelist/${id}`)       fetch(); onMsg('✅ IP 已移除')     } catch (err: any) { onMsg('❌ ' + (err.message || '')) }   }    if (loading"
+        },
+        {
+          "line": 1029,
+          "context": "ding(false) }   }, [userId])    useEffect(() => { fetch() }, [fetch])    const toggleKey = async (keyId: number, currentStatus: boolean) => {     try {"
+        },
+        {
+          "line": 1034,
+          "context": "keys/${keyId}`, { status: !currentStatus })       fetch(); onMsg(currentStatus ? '✅ 已禁用' : '✅ 已启用')     } catch (err: any) { onMsg('❌ ' + (err.message || ''"
+        },
+        {
+          "line": 1042,
+          "context": "1/admin/users/${userId}/api-keys/${keyId}`)       fetch(); onMsg('✅ 已删除')     } catch (err: any) { onMsg('❌ ' + (err.message || '')) }   }    if (loading) r"
+        },
+        {
+          "line": 1275,
+          "context": "ding(false) }   }, [userId])    useEffect(() => { fetch() }, [fetch])    const unbind = async (provider: string) => {     if (!confirm(`确定解绑 ${provider}?`))"
+        },
+        {
+          "line": 1281,
+          "context": "sers/${userId}/unbind-oauth`, { provider })       fetch(); onMsg(`✅ ${provider} 已解绑`)     } catch (err: any) { onMsg('❌ ' + (err.message || '')) }   }    if"
+        },
+        {
+          "line": 1505,
+          "context": "= async () => {     try {       const res = await fetch(`/api/v1/admin/users/${userId}/export-data`, {         headers: { Authorization: `Bearer ${localStor"
+        }
+      ],
+      "axios_calls": [],
+      "useQuery_calls": [],
+      "useMutation_calls": [],
+      "total_calls": 13
+    },
+    "src/pages/admin/Withdraws.tsx": {
+      "fetch_calls": [
+        {
+          "line": 101,
+          "context": "t('status', statusFilter)       const res = await fetch(`/api/v1/admin/withdraws/export?${params.toString()}`, { credentials: 'include' })       if (!res.ok"
+        }
+      ],
+      "axios_calls": [],
+      "useQuery_calls": [],
+      "useMutation_calls": [],
+      "total_calls": 1
+    },
+    "src/pages/vendor/VendorLogin.tsx": {
+      "fetch_calls": [],
+      "axios_calls": [
+        {
+          "line": 35,
+          "method": "post",
+          "context": "etLoading(true)     try {       const res = await axios.post('/api/vendor/login', { email, password })       const data = res.data        if (data.code !== 0) {"
+        }
+      ],
+      "useQuery_calls": [],
+      "useMutation_calls": [],
+      "total_calls": 1
+    },
+    "src/pages/admin/agent-detail/AgentClientsTab.tsx": {
+      "fetch_calls": [
+        {
+          "line": 327,
+          "context": "\">           <button             onClick={() => refetch()}             className=\"flex items-center gap-1 px-3 py-1.5 text-sm text-slate-600 border border-s"
+        },
+        {
+          "line": 379,
+          "context": "=> {             setShowBind(false)             refetch()           }}         />       )}     </div>   ) }"
+        }
+      ],
+      "axios_calls": [],
+      "useQuery_calls": [],
+      "useMutation_calls": [],
+      "total_calls": 2
+    },
+    "src/pages/admin/api-keys/UsageExampleRow.tsx": {
+      "fetch_calls": [
+        {
+          "line": 84,
+          "context": "xs p-3 rounded-lg font-mono\"> {`const res = await fetch('${origin}/api/v1/admin/users', {   headers: { 'Authorization': 'Bearer sk-${prefix}...' } }) const"
+        }
+      ],
+      "axios_calls": [],
+      "useQuery_calls": [],
+      "useMutation_calls": [],
+      "total_calls": 1
+    },
+    "src/pages/admin/users/ActionButtons.tsx": {
+      "fetch_calls": [
+        {
+          "line": 26,
+          "context": "= async () => {     try {       const res = await fetch(         `/api/v1/admin/users/${userId}/export-data`,         {           headers: {             Aut"
+        }
+      ],
+      "axios_calls": [],
+      "useQuery_calls": [],
+      "useMutation_calls": [],
+      "total_calls": 1
+    },
+    "src/pages/admin/users/UserDetailTabs.tsx": {
+      "fetch_calls": [
+        {
+          "line": 30,
+          "context": "ading(false) }   }, [userId])   useEffect(() => { fetch() }, [fetch])    const add = async () => {     if (!content.trim()) return     try { await post(`/ap"
+        },
+        {
+          "line": 34,
+          "context": "s/${userId}/notes`, { content }); setContent(''); fetch(); onMsg('✅ 备注已添加') }     catch (err: any) { onMsg('❌ ' + (err.message || '')) }   }    const remove"
+        },
+        {
+          "line": 39,
+          "context": "`/api/v1/admin/users/${userId}/notes/${noteId}`); fetch(); onMsg('✅ 备注已删除') }     catch (err: any) { onMsg('❌ ' + (err.message || '')) }   }    if (loading)"
+        },
+        {
+          "line": 84,
+          "context": "ading(false) }   }, [userId])   useEffect(() => { fetch() }, [fetch])    const add = async () => {     if (!ip.trim()) return     try { await post(`/api/v1/"
+        },
+        {
+          "line": 88,
+          "context": "c.trim() || undefined }); setIp(''); setDesc(''); fetch(); onMsg('✅ IP 已加入白名单') }     catch (err: any) { onMsg('❌ ' + (err.message || '')) }   }    const re"
+        },
+        {
+          "line": 93,
+          "context": "pi/v1/admin/users/${userId}/ip-whitelist/${id}`); fetch(); onMsg('✅ IP 已移除') }     catch (err: any) { onMsg('❌ ' + (err.message || '')) }   }    if (loading"
+        },
+        {
+          "line": 137,
+          "context": "ading(false) }   }, [userId])   useEffect(() => { fetch() }, [fetch])    const unbind = async (provider: string) => {     if (!confirm(`确定解绑 ${provider}?`))"
+        },
+        {
+          "line": 141,
+          "context": "min/users/${userId}/unbind-oauth`, { provider }); fetch(); onMsg(`✅ ${provider} 已解绑`) }     catch (err: any) { onMsg('❌ ' + (err.message || '')) }   }    if"
+        }
+      ],
+      "axios_calls": [],
+      "useQuery_calls": [],
+      "useMutation_calls": [],
+      "total_calls": 8
+    },
+    "src/pages/admin/users/UserKeyPanel.tsx": {
+      "fetch_calls": [
+        {
+          "line": 114,
+          "context": "ding(false) }   }, [userId])    useEffect(() => { fetch() }, [fetch])    const toggleKey = async (keyId: number, cur: boolean) => {     try { await patch(`/"
+        },
+        {
+          "line": 117,
+          "context": "/${userId}/api-keys/${keyId}`, { status: !cur }); fetch(); onMsg(cur ? '✅ 已禁用' : '✅ 已启用') }     catch (err: any) { onMsg('❌ ' + (err.message || '')) }   }"
+        },
+        {
+          "line": 123,
+          "context": "api/v1/admin/users/${userId}/api-keys/${keyId}`); fetch(); onMsg('✅ 已删除') }     catch (err: any) { onMsg('❌ ' + (err.message || '')) }   }    if (loading) r"
+        }
+      ],
+      "axios_calls": [],
+      "useQuery_calls": [],
+      "useMutation_calls": [],
+      "total_calls": 3
+    },
+    "src/pages/admin/users/UserStatsCard.tsx": {
+      "fetch_calls": [
+        {
+          "line": 81,
+          "context": "oading(false)     }   }, [])    useEffect(() => { fetch() }, [fetch])    if (loading) {     return (       <div className=\"grid grid-cols-2 md:grid-cols-4 g"
+        }
+      ],
+      "axios_calls": [],
+      "useQuery_calls": [],
+      "useMutation_calls": [],
+      "total_calls": 1
+    }
+  },
+  "total_statistics": {
+    "total_fetch_calls": 32,
+    "total_axios_calls": 1,
+    "total_useQuery_calls": 0,
+    "total_useMutation_calls": 0,
+    "total_api_calls": 33,
+    "pages_with_api_calls": 11,
+    "total_pages_analyzed": 313
+  },
+  "average_api_calls_per_page": 3.0
+}

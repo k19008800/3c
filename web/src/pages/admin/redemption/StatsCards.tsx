@@ -161,6 +161,6 @@ const StatsCardsBase = React.memo(function StatsCardsBase({ stats, loading }: St
       </div>
     </div>
   )
-}
+})
 
 export default StatsCardsBase;

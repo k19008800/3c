@@ -1,0 +1,463 @@
+{
+  "component_dependencies": {
+    "src/pages/Announcements.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/ApiKeys.tsx": [
+      "@/components/ui/skeleton"
+    ],
+    "src/pages/Dashboard.tsx": [
+      "@/components/portal/QuickConnectPanel"
+    ],
+    "src/pages/Login.tsx": [
+      "@/components/ui/CaptchaDialog"
+    ],
+    "src/pages/Logs-virtual.tsx": [
+      "@/components/ui/VirtualTable",
+      "@/components/logs/LogDetailDrawer",
+      "@/components/logs/LogStatsCards",
+      "@/components/logs/LogTrendChart",
+      "@/components/logs/LogModelChart",
+      "@/components/logs/LogExportButton",
+      "@/components/logs/LogAnomaliesPanel",
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/Logs.tsx": [
+      "@/components/logs/LogDetailDrawer",
+      "@/components/logs/LogStatsCards",
+      "@/components/logs/LogTrendChart",
+      "@/components/logs/LogModelChart",
+      "@/components/logs/LogExportButton",
+      "@/components/logs/LogAnomaliesPanel",
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/Notifications.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/OperationLogs.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/Recharge.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/Redemption.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/Transactions.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/admin/AdminApiKeys.tsx": [
+      "@/components/ui/FilterBar",
+      "@/components/admin/FeatureDescription",
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/AdminLogs.tsx": [
+      "@/components/admin/FeatureDescription",
+      "@/components/logs/LogExportButton",
+      "@/components/logs/LogModelChart",
+      "@/components/logs/LogAnomaliesPanel"
+    ],
+    "src/pages/admin/AdminModels.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/AgentClients.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/AgentDetail.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/Agents.tsx": [
+      "@/components/admin/FeatureDescription",
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/AgentsList.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/ui/skeleton",
+      "@/components/ui/MiniChart",
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/Announcements.tsx": [
+      "@/components/ui/FilterBar",
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/AuditLogs.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/Campaigns.tsx": [
+      "@/components/ui/FilterBar",
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/CircuitBreakers.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/Configs.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/Dashboard.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/EmailTemplates.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/EnterpriseAnalysis.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/FinanceCommissions.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/FinanceDashboard.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/FinanceReconciliation.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/OperationLogs.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/PageContents.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/Playground.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/ProfitAnalysis.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/PromptAudit.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/ui/badge",
+      "@/components/ui/Modal"
+    ],
+    "src/pages/admin/Quotas.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/RateLimits.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/RedemptionCodes.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/RoleFormModal.tsx": [
+      "@/components/ui/button"
+    ],
+    "src/pages/admin/Roles.tsx": [
+      "@/components/ui/badge",
+      "@/components/ui/button",
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/SecurityAlerts.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/SecurityAutoRules.tsx": [
+      "@/components/admin/FeatureDescription",
+      "@/components/ui/ConfirmDialog"
+    ],
+    "src/pages/admin/SecurityBans.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/SecurityConfig.tsx": [
+      "@/components/admin/FeatureDescription",
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/admin/SecurityDashboard.tsx": [
+      "@/components/security/RiskBadge",
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/SecurityEvents.tsx": [
+      "@/components/security/RiskBadge"
+    ],
+    "src/pages/admin/SensitiveWords.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/ui/badge",
+      "@/components/ui/Modal"
+    ],
+    "src/pages/admin/SiteSettings.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/Stats.tsx": [
+      "@/components/ui/card",
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/SystemHealthPanel.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/VendorKeyGroups.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/Vendors.tsx": [
+      "@/components/security/CircuitStatusBadge",
+      "@/components/ui/PaginationBar",
+      "@/components/ui/FilterBar",
+      "@/components/ui/FormField",
+      "@/components/ui/skeleton",
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/VendorSelfMgmt.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/WithdrawOrders.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/ui/skeleton"
+    ],
+    "src/pages/admin/Withdraws.tsx": [
+      "@/components/ui/FilterBar",
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/agent/Notifications.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/agent/Team.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/agent/Withdraw.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/portal/Home.tsx": [
+      "@/components/portal/HeroSection",
+      "@/components/portal/FeatureGrid",
+      "@/components/portal/HowItWorks",
+      "@/components/portal/StatsBanner",
+      "@/components/portal/CTASection"
+    ],
+    "src/pages/portal/Models.tsx": [
+      "@/components/portal/ModelCatalog"
+    ],
+    "src/pages/portal/Pricing.tsx": [
+      "@/components/portal/PricingTable",
+      "@/components/portal/PricingFaq"
+    ],
+    "src/pages/portal/docs/ContentRenderer.tsx": [
+      "@/components/portal/CodeBlock"
+    ],
+    "src/pages/finance/invoices/InvoiceList.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/finance/refunds/RefundList.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/agent/clients/ClientDetail.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/agent/clients/ClientList.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/agent/commissions/CommissionList.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/agent/finance/TransactionList.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/agent/reconciliation/ReconList.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/agent/redemption/CodeList.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/admin/admin-logs/LogFilters.tsx": [
+      "@/components/ui/FilterBar"
+    ],
+    "src/pages/admin/admin-logs/LogList.tsx": [
+      "@/components/ui/skeleton",
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/admin/admin-models/ModelList.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/ui/FilterBar",
+      "@/components/ui/skeleton"
+    ],
+    "src/pages/admin/agent-detail/AgentClientsTab.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/admin/agent-detail/DetailHeader.tsx": [
+      "@/components/ui/MiniChart",
+      "@/components/ui/MiniChart",
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/announcements/AnnounceList.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/ui/EmptyState"
+    ],
+    "src/pages/admin/announcements/AnnounceStats.tsx": [
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/api-keys/KeyList.tsx": [
+      "@/components/ui/badge",
+      "@/components/ui/PaginationBar",
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/api-keys/KeyUsageLogs.tsx": [
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/audit-logs/AuditFilters.tsx": [
+      "@/components/ui/FilterBar"
+    ],
+    "src/pages/admin/audit-logs/AuditList.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/ui/skeleton"
+    ],
+    "src/pages/admin/audit-logs/AuditStatsCards.tsx": [
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/campaigns/CampaignDetail.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/campaigns/CampaignList.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/admin/campaigns/CampaignMetrics.tsx": [
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/campaigns/CampaignStatsCards.tsx": [
+      "@/components/ui/MiniChart",
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/components/CommissionTable.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/admin/components/KeyItemTable.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/admin/enterprise/AnalysisOverview.tsx": [
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/enterprise-analysis/index.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/finance/AdminCostDetail.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/finance/AgentCostDetail.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/finance/AgentSettlement.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/finance/CodeCostDashboard.tsx": [
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/finance/Invoices.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/finance/Prices.tsx": [
+      "@/components/admin/FeatureDescription",
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/admin/finance/Refunds.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/admin/FeatureDescription"
+    ],
+    "src/pages/admin/page-contents/ContentList.tsx": [
+      "@/components/ui/badge",
+      "@/components/ui/card",
+      "@/components/ui/skeleton"
+    ],
+    "src/pages/admin/page-contents/ContentStatsCards.tsx": [
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/playground/UsageStats.tsx": [
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/quotas/QuotaList.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/ui/FilterBar"
+    ],
+    "src/pages/admin/rate-limits/LimitList.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/admin/rate-limits/LimitLogs.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/admin/real-name/ReviewList.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/ui/FilterBar"
+    ],
+    "src/pages/admin/real-name/ReviewStatsCards.tsx": [
+      "@/components/ui/MiniChart",
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/recharge/OrderFilterBar.tsx": [
+      "@/components/ui/FilterBar"
+    ],
+    "src/pages/admin/recharge/OrderList.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/admin/recharge/OrderListUtils.tsx": [
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/redemption/AgentCodeDetail.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/admin/redemption/CodeList.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/admin/redemption/StatsCards.tsx": [
+      "@/components/ui/MiniChart",
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/security-events/EventDetail.tsx": [
+      "@/components/security/RiskBadge"
+    ],
+    "src/pages/admin/security-events/EventFilters.tsx": [
+      "@/components/ui/FilterBar"
+    ],
+    "src/pages/admin/security-events/EventList.tsx": [
+      "@/components/security/RiskBadge",
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/admin/security-events/EventStatsCards.tsx": [
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/site-settings/ApiSettings.tsx": [
+      "@/components/ui/MiniChart",
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/site-settings/BillingSettings.tsx": [
+      "@/components/ui/MiniChart",
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/site-settings/EmailSettings.tsx": [
+      "@/components/ui/MiniChart",
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/site-settings/SecuritySettings.tsx": [
+      "@/components/ui/MiniChart",
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/stats/OverviewCards.tsx": [
+      "@/components/ui/card"
+    ],
+    "src/pages/admin/users/UserKeyPanel.tsx": [
+      "@/components/ui/MiniChart",
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/admin/users/UserList.tsx": [
+      "@/components/ui/PaginationBar",
+      "@/components/ui/skeleton",
+      "@/components/ui/MiniChart",
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/vendor-models/ModelStatsCards.tsx": [
+      "@/components/ui/MiniChart"
+    ],
+    "src/pages/admin/vendor-models/ModelTable.tsx": [
+      "@/components/ui/MiniChart",
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/admin/withdraws/WithdrawList.tsx": [
+      "@/components/ui/PaginationBar"
+    ],
+    "src/pages/admin/withdraws/WithdrawStatsCards.tsx": [
+      "@/components/ui/MiniChart"
+    ]
+  },
+  "total_pages": 125,
+  "total_component_imports": 207
+}

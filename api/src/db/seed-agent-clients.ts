@@ -10,7 +10,7 @@
 
 import "dotenv/config";
 import bcryptjs from "bcryptjs";
-import { eq, sql, and } from "drizzle-orm";
+import { eq, sql, and, inArray } from "drizzle-orm";
 import { createDb, closeDb, getDb } from "./index.js";
 import { createRedis } from "../redis.js";
 import {
@@ -618,12 +618,26 @@ async function main() {
   let totalCalls = 0;
   let totalCost = 0;
 
+  // 【优化】批量查询用户余额，消除 N+1
+  // 一次性获取所有用户的当前余额
+  const userIds = createdClientIds.map(c => c.uid);
+  const userBalances = await db
+    .select({ id: users.id, balance: users.balance })
+    .from(users)
+    .where(inArray(users.id, userIds));
+  
+  const balanceMap = new Map<number, string>();
+  for (const ub of userBalances) {
+    balanceMap.set(ub.id, ub.balance);
+  }
+
   for (const { uid, scenario: cfg, keyId } of createdClientIds) {
     let userCalls = 0;
     let userCost = 0;
     process.stdout.write(`  ${cfg.nickname.padEnd(12)} ${cfg.industry.padEnd(16)} `);
 
     let balanceExhausted = false;
+    let currentBalance = parseFloat(balanceMap.get(uid) || "0");
 
     for (let d = 0; d < cfg.daysBack && !balanceExhausted; d++) {
       const count = randInt(cfg.callsPerDay.min, cfg.callsPerDay.max);
@@ -649,12 +663,7 @@ async function main() {
         const errorMsg = ok ? undefined : genFailureMsg();
 
         // 余额不足时停止为该客户生成调用（不自动充值）
-        const [uCheck] = await db
-          .select({ balance: users.balance })
-          .from(users)
-          .where(eq(users.id, uid))
-          .limit(1);
-        if (uCheck && parseFloat(uCheck.balance) < 1.0) {
+        if (currentBalance < 1.0) {
           balanceExhausted = true;
           break;
         }
@@ -778,11 +787,40 @@ async function main() {
 
   // 各客户消费情况
   console.log(`┌─ 客户消费明细 ──────────────────────────────┐`);
+  
+  // 【优化】批量查询用户余额和消费统计，消除 N+1
+  const allUserIds = createdClientIds.map(c => c.uid);
+  
+  // 批量查询用户信息
+  const usersInfo = await db
+    .select({ id: users.id, nickname: users.nickname, balance: users.balance })
+    .from(users)
+    .where(inArray(users.id, allUserIds));
+  
+  const userInfoMap = new Map<number, {nickname: string, balance: string}>();
+  for (const u of usersInfo) {
+    userInfoMap.set(u.id, { nickname: u.nickname || '', balance: u.balance });
+  }
+  
+  // 批量查询用户消费统计
+  const consumptionStats = await db
+    .select({
+      userId: callLogs.userId,
+      total: sql<string>`COALESCE(SUM(cost), '0')` as any,
+    })
+    .from(callLogs)
+    .where(inArray(callLogs.userId, allUserIds))
+    .groupBy(callLogs.userId);
+  
+  const consumptionMap = new Map<number, string>();
+  for (const stat of consumptionStats) {
+    consumptionMap.set(stat.userId, stat.total);
+  }
+  
   for (const { uid, scenario: cfg } of createdClientIds) {
-    const [u] = await db.select({ nickname: users.nickname, balance: users.balance }).from(users).where(eq(users.id, uid));
-    const [c] = await db.select({ total: sql<string>`COALESCE(SUM(cost), 0)` }).from(callLogs).where(eq(callLogs.userId, uid));
-    const b = parseFloat(u?.balance || "0");
-    const cost = parseFloat(c?.total || "0");
+    const u = userInfoMap.get(uid) || { nickname: cfg.nickname, balance: "0" };
+    const cost = parseFloat(consumptionMap.get(uid) || "0");
+    const b = parseFloat(u.balance);
     const initials = parseFloat(cfg.balance);
     console.log(`  ${(cfg.nickname + " ").padEnd(14)} 充值¥${initials.toFixed(0).padStart(4)} 消费¥${cost.toFixed(2).padStart(8)} 余额¥${b.toFixed(2).padStart(7)}`);
   }

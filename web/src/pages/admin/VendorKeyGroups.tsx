@@ -4,55 +4,48 @@ import { usePagination } from '@/hooks/use-pagination'
 import PaginationBar from '@/components/ui/PaginationBar'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import type { Vendor } from '@/types'
-import React from 'react';
-import {Plus, Edit3, Trash2, Cable, CheckCircle2, AlertCircle, Loader2,
+import React from 'react'
+import {
+  Plus, Edit3, Trash2, Cable, CheckCircle2, AlertCircle, Loader2,
   DollarSign, RefreshCw, ToggleLeft, ToggleRight, Eye, EyeOff,
   Search, Download, FileText, Copy, X, Info,
   Square, CheckSquare,
 } from 'lucide-react'
 import KeyModelPricesModal from './KeyModelPricesModal'
+import {
+  VendorSelector,
+  GroupList,
+  KeyTable,
+  KeyFilters,
+  type StatusTab,
+  type KeyGroup,
+  type KeyItem,
+} from './vendor-key-groups/components'
 
-interface KeyGroup {
-  id: number; vendorId: number; name: string; strategy: string
-  description: string | null; status: boolean
-  keyCount: number; activeCount: number; downCount: number; disabledCount: number
-  createdAt: string; updatedAt: string
-}
-
-interface KeyItem {
-  id: number; groupId: number; apiKeyPrefix: string | null
-  apiKeyEncrypted?: string
-  weight: number; priority: number; status: boolean; isDown: boolean
-  consecutiveFailures: number; totalCalls: number; successCalls: number
-  sellPriceInput: string | null; sellPriceOutput: string | null
-  costPriceInput: string | null; costPriceOutput: string | null
-  notes: string | null; deletedAt: string | null
-  lastUsedAt: string | null; createdAt: string
+interface VendorSummary {
+  vendorId: number
+  vendorName: string
+  groupCount: number
+  keyCount: number
 }
 
 interface ChannelRef {
-  id: number; vendorId: number; vendorName: string
-  modelId: number; modelName: string; upstreamModelName: string
-  status: boolean; isDown: boolean
+  id: number
+  vendorId: number
+  vendorName: string
+  modelId: number
+  modelName: string
+  upstreamModelName: string
+  status: boolean
+  isDown: boolean
 }
 
 interface TestResult {
-  itemId: number; success: boolean; durationMs: number; statusCode?: number; error?: string
-}
-
-interface VendorSummary {
-  vendorId: number; vendorName: string; groupCount: number; keyCount: number
-}
-
-type StatusTab = 'all' | 'active' | 'down' | 'disabled' | 'deleted'
-
-/** 计算健康状态 */
-function calcHealth(item: KeyItem): { level: 'healthy' | 'warn' | 'danger'; rate: number | null } {
-  if (item.totalCalls < 10) return { level: 'warn', rate: null } // 数据不足
-  const rate = item.totalCalls > 0 ? (item.successCalls / item.totalCalls) * 100 : 0
-  if (rate >= 90 && item.consecutiveFailures < 3) return { level: 'healthy', rate }
-  if (rate >= 70 && item.consecutiveFailures < 10) return { level: 'warn', rate }
-  return { level: 'danger', rate }
+  itemId: number
+  success: boolean
+  durationMs: number
+  statusCode?: number
+  error?: string
 }
 
 function VendorKeyGroupsBaseImpl() {
@@ -66,38 +59,34 @@ function VendorKeyGroupsBaseImpl() {
   const [itemsLoading, setItemsLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // ── Pagination ──
   const pagination = usePagination(20)
-
-  // ── Search & filter ──
   const [searchQuery, setSearchQuery] = useState('')
   const [statusTab, setStatusTab] = useState<StatusTab>('all')
   const [showDeleted, setShowDeleted] = useState(false)
-
-  // ── Key reveal state ──
   const [revealedIds, setRevealedIds] = useState<Record<number, string>>({})
   const [revealing, setRevealing] = useState<number | null>(null)
-
-  // ── Channel association ──
-  const [channels, setChannels] = useState<ChannelRef[]>([])
-  const [channelsLoading, setChannelsLoading] = useState(false)
-  const [showChannels, setShowChannels] = useState(false)
-
-  // ── Batch test results ──
-  const [testResults, setTestResults] = useState<TestResult[] | null>(null)
-  const [testing, setTesting] = useState(false)
-
-  // ── Inline editing ──
   const [editingNotes, setEditingNotes] = useState<Record<number, string>>({})
   const [savingNotes, setSavingNotes] = useState<Record<number, boolean>>({})
-
-  // ── Batch selection ──
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [batchTestingItems, setBatchTestingItems] = useState<number[]>([])
-  const [batchDeleting, setBatchDeleting] = useState(false)
-  const [batchUpdating, setBatchUpdating] = useState(false)
+  const tableScrollRef = useRef<HTMLDivElement | null>(null)
 
-  // ── Load vendors on mount ──
+  const [showCreateGroup, setShowCreateGroup] = useState(false)
+  const [editGroup, setEditGroup] = useState<KeyGroup | null>(null)
+  const [groupForm, setGroupForm] = useState({ name: '', strategy: 'round_robin', description: '' })
+  const [groupSubmitting, setGroupSubmitting] = useState(false)
+
+  const [showCreateItem, setShowCreateItem] = useState(false)
+  const [editItem, setEditItem] = useState<KeyItem | null>(null)
+  const [itemForm, setItemForm] = useState({
+    apiKey: '', weight: 1, priority: 0, notes: '',
+    costPriceInput: '', costPriceOutput: '', sellPriceInput: '', sellPriceOutput: '',
+  })
+  const [itemSubmitting, setItemSubmitting] = useState(false)
+
+  const [priceConfigItem, setPriceConfigItem] = useState<{ itemId: number; groupId: number; prefix: string | null } | null>(null)
+
+  // Load vendors
   useEffect(() => {
     Promise.all([
       get<any>('/api/v1/admin/vendors', { page: 1, pageSize: 200 }),
@@ -108,7 +97,6 @@ function VendorKeyGroupsBaseImpl() {
     }).catch(() => {})
   }, [])
 
-  // ── Load groups for selected vendor ──
   const loadGroups = useCallback(async (vendorId: number) => {
     setLoading(true)
     setError('')
@@ -122,11 +110,6 @@ function VendorKeyGroupsBaseImpl() {
 
   const loadItems = useCallback(async (groupId: number) => {
     setItemsLoading(true)
-    setChannels([])
-    setShowChannels(false)
-    setTestResults(null)
-    setRevealedIds({})
-    setSelectedIds(new Set())
     try {
       const params: any = { page: pagination.page, pageSize: pagination.pageSize }
       if (showDeleted) params.showDeleted = 'true'
@@ -137,67 +120,45 @@ function VendorKeyGroupsBaseImpl() {
     } catch (err: any) {
       setError(err.message || '加载Key列表失败')
     } finally { setItemsLoading(false) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showDeleted, pagination.page, pagination.pageSize])
 
-  const loadChannels = useCallback(async (groupId: number) => {
-    setChannelsLoading(true)
-    try {
-      const data = await get<{ total: number; list: ChannelRef[] }>(`/api/v1/admin/key-groups/${groupId}/associated-channels`)
-      setChannels(data.list || [])
-    } catch (err: any) {
-      setError(err.message || '加载关联通道失败')
-    } finally { setChannelsLoading(false) }
-  }, [])
-
-  // ── Vendor/group selection ──
   useEffect(() => {
     if (selectedVendorId) { setSelectedGroupId(null); setItems([]); loadGroups(selectedVendorId) }
-  }, [selectedVendorId, loadGroups])
+  }, [selectedVendorId])
 
-  // Load items when group changes or pagination changes
-  // Uses a counter to force reload when switching groups (even if page=1 stays the same)
   const [groupLoadKey, setGroupLoadKey] = useState(0)
   useEffect(() => {
     if (selectedGroupId) {
       loadItems(selectedGroupId)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedGroupId, pagination.page, pagination.pageSize, groupLoadKey])
 
-  // Reset page to 1 when switching to a different group
   const prevGroupRef = useRef<number | null>(null)
   useEffect(() => {
     if (selectedGroupId) {
       if (prevGroupRef.current !== selectedGroupId) {
         prevGroupRef.current = selectedGroupId
         pagination.resetPage()
-        // Force reload even if resetPage is a no-op (page already 1)
         setGroupLoadKey(k => k + 1)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedGroupId])
 
   const selectedVendor = vendors.find(v => v.id === selectedVendorId)
   const selectedGroup = groups.find(g => g.id === selectedGroupId)
 
-  // ── Summary info for vendor dropdown ──
   const getVendorSummary = useCallback((vendorId: number) => {
     return vendorSummaries.find(s => s.vendorId === vendorId)
   }, [vendorSummaries])
 
-  // ── Filtered items based on tab + search ──
   const filteredItems = useMemo(() => {
     let list = items
-    // Tab filter
     if (statusTab === 'active') list = list.filter(i => i.status && !i.isDown && !i.deletedAt)
     else if (statusTab === 'down') list = list.filter(i => i.isDown && !i.deletedAt)
     else if (statusTab === 'disabled') list = list.filter(i => !i.status && !i.deletedAt)
     else if (statusTab === 'deleted') list = list.filter(i => i.deletedAt)
     else if (statusTab === 'all') list = list.filter(i => !i.deletedAt)
 
-    // Search filter
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase()
       list = list.filter(i =>
@@ -209,21 +170,6 @@ function VendorKeyGroupsBaseImpl() {
     return list
   }, [items, statusTab, searchQuery])
 
-  // ── Stats from all items (excluding deleted) ──
-  const stats = useMemo(() => {
-    const active = items.filter(i => i.status && !i.isDown && !i.deletedAt)
-    const down = items.filter(i => i.isDown && !i.deletedAt)
-    const disabled = items.filter(i => !i.status && !i.deletedAt)
-    const deleted = items.filter(i => i.deletedAt)
-    return {
-      total: active.length + down.length + disabled.length,
-      active: active.length,
-      down: down.length,
-      disabled: disabled.length,
-      deleted: deleted.length,
-    }
-  }, [items])
-
   const tabCounts = useMemo(() => {
     const all = items.filter(i => !i.deletedAt).length
     const active = items.filter(i => i.status && !i.isDown && !i.deletedAt).length
@@ -233,18 +179,18 @@ function VendorKeyGroupsBaseImpl() {
     return { all, active, down, disabled, deleted }
   }, [items])
 
-  // ── Group CRUD ──
-  const [showCreateGroup, setShowCreateGroup] = useState(false)
-  const [editGroup, setEditGroup] = useState<KeyGroup | null>(null)
-  const [groupForm, setGroupForm] = useState({ name: '', strategy: 'round_robin', description: '' })
-  const [groupSubmitting, setGroupSubmitting] = useState(false)
+  const allSelected = useMemo(() => {
+    if (filteredItems.length === 0) return false
+    return filteredItems.every(i => selectedIds.has(i.id))
+  }, [filteredItems, selectedIds])
 
   const handleCreateGroup = async () => {
     if (!selectedVendorId || !groupForm.name) return
     setGroupSubmitting(true)
     try {
       await post(`/api/v1/admin/vendors/${selectedVendorId}/key-groups`, groupForm)
-      setShowCreateGroup(false); setGroupForm({ name: '', strategy: 'round_robin', description: '' })
+      setShowCreateGroup(false)
+      setGroupForm({ name: '', strategy: 'round_robin', description: '' })
       loadGroups(selectedVendorId)
     } catch (err: any) { setError(err.message) }
     finally { setGroupSubmitting(false) }
@@ -257,7 +203,8 @@ function VendorKeyGroupsBaseImpl() {
       await patch(`/api/v1/admin/key-groups/${editGroup.id}`, {
         name: groupForm.name, strategy: groupForm.strategy, description: groupForm.description || null,
       })
-      setEditGroup(null); setGroupForm({ name: '', strategy: 'round_robin', description: '' })
+      setEditGroup(null)
+      setGroupForm({ name: '', strategy: 'round_robin', description: '' })
       if (selectedVendorId) loadGroups(selectedVendorId)
     } catch (err: any) { setError(err.message) }
     finally { setGroupSubmitting(false) }
@@ -272,7 +219,6 @@ function VendorKeyGroupsBaseImpl() {
     } catch (err: any) { setError(err.message) }
   }
 
-  // ── Group-level toggle ──
   const handleToggleGroup = async (g: KeyGroup) => {
     try {
       await patch(`/api/v1/admin/key-groups/${g.id}`, { status: !g.status })
@@ -280,20 +226,15 @@ function VendorKeyGroupsBaseImpl() {
     } catch (err: any) { setError(err.message) }
   }
 
-  // ── Item CRUD ──
-  const [showCreateItem, setShowCreateItem] = useState(false)
-  const [editItem, setEditItem] = useState<KeyItem | null>(null)
-  const emptyItemForm = {
-    apiKey: '', weight: 1, priority: 0, notes: '',
-    costPriceInput: '', costPriceOutput: '', sellPriceInput: '', sellPriceOutput: '',
+  const openCreateItem = () => {
+    setEditItem(null)
+    setItemForm({
+      apiKey: '', weight: 1, priority: 0, notes: '',
+      costPriceInput: '', costPriceOutput: '', sellPriceInput: '', sellPriceOutput: '',
+    })
+    setShowCreateItem(true)
   }
-  const [itemForm, setItemForm] = useState(emptyItemForm)
-  const [itemSubmitting, setItemSubmitting] = useState(false)
 
-  // ── Key-Model 价格配置 ──
-  const [priceConfigItem, setPriceConfigItem] = useState<{ itemId: number; groupId: number; prefix: string | null } | null>(null)
-
-  const openCreateItem = () => { setEditItem(null); setItemForm(emptyItemForm); setShowCreateItem(true) }
   const openEditItem = (item: KeyItem) => {
     setEditItem(item)
     setItemForm({
@@ -324,7 +265,12 @@ function VendorKeyGroupsBaseImpl() {
         body.apiKey = itemForm.apiKey
         await post(`/api/v1/admin/key-groups/${selectedGroupId}/items`, body)
       }
-      setShowCreateItem(false); setEditItem(null); setItemForm(emptyItemForm)
+      setShowCreateItem(false)
+      setEditItem(null)
+      setItemForm({
+        apiKey: '', weight: 1, priority: 0, notes: '',
+        costPriceInput: '', costPriceOutput: '', sellPriceInput: '', sellPriceOutput: '',
+      })
       loadItems(selectedGroupId)
     } catch (err: any) { setError(err.message) }
     finally { setItemSubmitting(false) }
@@ -338,7 +284,6 @@ function VendorKeyGroupsBaseImpl() {
     } catch (err: any) { setError(err.message) }
   }
 
-  // ── Inline item toggle ──
   const handleToggleItem = async (item: KeyItem) => {
     try {
       await patch(`/api/v1/admin/key-group-items/${item.id}`, { status: !item.status })
@@ -346,10 +291,8 @@ function VendorKeyGroupsBaseImpl() {
     } catch (err: any) { setError(err.message) }
   }
 
-  // ── Reveal full key ──
   const handleRevealKey = async (item: KeyItem) => {
     if (revealedIds[item.id]) {
-      // Already revealed, just hide
       setRevealedIds(prev => { const n = { ...prev }; delete n[item.id]; return n })
       return
     }
@@ -357,7 +300,6 @@ function VendorKeyGroupsBaseImpl() {
     try {
       const data = await post<{ data: { fullKey: string } }>(`/api/v1/admin/key-group-items/${item.id}/reveal`)
       setRevealedIds(prev => ({ ...prev, [item.id]: data.data.fullKey }))
-      // Auto-hide after 30s
       setTimeout(() => {
         setRevealedIds(prev => { const n = { ...prev }; delete n[item.id]; return n })
       }, 30000)
@@ -366,18 +308,15 @@ function VendorKeyGroupsBaseImpl() {
     } finally { setRevealing(null) }
   }
 
-  // ── Copy full key ──
   const handleCopyKey = async (fullKey: string) => {
     try {
       await navigator.clipboard.writeText(fullKey)
     } catch {
-      // Fallback
       const ta = document.createElement('textarea')
       ta.value = fullKey; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta)
     }
   }
 
-  // ── Inline notes save ──
   const handleSaveNotes = async (itemId: number) => {
     const notes = editingNotes[itemId]
     if (notes === undefined) return
@@ -391,7 +330,6 @@ function VendorKeyGroupsBaseImpl() {
     } finally { setSavingNotes(prev => ({ ...prev, [itemId]: false })) }
   }
 
-  // ── Connectivity test (single) ──
   const handleTestItem = async (item: KeyItem) => {
     try {
       const data = await post<{ data: { success: boolean; durationMs: number } }>(
@@ -399,72 +337,6 @@ function VendorKeyGroupsBaseImpl() {
       alert(data.data.success ? `连接成功 (${data.data.durationMs}ms)` : `连接失败 (${data.data.durationMs}ms)`)
     } catch (err: any) { alert('测试失败: ' + err.message) }
   }
-
-  // ── Batch test ──
-  const handleBatchTest = async () => {
-    if (!selectedGroupId) return
-    setTesting(true)
-    setTestResults(null)
-    try {
-      const data = await post<{ data: TestResult[] }>(`/api/v1/admin/key-groups/${selectedGroupId}/test-all`)
-      setTestResults(data.data || [])
-    } catch (err: any) {
-      setError('批量测试失败: ' + err.message)
-    } finally { setTesting(false) }
-  }
-
-  // ── CSV export ──
-  const handleExportCSV = () => {
-    const headers = ['ID', 'Key前缀', '状态', '权重', '优先级', '售价(入)', '售价(出)', '备注', '连续失败', '总调用', '成功率', '创建时间']
-    const rows = items.map(i => {
-      const health = calcHealth(i)
-      const healthLabel = health.rate !== null
-        ? `${health.rate.toFixed(1)}%`
-        : (i.totalCalls > 0 ? `${(i.successCalls / i.totalCalls * 100).toFixed(1)}%` : '—')
-      return [
-        i.id,
-        revealedIds[i.id] || i.apiKeyPrefix || '',
-        i.deletedAt ? '已删除' : i.isDown ? '宕机' : i.status ? '正常' : '禁用',
-        i.weight, i.priority,
-        i.sellPriceInput || '', i.sellPriceOutput || '',
-        i.notes || '',
-        i.consecutiveFailures, i.totalCalls,
-        healthLabel,
-        i.createdAt ? new Date(i.createdAt).toLocaleString('zh-CN') : '',
-      ]
-    })
-
-    const csv = [
-      headers.join(','),
-      ...rows.map(r => r.map(v => {
-        const s = String(v)
-        return s.includes(',') || s.includes('"') ? '"' + s.replace(/"/g, '""') + '"' : s
-      }).join(',')),
-    ].join('\n')
-
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = `key-group-${selectedGroupId}-${new Date().toISOString().slice(0,10)}.csv`
-    a.click(); URL.revokeObjectURL(url)
-  }
-
-  // ── Channel association ──
-  const handleShowChannels = () => {
-    if (!selectedGroupId) return
-    if (showChannels) {
-      setShowChannels(false)
-    } else {
-      setShowChannels(true)
-      if (channels.length === 0) loadChannels(selectedGroupId)
-    }
-  }
-
-  // ── Batch selection helpers ──
-  const allSelected = useMemo(() => {
-    if (filteredItems.length === 0) return false
-    return filteredItems.every(i => selectedIds.has(i.id))
-  }, [filteredItems, selectedIds])
 
   const handleSelectAll = () => {
     if (allSelected) {
@@ -482,74 +354,6 @@ function VendorKeyGroupsBaseImpl() {
     })
   }
 
-  const selectedItems = useMemo(() => {
-    return items.filter(i => selectedIds.has(i.id))
-  }, [items, selectedIds])
-
-  // ── Batch operations ──
-  const handleBatchStatus = async (status: boolean) => {
-    if (!selectedGroupId || selectedItems.length === 0) return
-    setBatchUpdating(true)
-    try {
-      await patch(`/api/v1/admin/key-groups/${selectedGroupId}/items/batch-status`, {
-        status,
-        itemIds: selectedItems.map(i => i.id),
-      })
-      setSelectedIds(new Set())
-      loadItems(selectedGroupId)
-    } catch (err: any) {
-      setError('批量操作失败: ' + err.message)
-    } finally { setBatchUpdating(false) }
-  }
-
-  const handleBatchDelete = async () => {
-    if (!selectedGroupId || selectedItems.length === 0) return
-    if (!confirm(`确定删除选中的 ${selectedItems.length} 个 Key?此操作不可恢复。`)) return
-    setBatchDeleting(true)
-    let failed = 0
-    try {
-      for (const item of selectedItems) {
-        try {
-          await del(`/api/v1/admin/key-group-items/${item.id}`)
-        } catch {
-          failed++
-        }
-      }
-      if (failed > 0) {
-        setError(`${selectedItems.length - failed} 个删除成功，${failed} 个删除失败`)
-      }
-      setSelectedIds(new Set())
-      loadItems(selectedGroupId)
-    } catch (err: any) {
-      setError('批量删除失败: ' + err.message)
-    } finally { setBatchDeleting(false) }
-  }
-
-  const handleBatchTestSelected = async () => {
-    if (selectedItems.length === 0) return
-    setBatchTestingItems(selectedItems.map(i => i.id))
-    const results: TestResult[] = []
-    for (const item of selectedItems) {
-      try {
-        const data = await post<{ data: { success: boolean; durationMs: number } }>(
-          `/api/v1/admin/key-group-items/${item.id}/test`)
-        results.push({ itemId: item.id, success: data.data.success, durationMs: data.data.durationMs })
-      } catch {
-        results.push({ itemId: item.id, success: false, durationMs: 0, error: '请求失败' })
-      }
-    }
-    setBatchTestingItems([])
-    alert(`批量测试完成：${results.filter(r => r.success).length}/${results.length} 通过`)
-  }
-
-  // ── Ref for the batch action bar to detect scroll ──
-  const tableScrollRef = useRef<HTMLDivElement>(null)
-  const [showFloatingBar, setShowFloatingBar] = useState(false)
-
-  useEffect(() => {
-    setShowFloatingBar(selectedIds.size > 0)
-  }, [selectedIds])
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -564,94 +368,26 @@ function VendorKeyGroupsBaseImpl() {
         </div>
       )}
 
-      {/* ── Vendor Selector ── */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4">
-        <label className="block text-sm font-medium text-slate-700 mb-2">选择供应商</label>
-        <select
-          value={selectedVendorId ?? ''}
-          onChange={e => { setSelectedVendorId(e.target.value ? Number(e.target.value) : null); setSearchQuery(''); setStatusTab('all') }}
-          className="w-full max-w-md px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">-- 请选择 --</option>
-          {vendors.map(v => {
-            const summary = getVendorSummary(v.id)
-            const label = summary
-              ? `${v.name} (${summary.groupCount}组 / ${summary.keyCount}个Key)`
-              : v.name
-            return <option key={v.id} value={v.id}>{label}</option>
-          })}
-        </select>
-      </div>
+      <VendorSelector
+        vendors={vendors}
+        vendorSummaries={vendorSummaries}
+        selectedVendorId={selectedVendorId}
+        onSelectVendor={setSelectedVendorId}
+        getVendorSummary={getVendorSummary}
+      />
 
       {selectedVendor && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* ── Left: Key Groups ── */}
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-              <h2 className="text-base font-semibold text-slate-800">资源池</h2>
-              <button onClick={() => { setEditGroup(null); setGroupForm({ name: '', strategy: 'round_robin', description: '' }); setShowCreateGroup(true) }}
-                className="flex items-center gap-1 px-2.5 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                <Plus size={14} />新建
-              </button>
-            </div>
+          <GroupList
+            groups={groups}
+            selectedGroupId={selectedGroupId}
+            onSelect={setSelectedGroupId}
+            onToggle={handleToggleGroup}
+            onEdit={(g: any) => { setEditGroup(g); setGroupForm({ name: g.name, strategy: g.strategy, description: g.description ?? '' }); setShowCreateGroup(true) }}
+            onDelete={handleDeleteGroup}
+            onCreateGroup={() => { setEditGroup(null); setGroupForm({ name: '', strategy: 'round_robin', description: '' }); setShowCreateGroup(true) }}
+          />
 
-            {loading ? (
-              <div className="text-center py-8"><Loader2 className="animate-spin inline-block" size={24} /></div>
-            ) : groups.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 py-10 text-slate-400">
-                <Info size={32} className="text-slate-300" />
-                <p className="text-sm">暂无资源池</p>
-                <button onClick={() => { setEditGroup(null); setGroupForm({ name: '', strategy: 'round_robin', description: '' }); setShowCreateGroup(true) }}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                  <Plus size={14} />立即新建
-                </button>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {groups.map(g => (
-                  <div key={g.id}
-                    className={`px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition ${selectedGroupId === g.id ? 'bg-blue-50' : ''}`}
-                    onClick={() => setSelectedGroupId(g.id)}>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${g.status ? 'bg-green-500' : 'bg-slate-300'}`} />
-                        <span className="text-sm font-medium text-slate-900 truncate">{g.name}</span>
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 whitespace-nowrap">
-                          {g.strategy === 'round_robin' ? '轮询' : g.strategy === 'weighted' ? '加权' : g.strategy === 'failover' ? '故障转移' : g.strategy === 'priority' ? '优先级' : g.strategy}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="text-xs text-slate-400">{g.keyCount} 个 Key</span>
-                        {g.keyCount > 0 && (
-                          <span className="flex items-center gap-2 text-xs">
-                            <span className="text-green-600">🟢{g.activeCount}</span>
-                            {g.downCount > 0 && <span className="text-red-600">🔴{g.downCount}</span>}
-                            {g.disabledCount > 0 && <span className="text-slate-400">⚪{g.disabledCount}</span>}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button onClick={(e) => { e.stopPropagation(); handleToggleGroup(g) }}
-                        className="p-1 text-slate-400 hover:text-blue-600 rounded" title={g.status ? '停用' : '启用'}>
-                        {g.status ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); setEditGroup(g); setGroupForm({ name: g.name, strategy: g.strategy, description: g.description ?? '' }); setShowCreateGroup(true) }}
-                        className="p-1 text-slate-400 hover:text-blue-600 rounded" title="编辑">
-                        <Edit3 size={14} />
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDeleteGroup(g) }}
-                        className="p-1 text-slate-400 hover:text-red-600 rounded" title="删除">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* ── Right: Key Items ── */}
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
               <h2 className="text-base font-semibold text-slate-800">
@@ -660,15 +396,6 @@ function VendorKeyGroupsBaseImpl() {
               <div className="flex items-center gap-1">
                 {selectedGroupId && (
                   <>
-                    <button onClick={handleExportCSV}
-                      className="flex items-center gap-1 px-2 py-1.5 text-xs border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50" title="导出 CSV">
-                      <Download size={12} />导出
-                    </button>
-                    <button onClick={handleBatchTest} disabled={testing}
-                      className="flex items-center gap-1 px-2 py-1.5 text-xs border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 disabled:opacity-50">
-                      {testing ? <Loader2 className="animate-spin" size={12} /> : <Cable size={12} />}
-                      批量测试
-                    </button>
                     <button onClick={openCreateItem}
                       className="flex items-center gap-1 px-2.5 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                       <Plus size={14} />新增 Key
@@ -693,364 +420,50 @@ function VendorKeyGroupsBaseImpl() {
               </div>
             ) : (
               <>
-                {/* ── Stats cards ── */}
-                <div className="grid grid-cols-5 gap-2 px-4 py-3 bg-slate-50 border-b border-slate-200">
-                  <div className="text-center cursor-pointer" onClick={() => setStatusTab('all')}>
-                    <div className={`text-lg font-semibold ${statusTab === 'all' ? 'text-blue-600' : 'text-slate-900'}`}>{tabCounts.all}</div>
-                    <div className="text-[10px] text-slate-500">正常</div>
-                  </div>
-                  <div className="text-center cursor-pointer" onClick={() => setStatusTab('active')}>
-                    <div className={`text-lg font-semibold ${statusTab === 'active' ? 'text-green-600' : 'text-green-600'}`}>{tabCounts.active}</div>
-                    <div className="text-[10px] text-slate-500">活跃</div>
-                  </div>
-                  <div className="text-center cursor-pointer" onClick={() => setStatusTab('down')}>
-                    <div className={`text-lg font-semibold ${statusTab === 'down' ? 'text-red-600' : 'text-red-500'}`}>{tabCounts.down}</div>
-                    <div className="text-[10px] text-slate-500">宕机</div>
-                  </div>
-                  <div className="text-center cursor-pointer" onClick={() => setStatusTab('disabled')}>
-                    <div className={`text-lg font-semibold ${statusTab === 'disabled' ? 'text-slate-600' : 'text-slate-400'}`}>{tabCounts.disabled}</div>
-                    <div className="text-[10px] text-slate-500">禁用</div>
-                  </div>
-                  <div className="text-center cursor-pointer" onClick={() => setStatusTab('deleted')}>
-                    <div className={`text-lg font-semibold ${statusTab === 'deleted' ? 'text-orange-600' : 'text-orange-400'}`}>{tabCounts.deleted}</div>
-                    <div className="text-[10px] text-slate-500">已删除</div>
-                  </div>
-                </div>
+                <KeyFilters
+                  tabCounts={tabCounts}
+                  statusTab={statusTab}
+                  onTabChange={setStatusTab}
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                />
 
-                {/* ── Tabs + Search ── */}
-                <div className="flex items-center gap-2 px-4 py-2 border-b border-slate-200 bg-white">
-                  <div className="flex items-center gap-1">
-                    {(['all', 'active', 'down', 'disabled', 'deleted'] as StatusTab[]).map(tab => (
-                      <button key={tab}
-                        onClick={() => setStatusTab(tab)}
-                        className={`px-2.5 py-1 text-xs rounded-full transition ${
-                          statusTab === tab
-                            ? 'bg-blue-100 text-blue-700 font-medium'
-                            : 'text-slate-500 hover:bg-slate-100'
-                        }`}>
-                        {tab === 'all' ? '全部' : tab === 'active' ? '活跃' : tab === 'down' ? '宕机' : tab === 'disabled' ? '禁用' : '已删除'}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="relative flex-1 max-w-xs ml-auto">
-                    <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                      placeholder="搜索 Key / ID / 备注..."
-                      className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none" />
-                    {searchQuery && (
-                      <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
-                        <X size={12} />
-                      </button>
-                    )}
-                  </div>
-                </div>
+                <KeyTable
+                  items={items}
+                  filteredItems={filteredItems}
+                  hasSelectedGroup={!!selectedGroupId}
+                  itemsLoading={itemsLoading}
+                  selectedIds={selectedIds}
+                  revealedIds={revealedIds}
+                  revealing={revealing}
+                  editingNotes={editingNotes}
+                  savingNotes={savingNotes}
+                  batchTestingItems={batchTestingItems}
+                  tableScrollRef={tableScrollRef}
+                  onSelectItem={handleSelectItem}
+                  onSelectAll={handleSelectAll}
+                  onRevealKey={handleRevealKey}
+                  onCopyKey={handleCopyKey}
+                  onToggleItem={handleToggleItem}
+                  onTestItem={handleTestItem}
+                  onPriceConfig={(item) => setPriceConfigItem({
+                    itemId: item.id, groupId: selectedGroupId!, prefix: item.apiKeyPrefix
+                  })}
+                  onEditItem={openEditItem}
+                  onDeleteItem={handleDeleteItem}
+                  onNotesChange={(itemId, notes) => setEditingNotes(prev => ({ ...prev, [itemId]: notes }))}
+                  onSaveNotes={handleSaveNotes}
+                  onCancelEditNotes={(itemId) => setEditingNotes(prev => { const n = { ...prev }; delete n[itemId]; return n })}
+                />
 
-                {/* ── Floating batch action bar ── */}
-                {showFloatingBar && (
-                  <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2 bg-blue-50 border-b border-blue-200 shadow-sm">
-                    <span className="text-xs font-medium text-blue-700 whitespace-nowrap">已选 {selectedIds.size} 项</span>
-                    <div className="flex items-center gap-1 ml-2">
-                      <button
-                        onClick={() => handleBatchStatus(true)}
-                        disabled={batchUpdating}
-                        className="flex items-center gap-1 px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50">
-                        {batchUpdating ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle2 size={10} />}
-                        批量启用
-                      </button>
-                      <button
-                        onClick={() => handleBatchStatus(false)}
-                        disabled={batchUpdating}
-                        className="flex items-center gap-1 px-2 py-1 text-xs bg-slate-500 text-white rounded hover:bg-slate-600 disabled:opacity-50">
-                        {batchUpdating ? <Loader2 size={10} className="animate-spin" /> : <ToggleLeft size={10} />}
-                        批量禁用
-                      </button>
-                      <button
-                        onClick={handleBatchTestSelected}
-                        disabled={batchTestingItems.length > 0}
-                        className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
-                        {batchTestingItems.length > 0 ? <Loader2 size={10} className="animate-spin" /> : <Cable size={10} />}
-                        批量测试连通性
-                      </button>
-                      <button
-                        onClick={handleBatchDelete}
-                        disabled={batchDeleting}
-                        className="flex items-center gap-1 px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50">
-                        {batchDeleting ? <Loader2 size={10} className="animate-spin" /> : <Trash2 size={10} />}
-                        批量删除
-                      </button>
-                    </div>
-                    <button
-                      onClick={() => setSelectedIds(new Set())}
-                      className="ml-auto p-1 text-blue-400 hover:text-blue-600 rounded" title="取消选择">
-                      <X size={14} />
-                    </button>
-                  </div>
-                )}
-
-                {/* ── Key table ── */}
-                <div className="overflow-x-auto" ref={tableScrollRef}>
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-slate-50 text-left">
-                        <th className="px-2 py-2 w-8">
-                          <button onClick={handleSelectAll} className="text-slate-400 hover:text-blue-600" title="全选">
-                            {allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
-                          </button>
-                        </th>
-                        <th className="px-2 py-2 text-xs font-medium text-slate-500 w-4">健康</th>
-                        <th className="px-3 py-2 text-xs font-medium text-slate-500">Key</th>
-                        <th className="px-3 py-2 text-xs font-medium text-slate-500">权重</th>
-                        <th className="px-3 py-2 text-xs font-medium text-slate-500">优先级</th>
-                        <th className="px-3 py-2 text-xs font-medium text-slate-500">售价</th>
-                        <th className="px-3 py-2 text-xs font-medium text-slate-500">成功率</th>
-                        <th className="px-3 py-2 text-xs font-medium text-slate-500">备注</th>
-                        <th className="px-3 py-2 text-xs font-medium text-slate-500">状态</th>
-                        <th className="px-3 py-2 text-xs font-medium text-slate-500">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredItems.length === 0 ? (
-                        <tr>
-                          <td colSpan={10} className="text-center py-8 text-slate-400 text-xs">无匹配记录</td>
-                        </tr>
-                      ) : (
-                        filteredItems.map(item => {
-                          const isRevealed = !!revealedIds[item.id]
-                          const isEditing = editingNotes[item.id] !== undefined
-                          const health = calcHealth(item)
-                          const isSelected = selectedIds.has(item.id)
-                          const isTesting = batchTestingItems.includes(item.id)
-                          return (
-                            <tr key={item.id} className={`hover:bg-slate-50 ${item.deletedAt ? 'opacity-50 bg-slate-50' : ''} ${isSelected ? 'bg-blue-50/50' : ''}`}>
-                              {/* Checkbox */}
-                              <td className="px-2 py-2">
-                                {!item.deletedAt && (
-                                  <button onClick={() => handleSelectItem(item.id)} className="text-slate-400 hover:text-blue-600">
-                                    {isSelected ? <CheckSquare size={14} className="text-blue-600" /> : <Square size={14} />}
-                                  </button>
-                                )}
-                              </td>
-                              {/* Health indicator */}
-                              <td className="px-2 py-2">
-                                <span
-                                  className="inline-block w-2 h-2 rounded-full"
-                                  title={
-                                    health.rate !== null
-                                      ? `成功率: ${health.rate.toFixed(1)}% | 连续失败: ${item.consecutiveFailures}`
-                                      : item.totalCalls > 0
-                                        ? `成功率: ${(item.successCalls / item.totalCalls * 100).toFixed(1)}%`
-                                        : item.totalCalls === 0 && item.consecutiveFailures === 0
-                                          ? '暂无数据'
-                                          : `连续失败: ${item.consecutiveFailures}`
-                                  }
-                                  style={{
-                                    backgroundColor:
-                                      health.level === 'healthy' ? '#22c55e' :
-                                      health.level === 'warn' ? '#eab308' :
-                                      '#ef4444'
-                                  }}
-                                />
-                              </td>
-                              {/* Key */}
-                              <td className="px-3 py-2">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-xs font-mono text-slate-700">
-                                    {isRevealed ? revealedIds[item.id] : (item.apiKeyPrefix || `#${item.id}`)}
-                                  </span>
-                                  {!item.deletedAt && (
-                                    <>
-                                      <button onClick={() => handleRevealKey(item)}
-                                        className="p-0.5 text-slate-300 hover:text-blue-600 rounded" title={isRevealed ? '隐藏' : '查看完整 Key'}>
-                                        {revealing === item.id
-                                          ? <Loader2 size={12} className="animate-spin" />
-                                          : isRevealed ? <EyeOff size={12} /> : <Eye size={12} />}
-                                      </button>
-                                      {isRevealed && (
-                                        <button onClick={() => handleCopyKey(revealedIds[item.id])}
-                                          className="p-0.5 text-slate-300 hover:text-green-600 rounded" title="复制完整 Key">
-                                          <Copy size={12} />
-                                        </button>
-                                      )}
-                                    </>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-3 py-2 text-xs text-slate-600">{item.weight}</td>
-                              <td className="px-3 py-2 text-xs text-slate-600">{item.priority}</td>
-                              {/* 售价 */}
-                              <td className="px-3 py-2 text-xs text-slate-600">
-                                {item.sellPriceInput ? `¥${Number(item.sellPriceInput).toFixed(6)}入` : ''}
-                                {item.sellPriceInput && item.sellPriceOutput ? ' / ' : ''}
-                                {item.sellPriceOutput ? `¥${Number(item.sellPriceOutput).toFixed(6)}出` : ''}
-                                {!item.sellPriceInput && !item.sellPriceOutput ? <span className="text-slate-300">—</span> : ''}
-                              </td>
-                              {/* 成功率 */}
-                              <td className="px-3 py-2 text-xs">
-                                {health.rate !== null ? (
-                                  <span className={`font-mono ${
-                                    health.level === 'healthy' ? 'text-green-600' :
-                                    health.level === 'warn' ? 'text-yellow-600' :
-                                    'text-red-600'
-                                  }`}>
-                                    {health.rate.toFixed(1)}%
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-400 italic" title={
-                                    item.totalCalls === 0 && item.consecutiveFailures === 0
-                                      ? '尚无调用数据'
-                                      : `总调用 ${item.totalCalls}，数据不足`
-                                  }>
-                                    {item.totalCalls === 0 && item.consecutiveFailures === 0
-                                      ? '—'
-                                      : '数据不足'}
-                                  </span>
-                                )}
-                              </td>
-                              {/* 备注 */}
-                              <td className="px-3 py-2">
-                                {item.deletedAt ? (
-                                  <span className="text-xs text-slate-400 italic">已删除</span>
-                                ) : isEditing ? (
-                                  <div className="flex items-center gap-1">
-                                    <input type="text" value={editingNotes[item.id] ?? ''}
-                                      onChange={e => setEditingNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
-                                      className="w-28 px-1.5 py-0.5 text-xs border border-slate-200 rounded focus:ring-1 focus:ring-blue-400 outline-none"
-                                      autoFocus
-                                      onKeyDown={e => { if (e.key === 'Enter') handleSaveNotes(item.id); if (e.key === 'Escape') setEditingNotes(prev => { const n = { ...prev }; delete n[item.id]; return n }) }} />
-                                    <button onClick={() => handleSaveNotes(item.id)} disabled={savingNotes[item.id]}
-                                      className="p-0.5 text-blue-500 hover:text-blue-700">
-                                      {savingNotes[item.id] ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                                    </button>
-                                    <button onClick={() => setEditingNotes(prev => { const n = { ...prev }; delete n[item.id]; return n })}
-                                      className="p-0.5 text-slate-300 hover:text-slate-500"><X size={12} /></button>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-1 group cursor-pointer"
-                                    onClick={() => setEditingNotes(prev => ({ ...prev, [item.id]: item.notes ?? '' }))}>
-                                    <span className="text-xs text-slate-500 max-w-[120px] truncate">{item.notes || <span className="text-slate-300 italic">添加备注</span>}</span>
-                                    <Edit3 size={10} className="text-slate-200 group-hover:text-blue-500 shrink-0" />
-                                  </div>
-                                )}
-                              </td>
-                              {/* 状态 */}
-                              <td className="px-3 py-2">
-                                {item.deletedAt ? (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-orange-100 text-orange-600 rounded-full">
-                                    <Trash2 size={10} />已删除
-                                  </span>
-                                ) : item.isDown ? (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-red-100 text-red-700 rounded-full">
-                                    <AlertCircle size={10} />宕机
-                                  </span>
-                                ) : item.status ? (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
-                                    <CheckCircle2 size={10} />正常
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-slate-100 text-slate-500 rounded-full">禁用</span>
-                                )}
-                              </td>
-                              {/* 操作 */}
-                              <td className="px-3 py-2">
-                                {item.deletedAt ? (
-                                  <span className="text-xs text-slate-400">{new Date(item.deletedAt).toLocaleDateString('zh-CN')}</span>
-                                ) : (
-                                  <div className="flex items-center gap-1">
-                                    <button onClick={() => handleToggleItem(item)}
-                                      className="p-1 text-slate-400 hover:text-blue-600 rounded" title={item.status && !item.isDown ? '禁用' : '启用'}>
-                                      {item.status && !item.isDown ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
-                                    </button>
-                                    <button onClick={() => handleTestItem(item)}
-                                      className="p-1 text-slate-400 hover:text-green-600 rounded" title="测试连通性">
-                                      {isTesting ? <Loader2 size={14} className="animate-spin" /> : <Cable size={14} />}
-                                    </button>
-                                    <button onClick={() => setPriceConfigItem({
-                                      itemId: item.id, groupId: selectedGroupId!, prefix: item.apiKeyPrefix
-                                    })}
-                                      className="p-1 text-slate-400 hover:text-orange-600 rounded" title="模型价格配置">
-                                      <DollarSign size={14} />
-                                    </button>
-                                    <button onClick={() => openEditItem(item)}
-                                      className="p-1 text-slate-400 hover:text-blue-600 rounded" title="编辑">
-                                      <Edit3 size={14} />
-                                    </button>
-                                    <button onClick={() => handleDeleteItem(item)}
-                                      className="p-1 text-slate-400 hover:text-red-600 rounded" title="删除">
-                                      <Trash2 size={14} />
-                                    </button>
-                                  </div>
-                                )}
-                              </td>
-                            </tr>
-                          )
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* ── Pagination ── */}
                 <PaginationBar {...pagination.paginationProps} />
-
-                {/* ── Batch test results ── */}
-                {testResults && (
-                  <div className="border-t border-slate-200">
-                    <div className="px-4 py-2 text-xs font-medium text-slate-500 bg-slate-50">批量测试结果</div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3">
-                      {testResults.map(r => (
-                        <div key={r.itemId} className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs ${
-                          r.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-                        }`}>
-                          {r.success ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-                          <span className="font-mono">#{r.itemId}</span>
-                          <span>{r.durationMs}ms</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="px-4 pb-2 text-xs text-slate-400">
-                      {testResults.filter(r => r.success).length}/{testResults.length} 通过
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Channel association ── */}
-                <div className="border-t border-slate-200">
-                  <button onClick={handleShowChannels}
-                    className="flex items-center gap-1 px-4 py-2 text-xs text-slate-500 hover:text-blue-600 hover:bg-slate-50 w-full text-left transition">
-                    {showChannels ? <EyeOff size={12} /> : <Eye size={12} />}
-                    查看关联通道 {channels.length > 0 ? `(${channels.length})` : ''}
-                  </button>
-                  {showChannels && (
-                    <div className="px-4 pb-3">
-                      {channelsLoading ? (
-                        <div className="text-center py-2"><Loader2 className="animate-spin inline-block" size={16} /></div>
-                      ) : channels.length === 0 ? (
-                        <div className="text-xs text-slate-400 py-1">暂无关联通道</div>
-                      ) : (
-                        <div className="max-h-48 overflow-y-auto space-y-1">
-                          {channels.map(ch => (
-                            <div key={ch.id} className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-slate-50">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${ch.status && !ch.isDown ? 'bg-green-500' : 'bg-red-400'}`} />
-                                <span className="text-slate-700 font-medium">{ch.vendorName}</span>
-                                <span className="text-slate-400">/</span>
-                                <span className="text-slate-600 truncate">{ch.modelName}</span>
-                              </div>
-                              <span className="text-slate-400 shrink-0 ml-2">{ch.upstreamModelName}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
               </>
             )}
           </div>
         </div>
       )}
 
-      {/* ── Group Modal ── */}
+      {/* Group Modal */}
       {(showCreateGroup || editGroup) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => { setShowCreateGroup(false); setEditGroup(null) }}>
           <div className="bg-white rounded-xl w-full max-w-lg shadow-xl mx-4" onClick={e => e.stopPropagation()}>
@@ -1100,7 +513,6 @@ function VendorKeyGroupsBaseImpl() {
         </div>
       )}
 
-      {/* ── Key-Model 价格配置 Modal ── */}
       <KeyModelPricesModal
         itemId={priceConfigItem?.itemId ?? 0}
         groupId={priceConfigItem?.groupId ?? 0}
@@ -1110,7 +522,6 @@ function VendorKeyGroupsBaseImpl() {
         onSaved={() => { if (selectedGroupId) loadItems(selectedGroupId) }}
       />
 
-      {/* ── Item Modal ── */}
       {showCreateItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowCreateItem(false)}>
           <div className="bg-white rounded-xl w-full max-w-xl shadow-xl mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -1202,4 +613,4 @@ function VendorKeyGroupsBaseImpl() {
 }
 
 const VendorKeyGroupsBase = React.memo(VendorKeyGroupsBaseImpl)
-export default VendorKeyGroupsBase;
+export default VendorKeyGroupsBase

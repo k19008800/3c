@@ -1,0 +1,1890 @@
+{
+  "state_statistics_by_page": {
+    "src/pages/Announcements.tsx": {
+      "useState_count": 5,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 5
+    },
+    "src/pages/ApiKeys.tsx": {
+      "useState_count": 8,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 8
+    },
+    "src/pages/Dashboard.tsx": {
+      "useState_count": 7,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 7
+    },
+    "src/pages/Docs.tsx": {
+      "useState_count": 3,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 3
+    },
+    "src/pages/ForgotPassword.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/Login.tsx": {
+      "useState_count": 5,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 5
+    },
+    "src/pages/Logs-virtual.tsx": {
+      "useState_count": 14,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 14
+    },
+    "src/pages/Logs.tsx": {
+      "useState_count": 14,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 14
+    },
+    "src/pages/Models.tsx": {
+      "useState_count": 8,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 8
+    },
+    "src/pages/Notifications.tsx": {
+      "useState_count": 9,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 9
+    },
+    "src/pages/OperationLogs.tsx": {
+      "useState_count": 8,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 8
+    },
+    "src/pages/RealName.tsx": {
+      "useState_count": 5,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 5
+    },
+    "src/pages/Recharge.tsx": {
+      "useState_count": 16,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 16
+    },
+    "src/pages/Redemption.tsx": {
+      "useState_count": 26,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 26
+    },
+    "src/pages/Register.tsx": {
+      "useState_count": 6,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 6
+    },
+    "src/pages/ResetPassword.tsx": {
+      "useState_count": 5,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 5
+    },
+    "src/pages/Security.tsx": {
+      "useState_count": 3,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 3
+    },
+    "src/pages/Settings.tsx": {
+      "useState_count": 21,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 21
+    },
+    "src/pages/Stats.tsx": {
+      "useState_count": 7,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 7
+    },
+    "src/pages/Transactions.tsx": {
+      "useState_count": 8,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 8
+    },
+    "src/pages/admin/AdminApiKeys.tsx": {
+      "useState_count": 5,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 5
+    },
+    "src/pages/admin/AdminLogs.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/AdminModels.tsx": {
+      "useState_count": 5,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 5
+    },
+    "src/pages/admin/AgentClients.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/AgentDetail.tsx": {
+      "useState_count": 2,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 2
+    },
+    "src/pages/admin/Agents.tsx": {
+      "useState_count": 2,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 2
+    },
+    "src/pages/admin/AgentsList.tsx": {
+      "useState_count": 16,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 16
+    },
+    "src/pages/admin/Announcements.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/AuditLogs.tsx": {
+      "useState_count": 3,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 3
+    },
+    "src/pages/admin/CampaignDetail.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/Campaigns.tsx": {
+      "useState_count": 5,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 5
+    },
+    "src/pages/admin/CircuitBreakers.tsx": {
+      "useState_count": 3,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 3
+    },
+    "src/pages/admin/Configs.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/Dashboard.tsx": {
+      "useState_count": 3,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 3
+    },
+    "src/pages/admin/EmailTemplates.tsx": {
+      "useState_count": 7,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 7
+    },
+    "src/pages/admin/EnterpriseAnalysis.tsx": {
+      "useState_count": 13,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 13
+    },
+    "src/pages/admin/FinanceCommissions.tsx": {
+      "useState_count": 20,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 20
+    },
+    "src/pages/admin/FinanceDashboard.tsx": {
+      "useState_count": 3,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 3
+    },
+    "src/pages/admin/FinanceReconciliation.tsx": {
+      "useState_count": 6,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 6
+    },
+    "src/pages/admin/KeyModelPricesModal.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/OperationLogs.tsx": {
+      "useState_count": 10,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 10
+    },
+    "src/pages/admin/PageContents.tsx": {
+      "useState_count": 3,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 3
+    },
+    "src/pages/admin/Playground.tsx": {
+      "useState_count": 6,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 6
+    },
+    "src/pages/admin/ProfitAnalysis.tsx": {
+      "useState_count": 7,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 7
+    },
+    "src/pages/admin/PromptAudit.tsx": {
+      "useState_count": 7,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 7
+    },
+    "src/pages/admin/Quotas.tsx": {
+      "useState_count": 9,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 9
+    },
+    "src/pages/admin/RateLimits.tsx": {
+      "useState_count": 5,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 5
+    },
+    "src/pages/admin/RealNameReview.tsx": {
+      "useState_count": 10,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 10
+    },
+    "src/pages/admin/RechargeOrders.tsx": {
+      "useState_count": 8,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 8
+    },
+    "src/pages/admin/RedemptionCodes.tsx": {
+      "useState_count": 43,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 43
+    },
+    "src/pages/admin/RoleFormModal.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/Roles.tsx": {
+      "useState_count": 13,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 13
+    },
+    "src/pages/admin/SecurityAlerts.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/SecurityAutoRules.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/SecurityBans.tsx": {
+      "useState_count": 2,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 2
+    },
+    "src/pages/admin/SecurityConfig.tsx": {
+      "useState_count": 6,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 6
+    },
+    "src/pages/admin/SecurityDashboard.tsx": {
+      "useState_count": 2,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 2
+    },
+    "src/pages/admin/SecurityEvents.tsx": {
+      "useState_count": 6,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 6
+    },
+    "src/pages/admin/SensitiveWords.tsx": {
+      "useState_count": 9,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 9
+    },
+    "src/pages/admin/SiteSettings.tsx": {
+      "useState_count": 1,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 1
+    },
+    "src/pages/admin/Stats.tsx": {
+      "useState_count": 13,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 13
+    },
+    "src/pages/admin/SystemHealthPanel.tsx": {
+      "useState_count": 2,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 2
+    },
+    "src/pages/admin/TrendsCharts.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/Users.tsx": {
+      "useState_count": 49,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 49
+    },
+    "src/pages/admin/VendorKeyGroups.tsx": {
+      "useState_count": 18,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 18
+    },
+    "src/pages/admin/VendorModels.tsx": {
+      "useState_count": 18,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 18
+    },
+    "src/pages/admin/Vendors.tsx": {
+      "useState_count": 14,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 14
+    },
+    "src/pages/admin/VendorSelfMgmt.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/WithdrawOrders.tsx": {
+      "useState_count": 9,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 9
+    },
+    "src/pages/admin/Withdraws.tsx": {
+      "useState_count": 6,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 6
+    },
+    "src/pages/agent/Clients.tsx": {
+      "useState_count": 7,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 7
+    },
+    "src/pages/agent/Commissions.tsx": {
+      "useState_count": 12,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 12
+    },
+    "src/pages/agent/Dashboard.tsx": {
+      "useState_count": 5,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 5
+    },
+    "src/pages/agent/Finance.tsx": {
+      "useState_count": 8,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 8
+    },
+    "src/pages/agent/Notifications.tsx": {
+      "useState_count": 8,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 8
+    },
+    "src/pages/agent/Reconciliation.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/agent/Redemption.tsx": {
+      "useState_count": 18,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 18
+    },
+    "src/pages/agent/Team.tsx": {
+      "useState_count": 7,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 7
+    },
+    "src/pages/agent/Withdraw.tsx": {
+      "useState_count": 12,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 12
+    },
+    "src/pages/finance/Invoices.tsx": {
+      "useState_count": 8,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 8
+    },
+    "src/pages/finance/Refunds.tsx": {
+      "useState_count": 7,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 7
+    },
+    "src/pages/portal/Docs.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/portal/Home.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/portal/Models.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/portal/Pricing.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/vendor/VendorDashboard.tsx": {
+      "useState_count": 8,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 8
+    },
+    "src/pages/vendor/VendorLogin.tsx": {
+      "useState_count": 5,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 5
+    },
+    "src/pages/vendor/VendorRegister.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/vendor/VendorRegisterSuccess.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/vendor/components/VendorOnboardingGuide.tsx": {
+      "useState_count": 1,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 1
+    },
+    "src/pages/vendor/vendor-dashboard/KeyRotateModal.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/vendor/vendor-dashboard/ModelFormModal.tsx": {
+      "useState_count": 3,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 3
+    },
+    "src/pages/vendor/vendor-dashboard/ModelPerformance.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/vendor/vendor-dashboard/RecentAlerts.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/vendor/vendor-dashboard/RevenuePanel.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/vendor/vendor-dashboard/StatusBadge.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/vendor/vendor-dashboard/SystemStatus.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/vendor/vendor-dashboard/VendorStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/vendor/vendor-register/AgreementSection.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/vendor/vendor-register/RegistrationForm.tsx": {
+      "useState_count": 5,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 5
+    },
+    "src/pages/portal/docs/ContentRenderer.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/portal/docs/SearchBar.tsx": {
+      "useState_count": 1,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 1
+    },
+    "src/pages/portal/docs/Sidebar.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/finance/invoices/InvoiceForm.tsx": {
+      "useState_count": 7,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 7
+    },
+    "src/pages/finance/invoices/InvoiceList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/finance/invoices/InvoiceStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/finance/refunds/RefundList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/finance/refunds/RefundReview.tsx": {
+      "useState_count": 6,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 6
+    },
+    "src/pages/finance/refunds/RefundStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/agent/agent-dashboard/KpiCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/agent/agent-dashboard/QuickActions.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/agent/agent-dashboard/RecentOrders.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/agent/agent-dashboard/TrendChart.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/agent/agent-dashboard/types.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/agent/clients/ClientDetail.tsx": {
+      "useState_count": 5,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 5
+    },
+    "src/pages/agent/clients/ClientList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/agent/clients/ClientStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/agent/clients/types.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/agent/commissions/CommissionList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/agent/commissions/CommissionSettings.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/agent/commissions/CommissionStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/agent/finance/BalanceHistory.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/agent/finance/FinanceStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/agent/finance/TransactionList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/agent/reconciliation/ReconDetail.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/agent/reconciliation/ReconList.tsx": {
+      "useState_count": 6,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 6
+    },
+    "src/pages/agent/reconciliation/ReconStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/agent/redemption/BatchCreateForm.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/agent/redemption/CodeList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/agent/redemption/DistributionPanel.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/agent/redemption/RedemptionStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/admin-logs/LogAnalyticsPanel.tsx": {
+      "useState_count": 1,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 1
+    },
+    "src/pages/admin/admin-logs/LogDetail.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/admin-logs/LogFilters.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/admin-logs/LogList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/admin-logs/LogStatsCards.tsx": {
+      "useState_count": 1,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 1
+    },
+    "src/pages/admin/admin-logs/StatusBadge.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/admin-models/ModelForm.tsx": {
+      "useState_count": 7,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 7
+    },
+    "src/pages/admin/admin-models/ModelList.tsx": {
+      "useState_count": 1,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 1
+    },
+    "src/pages/admin/admin-models/ModelStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/agent-detail/AgentClientsTab.tsx": {
+      "useState_count": 8,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 8
+    },
+    "src/pages/admin/agent-detail/AgentInfoTab.tsx": {
+      "useState_count": 6,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 6
+    },
+    "src/pages/admin/agent-detail/CommissionModal.tsx": {
+      "useState_count": 12,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 12
+    },
+    "src/pages/admin/agent-detail/CommissionTab.tsx": {
+      "useState_count": 2,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 2
+    },
+    "src/pages/admin/agent-detail/config.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/agent-detail/DetailHeader.tsx": {
+      "useState_count": 1,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 1
+    },
+    "src/pages/admin/announcements/AnnounceEditor.tsx": {
+      "useState_count": 3,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 3
+    },
+    "src/pages/admin/announcements/AnnounceList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/announcements/AnnounceStats.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/api-keys/KeyCreateForm.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/api-keys/KeyList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/api-keys/KeyStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/api-keys/KeyUsageLogs.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/api-keys/UsageExampleRow.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/audit-logs/AuditDetail.tsx": {
+      "useState_count": 2,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 2
+    },
+    "src/pages/admin/audit-logs/AuditFilters.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/audit-logs/AuditList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/audit-logs/AuditStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/campaigns/AllocationFormModal.tsx": {
+      "useState_count": 5,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 5
+    },
+    "src/pages/admin/campaigns/CampaignDetail.tsx": {
+      "useState_count": 3,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 3
+    },
+    "src/pages/admin/campaigns/CampaignForm.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/campaigns/CampaignInfo.tsx": {
+      "useState_count": 1,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 1
+    },
+    "src/pages/admin/campaigns/CampaignList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/campaigns/CampaignMetrics.tsx": {
+      "useState_count": 2,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 2
+    },
+    "src/pages/admin/campaigns/CampaignRedemptions.tsx": {
+      "useState_count": 7,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 7
+    },
+    "src/pages/admin/campaigns/CampaignStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/components/CommissionStatsPanel.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/components/CommissionTable.tsx": {
+      "useState_count": 2,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 2
+    },
+    "src/pages/admin/components/KeyGroupPanel.tsx": {
+      "useState_count": 3,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 3
+    },
+    "src/pages/admin/components/KeyItemTable.tsx": {
+      "useState_count": 2,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 2
+    },
+    "src/pages/admin/dashboard/AlertBar.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/dashboard/KpiCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/dashboard/ModelRankBar.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/dashboard/ModelSchedulingRealtime.tsx": {
+      "useState_count": 5,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 5
+    },
+    "src/pages/admin/dashboard/OverviewTrends.tsx": {
+      "useState_count": 6,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 6
+    },
+    "src/pages/admin/dashboard/QuickActions.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/dashboard/RecentActivity.tsx": {
+      "useState_count": 2,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 2
+    },
+    "src/pages/admin/dashboard/RevenueBreakdown.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/dashboard/RevenueChart.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/dashboard/StatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/dashboard/SummaryBar.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/dashboard/TimeRangeSelector.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/dashboard/TodoQueue.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/dashboard/TopModels.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/dashboard/TopUsersTable.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/dashboard/UsageChart.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/dashboard/VendorHealthPanel.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/email-templates/TemplateEditor.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/email-templates/TemplateList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/email-templates/TemplatePreview.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/email-templates/TemplateStats.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/enterprise/ActivityRecord.tsx": {
+      "useState_count": 1,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 1
+    },
+    "src/pages/admin/enterprise/AnalysisOverview.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/enterprise/BillingDashboard.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/enterprise/EnterpriseList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/enterprise/ModelDistribution.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/enterprise/UsageTrend.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/enterprise-analysis/ActivityTab.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/enterprise-analysis/ConsumptionTrend.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/enterprise-analysis/EnterpriseOverview.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/enterprise-analysis/FinanceTab.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/enterprise-analysis/GeographicDistribution.tsx": {
+      "useState_count": 1,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 1
+    },
+    "src/pages/admin/enterprise-analysis/index.tsx": {
+      "useState_count": 9,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 9
+    },
+    "src/pages/admin/enterprise-analysis/LowBalanceAlert.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/enterprise-analysis/ModelUsage.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/enterprise-analysis/shared.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/enterprise-analysis/TokenDistribution.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/finance/AdminCostDetail.tsx": {
+      "useState_count": 7,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 7
+    },
+    "src/pages/admin/finance/AgentCostDetail.tsx": {
+      "useState_count": 8,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 8
+    },
+    "src/pages/admin/finance/AgentSettlement.tsx": {
+      "useState_count": 5,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 5
+    },
+    "src/pages/admin/finance/CodeCostDashboard.tsx": {
+      "useState_count": 3,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 3
+    },
+    "src/pages/admin/finance/Invoices.tsx": {
+      "useState_count": 2,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 2
+    },
+    "src/pages/admin/finance/Prices.tsx": {
+      "useState_count": 27,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 27
+    },
+    "src/pages/admin/finance/Refunds.tsx": {
+      "useState_count": 2,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 2
+    },
+    "src/pages/admin/page-contents/ContentEditor.tsx": {
+      "useState_count": 3,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 3
+    },
+    "src/pages/admin/page-contents/ContentList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/page-contents/ContentPreview.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/page-contents/ContentStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/page-contents/CreateContentModal.tsx": {
+      "useState_count": 3,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 3
+    },
+    "src/pages/admin/playground/EndpointSelector.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/playground/RequestPanel.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/playground/ResponsePanel.tsx": {
+      "useState_count": 1,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 1
+    },
+    "src/pages/admin/playground/UsageStats.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/quotas/QuotaForm.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/quotas/QuotaList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/quotas/QuotaStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/quotas/QuotaUsageChart.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/rate-limits/LimitAnalytics.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/rate-limits/LimitForm.tsx": {
+      "useState_count": 7,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 7
+    },
+    "src/pages/admin/rate-limits/LimitList.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/rate-limits/LimitLogs.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/rate-limits/LimitStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/real-name/ReviewDetail.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/real-name/ReviewList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/real-name/ReviewStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/recharge/BatchReviewDialog.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/recharge/OrderFilterBar.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/recharge/OrderList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/recharge/OrderListUtils.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/recharge/OrderStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/recharge/ReviewDialog.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/redemption/AgentCodeDetail.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/redemption/AgentOverview.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/redemption/BatchCreateForm.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/redemption/CodeDetail.tsx": {
+      "useState_count": 7,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 7
+    },
+    "src/pages/admin/redemption/CodeList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/redemption/StatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/security-bans/BanForm.tsx": {
+      "useState_count": 5,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 5
+    },
+    "src/pages/admin/security-bans/BanList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/security-bans/BanStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/security-events/EventDetail.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/security-events/EventFilters.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/security-events/EventList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/security-events/EventStatsCards.tsx": {
+      "useState_count": 2,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 2
+    },
+    "src/pages/admin/security-rules/RuleForm.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/security-rules/RuleList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/security-rules/RuleStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/site-settings/ApiSettings.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/site-settings/BillingSettings.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/site-settings/EmailSettings.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/site-settings/FieldRenderer.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/site-settings/GeneralSettings.tsx": {
+      "useState_count": 6,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 6
+    },
+    "src/pages/admin/site-settings/SecuritySettings.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/stats/HourlyDistribution.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/stats/ModelDistribution.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/stats/OverviewCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/stats/PeriodSelector.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/stats/Tooltips.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/stats/TopUsers.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/stats/TrendChart.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/system-health/HealthStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/system-health/ServiceList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/system-health/SystemMetrics.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/trends/ComparisonChart.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/trends/ExportControls.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/trends/TimeSeriesChart.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/trends/TrendsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/users/ActionButtons.tsx": {
+      "useState_count": 8,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 8
+    },
+    "src/pages/admin/users/CreateUserModal.tsx": {
+      "useState_count": 3,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 3
+    },
+    "src/pages/admin/users/UserBalancePanel.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/users/UserCallStatsTab.tsx": {
+      "useState_count": 3,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 3
+    },
+    "src/pages/admin/users/UserDetailPanel.tsx": {
+      "useState_count": 2,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 2
+    },
+    "src/pages/admin/users/UserDetailTabs.tsx": {
+      "useState_count": 8,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 8
+    },
+    "src/pages/admin/users/UserInfoTab.tsx": {
+      "useState_count": 9,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 9
+    },
+    "src/pages/admin/users/UserKeyPanel.tsx": {
+      "useState_count": 6,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 6
+    },
+    "src/pages/admin/users/UserList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/users/UserLogPanel.tsx": {
+      "useState_count": 2,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 2
+    },
+    "src/pages/admin/users/UsersPage.tsx": {
+      "useState_count": 1,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 1
+    },
+    "src/pages/admin/users/UserStatsCard.tsx": {
+      "useState_count": 1,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 1
+    },
+    "src/pages/admin/vendor-key-groups/VendorKeyGroupsPage.tsx": {
+      "useState_count": 2,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 2
+    },
+    "src/pages/admin/vendor-models/ConnectivityTest.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/vendor-models/ModelEditForm.tsx": {
+      "useState_count": 6,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 6
+    },
+    "src/pages/admin/vendor-models/ModelStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/vendor-models/ModelTable.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/vendor-models/PriceConfigForm.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/vendor-self/ApiKeyPanel.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/vendor-self/ModelList.tsx": {
+      "useState_count": 5,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 5
+    },
+    "src/pages/admin/vendor-self/OverviewCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/vendor-self/ProfilePanel.tsx": {
+      "useState_count": 4,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 4
+    },
+    "src/pages/admin/vendor-self/types.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/vendor-self/UsageStats.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/withdraws/WithdrawList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/withdraws/WithdrawReview.tsx": {
+      "useState_count": 5,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 5
+    },
+    "src/pages/admin/withdraws/WithdrawStatsCards.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/vendor-key-groups/components/BatchOperations.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/vendor-key-groups/components/FiltersPanel.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/vendor-key-groups/components/GroupList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/vendor-key-groups/components/KeyHealthIndicator.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/vendor-key-groups/components/KeyItemsTable.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/vendor-key-groups/components/VendorSelector.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/users/components/UserActions.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/users/components/UserFilters.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    },
+    "src/pages/admin/users/components/UsersList.tsx": {
+      "useState_count": 0,
+      "useReducer_count": 0,
+      "useContext_count": 0,
+      "total_hooks": 0
+    }
+  },
+  "total_statistics": {
+    "total_useState": 1044,
+    "total_useReducer": 0,
+    "total_useContext": 0,
+    "total_pages": 313,
+    "total_hooks": 1044
+  },
+  "average_hooks_per_page": 3.3354632587859423
+}

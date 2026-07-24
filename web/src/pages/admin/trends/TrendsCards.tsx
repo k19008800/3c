@@ -175,6 +175,6 @@ const TrendsCardsBase = React.memo(function TrendsCardsBase({ series }: TrendsCa
       ))}
     </div>
   )
-}
+})
 
 export default TrendsCardsBase;

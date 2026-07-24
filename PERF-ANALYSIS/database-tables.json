@@ -1,0 +1,44 @@
+{
+  "analysis_time": "2026-07-23 21:48:00",
+  "total_tables": 83,
+  "total_rows": 2232959,
+  "database_size_mb": 1221,
+  "largest_tables": [
+    {
+      "table_name": "call_logs_202607",
+      "size_mb": 875,
+      "size": "875 MB",
+      "row_count": 17764445
+    },
+    {
+      "table_name": "balance_logs",
+      "size_mb": 267,
+      "size": "267 MB",
+      "row_count": 304284
+    },
+    {
+      "table_name": "call_logs_202606",
+      "size_mb": 26,
+      "size": "26 MB",
+      "row_count": 652242
+    },
+    {
+      "table_name": "commission_logs_202606",
+      "size_mb": 20,
+      "size": "20 MB",
+      "row_count": 382733
+    },
+    {
+      "table_name": "commission_logs_2026_05",
+      "size_mb": 8,
+      "size": "8280 kB",
+      "row_count": 27355
+    }
+  ],
+  "table_categories": {
+    "log_tables": ["call_logs_202607", "balance_logs", "call_logs_202606", "commission_logs_202606", "operation_logs", "audit_logs"],
+    "user_tables": ["users", "user_notifications", "user_login_sessions", "user_login_history"],
+    "transaction_tables": ["recharge_orders", "withdraw_orders", "agent_balance_ledger"],
+    "system_tables": ["system_configs", "admin_roles", "announcements", "email_templates"]
+  }
+}

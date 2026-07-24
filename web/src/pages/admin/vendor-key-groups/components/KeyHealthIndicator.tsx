@@ -21,7 +21,7 @@ const KeyHealthIndicator: React.FC<KeyHealthIndicatorProps> = memo(({
 
   const iconSize = {
     sm: 12,
-    md:勾结14,
+    md: 14,
     lg: 16
   }[size]
 

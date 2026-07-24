@@ -1,0 +1,51 @@
+{
+  "timestamp": "2026-07-23T13:47:45.000Z",
+  "project": "3cloud-api",
+  "repository": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api",
+  "architecture_analysis": {
+    "routes": {
+      "route_files_count": 150,
+      "http_get_endpoints": 51,
+      "http_post_endpoints": "需进一步统计",
+      "http_put_endpoints": "需进一步统计",
+      "http_patch_endpoints": "需进一步统计",
+      "http_delete_endpoints": "需进一步统计"
+    },
+    "services": {
+      "service_files_count": 166,
+      "total_lines": "需进一步统计"
+    },
+    "typescript_compilation": {
+      "total_files": 1203,
+      "lines_of_typescript": 78058,
+      "lines_of_definitions": 115426,
+      "total_identifiers": 295054,
+      "compilation_time_s": 11.51,
+      "type_check_time_s": 9.19
+    }
+  },
+  "dependency_analysis": {
+    "circular_dependencies_found": 0,
+    "orphan_modules_found": 0,
+    "notes": "依赖结构良好，无循环依赖检测到"
+  },
+  "complexity_analysis": {
+    "eslint_files_analyzed": 224,
+    "files_with_complexity_issues": 65,
+    "total_complexity_errors": 132,
+    "notes": "代码复杂度需要关注，建议审查高复杂度函数"
+  },
+  "performance_risks": {
+    "potential_n_plus_1_patterns": 183,
+    "synchronous_blocking_calls": 171,
+    "redis_keys_usage": 0,
+    "notes": "主要风险在于潜在的N+1查询和同步阻塞调用"
+  },
+  "recommendations": [
+    "1. 手动审查for循环中的数据库查询模式",
+    "2. 将大文件的fs.readFileSync改为异步版本",
+    "3. 对高复杂度函数进行重构",
+    "4. 继续避免使用Redis KEYS命令",
+    "5. 考虑添加性能监控和告警"
+  ]
+}

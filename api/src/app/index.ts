@@ -87,6 +87,12 @@ function checkSecurityConfig(app: Fastify.FastifyInstance) {
 //  Cron Jobs
 // ══════════════════════════════════════════════
 
+// 定时器句柄集合（用于优雅关闭）
+const timerHandles: { intervals: NodeJS.Timeout[]; timeouts: NodeJS.Timeout[] } = {
+  intervals: [],
+  timeouts: [],
+};
+
 function registerCronJobs(app: Fastify.FastifyInstance) {
   // ── Commission auto-settlement (by config) ──
   async function tryAutoSettle() {
@@ -189,15 +195,17 @@ function registerCronJobs(app: Fastify.FastifyInstance) {
   app.log.info("[Cron] Partition cleanup scheduled: daily at 03:30");
 
   // ── 兑换码过期检查（每小时）──
-  setTimeout(async () => {
+  const codeExpiryTimeout = setTimeout(async () => {
     const { runCodeExpiryCheck } = await import("../cron/code-expiry.js");
     await runCodeExpiryCheck();
   }, 30_000);
+  timerHandles.timeouts.push(codeExpiryTimeout);
 
-  setInterval(async () => {
+  const codeExpiryInterval = setInterval(async () => {
     const { runCodeExpiryCheck } = await import("../cron/code-expiry.js");
     await runCodeExpiryCheck();
   }, 60 * 60 * 1000);
+  timerHandles.intervals.push(codeExpiryInterval);
   app.log.info("[Cron] Code expiry check scheduled: every 1 hour, first run in 30s");
 
   // ── 安全自动规则检查（每 60 秒）──
@@ -303,6 +311,16 @@ export async function startServer() {
   // 优雅关闭
   const shutdown = async (signal: string) => {
     app.log.info(`Received ${signal}, shutting down...`);
+    
+    // 清理定时器
+    for (const handle of timerHandles.timeouts) {
+      clearTimeout(handle);
+    }
+    for (const handle of timerHandles.intervals) {
+      clearInterval(handle);
+    }
+    app.log.info(`Cleared ${timerHandles.timeouts.length} timeouts, ${timerHandles.intervals.length} intervals`);
+    
     await app.close();
     await closeDb();
     process.exit(0);

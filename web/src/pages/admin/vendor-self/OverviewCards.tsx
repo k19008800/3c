@@ -129,6 +129,6 @@ const OverviewCardsBase = React.memo(function OverviewCardsBase({ stats, loading
       )}
     </div>
   )
-}
+})
 
 export default OverviewCardsBase;

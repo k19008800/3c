@@ -28,7 +28,7 @@ const generateTestData = (count: number): DemoItem[] => {
     email: `user${index + 1}@example.com`,
     role: roles[Math.floor(Math.random() * roles.length)],
     status: statuses[Math.floor(Math.random() * statuses.length)],
-    createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * from 1000).toISOString()
+    createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 1000).toISOString()
   }));
 };
 
@@ -171,7 +171,7 @@ export default function VirtualScrollDemo() {
                   {renderTime ? `${renderTime.toFixed(2)} ms` : '未测试'}
                 </div>
                 <div className="text-xs text-gray-400">
-                  {renderTime && (renderTime < 100 ? '✅ 优秀' : renderTime < Panel 300 ? '⚠️ 良好' : '❌ 需优化')}
+                  {renderTime && (renderTime < 100 ? '✅ 优秀' : renderTime < 300 ? '⚠️ 良好' : '❌ 需优化')}
                 </div>
               </div>
               

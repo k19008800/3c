@@ -97,8 +97,8 @@ const VendorKeyGroupsPage: React.FC = () => {
     }
   }, [selectedGroupId, pagination.page, pagination.pageSize])
 
-  const handleVendorSelect = async (vendorId: number) => {
-    setSelectedVendorId(vendorId)
+  const handleVendorSelect = (vendorId: number | null) => {
+    if (vendorId) setSelectedVendorId(vendorId)
   }
 
   const handleGroupSelect = (groupId: number) => {
@@ -210,9 +210,8 @@ const VendorKeyGroupsPage: React.FC = () => {
         vendors={vendors}
         vendorSummaries={vendorSummaries}
         selectedVendorId={selectedVendorId}
-        loading={loading}
-        onSelect={handleVendorSelect}
-        onRefresh={loadVendors}
+        onSelectVendor={handleVendorSelect}
+        getVendorSummary={(id) => vendorSummaries.find(s => s.vendorId === id)}
       />
 
       {/* Group selection and management */}
@@ -221,8 +220,6 @@ const VendorKeyGroupsPage: React.FC = () => {
           <GroupList
             groups={groups}
             selectedGroupId={selectedGroupId}
-            loading={loading}
-            error={error}
             onSelect={handleGroupSelect}
             onEdit={handleGroupEdit}
             onDelete={handleGroupDelete}

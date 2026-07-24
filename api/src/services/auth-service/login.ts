@@ -97,13 +97,15 @@ export async function loginUser(email: string, password: string, ip?: string, us
     } catch {}
   })();
 
-  await Promise.all([recordLogin(user.id, true), db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id))]);
+  // 顺序执行关键操作，避免竞态条件
+  await recordLogin(user.id, true);
+  await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
 
   const tokens = generateTokens(user.id, user.role);
   createSession({ userId: user.id, jti: tokens.accessToken, ip: ip ?? "unknown", userAgent: userAgent ?? undefined }).catch((err) => console.warn(`[Session] 创建会话失败 (userId=${user.id}):`, err));
 
-  await geoPromise;
-  await sessionPromise;
+  // 并行执行独立的后台操作（失败不影响登录）
+  await Promise.allSettled([geoPromise, sessionPromise]);
 
   return { user: { id: user.id, email: user.email, nickname: user.nickname, userType: user.userType as "personal" | "enterprise", role: user.role, status: user.status, balance: user.balance, emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null }, tokens, captchaRequired: false };
 }

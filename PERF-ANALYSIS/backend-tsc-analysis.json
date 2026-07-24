@@ -1,0 +1,22 @@
+{
+  "files": 1203,
+  "lines_of_library": 11237,
+  "lines_of_definitions": 115426,
+  "lines_of_typescript": 78058,
+  "identifiers": 295054,
+  "symbols": 821429,
+  "types": 238573,
+  "instantiations": 1793987,
+  "memory_used_kb": 708629,
+  "io_read_time_s": 0.48,
+  "parse_time_s": 0.79,
+  "resolve_module_time_s": 0.36,
+  "resolve_type_reference_time_s": 0.01,
+  "program_time_s": 1.83,
+  "bind_time_s": 0.49,
+  "check_time_s": 9.19,
+  "transform_time_s": 0.55,
+  "total_time_s": 11.51,
+  "compilation_result": "success",
+  "timestamp": "2026-07-23T13:43:10.000Z"
+}

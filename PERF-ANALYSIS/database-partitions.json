@@ -1,0 +1,77 @@
+{
+  "analysis_time": "2026-07-23 21:48:00",
+  "partition_tables_analysis": {
+    "partitioned_tables": [
+      {
+        "parent_table": "call_logs",
+        "partition_strategy": "monthly",
+        "partitions": [
+          "call_logs_202606",
+          "call_logs_202607",
+          "call_logs_202608",
+          "call_logs_202609",
+          "call_logs_202610",
+          "call_logs_202611",
+          "call_logs_202612"
+        ],
+        "partition_count": 7,
+        "total_size_mb": 901,
+        "largest_partition": {
+          "name": "call_logs_202607",
+          "size_mb": 875,
+          "row_count": 17764445
+        }
+      },
+      {
+        "parent_table": "commission_logs",
+        "partition_strategy": "monthly",
+        "partitions": [
+          "commission_logs_2026_05",
+          "commission_logs_202606",
+          "commission_logs_202607",
+          "commission_logs_202608",
+          "commission_logs_202609",
+          "commission_logs_202610",
+          "commission_logs_202611",
+          "commission_logs_202612"
+        ],
+        "partition_count": 8,
+        "total_size_mb": 22,
+        "largest_partition": {
+          "name": "commission_logs_202606",
+          "size_mb": 20,
+          "row_count": 382733
+        }
+      }
+    ]
+  },
+  "partition_effectiveness": {
+    "benefits": [
+      "查询性能优化：仅查询相关分区",
+      "维护便利：可独立维护单个分区",
+      "数据管理：便于数据归档和清理"
+    ],
+    "challenges": [
+      "索引管理复杂：每个分区需要单独维护索引",
+      "查询优化难度：需要确保查询正确使用分区剪裁",
+      "监控复杂度：需要监控每个分区的性能"
+    ]
+  },
+  "recommendations": [
+    {
+      "priority": "high",
+      "action": "优化分区索引",
+      "description": "删除未使用的索引，优化分区表索引设计"
+    },
+    {
+      "priority": "medium",
+      "action": "建立分区维护流程",
+      "description": "制定分区创建、归档、清理的标准流程"
+    },
+    {
+      "priority": "low",
+      "action": "监控分区性能",
+      "description": "建立分区表性能监控体系"
+    }
+  ]
+}

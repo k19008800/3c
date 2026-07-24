@@ -118,7 +118,7 @@ export function CreateModal({ vendors, models, existingItems, onClose, onSuccess
 
   const copyFromExisting = useCallback((item: VendorModel) => {
     setForm({
-      ...emptyForm(),
+      ...emptyForm,
       vendorId: String(item.vendorId), modelId: String(item.modelId),
       upstreamModelName: item.upstreamModelName, apiEndpoint: item.apiEndpoint,
       costPriceInput: item.costPriceInput, costPriceOutput: item.costPriceOutput,
@@ -219,7 +219,7 @@ export function EditModal({ item, vendors, models, onClose, onSuccess }: {
         </div>
         <div>
           <label className="block text-xs text-slate-500 mb-1">状态</label>
-          <select value={form.status} onChange={e => setFld('status', e.target.value)}
+          <select value={String(form.status)} onChange={e => setFld('status', e.target.value)}
             className="w-full px-3 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="true">启用</option>
             <option value="false">禁用</option>

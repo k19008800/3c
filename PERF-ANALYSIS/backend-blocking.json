@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-07-23T13:47:15.000Z",
+  "analysis_method": "grep_pattern_search",
+  "summary": {
+    "JSON.parse_occurrences": 169,
+    "fs.readFileSync_occurrences": 1,
+    "crypto.randomUUID_occurrences": 1,
+    "potential_issues": []
+  },
+  "JSON.parse_locations": [
+    {
+      "file": "src/routes/real-name-ocr.ts",
+      "line": 17,
+      "pattern": "fs.readFileSync",
+      "risk": "medium",
+      "note": "文件读取操作可能阻塞主线程"
+    },
+    {
+      "file": "src/routes/admin/users/actions.ts",
+      "line": 75,
+      "pattern": "crypto.randomUUID",
+      "risk": "low",
+      "note": "UUID生成通常较快"
+    }
+  ],
+  "notes": "JSON.parse使用频繁但大多数是处理缓存数据，风险较低。fs.readFileSync需要关注文件大小。"
+}

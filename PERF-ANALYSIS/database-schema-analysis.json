@@ -1,0 +1,51 @@
+{
+  "analysis_time": "2026-07-23 21:48:00",
+  "drizzle_schema_analysis": {
+    "schema_files": 18,
+    "table_definitions": 94,
+    "schema_structure": {
+      "core_schemas": ["users.ts", "vendors.ts", "billing.ts", "agents.ts"],
+      "redemption_system": ["redemption.ts", "campaigns.ts", "code-templates.ts"],
+      "finance": ["finance.ts"],
+      "system": ["system.ts"],
+      "roles_permissions": ["roles.ts"],
+      "security": ["security.ts"],
+      "prompt_audit": ["prompt-audit.ts"],
+      "notification": ["notification.ts"],
+      "quotas": ["quotas.ts"],
+      "admin": ["admin.ts"],
+      "api_keys": ["api-keys.ts"],
+      "enums": ["enums.ts"]
+    },
+    "schema_quality_assessment": {
+      "modularity": "high",
+      "organization": "good",
+      "separation_of_concerns": "good",
+      "naming_conventions": "consistent"
+    }
+  },
+  "potential_issues": {
+    "missing_index_analysis": {
+      "description": "需要分析schema中的索引定义是否合理",
+      "risk_level": "medium"
+    },
+    "foreign_key_consistency": {
+      "description": "需要确保schema中的外键定义与实际数据库一致",
+      "risk_level": "medium"
+    }
+  },
+  "recommendations": [
+    {
+      "action": "Schema索引分析",
+      "description": "分析schema文件中的索引定义，确保与查询模式匹配"
+    },
+    {
+      "action": "外键一致性检查",
+      "description": "对比schema外键定义与数据库实际外键约束"
+    },
+    {
+      "action": "Schema文档化",
+      "description": "为复杂schema添加文档说明"
+    }
+  ]
+}

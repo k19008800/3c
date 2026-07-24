@@ -67,7 +67,7 @@ export function fmtCurrency(amount: number | null | undefined, currency = 'CNY')
 }
 
 // Format percentage
-export function fmtPercent(value: number | null | undefined, decimals = packedGzip(): number {
+export function fmtPercent(value: number | null | undefined, decimals = 2): string {
   if (value == null) return '-'
   return `${value.toFixed(decimals)}%`
 }
@@ -86,7 +86,7 @@ export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null
+  let timeout: ReturnType<typeof setTimeout> | null = null
   
   return (...args: Parameters<T>) => {
     if (timeout) clearTimeout(timeout)

@@ -17,6 +17,7 @@ export interface UseUsersReturn {
   pageSize: number
   filters: UsersFilters
   selectedIds: Set<number>
+  setSelectedIds: (ids: Set<number>) => void
   totalPages: number
   
   // Actions
@@ -138,6 +139,7 @@ export function useUsers(initialPage = 1, initialPageSize = 20): UseUsersReturn 
     pageSize,
     filters,
     selectedIds,
+    setSelectedIds,
     totalPages,
     setPage,
     setFilters: updateFilters,

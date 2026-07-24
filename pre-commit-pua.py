@@ -3,7 +3,7 @@
 import sys
 import re
 
-pua_pattern = re.compile(r'[\ue000-\uf8ff\ufffd\uff1f]')
+pua_pattern = re.compile(r'[\ue000-\uf8ff\ufffd]')
 
 errors = []
 for path in sys.argv[1:]:

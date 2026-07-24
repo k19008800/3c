@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, Fragment } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { get, post, patch, del } from '@/lib/api'
 import { useImpersonate } from '@/hooks/use-impersonate'
+import React from 'react';
 import type {
   AdminUser, PaginatedData, LoginHistoryRecord, UserNote,
   UserIpWhitelistEntry, UserCallStats, AdminApiKey, OAuthBinding,
@@ -44,7 +45,7 @@ function cmp(a: string, b: string): number { return a === b ? 0 : a < b ? -1 : 1
 //  Main Page
 // ──────────────────────────────────────────────
 
-export default function AdminUsers() {
+const AdminUsersBase = React.memo(function AdminUsersBase() {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -1579,3 +1580,5 @@ function ImpersonateButton({ userId, email, onMsg }: { userId: number; email: st
     </>
   )
 }
+
+export default AdminUsersBase;

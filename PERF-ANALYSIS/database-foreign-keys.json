@@ -1,0 +1,44 @@
+{
+  "analysis_time": "2026-07-23 21:48:00",
+  "foreign_key_analysis": {
+    "missing_foreign_keys": {
+      "severity": "medium",
+      "description": "检测到多个以_id结尾的字段缺少外键约束",
+      "potential_issues": [
+        "数据完整性风险",
+        "关联查询性能问题",
+        "数据一致性难以保证"
+      ]
+    },
+    "recommended_actions": [
+      {
+        "action": "识别关键关联字段",
+        "description": "分析业务逻辑，识别需要外键约束的关联关系"
+      },
+      {
+        "action": "添加外键约束",
+        "description": "为关键关联字段添加外键，确保数据引用完整性"
+      },
+      {
+        "action": "测试数据一致性",
+        "description": "在添加外键前，检查现有数据是否符合引用完整性"
+      }
+    ]
+  },
+  "common_id_fields_patterns": [
+    "user_id",
+    "agent_id",
+    "vendor_id",
+    "model_id",
+    "key_group_id",
+    "campaign_id",
+    "redemption_code_id",
+    "order_id",
+    "log_id"
+  ],
+  "data_integrity_concerns": {
+    "orphaned_records_risk": "high",
+    "referential_integrity": "low",
+    "data_quality": "medium"
+  }
+}

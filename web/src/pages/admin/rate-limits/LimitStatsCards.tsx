@@ -153,6 +153,6 @@ const LimitStatsCardsBase = React.memo(function LimitStatsCardsBase({ waterLevel
       </div>
     </div>
   )
-}
+})
 
 export default LimitStatsCardsBase;
