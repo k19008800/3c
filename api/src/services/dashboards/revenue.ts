@@ -23,11 +23,11 @@ export interface RevenueAnalysisResult {
 }
 
 const REVENUE_CACHE_KEY = "service:dashboard:revenue";
-const REVENUE_CACHE_TTL = 120;
+const REVENUE_CACHE_TTL = 60;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function buildRevenue(db: any, redis: Redis): Promise<RevenueAnalysisResult> {
-  // PERF: Redis cache check first (120s TTL)
+  // PERF: Redis cache check first (60s TTL)
   try {
     const cached = await redis.get(REVENUE_CACHE_KEY);
     if (cached) return JSON.parse(cached);
@@ -139,7 +139,7 @@ export async function buildRevenue(db: any, redis: Redis): Promise<RevenueAnalys
     }
   }
 
-  return {
+  const result = {
     code: 0,
     data: {
       today: {
@@ -162,6 +162,15 @@ export async function buildRevenue(db: any, redis: Redis): Promise<RevenueAnalys
     },
     message: "ok",
   };
+  
+  // 设置缓存
+  try {
+    await redis.setex(REVENUE_CACHE_KEY, REVENUE_CACHE_TTL, JSON.stringify(result));
+  } catch (error) {
+    console.warn('[Revenue Dashboard] Redis缓存设置失败:', error);
+  }
+  
+  return result;
 }
 
 // PERF 缓存导出 — 路由层可直接调用此方法 + 检查内部缓存

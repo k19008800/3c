@@ -11,7 +11,7 @@ import {
 } from "../../db/schema.js";
 import { getRedis } from "../../redis.js";
 import { logger } from "../../logger.js";
-import { getReconciliationReport } from "./reconciliation.js";
+import { getReconciliationReport } from "../reconciliation/index.js";
 
 /**
  * 每日预计算对账汇总（Cron: 每天 03:00）

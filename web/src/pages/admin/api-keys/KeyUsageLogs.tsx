@@ -5,8 +5,9 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { get } from '@/lib/api'
 import MiniChart from '@/components/ui/MiniChart'
 import {
-  Loader2, FileText, X, AlertCircle, ChevronLeft, ChevronRight,
+  Loader2, FileText, X, AlertCircle,
 } from 'lucide-react'
+import PaginationBar from '@/components/ui/PaginationBar'
 
 interface AdminKeyUsageLog {
   id: number
@@ -179,34 +180,17 @@ export default function KeyUsageLogs({ keyId, onClose }: KeyUsageLogsProps) {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-3">
-                <span className="text-xs text-slate-400">
-                  第 {logPage} / {totalPages} 页
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      const next = Math.max(1, logPage - 1)
-                      setLogPage(next)
-                      fetchLogs(next)
-                    }}
-                    disabled={logPage <= 1}
-                    className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 transition"
-                  >
-                    <ChevronLeft size={16} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      const next = Math.min(totalPages, logPage + 1)
-                      setLogPage(next)
-                      fetchLogs(next)
-                    }}
-                    disabled={logPage >= totalPages}
-                    className="p-1 rounded hover:bg-slate-100 disabled:opacity-30 transition"
-                  >
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
+              <div className="pt-3 border-t border-slate-100 mt-3">
+                <PaginationBar
+                  page={logPage}
+                  pageSize={LOG_PAGE_SIZE}
+                  total={logTotal}
+                  totalPages={totalPages}
+                  onPageChange={(p) => {
+                    setLogPage(p)
+                    fetchLogs(p)
+                  }}
+                />
               </div>
             )}
           </div>

@@ -126,7 +126,7 @@ export function registerForwardRoutes(app: any) {
 
 
 
-        enrichCallGeo(request.ip, request.user!.userId).catch(() => {});
+        enrichCallGeo(request.ip, request.user!.userId).catch((err) => { console.error("[Redis Cache Error]", err); });
 
 
 
@@ -156,7 +156,7 @@ export function registerForwardRoutes(app: any) {
 
         const body: EmbeddingsInput = embeddingsSchema.parse(request.body);
 
-        enrichCallGeo(request.ip, request.user!.userId).catch(() => {});
+        enrichCallGeo(request.ip, request.user!.userId).catch((err) => { console.error("[Redis Cache Error]", err); });
 
         return await handleNonStreaming(request, reply, body, body.model);
 
@@ -525,7 +525,7 @@ async function tryFallback(
         userAgent: request.headers["user-agent"] as string,
 
       route: fallbackRoute,
-      }).catch(() => {});
+      }).catch((err) => { console.error("[Redis Cache Error]", err); });
 
       await recordTokensForLimit(userId, fallbackResult.usage.totalTokens);
 
@@ -533,7 +533,7 @@ async function tryFallback(
 
       const { recordSchedulingStats } = await import("../../services/scheduling-stats.js");
 
-      recordSchedulingStats(fallbackRoute.vendorName, model.name, fallbackResult.usage.totalTokens, durationMs).catch(() => {});
+      recordSchedulingStats(fallbackRoute.vendorName, model.name, fallbackResult.usage.totalTokens, durationMs).catch((err) => { console.error("[Redis Cache Error]", err); });
 
     }
 
@@ -732,7 +732,7 @@ async function handleNonStreaming(
 
     const { recordSchedulingStats } = await import("../../services/scheduling-stats.js");
 
-    recordSchedulingStats(route.vendorName, model.name, result.usage.totalTokens, durationMs).catch(() => {});
+    recordSchedulingStats(route.vendorName, model.name, result.usage.totalTokens, durationMs).catch((err) => { console.error("[Redis Cache Error]", err); });
 
   }
 
@@ -815,7 +815,7 @@ async function handleNonTokenBilling(
       ip: request.ip, userAgent: request.headers["user-agent"] as string,
 
     route: route,
-    }).catch(() => {});
+    }).catch((err) => { console.error("[Redis Cache Error]", err); });
 
     reply.status(502);
 
@@ -864,7 +864,7 @@ async function handleNonTokenBilling(
       ip: request.ip, userAgent: request.headers["user-agent"] as string,
 
     route: route,
-    }).catch(() => {});
+    }).catch((err) => { console.error("[Redis Cache Error]", err); });
 
     reply.status(result.status);
 
@@ -988,7 +988,7 @@ async function handleStreamingChat(
       userAgent: request.headers["user-agent"] as string,
 
     route: route,
-    }).catch(() => {});
+    }).catch((err) => { console.error("[Redis Cache Error]", err); });
 
     throw err;
 
@@ -1056,7 +1056,7 @@ async function handleStreamingChat(
 
 
 
-  await updateHealthAfterCall(route.vendorModelId, success, durationMs).catch(() => {});
+  await updateHealthAfterCall(route.vendorModelId, success, durationMs).catch((err) => { console.error("[Redis Cache Error]", err); });
 
 
 
@@ -1089,7 +1089,7 @@ async function handleStreamingChat(
 
     if (usage?.totalTokens) {
 
-      await recordTokensForLimit(userId, usage.totalTokens).catch(() => {});
+      await recordTokensForLimit(userId, usage.totalTokens).catch((err) => { console.error("[Redis Cache Error]", err); });
 
     }
 
@@ -1130,7 +1130,7 @@ async function handleStreamingChat(
 
     const { recordSchedulingStats } = await import("../../services/scheduling-stats.js");
 
-    recordSchedulingStats(route.vendorName, model.name, usage.totalTokens, durationMs).catch(() => {});
+    recordSchedulingStats(route.vendorName, model.name, usage.totalTokens, durationMs).catch((err) => { console.error("[Redis Cache Error]", err); });
 
 
 
@@ -1159,7 +1159,7 @@ async function handleStreamingChat(
       ip: request.ip, userAgent: request.headers["user-agent"] as string,
 
     route: route,
-    }).catch(() => {});
+    }).catch((err) => { console.error("[Redis Cache Error]", err); });
 
   }
 
@@ -1330,7 +1330,7 @@ async function handleVideoGeneration(
         ip: request.ip, userAgent: request.headers["user-agent"] as string,
 
       route: route,
-      }).catch(() => {});
+      }).catch((err) => { console.error("[Redis Cache Error]", err); });
 
 
 
@@ -1389,7 +1389,7 @@ async function handleVideoGeneration(
 
       const { recordSchedulingStats } = await import("../../services/scheduling-stats.js");
 
-      recordSchedulingStats(route.vendorName, model.name, virtualTokens, durationMs).catch(() => {});
+      recordSchedulingStats(route.vendorName, model.name, virtualTokens, durationMs).catch((err) => { console.error("[Redis Cache Error]", err); });
 
     } catch {}
 
@@ -1446,7 +1446,7 @@ async function handleVideoGeneration(
       ip: request.ip, userAgent: request.headers["user-agent"] as string,
 
     route: route,
-    }).catch(() => {});
+    }).catch((err) => { console.error("[Redis Cache Error]", err); });
 
     reply.status(502);
 

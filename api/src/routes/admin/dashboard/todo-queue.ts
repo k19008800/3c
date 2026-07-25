@@ -119,7 +119,7 @@ export async function todoQueueRoutes(app: FastifyInstance) {
       message: "ok",
     };
 
-    redis.setex("dashboard:todo-queue", 60, JSON.stringify(result)).catch(() => {});
+    redis.setex("dashboard:todo-queue", 60, JSON.stringify(result)).catch((err) => { console.error("[Redis Cache Error]", err); });
     reply.send(result);
   });
 }

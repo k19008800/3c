@@ -4,6 +4,7 @@ import GroupList from './components/GroupList'
 import KeyItemsTable from './components/KeyItemsTable'
 import FiltersPanel from './components/FiltersPanel'
 import BatchOperations from './components/BatchOperations'
+import PaginationBar from '@/components/ui/PaginationBar'
 import { useVendorKeyGroups } from './hooks/useVendorKeyGroups'
 import { usePagination } from '@/hooks/use-pagination'
 
@@ -277,47 +278,7 @@ const VendorKeyGroupsPage: React.FC = () => {
 
           {/* Pagination */}
           {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-              <div className="text-sm text-slate-600">
-                共 {filteredItems.length} 条记录, 第 {pagination.page}/{pagination.totalPages} 页 </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => pagination.setPage(Math.max(1, pagination.page - 1))}
-                  disabled={pagination.page <= 1}
-                  className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm hover:bg-slate-50 disabled:opacity-50"
-                >
-                  上一页</button>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                    let pageNum = i + 1
-                    if (pagination.totalPages > 5) {
-                      if (pagination.page <= 3) pageNum = i + 1
-                      else if (pagination.page >= pagination.totalPages - 2) pageNum = pagination.totalPages - 4 + i
-                      else pageNum = pagination.page - 2 + i
-                    }
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => pagination.setPage(pageNum)}
-                        className={`px-3 py-1.5 rounded-lg text-sm ${
-                          pagination.page === pageNum
-                            ? 'bg-blue-600 text-white'
-                            : 'border border-slate-300 hover:bg-slate-50'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    )
-                  })}
-                </div>
-                <button
-                  onClick={() => pagination.setPage(Math.min(pagination.totalPages, pagination.page + 1))}
-                  disabled={pagination.page >= pagination.totalPages}
-                  className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm hover:bg-slate-50 disabled:opacity-50"
-                >
-                  下一页</button>
-              </div>
-            </div>
+            <PaginationBar {...pagination.paginationProps} />
           )}
 
           {/* Statistics */}

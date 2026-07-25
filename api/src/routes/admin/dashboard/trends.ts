@@ -348,7 +348,7 @@ export async function trendsRoutes(app: FastifyInstance) {
       message: "ok",
     };
 
-    redis.setex("dashboard:trends:filters", 600, JSON.stringify(result)).catch(() => {});
+    redis.setex("dashboard:trends:filters", 60, JSON.stringify(result)).catch((err) => { console.error("[Redis Cache Error]", err); });
     reply.send(result);
   });
 
@@ -470,7 +470,7 @@ export async function trendsRoutes(app: FastifyInstance) {
       message: "ok",
     };
 
-    redis.setex(hourlyCacheKey, 300, JSON.stringify(hourlyResult)).catch(() => {});
+    redis.setex(hourlyCacheKey, 60, JSON.stringify(hourlyResult)).catch((err) => { console.error("[Redis Cache Error]", err); });
     reply.send(hourlyResult);
   });
 
@@ -511,7 +511,7 @@ export async function trendsRoutes(app: FastifyInstance) {
       message: "ok",
     };
 
-    redis.setex(cacheKey, 300, JSON.stringify(trendsResult)).catch(() => {});
+    redis.setex(cacheKey, 60, JSON.stringify(trendsResult)).catch((err) => { console.error("[Redis Cache Error]", err); });
     reply.send(trendsResult);
   });
 
@@ -578,7 +578,7 @@ export async function trendsRoutes(app: FastifyInstance) {
       message: "ok",
     };
 
-    redis.setex(cacheKey, 300, JSON.stringify(result)).catch(() => {});
+    redis.setex(cacheKey, 60, JSON.stringify(result)).catch((err) => { console.error("[Redis Cache Error]", err); });
     reply.send(result);
   });
 }

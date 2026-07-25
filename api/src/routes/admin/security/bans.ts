@@ -15,6 +15,7 @@ import { requirePerm, Perm } from "../../../middleware/auth.js";
 import { clearIpBan, clearUserBan } from "../../../services/login-security.js";
 import { recordSecurityEvent } from "../../../services/security-event.js";
 import { getRedis } from "../../../redis.js";
+import { scanKeys } from "../../../utils/redis-scan.js";
 
 export async function securityBansRoutes(app: FastifyInstance) {
   // ── 封禁列表 ──
@@ -25,18 +26,7 @@ export async function securityBansRoutes(app: FastifyInstance) {
     const redis = getRedis();
     const db = getDb();
 
-    // 【优化】使用 SCAN 替代 KEYS 避免阻塞
-    const scanKeys = async (pattern: string): Promise<string[]> => {
-      const keys: string[] = [];
-      let cursor = '0';
-      do {
-        const [nextCursor, batch] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
-        cursor = nextCursor;
-        keys.push(...batch);
-      } while (cursor !== '0');
-      return keys;
-    };
-
+    // 使用 SCAN 替代 KEYS 避免阻塞
     const [ipKeys, userKeys] = await Promise.all([
       scanKeys("risk:ban:ip:*"),
       scanKeys("risk:ban:user:*"),

@@ -16,7 +16,8 @@ export function createDb() {
 
   pool = new Pool({
     connectionString: config.database.url,
-    max: 20,
+    max: 50,
+    min: 5,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
     statement_timeout: 30000, // PERF: 防止慢查询长时间占用连接（30s 超时断开）

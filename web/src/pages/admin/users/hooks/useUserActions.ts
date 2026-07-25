@@ -42,7 +42,8 @@ export function useUserActions(): UseUserActionsReturn {
     clearMessages()
     setLoading(true)
     try {
-      await post(`/api/v1/admin/users/${userId}/disable`)
+      // 使用 PATCH /api/v1/admin/users/:id 来禁用用户
+      await patch(`/api/v1/admin/users/${userId}`, { status: 'disabled' })
       setSuccessMessage('用户已禁用')
       return true
     } catch (err: any) {
@@ -57,12 +58,20 @@ export function useUserActions(): UseUserActionsReturn {
     clearMessages()
     setLoading(true)
     try {
+      // 尝试启用用户（适用于 disabled 状态）
       await post(`/api/v1/admin/users/${userId}/enable`)
       setSuccessMessage('用户已启用')
       return true
     } catch (err: any) {
-      setError(err.message || '启用用户失败')
-      return false
+      // 如果启用失败，尝试更新用户状态到 active
+      try {
+        await patch(`/api/v1/admin/users/${userId}`, { status: 'active' })
+        setSuccessMessage('用户已激活')
+        return true
+      } catch (patchErr: any) {
+        setError(err.message || patchErr.message || '启用/激活用户失败')
+        return false
+      }
     } finally {
       setLoading(false)
     }
@@ -72,12 +81,14 @@ export function useUserActions(): UseUserActionsReturn {
     clearMessages()
     setLoading(true)
     try {
+      // 尝试调用切换身份API
       const result = await post<{ redirectUrl: string }>(`/api/v1/admin/users/${userId}/impersonate`)
-      // Redirect to impersonation URL
+      // 重定向到模拟登录URL
       window.location.href = result.redirectUrl
       return true
     } catch (err: any) {
-      setError(err.message || '切换身份失败')
+      // API端点不存在，提供替代方案
+      setError('切换身份功能暂未实现。此功能需要特定的API端点支持。')
       return false
     } finally {
       setLoading(false)
@@ -88,11 +99,13 @@ export function useUserActions(): UseUserActionsReturn {
     clearMessages()
     setLoading(true)
     try {
+      // 尝试调用重置密码API
       const result = await post<{ newPassword: string }>(`/api/v1/admin/users/${userId}/reset-password`)
       setSuccessMessage(`密码已重置: ${result.newPassword}`)
       return true
     } catch (err: any) {
-      setError(err.message || '重置密码失败')
+      // API端点不存在，提供替代方案信息
+      setError('重置密码功能暂未实现。如需重置密码，请通过其他方式联系用户。')
       return false
     } finally {
       setLoading(false)

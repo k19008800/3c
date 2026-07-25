@@ -191,10 +191,17 @@ export async function batchSettleCommissions(ids: number[]): Promise<number> {
       }
     });
 
-    // 批量更新凭证号（需要优化：当前循环单条更新）
-    // TODO: 重构为真正的批量更新
-    for (const [id, no] of voucherMap) {
-      await db.update(commissionLogs).set({ voucherNo: no }).where(eq(commissionLogs.id, id));
+    // 批量更新凭证号 - 优化为真正的批量更新
+    if (voucherMap.size > 0) {
+      const idList = Array.from(voucherMap.keys());
+      const caseExpr = idList.map(id => 
+        `WHEN id = ${id} THEN '${voucherMap.get(id)}'`
+      ).join(' ');
+      await db.execute(sql.raw(`
+        UPDATE commission_logs 
+        SET voucher_no = CASE ${caseExpr} END 
+        WHERE id IN (${idList.join(',')})
+      `));
     }
 
     // 刷新 rollup（同步状态分布）- 优化：批量执行

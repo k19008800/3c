@@ -8,6 +8,10 @@ import { config } from "../config.js";
 import { authenticateAdminKey } from "../middleware/adminKeyAuth.js";
 
 export async function registerPlugins(app: FastifyInstance): Promise<void> {
+  // ── 请求ID追踪（必须在最早的阶段注册）──
+  const { registerRequestIdMiddleware } = await import("../middleware/request-id.js");
+  registerRequestIdMiddleware(app);
+  
   // ── 允许空 body 的 application/json ──
   // JSON body 解析：空 body 解析为 null，无效 JSON 返回 400
   app.addContentTypeParser("application/json", { parseAs: "buffer" }, (_req, body, done) => {
@@ -52,7 +56,7 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
   await app.register(dbPlugin, {});
 
   // ── 数据库查询超时保护（必须在 DB 插件之后注册）──
-  const { default: queryTimeoutPlugin } = await import("../plugins/query-timeout.js");
+  const { default: queryTimeoutPlugin } = await import("../plugins/query-timeout-enhanced.js");
   await app.register(queryTimeoutPlugin, {});
 
   // ── 响应压缩 ──
@@ -65,10 +69,9 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
 
   // ── 静态文件服务（用于上传图片访问）──
   await app.register(import("@fastify/static"), {
-    root: join(import.meta.dirname, "../public"),
+    root: join(import.meta.dirname, "../../public"),
     prefix: "/",
     decorateReply: false,
-    wildcard: true,
   });
 
   // ── 钩子：请求日志 ──

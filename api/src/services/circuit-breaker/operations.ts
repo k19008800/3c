@@ -89,7 +89,7 @@ export async function shouldSkipVendor(vendorModelId: number): Promise<boolean> 
       eventType: "circuit_recovery",
       riskLevel: "medium",
       detail: { vendorModelId, state: "half_open", reason: "OPEN窗口超时，进入探测模式" },
-    }).catch(() => {});
+    }).catch((err) => { console.error("[Redis Cache Error]", err); });
 
     return false; // 允许探测请求
   }
@@ -121,7 +121,7 @@ export async function shouldSkipVendor(vendorModelId: number): Promise<boolean> 
       eventType: "circuit_trip",
       riskLevel: "high",
       detail: { vendorModelId, failCount, state: "half_open" },
-    }).catch(() => {});
+    }).catch((err) => { console.error("[Redis Cache Error]", err); });
 
     return true;
   }

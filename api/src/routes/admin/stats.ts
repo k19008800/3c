@@ -94,7 +94,7 @@ export async function adminStatsRoutes(app: FastifyInstance) {
       message: "ok",
     };
 
-    redis.setex(cacheKey, RECENT_CACHE_TTL, JSON.stringify(result)).catch(() => {});
+    redis.setex(cacheKey, RECENT_CACHE_TTL, JSON.stringify(result)).catch((err) => { console.error("[Redis Cache Error]", err); });
     reply.send(result);
   });
 
@@ -173,7 +173,7 @@ export async function adminStatsRoutes(app: FastifyInstance) {
       message: "ok",
     };
 
-    redis.setex(cacheKey, RECENT_CACHE_TTL, JSON.stringify(result)).catch(() => {});
+    redis.setex(cacheKey, RECENT_CACHE_TTL, JSON.stringify(result)).catch((err) => { console.error("[Redis Cache Error]", err); });
     reply.send(result);
   });
 
@@ -238,7 +238,7 @@ export async function adminStatsRoutes(app: FastifyInstance) {
       message: "ok",
     };
 
-    redis.setex(cacheKey, RECENT_CACHE_TTL, JSON.stringify(result)).catch(() => {});
+    redis.setex(cacheKey, RECENT_CACHE_TTL, JSON.stringify(result)).catch((err) => { console.error("[Redis Cache Error]", err); });
     reply.send(result);
   });
 
@@ -322,7 +322,7 @@ export async function adminStatsRoutes(app: FastifyInstance) {
       message: "ok",
     };
 
-    redis.setex(cacheKey, RECENT_CACHE_TTL, JSON.stringify(result)).catch(() => {});
+    redis.setex(cacheKey, RECENT_CACHE_TTL, JSON.stringify(result)).catch((err) => { console.error("[Redis Cache Error]", err); });
     reply.send(result);
   });
 
@@ -392,7 +392,7 @@ export async function adminStatsRoutes(app: FastifyInstance) {
       message: "ok",
     };
 
-    redis.setex(cacheKey, RECENT_CACHE_TTL, JSON.stringify(result)).catch(() => {});
+    redis.setex(cacheKey, RECENT_CACHE_TTL, JSON.stringify(result)).catch((err) => { console.error("[Redis Cache Error]", err); });
     reply.send(result);
   });
 
@@ -466,7 +466,7 @@ export async function adminStatsRoutes(app: FastifyInstance) {
       message: "ok",
     };
 
-    redis.setex(cacheKey, RECENT_CACHE_TTL, JSON.stringify(result)).catch(() => {});
+    redis.setex(cacheKey, RECENT_CACHE_TTL, JSON.stringify(result)).catch((err) => { console.error("[Redis Cache Error]", err); });
     reply.send(result);
   });
 

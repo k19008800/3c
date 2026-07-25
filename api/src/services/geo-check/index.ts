@@ -3,7 +3,7 @@
 // ============================================================
 
 export type { GeoInfo, GeoBlockInfo, GeoRiskResult } from "./types.js";
-export { lookupGeo } from "./geo-lookup.js";
+export { lookupGeo, lookupGeoBatch } from "./geo-lookup.js";
 export { lookupBlock, lookupGeoWithBlock, assessBlockRisk } from "./block-lookup.js";
 export { enrichCallGeo, getCallGeoEnrichment } from "./enrich.js";
 export { isPhysicalPossible, detectUnusualLogin, updateLastGeo } from "./detect.js";

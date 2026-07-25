@@ -17,26 +17,43 @@ export interface CommissionStats {
   settledCommission: number
   pendingCommission: number
   totalRecords: number
+  pendingCount: number
+  settledCount: number
 }
 
-// ── Helpers ──
-
-export const fmt = (v: any) => `¥${parseFloat(String(v ?? 0)).toFixed(2)}`
-
-export const toCSV = (headers: string[], rows: string[][]) => {
-  const bom = '\uFEFF'
-  const enc = (v: string) => /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
-  const h = headers.map(enc).join(',')
-  const body = rows.map(r => r.map(enc).join(',')).join('\n')
-  return bom + [h, body].join('\n')
+export interface CommissionFormData {
+  settlementAmount: number
+  settlementDate: string
+  notes: string
+  referenceNumber: string
 }
 
-export const triggerDownload = (content: string, filename: string) => {
-  const blob = new Blob([content], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
+export interface CommissionAdjustment {
+  commissionId: number
+  amount: number
+  reason: string
+  notes?: string
+}
+
+export interface ExportOptions {
+  format: 'csv' | 'excel'
+  includeAllColumns: boolean
+  includeSettledOnly: boolean
+}
+
+export interface BatchSettleRequest {
+  commissionIds: number[]
+  settlementDate: string
+  referenceNumber?: string
+}
+
+export interface CommissionDetail extends CommissionRollupRow {
+  transactions: CommissionRecord[]
+  settlementHistory: {
+    date: string
+    amount: number
+    referenceNumber: string
+    operator: string
+  }[]
+  adjustmentHistory: CommissionAdjustment[]
 }

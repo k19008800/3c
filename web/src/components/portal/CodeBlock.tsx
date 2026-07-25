@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 import { Copy, CheckCircle2 } from 'lucide-react'
 
 interface CodeBlockProps {
@@ -10,7 +10,7 @@ interface CodeBlockProps {
   label?: string
 }
 
-export default function CodeBlock({ code, language, maskApiKey, label }: CodeBlockProps) {
+function CodeBlock({ code, language, maskApiKey, label }: CodeBlockProps) {
   const [copied, setCopied] = useState(false)
 
   const displayCode = maskApiKey
@@ -71,3 +71,5 @@ export default function CodeBlock({ code, language, maskApiKey, label }: CodeBlo
     </div>
   )
 }
+
+export default React.memo(CodeBlock)

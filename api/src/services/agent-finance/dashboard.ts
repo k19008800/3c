@@ -108,7 +108,7 @@ export async function getFinanceDashboard() {
   };
 
   // 写缓存（非阻塞）
-  redis.setex(cacheKey, 60, JSON.stringify(result)).catch(() => {});
+  redis.setex(cacheKey, 60, JSON.stringify(result)).catch((err) => { console.error("[Redis Cache Error]", err); });
 
   return result;
 }

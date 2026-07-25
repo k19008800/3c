@@ -13,7 +13,7 @@ export async function loginUser(email: string, password: string, ip?: string, us
 
   async function recordLogin(userId: number | null, success: boolean, failReason?: string) {
     if (!userId) return;
-    await db.insert(userLoginHistory).values({ userId, ip: ip ?? "unknown", userAgent: userAgent ?? undefined, success, failReason: failReason ?? undefined }).catch(() => {});
+    await db.insert(userLoginHistory).values({ userId, ip: ip ?? "unknown", userAgent: userAgent ?? undefined, success, failReason: failReason ?? undefined }).catch((err) => { console.error("[Redis Cache Error]", err); });
   }
 
   const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1);
@@ -71,6 +71,7 @@ export async function loginUser(email: string, password: string, ip?: string, us
 
   await handleLoginSuccess(ip ?? "unknown", user.id);
 
+  // 异步准备地理位置检测
   const geoPromise = (async () => {
     try {
       const { detectUnusualLogin, lookupGeo } = await import("../geo-check.js");
@@ -81,13 +82,14 @@ export async function loginUser(email: string, password: string, ip?: string, us
           await recordSecurityEvent({ userId: user.id, eventType: risk.riskLevel === "critical" ? "unusual_location" : "new_device", riskLevel: risk.riskLevel, ip, userAgent, city: geo.city, country: geo.countryName, detail: { reason: risk.reason } });
           if (risk.riskLevel === "high" || risk.riskLevel === "critical") {
             const { sendLoginAlertEmail } = await import("../email-service.js");
-            sendLoginAlertEmail({ toEmail: user.email, nickname: user.nickname, city: geo.city, country: geo.countryName, ip: ip ?? "unknown", device: userAgent ?? "未知设备" }).catch(() => {});
+            sendLoginAlertEmail({ toEmail: user.email, nickname: user.nickname, city: geo.city, country: geo.countryName, ip: ip ?? "unknown", device: userAgent ?? "未知设备" }).catch((err) => { console.error("[Redis Cache Error]", err); });
           }
         }
       }
     } catch (err) { console.warn(`[GeoCheck] 异地检测失败 (userId=${user.id}):`, err); }
   })();
 
+  // 异步准备会话清理
   const sessionPromise = (async () => {
     try {
       if (user.forceLogoutAt && new Date(user.forceLogoutAt) < new Date()) {
@@ -97,15 +99,19 @@ export async function loginUser(email: string, password: string, ip?: string, us
     } catch {}
   })();
 
-  // 顺序执行关键操作，避免竞态条件
+  // 关键步骤顺序执行，确保数据一致性
   await recordLogin(user.id, true);
   await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
-
+  
   const tokens = generateTokens(user.id, user.role);
-  createSession({ userId: user.id, jti: tokens.accessToken, ip: ip ?? "unknown", userAgent: userAgent ?? undefined }).catch((err) => console.warn(`[Session] 创建会话失败 (userId=${user.id}):`, err));
+  
+  // 关键操作：创建会话（必须成功）
+  await createSession({ userId: user.id, jti: tokens.accessToken, ip: ip ?? "unknown", userAgent: userAgent ?? undefined });
 
-  // 并行执行独立的后台操作（失败不影响登录）
-  await Promise.allSettled([geoPromise, sessionPromise]);
+  // 非关键后台操作异步执行（失败不影响登录）
+  Promise.allSettled([geoPromise, sessionPromise]).catch((err) => { console.error("[Async Error]", err);
+    // 后台操作失败不影响主流程
+  });
 
   return { user: { id: user.id, email: user.email, nickname: user.nickname, userType: user.userType as "personal" | "enterprise", role: user.role, status: user.status, balance: user.balance, emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null }, tokens, captchaRequired: false };
 }

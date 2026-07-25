@@ -116,7 +116,7 @@ export async function dbTransitionDead(vendorModelId: number): Promise<void> {
     eventType: "circuit_trip",
     riskLevel: "critical",
     detail: { vendorModelId, state: "dead", reason: "半开探测连续失败3次，需人工恢复" },
-  }).catch(() => {});
+  }).catch((err) => { console.error("[Redis Cache Error]", err); });
 }
 
 export async function dbTransitionClosed(vendorModelId: number): Promise<void> {

@@ -173,7 +173,8 @@ export function registerErrorHandler(app: FastifyInstance) {
     }
 
     // 未知错误——统一降级为 500，不暴露内部细节
-    request.log.error({ err: error }, "Unhandled error");
+    // 使用 app.log 替代 request.log（Pino writeSym bug workaround）
+    request.server.log.error({ err: error }, "Unhandled error");
     const isDev = process.env.NODE_ENV === "development";
     return reply.status(500).send({
       code: 500,

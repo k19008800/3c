@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Download, UserPlus } from 'lucide-react'
+import PaginationBar from '@/components/ui/PaginationBar'
+import StatsCards from './components/StatsCards'
 import UserFilters from './components/UserFilters'
 import UsersList from './components/UsersList'
 import UserActions from './components/UserActions'
@@ -15,6 +17,7 @@ const UsersPage: React.FC = () => {
   const {
     users,
     total,
+    stats,
     loading,
     error,
     page,
@@ -24,12 +27,14 @@ const UsersPage: React.FC = () => {
     setSelectedIds,
     totalPages,
     setPage,
+    setPageSize,
     setFilters,
     toggleSelect,
     toggleAll,
     handleBatchAction,
     handleExportCSV,
-    refreshUsers
+    refreshUsers,
+    refreshStats
   } = useUsers()
 
   const {
@@ -106,6 +111,9 @@ const UsersPage: React.FC = () => {
         </div>
       )}
 
+      {/* Stats Cards */}
+      <StatsCards stats={stats} loading={loading && !users.length} />
+
       {/* Filters */}
       <UserFilters
         keyword={filters.keyword}
@@ -135,60 +143,20 @@ const UsersPage: React.FC = () => {
           onSelect={toggleSelect}
           onSelectAll={toggleAll}
           onViewDetail={handleViewDetail}
-          onImpersonate={handleImpersonate}
-          onDisable={handleDisable}
-          onEnable={handleEnable}
-          onResetPassword={handleResetPassword}
           loading={loading}
         />
       </div>
 
       {/* Pagination */}
-      {totalPages >-1 && (
-        <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-          <div className="text-sm text-slate-600">
-            共 {total} 条记录，第 {page}/{totalPages} 页
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage(Math.max(1, page - 1))}
-              disabled={page <= 1}
-              className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              上一页
-            </button>
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum = i + 1
-                if (totalPages > 5) {
-                  if (page <= 3) pageNum = i + 1
-                  else if (page >= totalPages - 2) pageNum = totalPages - 4 + i
-                  else pageNum = page - 2 + i
-                }
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => setPage(pageNum)}
-                    className={`px-3 py-1.5 rounded-lg text-sm ${
-                      page === pageNum
-                        ? 'bg-blue-600 text-white'
-                        : 'border border-slate-300 hover:bg-slate-50'
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                )
-              })}
-            </div>
-            <button
-              onClick={() => setPage(Math.min(totalPages, page + 1))}
-              disabled={page >= totalPages}
-              className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              下一页
-            </button>
-          </div>
-        </div>
+      {totalPages > 0 && (
+        <PaginationBar
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       )}
 
       {/* TODO: Add UserFormModal and UserDetailModal components */}

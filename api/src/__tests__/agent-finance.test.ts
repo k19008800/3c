@@ -84,7 +84,7 @@ afterAll(async () => {
       method: "DELETE",
       url: `/api/v1/admin/announcements/${createdAnnouncementId}`,
       headers: { authorization: `Bearer ${adminToken}` },
-    }).catch(() => {});
+    }).catch((err) => { console.error("[Redis Cache Error]", err); });
   }
   await closeApp();
 });

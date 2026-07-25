@@ -1,1 +1,2 @@
-export { useVendorModels, useModelOptions } from './useVendorModels'
+export { useVendorModels } from './useVendorModels'
+export { useModelActions } from './useModelActions'

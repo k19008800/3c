@@ -9,82 +9,14 @@ import LogTrendChart from '@/components/logs/LogTrendChart'
 import LogModelChart from '@/components/logs/LogModelChart'
 import LogExportButton from '@/components/logs/LogExportButton'
 import LogAnomaliesPanel from '@/components/logs/LogAnomaliesPanel'
+import LogsFilter from '@/components/logs/LogsFilter'
+import LogsTable from '@/components/logs/LogsTable'
+import KeyComparison from '@/components/logs/KeyComparison'
 import PaginationBar from '@/components/ui/PaginationBar'
 import {
   Loader2, AlertCircle, RefreshCw,
-  Search, Key, Eye, EyeOff, ArrowUpDown, Clock, Zap,
-  Gauge, BarChart3, GitCompare,
+  BarChart3,
 } from 'lucide-react'
-
-const STATUS_OPTIONS = [
-  { value: '', label: '全部' },
-  { value: 'success', label: '成功' },
-  { value: 'failed', label: '失败' },
-  { value: 'timeout', label: '超时' },
-  { value: 'cancelled', label: '已取消' },
-  { value: 'pending', label: '处理中' },
-] as const
-
-const COLUMNS = [
-  { key: 'id', label: 'ID' },
-  { key: 'createdAt', label: '时间' },
-  { key: 'modelName', label: '模型' },
-  { key: 'vendorName', label: '供应商' },
-  { key: 'promptTokens', label: 'Prompt' },
-  { key: 'completionTokens', label: 'Completion' },
-  { key: 'totalTokens', label: 'Token' },
-  { key: 'cost', label: '消费' },
-  { key: 'status', label: '状态' },
-  { key: 'durationMs', label: '耗时' },
-  { key: 'isStreaming', label: '模式' },
-  { key: 'errorMessage', label: '错误信息' },
-] as const
-
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    success: 'bg-green-100 text-green-700',
-    failed: 'bg-red-100 text-red-700',
-    timeout: 'bg-orange-100 text-orange-700',
-    cancelled: 'bg-gray-100 text-gray-600',
-    pending: 'bg-yellow-100 text-yellow-700',
-  }
-  const labels: Record<string, string> = {
-    success: '成功',
-    failed: '失败',
-    timeout: '超时',
-    cancelled: '已取消',
-    pending: '处理中',
-  }
-  return (
-    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${map[status] || 'bg-slate-100 text-slate-700'}`}>
-      {labels[status] || status}
-    </span>
-  )
-}
-
-function LatencyBadge({ durationMs }: { durationMs: number | null }) {
-  if (durationMs == null) return <span className="text-xs text-slate-400">-</span>
-
-  let color: string
-  let bg: string
-  if (durationMs < 500) {
-    color = 'text-green-700'
-    bg = 'bg-green-100'
-  } else if (durationMs < 2000) {
-    color = 'text-amber-700'
-    bg = 'bg-amber-100'
-  } else {
-    color = 'text-red-700'
-    bg = 'bg-red-100'
-  }
-
-  return (
-    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-medium ${bg} ${color}`}>
-      <Gauge size={10} />
-      {durationMs}ms
-    </span>
-  )
-}
 
 interface ErrorPattern {
   pattern: string
@@ -149,6 +81,7 @@ export default function Logs() {
   // ── Saved prefs ──
   const { filters: savedFilters, loaded: prefsLoaded, updateFilter, saveAll } = usePagePreferences('user_logs')
   const { isVisible, toggleColumn } = useColumnPrefs('logs_table')
+  const [showColumnMenu, setShowColumnMenu] = useState(false)
 
   // ── Restore saved filters ──
   useEffect(() => {
@@ -337,80 +270,8 @@ export default function Logs() {
     setPage(1)
   }
 
-  // ── Column visibility panel ──
-  const [showColumnMenu, setShowColumnMenu] = useState(false)
 
-  // ── Render comparison card ──
-  const renderComparisonCard = (data: KeyComparisonData | null, label: string) => {
-    if (!data) {
-      return (
-        <div className="flex-1 bg-slate-50 rounded-lg p-4 text-center text-sm text-slate-400">
-          请选择 API Key
-        </div>
-      )
-    }
 
-    if (data.loading) {
-      return (
-        <div className="flex-1 bg-slate-50 rounded-lg p-4 flex items-center justify-center">
-          <Loader2 className="animate-spin" size={20} />
-        </div>
-      )
-    }
-
-    if (data.error) {
-      return (
-        <div className="flex-1 bg-red-50 rounded-lg p-4 text-sm text-red-600">
-          {data.error}
-        </div>
-      )
-    }
-
-    const s = data.summary
-    return (
-      <div className="flex-1 bg-slate-50 rounded-lg p-4 space-y-3">
-        <p className="text-sm font-medium text-slate-800 truncate" title={data.keyName}>
-          {data.keyName}
-        </p>
-        {s ? (
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>
-              <span className="text-slate-400">总调用</span>
-              <p className="font-semibold text-slate-800">{s.totalCalls.toLocaleString()}</p>
-            </div>
-            <div>
-              <span className="text-slate-400">成功率</span>
-              <p className="font-semibold text-slate-800">{s.successRate.toFixed(1)}%</p>
-            </div>
-            <div>
-              <span className="text-slate-400">Token</span>
-              <p className="font-semibold text-slate-800">{Number(s.totalTokens).toLocaleString()}</p>
-            </div>
-            <div>
-              <span className="text-slate-400">消费</span>
-              <p className="font-semibold text-slate-800">¥{Number(s.totalCost).toFixed(4)}</p>
-            </div>
-            <div>
-              <span className="text-slate-400">成功</span>
-              <p className="font-semibold text-green-600">{s.successCalls.toLocaleString()}</p>
-            </div>
-            <div>
-              <span className="text-slate-400">失败</span>
-              <p className="font-semibold text-red-600">{s.failedCalls.toLocaleString()}</p>
-            </div>
-            <div className="col-span-2">
-              <span className="text-slate-400">平均耗时</span>
-              <p className="font-semibold text-slate-800">{s.avgDuration.toFixed(0)}ms</p>
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-slate-400">暂无数据</p>
-        )}
-      </div>
-    )
-  }
-
-  // ── Render ──
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -498,296 +359,62 @@ export default function Logs() {
       )}
 
       {/* Key Comparison */}
-      <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-200">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <GitCompare size={20} className="text-indigo-500" />
-            <h2 className="text-lg font-semibold text-slate-900">API Key 对比</h2>
-          </div>
-          <button
-            onClick={() => setShowComparison(!showComparison)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition ${
-              showComparison
-                ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
-                : 'border-slate-300 text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            <GitCompare size={14} />
-            {showComparison ? '关闭对比' : '开启对比'}
-          </button>
-        </div>
-
-        {showComparison && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">Key A</label>
-                <select
-                  value={compareKeyA}
-                  onChange={(e) => setCompareKeyA(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">选择 Key...</option>
-                  {apiKeys.filter(k => k.status).map((k) => (
-                    <option key={k.id} value={k.id}>
-                      {k.name} ({k.keyPrefix}...)
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">Key B</label>
-                <select
-                  value={compareKeyB}
-                  onChange={(e) => setCompareKeyB(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">选择 Key...</option>
-                  {apiKeys.filter(k => k.status && k.id !== compareKeyA).map((k) => (
-                    <option key={k.id} value={k.id}>
-                      {k.name} ({k.keyPrefix}...)
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              {renderComparisonCard(comparisonDataA, 'Key A')}
-              <div className="flex items-center">
-                <span className="text-slate-300 font-bold text-lg">VS</span>
-              </div>
-              {renderComparisonCard(comparisonDataB, 'Key B')}
-            </div>
-          </div>
-        )}
-      </div>
+      <KeyComparison
+        showComparison={showComparison}
+        setShowComparison={setShowComparison}
+        compareKeyA={compareKeyA}
+        setCompareKeyA={setCompareKeyA}
+        compareKeyB={compareKeyB}
+        setCompareKeyB={setCompareKeyB}
+        apiKeys={apiKeys}
+        comparisonDataA={comparisonDataA}
+        comparisonDataB={comparisonDataB}
+      />
 
       {/* Filters */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div className="flex flex-wrap gap-4 items-end">
-          {/* Model name search */}
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">模型名称</label>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={modelName}
-                onChange={(e) => changeFilter('modelName', e.target.value, setModelName)}
-                placeholder="搜索模型..."
-                className="w-40 pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* API Key filter */}
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">API Key</label>
-            <div className="relative">
-              <Key size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <select
-                value={apiKeyId}
-                onChange={(e) => changeFilter('apiKeyId', e.target.value ? Number(e.target.value) : '', setApiKeyId)}
-                className="w-44 pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white"
-              >
-                <option value="">全部 Key</option>
-                {apiKeys.map((k) => (
-                  <option key={k.id} value={k.id}>
-                    {k.name} ({k.keyPrefix}...)
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Status */}
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">状态</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => changeFilter('status', e.target.value, setStatusFilter)}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Date range */}
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">开始日期</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => changeFilter('startDate', e.target.value, setStartDate)}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">结束日期</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => changeFilter('endDate', e.target.value, setEndDate)}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Sort order */}
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">排序</label>
-            <button
-              onClick={() => {
-                const next = sortOrder === 'desc' ? 'asc' : 'desc'
-                setSortOrder(next)
-                updateFilter('sortOrder', next)
-              }}
-              className="flex items-center gap-1.5 px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition"
-            >
-              <ArrowUpDown size={14} />
-              <Clock size={12} />
-              时间{sortOrder === 'desc' ? '↓' : '↑'}
-            </button>
-          </div>
-
-          {/* Column visibility */}
-          <div className="relative">
-            <label className="block text-xs text-slate-500 mb-1">列显隐</label>
-            <button
-              onClick={() => setShowColumnMenu(!showColumnMenu)}
-              className="flex items-center gap-1.5 px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition"
-            >
-              <Eye size={14} />
-              列
-            </button>
-            {showColumnMenu && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowColumnMenu(false)} />
-                <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg shadow-lg border border-slate-200 z-20 py-1">
-                  {COLUMNS.map((col) => (
-                    <button
-                      key={col.key}
-                      onClick={() => toggleColumn(col.key)}
-                      className="flex items-center gap-2 w-full px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 transition"
-                    >
-                      {isVisible(col.key) ? (
-                        <Eye size={14} className="text-blue-500" />
-                      ) : (
-                        <EyeOff size={14} className="text-slate-300" />
-                      )}
-                      {col.label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          <button
-            onClick={resetFilters}
-            className="px-3 py-2 text-sm text-slate-500 hover:text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 transition"
-          >
-            重置
-          </button>
-        </div>
-      </div>
-
-      {/* Error */}
-      {error && (
-        <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg text-sm">
-          <AlertCircle size={16} />
-          {error}
-        </div>
-      )}
+      <LogsFilter
+        modelName={modelName}
+        setModelName={setModelName}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        startDate={startDate}
+        setStartDate={setStartDate}
+        endDate={endDate}
+        setEndDate={setEndDate}
+        apiKeyId={apiKeyId}
+        setApiKeyId={setApiKeyId}
+        sortOrder={sortOrder}
+        setSortOrder={setSortOrder}
+        apiKeys={apiKeys}
+        updateFilter={updateFilter}
+        resetFilters={resetFilters}
+        showColumnMenu={showColumnMenu}
+        setShowColumnMenu={setShowColumnMenu}
+        isVisible={isVisible}
+        toggleColumn={toggleColumn}
+      />
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-slate-50 text-left">
-                {COLUMNS.filter(col => isVisible(col.key)).map(col => (
-                  <th key={col.key} className="px-4 py-3 text-sm font-medium text-slate-500 whitespace-nowrap">
-                    {col.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {loading ? (
-                <tr>
-                  <td colSpan={COLUMNS.filter(col => isVisible(col.key)).length} className="text-center py-12">
-                    <Loader2 className="animate-spin inline-block" size={24} />
-                  </td>
-                </tr>
-              ) : logs.length === 0 ? (
-                <tr>
-                  <td colSpan={COLUMNS.filter(col => isVisible(col.key)).length} className="text-center py-12 text-slate-400">
-                    暂无日志数据
-                  </td>
-                </tr>
-              ) : (
-                logs.map((log) => (
-                  <tr
-                    key={log.id}
-                    className="hover:bg-slate-50 transition cursor-pointer"
-                    onClick={() => setDetailId(log.id)}
-                  >
-                    {isVisible('id') && <td className="px-4 py-3 text-sm text-slate-400 font-mono">{log.id}</td>}
-                    {isVisible('createdAt') && (
-                      <td className="px-4 py-3 text-sm text-slate-600 whitespace-nowrap">
-                        {new Date(log.createdAt).toLocaleString('zh-CN')}
-                      </td>
-                    )}
-                    {isVisible('modelName') && <td className="px-4 py-3 text-sm font-medium text-slate-900">{log.modelName}</td>}
-                    {isVisible('vendorName') && <td className="px-4 py-3 text-sm text-slate-600">{log.vendorName}</td>}
-                    {isVisible('promptTokens') && <td className="px-4 py-3 text-sm text-slate-600 text-right">{log.promptTokens?.toLocaleString() || '-'}</td>}
-                    {isVisible('completionTokens') && <td className="px-4 py-3 text-sm text-slate-600 text-right">{log.completionTokens?.toLocaleString() || '-'}</td>}
-                    {isVisible('totalTokens') && <td className="px-4 py-3 text-sm text-slate-600 text-right font-medium">{log.totalTokens?.toLocaleString() || '-'}</td>}
-                    {isVisible('cost') && <td className="px-4 py-3 text-sm text-slate-600 text-right">¥{Number(log.cost || 0).toFixed(6)}</td>}
-                    {isVisible('status') && <td className="px-4 py-3"><StatusBadge status={log.status} /></td>}
-                    {isVisible('durationMs') && (
-                      <td className="px-4 py-3">
-                        <LatencyBadge durationMs={log.durationMs} />
-                      </td>
-                    )}
-                    {isVisible('isStreaming') && (
-                      <td className="px-4 py-3">
-                        {log.isStreaming ? (
-                          <span className="inline-flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                            <Zap size={10} />流式
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-400">非流式</span>
-                        )}
-                      </td>
-                    )}
-                    {isVisible('errorMessage') && (
-                      <td className="px-4 py-3 text-sm text-red-500 max-w-[200px] truncate" title={log.errorMessage || ''}>
-                        {log.errorMessage || '-'}
-                      </td>
-                    )}
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      <LogsTable
+        logs={logs}
+        total={total}
+        loading={loading}
+        error={error}
+        isVisible={isVisible}
+        setDetailId={setDetailId}
+      />
 
-        {/* Pagination */}
-        {total > 0 && (
-          <PaginationBar
-            page={page}
-            onPageChange={setPage}
-            pageSize={pageSize}
-            onPageSizeChange={setPageSize}
-            total={total}
-            totalPages={totalPages}
-          />
-        )}
-      </div>
+      {/* Pagination */}
+      {total > 0 && (
+        <PaginationBar
+          page={page}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          total={total}
+          totalPages={totalPages}
+        />
+      )}
 
       {/* Detail Drawer */}
       <LogDetailDrawer logId={detailId} onClose={() => setDetailId(null)} />

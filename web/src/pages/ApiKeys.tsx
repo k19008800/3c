@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { get, post, del, patch } from '@/lib/api'
 import type { ApiKey, PaginatedData } from '@/types'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -312,7 +312,15 @@ export default function ApiKeys() {
   const [creating, setCreating] = useState(false)
   const [createdKey, setCreatedKey] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [expandedKeyId, setExpandedKeyId] = useState<number | null>(null)
+
+  // 清理 setTimeout
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
+    }
+  }, [])
 
   const fetchKeys = useCallback(async () => {
     try {
@@ -354,11 +362,11 @@ export default function ApiKeys() {
   }
 
   const handleCopy = async (text: string) => {
-    try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 3000) }
+    try { await navigator.clipboard.writeText(text); setCopied(true); if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current); copyTimeoutRef.current = setTimeout(() => setCopied(false), 3000) }
     catch {
       const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta)
       ta.select(); document.execCommand('copy'); document.body.removeChild(ta)
-      setCopied(true); setTimeout(() => setCopied(false), 3000)
+      setCopied(true); if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current); copyTimeoutRef.current = setTimeout(() => setCopied(false), 3000)
     }
   }
 

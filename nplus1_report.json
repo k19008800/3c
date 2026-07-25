@@ -1,0 +1,392 @@
+[
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\scripts\\check-deepseek-vms.ts",
+    "line": 12,
+    "code": "for (const vm of vmList) {",
+    "context": "\r\nconsole.log('DeepSeek vendor_models:');\r\nfor (const vm of vmList) {\r\n  const [model] = await db.select().from(models).where(eq(models.id, vm.modelId)).limit(1);\r\n  console.log(`  ${vm.upstreamModelName} (model.name=${model?.name}): cost=${vm.costPriceInput}/${vm.costPriceOutput}, sell=${vm.sellPriceInput}/${vm.sellPriceOutput}`);\r\n}\r\n\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\scripts\\diagnose-edge-cases.ts",
+    "line": 138,
+    "code": "for (const row of settledCommissions.rows.slice(0, 5) as any[]) {",
+    "context": "  // 检查代理商余额一致性\r\n  console.log('\\n代理商余额一致性检查:');\r\n  for (const row of settledCommissions.rows.slice(0, 5) as any[]) {\r\n    const agent = await db.execute(sql`\r\n      SELECT \r\n        id,\r\n        total_commission,\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\scripts\\update-all-prices.ts",
+    "line": 29,
+    "code": "for (const vm of vmList) {",
+    "context": "const skipped: string[] = [];\r\n\r\nfor (const vm of vmList) {\r\n  const [model] = await db.select().from(models).where(eq(models.id, vm.modelId)).limit(1);\r\n  if (!model) {\r\n    skipped.push(`ID ${vm.id}: model 不存在`);\r\n    continue;\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\scripts\\update-deepseek-prices.ts",
+    "line": 27,
+    "code": "for (const vm of vmList) {",
+    "context": "// 更新价格\r\nconst updates: string[] = [];\r\nfor (const vm of vmList) {\r\n  const [model] = await db.select().from(models).where(eq(models.id, vm.modelId)).limit(1);\r\n  if (!model) continue;\r\n\r\n  const prices = getModelPrices(model.name);\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\scripts\\verify-final-pricing.ts",
+    "line": 37,
+    "code": "for (const tm of testModels) {",
+    "context": "let allPass = true;\r\n\r\nfor (const tm of testModels) {\r\n  const [vendor] = await db.select().from(vendors).where(eq(vendors.name, tm.vendor)).limit(1);\r\n  if (!vendor) {\r\n    console.log(`   ❌ ${tm.name}: vendor \"${tm.vendor}\" 不存在`);\r\n    allPass = false;\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\scripts\\verify-final-pricing.ts",
+    "line": 52,
+    "code": "for (const v of vmList2) {",
+    "context": "  // 找到正确的匹配（model.name 与 upstreamModelName 一致）\r\n  let vm = null;\r\n  for (const v of vmList2) {\r\n    const [m] = await db.select().from(models).where(eq(models.id, v.modelId)).limit(1);\r\n    if (m && m.name === tm.name) {\r\n      vm = v;\r\n      break;\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\scripts\\verify-system-config.ts",
+    "line": 35,
+    "code": "for (const v of vendorList) {",
+    "context": "const vendorList = await db.select().from(vendors).limit(20);\r\nconsole.log('\\n3. 供应商状态 (' + vendorList.length + ' 个):');\r\nfor (const v of vendorList) {\r\n  const vmCount = await db.select().from(vendorModels).where(eq(vendorModels.vendorId, v.id));\r\n  console.log('   ' + v.name + ': status=' + v.status + ', models=' + vmCount.length);\r\n}\r\n\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\check-redemption-schema.ts",
+    "line": 10,
+    "code": "for (const t of tables) {",
+    "context": "\r\n  const tables = [\"redemption_logs\", \"redemption_codes\", \"redemption_batches\"];\r\n  for (const t of tables) {\r\n    const result = await db.execute(\r\n      sql`SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = ${t} ORDER BY ordinal_position`\r\n    );\r\n    console.log(\"--- \" + t + \" --- type:\", typeof result, Array.isArray(result));\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\migrate.ts",
+    "line": 86,
+    "code": "for (const stmt of statements) {",
+    "context": "    .filter((s) => s.length > 0);\r\n\r\n  for (const stmt of statements) {\r\n    try {\r\n      await pool.query(stmt);\r\n    } catch (err: unknown) {\r\n      const message = err instanceof Error ? err.message : String(err);\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\migrations\\2026-06-29-backfill-agent-consumption.ts",
+    "line": 136,
+    "code": "for (const b of orphanBindings) {",
+    "context": "  if (orphanBindings.length > 0) {\r\n    console.log(`  ⚠️  发现 ${orphanBindings.length} 条绑定无消费记录，创建占位行...`);\r\n    for (const b of orphanBindings) {\r\n      await db.execute(sql`\r\n        INSERT INTO agent_customer_consumption (agent_id, customer_user_id)\r\n        VALUES (${b.agentId}, ${b.clientUserId})\r\n        ON CONFLICT (agent_id, customer_user_id) DO NOTHING\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\migrations\\2026-07-09-announcements-audit-actions.ts",
+    "line": 11,
+    "code": "for (const action of newActions) {",
+    "context": "    const newActions = [\"announcement_create\", \"announcement_update\", \"announcement_delete\"];\r\n\r\n    for (const action of newActions) {\r\n      try {\r\n        await client.query(`ALTER TYPE audit_action ADD VALUE IF NOT EXISTS '${action}'`);\r\n        console.log(`  + added ${action} to audit_action`);\r\n      } catch (e: any) {\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\migrations\\2026-07-09-quotas-circuit-breaker-stats.ts",
+    "line": 150,
+    "code": "for (const col of columns) {",
+    "context": "    ];\r\n\r\n    for (const col of columns) {\r\n      const colExists = await client.query(`\r\n        SELECT column_name FROM information_schema.columns\r\n        WHERE table_name = 'vendor_models' AND column_name = $1\r\n      `, [col.name]);\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\migrations\\2026-07-09-vendor-self-notification-model-types.ts",
+    "line": 50,
+    "code": "for (const nt of newNotifTypes) {",
+    "context": "    ];\r\n\r\n    for (const nt of newNotifTypes) {\r\n      try {\r\n        await client.query(`ALTER TYPE notification_type ADD VALUE IF NOT EXISTS '${nt}'`);\r\n        console.log(`  + added ${nt} to notification_type`);\r\n      } catch (e: any) {\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\migrations\\2026-07-09-vendor-self-notification-model-types.ts",
+    "line": 76,
+    "code": "for (const col of vendorCols) {",
+    "context": "    ];\r\n\r\n    for (const col of vendorCols) {\r\n      const exists = await client.query(`\r\n        SELECT column_name FROM information_schema.columns\r\n        WHERE table_name = 'vendors' AND column_name = '${col.name}'\r\n      `);\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\migrations\\2026-07-10-admin-roles-table.ts",
+    "line": 166,
+    "code": "for (const role of systemRoles) {",
+    "context": "  ];\r\n\r\n  for (const role of systemRoles) {\r\n    await db.execute(sql`\r\n      INSERT INTO admin_roles (name, label, permissions, is_system, description)\r\n      VALUES (${role.name}, ${role.label}, ${role.permissions}::bigint, true, ${role.description})\r\n      ON CONFLICT (name) DO UPDATE SET\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\migrations\\2026-07-10-quota-audit-actions.ts",
+    "line": 11,
+    "code": "for (const action of newActions) {",
+    "context": "    const newActions = [\"quota_create\", \"quota_update\"];\r\n\r\n    for (const action of newActions) {\r\n      try {\r\n        await client.query(`ALTER TYPE audit_action ADD VALUE IF NOT EXISTS '${action}'`);\r\n        console.log(`  + added ${action} to audit_action`);\r\n      } catch (e: any) {\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\migrations\\2026-07-10-user-quota-tpm-rpm-delete.ts",
+    "line": 13,
+    "code": "for (const col of uqCols) {",
+    "context": "    // a) 添加 rpm_limit, tpm_limit 到 user_quotas\r\n    const uqCols = [\"rpm_limit\", \"tpm_limit\"];\r\n    for (const col of uqCols) {\r\n      const exists = await client.query(`\r\n        SELECT column_name FROM information_schema.columns\r\n        WHERE table_name = 'user_quotas' AND column_name = $1\r\n      `, [col]);\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\migrations\\2026-07-13-page-content-email-template-audit-actions.ts",
+    "line": 18,
+    "code": "for (const action of newActions) {",
+    "context": "    ];\r\n\r\n    for (const action of newActions) {\r\n      try {\r\n        await client.query(`ALTER TYPE audit_action ADD VALUE IF NOT EXISTS '${action}'`);\r\n        console.log(`  + added ${action} to audit_action`);\r\n      } catch (e: any) {\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\migrations\\2026-07-18-content-filter-audit-actions.ts",
+    "line": 11,
+    "code": "for (const action of newActions) {",
+    "context": "    const newActions = [\"content_filter_create\", \"content_filter_update\", \"content_filter_delete\"];\r\n\r\n    for (const action of newActions) {\r\n      try {\r\n        await client.query(`ALTER TYPE audit_action ADD VALUE IF NOT EXISTS '${action}'`);\r\n        console.log(`  + added ${action} to audit_action`);\r\n      } catch (e: any) {\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\migrations\\seed-v2-data.ts",
+    "line": 175,
+    "code": "for (const n of notifs) {",
+    "context": "    { type: 'commission_settled', title: '佣金结算', content: '您 2026年7月 的佣金 ¥1,234.56 已结算' },\r\n  ];\r\n  for (const n of notifs) {\r\n    if (n.type === 'system' || n.type === 'system_announcement') {\r\n      await db.execute(sql`\r\n        INSERT INTO user_notifications (user_id, type, title, content, read_at)\r\n        VALUES (${targetUser.id}, ${n.type}, ${n.title}, ${n.content}, NOW())\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\migrations\\seed-v2-data.ts",
+    "line": 200,
+    "code": "for (const t of tables) {",
+    "context": "    \"circuit_history\", \"vendor_api_keys\"\r\n  ];\r\n  for (const t of tables) {\r\n    const r = await db.execute(sql`SELECT count(*)::int as c FROM ${sql.identifier(t)}`);\r\n    const row0 = r.rows[0] as Record<string, unknown>;\r\n    const icon = Number(row0.c) > 0 ? \"✅\" : \"⚠️\";\r\n    console.log(`   ${icon} ${t}: ${row0.c} 条`);\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\migrations\\setup-commission-logs-partitions.ts",
+    "line": 124,
+    "code": "for (const row of batch) {",
+    "context": "    for (let i = 0; i < oldRows.length; i += BATCH) {\r\n      const batch = oldRows.slice(i, i + BATCH);\r\n      for (const row of batch) {\r\n        await pool.query(\r\n          `INSERT INTO ${TABLE_NAME}\r\n           (id, agent_id, client_call_log_id, call_cost, commission_amount,\r\n            status, voucher_no, commission_type, source_order_id, source_order_amount,\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\migrations\\v2-create-all-tables.ts",
+    "line": 174,
+    "code": "for (const idx of indexes) {",
+    "context": "    sql`CREATE INDEX IF NOT EXISTS idx_vendor_api_keys_hash ON vendor_api_keys(key_hash)`,\r\n  ];\r\n  for (const idx of indexes) {\r\n    await db.execute(idx);\r\n  }\r\n  console.log(\"✅ All indexes created\");\r\n  console.log(\"🎉 V2 migration complete!\");\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\migrations\\v3-vendor-login.ts",
+    "line": 28,
+    "code": "for (const col of vendorCols) {",
+    "context": "    ];\r\n\r\n    for (const col of vendorCols) {\r\n      const exists = await client.query(`\r\n        SELECT column_name FROM information_schema.columns\r\n        WHERE table_name = 'vendors' AND column_name = '${col.name}'\r\n      `);\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\seed-10000-commissions.ts",
+    "line": 86,
+    "code": "for (const m of modelRows) modelMap[m.name] = m.id;",
+    "context": "  const modelRows = await db.select().from(models);\r\n  const modelMap: Record<string, number> = {};\r\n  for (const m of modelRows) modelMap[m.name] = m.id;\r\n\r\n  const vmRows = await db.select({\r\n    id: vendorModels.id,\r\n    modelId: vendorModels.modelId,\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\seed-10000-commissions.ts",
+    "line": 225,
+    "code": "for (const [uid, data] of consUpdates) {",
+    "context": "\r\n    // ── 更新 agent_customer_consumption ──\r\n    for (const [uid, data] of consUpdates) {\r\n      // 检查是否存在记录\r\n      const [existingCons] = await db.select()\r\n        .from(agentCustomerConsumption)\r\n        .where(sql`agent_id = ${AGENT_ID} AND customer_user_id = ${uid}`)\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\seed-agent-clients.ts",
+    "line": 485,
+    "code": "for (const cfg of CLIENTS) {",
+    "context": "  const createdClientIds: { uid: number; scenario: ClientScenario; keyId: number }[] = [];\r\n\r\n  for (const cfg of CLIENTS) {\r\n    // 检查是否已存在\r\n    const [existing] = await db.select().from(users).where(eq(users.email, cfg.email)).limit(1);\r\n    if (existing) {\r\n      console.log(`  ⏭  ${cfg.nickname} (${cfg.email}) 已存在, ID=${existing.id}`);\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\seed-prod-data-phase3.ts",
+    "line": 142,
+    "code": "for (const code of c.codes) {",
+    "context": "    `));\r\n    const campaignId = r.rows[0].id;\r\n    for (const code of c.codes) {\r\n      await db.execute(sql.raw(`\r\n        INSERT INTO \"campaign_codes\" (campaign_id, agent_id, allocated_count, used_count)\r\n        VALUES (${campaignId}, ${code.agentId}, ${code.alloc}, ${code.used})\r\n      `));\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\seed-prod-data-phase3.ts",
+    "line": 187,
+    "code": "for (const rt of refundTargets.rows) {",
+    "context": "    WHERE status = 'paid' ORDER BY random() LIMIT 3\r\n  `));\r\n  for (const rt of refundTargets.rows) {\r\n    await db.execute(sql.raw(`\r\n      UPDATE \"recharge_orders\" SET status = 'refunded', refunded_at = NOW() - INTERVAL '2 days'\r\n      WHERE id = ${rt.id}\r\n    `));\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\seed-prod-data-phase3.ts",
+    "line": 257,
+    "code": "for (const c of circuitRecords) {",
+    "context": "    {vmid:91, from:'half_open',to:'closed',  reason:'探活成功',             day:'07-06 12:06', fail:0},\r\n  ];\r\n  for (const c of circuitRecords) {\r\n    const fromVal = c.from ? `'${c.from}'` : 'NULL';\r\n    await db.execute(sql.raw(`\r\n      INSERT INTO \"circuit_history\" (vendor_model_id, from_state, to_state, reason, fail_count, created_at)\r\n      VALUES (${c.vmid}, ${fromVal}, '${c.to}', '${c.reason}', ${c.fail},\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\seed-prod-data-phase3.ts",
+    "line": 308,
+    "code": "for (const ep of routes) {",
+    "context": "    // 每个 key 分配 4-6 条\r\n    const routes = endpoints.sort(() => Math.random() - 0.5).slice(0, randInt(4, 6));\r\n    for (const ep of routes) {\r\n      const daysAgo = randInt(1, 20);\r\n      await db.execute(sql.raw(`\r\n        INSERT INTO \"admin_key_usage_logs\" (key_id, method, path, ip, status_code, duration_ms, created_at)\r\n        VALUES (${ak.id}, '${ep.method}', '${ep.path}', '127.0.0.1', ${ep.code}, ${ep.dur},\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\seed-prod-data-phase3.ts",
+    "line": 347,
+    "code": "for (const p of prefs) {",
+    "context": "  ];\r\n  let prefCount = 0;\r\n  for (const p of prefs) {\r\n    try {\r\n      await db.execute(sql.raw(`\r\n        INSERT INTO \"user_preferences\" (user_id, page_key, filters)\r\n        VALUES (${p.uid}, '${p.page}', '${p.filters}')\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\seed-prod-data-phase3.ts",
+    "line": 587,
+    "code": "for (const profile of userProfiles) {",
+    "context": "\r\n  // 找出 agent 1 的业务客户关联\r\n  for (const profile of userProfiles) {\r\n    const userId = profile.userId;\r\n    const agentRel = await db.execute(sql.raw(`\r\n      SELECT agent_id FROM agent_clients WHERE client_user_id = ${userId} LIMIT 1\r\n    `));\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\seed-prod-data.ts",
+    "line": 35,
+    "code": "for (const u of activeUsers.rows) {",
+    "context": "    LIMIT 30\r\n  `));\r\n  for (const u of activeUsers.rows) {\r\n    const amount = (Math.random() * 1995 + 5).toFixed(6);\r\n    await db.execute(sql.raw(\r\n      `UPDATE \"users\" SET balance = '${amount}' WHERE id = ${u.id}`\r\n    ));\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\seed-prod-data.ts",
+    "line": 204,
+    "code": "for (const p of pages) {",
+    "context": "    { slug: 'faq', titleZh: '常见问题', content: '## 常见问题\\n\\n### 如何注册?\\n\\n...\\n\\n### 如何充值?\\n\\n...' },\r\n  ];\r\n  for (const p of pages) {\r\n    await db.execute(sql.raw(`\r\n      INSERT INTO \"page_contents\" (slug, title_zh, title_en, content_markdown_zh, content_markdown_en, status, updated_by, created_at)\r\n      VALUES ('${p.slug}', '${p.titleZh}', '${p.titleZh}', '${p.content}', '${p.content}', true, 1, NOW())\r\n      ON CONFLICT (slug) DO UPDATE SET\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\seed-prod-data.ts",
+    "line": 322,
+    "code": "for (const cl of clientRows) {",
+    "context": "  const clientRows = existingClients.rows;\r\n  // 对每个已绑定的客户，追加 2-4 条跨 30 天的消费记录\r\n  for (const cl of clientRows) {\r\n    const daysBack = Math.floor(Math.random() * 25) + 3;\r\n    await db.execute(sql.raw(`\r\n      INSERT INTO \"agent_customer_consumption\"\r\n        (agent_id, customer_user_id, customer_name, bind_at,\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\seed-prod-data.ts",
+    "line": 352,
+    "code": "for (const ka of keyAgents) {",
+    "context": "  const keyAgents = [{ agentId: 3, nickname: 'factory-normal' }, { agentId: 1, nickname: '163' },\r\n    { agentId: 5, nickname: 'user01' }, { agentId: 6, nickname: 'user02' }];\r\n  for (const ka of keyAgents) {\r\n    const agentRec = await db.execute(sql.raw(\r\n      `SELECT user_id FROM \"agents\" WHERE id = ${ka.agentId}`\r\n    ));\r\n    if (agentRec.rows.length === 0) continue;\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\seed-prod-data.ts",
+    "line": 387,
+    "code": "for (const bt of bankTransfers.rows) {",
+    "context": "    LIMIT 5\r\n  `));\r\n  for (const bt of bankTransfers.rows) {\r\n    await db.execute(sql.raw(`\r\n      UPDATE \"recharge_orders\" SET\r\n        first_confirmed_by = 1,\r\n        first_confirmed_at = NOW() - INTERVAL '1 day',\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\seed-prod-data.ts",
+    "line": 413,
+    "code": "for (const co of confirmedOrders.rows) {",
+    "context": "    LIMIT 3\r\n  `));\r\n  for (const co of confirmedOrders.rows) {\r\n    await db.execute(sql.raw(`\r\n      UPDATE \"recharge_orders\" SET\r\n        second_confirmed_by = 5,\r\n        second_confirmed_at = NOW() - INTERVAL '6 hours',\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\seed-prod-data.ts",
+    "line": 469,
+    "code": "for (const k of activeKeys.rows) {",
+    "context": "    WHERE ak.status = true ORDER BY random() LIMIT 10\r\n  `));\r\n  for (const k of activeKeys.rows) {\r\n    await db.execute(sql.raw(`\r\n      INSERT INTO \"key_quotas\" (api_key_id, quota_amount, used_amount, alert_percent, period_start, period_end)\r\n      VALUES (${k.id}, '${(Math.random() * 1000 + 100).toFixed(6)}',\r\n        '${(Math.random() * 500).toFixed(6)}', 80,\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\seed-prod-data.ts",
+    "line": 506,
+    "code": "for (const au of agentUsersForNotif.rows) {",
+    "context": "    SELECT u.id FROM \"users\" u JOIN agents a ON u.id = a.user_id WHERE u.status = 'active'\r\n  `));\r\n  for (const au of agentUsersForNotif.rows) {\r\n    await db.execute(sql.raw(`\r\n      INSERT INTO \"user_notifications\" (user_id, type, title, content, created_at)\r\n      VALUES (${au.id}, 'system_announcement', '代理商月报已生成',\r\n        '您本月的佣金报表已生成，请登录后台查看详情。', NOW() - INTERVAL '1 day')\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\seed-test-agents.ts",
+    "line": 392,
+    "code": "for (const c of allClients) {",
+    "context": "\r\n  console.log(\"\\n  客户消费情况：\");\r\n  for (const c of allClients) {\r\n    // 查该客户的总消费\r\n    const [costResult] = await db.select({\r\n      totalCost: sql<string>`COALESCE(SUM(cost), 0)`,\r\n    }).from(callLogs)\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\routes\\admin\\finance.ts",
+    "line": 1149,
+    "code": "for (const order of validOrders) {",
+    "context": "        if (body.action === \"confirm\") {\r\n          // ── 复审确认：需要逐个处理（因为涉及余额更新和佣金计算）──\r\n          for (const order of validOrders) {\r\n            try {\r\n              const voucherNo = await generateVoucherNo('C');\r\n              await db.transaction(async (tx) => {\r\n                await tx\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\routes\\admin\\finance.ts",
+    "line": 1202,
+    "code": "for (const order of validOrders) {",
+    "context": "          // ── 复审拒绝：可批量处理 ──\r\n          await db.transaction(async (tx) => {\r\n            for (const order of validOrders) {\r\n              await tx\r\n                .update(rechargeOrders)\r\n                .set({\r\n                  status: \"cancelled\",\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\routes\\admin\\finance.ts",
+    "line": 1230,
+    "code": "for (const order of validOrders) {",
+    "context": "        // ── 初审：可批量处理（不涉及余额变更）──\r\n        await db.transaction(async (tx) => {\r\n          for (const order of validOrders) {\r\n            if (body.action === \"confirm\") {\r\n              await tx\r\n                .update(rechargeOrders)\r\n                .set({\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\routes\\admin\\rate-limits.ts",
+    "line": 229,
+    "code": "for (const rule of rules) {",
+    "context": "\r\n    await db.transaction(async (tx) => {\r\n      for (const rule of rules) {\r\n        const [existing] = await tx\r\n          .select({ id: systemConfigs.id, value: systemConfigs.value })\r\n          .from(systemConfigs)\r\n          .where(eq(systemConfigs.key, rule.key))\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\routes\\admin\\site-settings.ts",
+    "line": 137,
+    "code": "for (const u of updates) {",
+    "context": "\r\n    await db.transaction(async (tx) => {\r\n      for (const u of updates) {\r\n        // 读更新前值\r\n        const [existing] = await tx\r\n          .select({ value: systemConfigs.value })\r\n          .from(systemConfigs)\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\routes\\admin\\vendors.ts",
+    "line": 960,
+    "code": "for (const item of mappingsToReenable) {",
+    "context": "\r\n    // 批量重新启用映射\r\n    for (const item of mappingsToReenable) {\r\n      await db.update(vendorModels).set(item.data).where(eq(vendorModels.id, item.id));\r\n    }\r\n    reenabledMappings = mappingsToReenable.length;\r\n\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\routes\\admin\\vendors.ts",
+    "line": 966,
+    "code": "for (const item of mappingsToUpdatePrice) {",
+    "context": "\r\n    // 批量更新价格\r\n    for (const item of mappingsToUpdatePrice) {\r\n      await db.update(vendorModels).set(item.data).where(eq(vendorModels.id, item.id));\r\n    }\r\n    updatedPrices = mappingsToUpdatePrice.length;\r\n\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\scripts\\data-factory.ts",
+    "line": 209,
+    "code": "for (const m of MODELS) {",
+    "context": "  const db = getDb();\r\n  const map: Record<string, number> = {};\r\n  for (const m of MODELS) {\r\n    const existing = await db.select({ id: models.id }).from(models).where(eq(models.name, m.name)).limit(1);\r\n    if (existing[0]) { map[m.name] = existing[0].id; continue; }\r\n    const [r] = await db.insert(models).values({ name: m.name, displayName: m.display, type: m.type, status: true }).returning({ id: models.id });\r\n    map[m.name] = r.id;\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\scripts\\data-factory.ts",
+    "line": 221,
+    "code": "for (const v of VENDORS) {",
+    "context": "  const db = getDb();\r\n  const map: Record<string, number> = {};\r\n  for (const v of VENDORS) {\r\n    const existing = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.name, v.name)).limit(1);\r\n    if (existing[0]) { map[v.name] = existing[0].id; continue; }\r\n    const [r] = await db.insert(vendors).values({ name: v.name, baseUrl: v.url, status: \"active\" }).returning({ id: vendors.id });\r\n    map[v.name] = r.id;\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\scripts\\data-factory.ts",
+    "line": 278,
+    "code": "for (const c of defaults) {",
+    "context": "    { key: \"enterprise_discount_rate\", value: \"0.95\" },\r\n  ];\r\n  for (const c of defaults) {\r\n    const existing = await db.select().from(systemConfigs).where(eq(systemConfigs.key, c.key)).limit(1);\r\n    if (!existing[0]) {\r\n      await db.insert(systemConfigs). values({ key: c.key, value: c.value, description: \"\" });\r\n    }\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\scripts\\debug-rollup-mismatch.ts",
+    "line": 27,
+    "code": "for (const r of badRollups as any[]) {",
+    "context": "\r\n  // For each bad date, check actual counts\r\n  for (const r of badRollups as any[]) {\r\n    const actual = (await db.execute(sql`\r\n      SELECT status, count(*)::int as cnt, sum(commission_amount)::numeric(18,6) as total\r\n      FROM commission_logs\r\n      WHERE agent_id = ${agentId}\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\scripts\\debug-rollup-mismatch.ts",
+    "line": 48,
+    "code": "for (const r of allRollups as any[]) {",
+    "context": "  \r\n  console.log('\\n\\nAll rollup rows:');\r\n  for (const r of allRollups as any[]) {\r\n    const actual = (await db.execute(sql`\r\n      SELECT count(*)::int as cnt\r\n      FROM commission_logs\r\n      WHERE agent_id = ${agentId}\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\scripts\\simulate-calls.ts",
+    "line": 344,
+    "code": "for (const m of MODELS) {",
+    "context": "  const db = getDb();\r\n  const map: Record<string, number> = {};\r\n  for (const m of MODELS) {\r\n    const existing = await db.select({ id: models.id }).from(models).where(eq(models.name, m.name)).limit(1);\r\n    if (existing[0]) { map[m.name] = existing[0].id; continue; }\r\n    const [r] = await db.insert(models).values({ name: m.name, displayName: m.display, type: m.type, status: true }).returning({ id: models.id });\r\n    map[m.name] = r.id;\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\scripts\\simulate-calls.ts",
+    "line": 356,
+    "code": "for (const v of VENDORS) {",
+    "context": "  const db = getDb();\r\n  const map: Record<string, number> = {};\r\n  for (const v of VENDORS) {\r\n    const existing = await db.select({ id: vendors.id }).from(vendors).where(eq(vendors.name, v.name)).limit(1);\r\n    if (existing[0]) { map[v.name] = existing[0].id; continue; }\r\n    const [r] = await db.insert(vendors).values({ name: v.name, baseUrl: v.url, status: \"active\" }).returning({ id: vendors.id });\r\n    map[v.name] = r.id;\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\scripts\\simulate-calls.ts",
+    "line": 420,
+    "code": "for (const c of defaults) {",
+    "context": "    { key: \"alert_stop_balance\", value: \"10\" },\r\n  ];\r\n  for (const c of defaults) {\r\n    const existing = await db.select().from(systemConfigs).where(eq(systemConfigs.key, c.key)).limit(1);\r\n    if (!existing[0]) {\r\n      await db.insert(systemConfigs).values({ key: c.key, value: c.value, description: \"\" });\r\n    }\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\scripts\\verify-fix.ts",
+    "line": 42,
+    "code": "for (const agent of allAgents) {",
+    "context": "  console.log(\"\\n📊 API 返回字段验证（模拟 agent /api/v1/agent/clients）：\");\r\n  const allAgents = await db.select().from(agents);\r\n  for (const agent of allAgents) {\r\n    const [agentUser] = await db\r\n      .select({ email: users.email, nickname: users.nickname })\r\n      .from(users)\r\n      .where(eq(users.id, agent.userId))\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\services\\agent-finance\\cron.ts",
+    "line": 139,
+    "code": "for (const row of batch) {",
+    "context": "    const batch = rollupRows.slice(i, i + batchSize);\r\n    await db.transaction(async (tx) => {\r\n      for (const row of batch) {\r\n        await tx.insert(commissionDailyRollup).values({\r\n          agentId: row.agentId,\r\n          reportDate: date,\r\n          totalRecords: row.totalRecords,\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\services\\agent-settlement\\settlements.ts",
+    "line": 196,
+    "code": "for (const [id, no] of voucherMap) {",
+    "context": "    // 批量更新凭证号（需要优化：当前循环单条更新）\r\n    // TODO: 重构为真正的批量更新\r\n    for (const [id, no] of voucherMap) {\r\n      await db.update(commissionLogs).set({ voucherNo: no }).where(eq(commissionLogs.id, id));\r\n    }\r\n\r\n    // 刷新 rollup（同步状态分布）- 优化：批量执行\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\services\\profit-service.ts",
+    "line": 107,
+    "code": "for (const val of batchValues) {",
+    "context": "  // PERF: 批量 INSERT ... ON CONFLICT DO UPDATE (替代逐行 INSERT)\r\n  if (batchValues.length > 0) {\r\n    for (const val of batchValues) {\r\n      await db\r\n        .insert(financeProfitRecords)\r\n        .values(val)\r\n        .onConflictDoUpdate({\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\services\\vendor-sync\\sync-engine.ts",
+    "line": 192,
+    "code": "for (const update of vendorModelsToUpdate) {",
+    "context": "      \r\n      if (vendorModelsToUpdate.length > 0) {\r\n        for (const update of vendorModelsToUpdate) {\r\n          await db.update(vendorModels)\r\n            .set(update.values)\r\n            .where(eq(vendorModels.id, update.id));\r\n        }\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\__tests__\\chain-scenarios.test.ts",
+    "line": 467,
+    "code": "for (const [label, q] of Object.entries(qs)) {",
+    "context": "    };\r\n    console.log(`\\n═══ 测试数据 (${today}) ═══`);\r\n    for (const [label, q] of Object.entries(qs)) {\r\n      try {\r\n        const r = await db.execute(q);\r\n        console.log(`  ${label}: ${JSON.stringify(r.rows)}`);\r\n      } catch (e: any) { console.log(`  ${label}: ${e.message?.slice(0, 80)}`); }\r"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\test-db-simple.js",
+    "line": 42,
+    "code": "for (const [name, query] of Object.entries(queries)) {",
+    "context": "    const results = {};\n    \n    for (const [name, query] of Object.entries(queries)) {\n      console.log(`\\nRunning ${name} query...`);\n      const result = await client.query(query);\n      results[name] = result.rows;\n      console.log(`✓ Found ${result.rows.length} ${name}`);"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\test-sim\\phases\\5-tokens.ts",
+    "line": 145,
+    "code": "for (const val of callV) {",
+    "context": "    } catch (err: any) {\r\n      // Try smaller batch\r\n      for (const val of callV) {\r\n        try {\r\n          await db.execute(sql.raw(`\r\n            INSERT INTO call_logs (user_id, model_id, vendor_model_id, vendor_name, model_name, prompt_tokens, completion_tokens, total_tokens, cost, duration_ms, status, is_streaming, ip, user_agent, created_at)\r\n            VALUES ${val}\r"
+  }
+]

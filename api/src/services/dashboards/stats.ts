@@ -6,6 +6,7 @@
 import { eq, and, gte, lt, sql } from "drizzle-orm";
 import type { Redis } from "ioredis";
 import { users, callLogs, rechargeOrders, vendors, vendorModels, models, agents, agents as agentsTable, balanceLogs, securityEvents, withdrawOrders } from "../../db/schema.js";
+import { getRedis } from "../../redis.js";
 
 export interface StatsResult {
   code: number;
@@ -33,6 +34,18 @@ export interface StatsResult {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function buildStats(db: any, _redis: Redis): Promise<StatsResult> {
+  // 尝试从 Redis 缓存读取 (60秒 TTL)
+  const redis = getRedis();
+  const cacheKey = 'dashboard:stats:main';
+  
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (error) {
+    console.warn('[Dashboard] Redis缓存读取失败:', error);
+  }
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const todayEnd = new Date(todayStart.getTime() + 86400000);
@@ -121,7 +134,7 @@ export async function buildStats(db: any, _redis: Redis): Promise<StatsResult> {
   // 14. 平台总余额
   const [platformBalance] = await db.select({ total: sql<string>`coalesce(sum(${users.balance}::numeric), 0)` }).from(users).where(sql`${users.deletedAt} IS NULL`);
 
-  return {
+  const result = {
     code: 0,
     data: {
       users: { total: totalUsers.count, todayNew: todayNewUsers.count, yesterdayNew: yesterdayNewUsers.count },
@@ -152,4 +165,13 @@ export async function buildStats(db: any, _redis: Redis): Promise<StatsResult> {
     },
     message: "ok",
   };
+  
+  // 设置 Redis 缓存 (60秒 TTL)
+  try {
+    await redis.setex(cacheKey, 60, JSON.stringify(result));
+  } catch (error) {
+    console.warn('[Dashboard] Redis缓存设置失败:', error);
+  }
+  
+  return result;
 }

@@ -6,6 +6,7 @@ import { getRedis } from "../../../redis.js";
 import { requirePerm, Perm } from "../../../middleware/auth.js";
 import { adminExportUsersQuerySchema } from "../../../schemas.js";
 import type { AdminExportUsersQuery } from "../../../schemas.js";
+import { streamExportCsv, EXPORT_CONFIG } from "../../../utils/stream-export.js";
 
 export async function listRoutes(app: FastifyInstance) {
   // ──────────────────────────────────────────────
@@ -114,7 +115,7 @@ export async function listRoutes(app: FastifyInstance) {
   });
 
   // ──────────────────────────────────────────────
-  //  GET /api/v1/admin/users/export — 导出用户列表 (CSV)
+  //  GET /api/v1/admin/users/export — 导出用户列表 (CSV) - 流式优化
   // ──────────────────────────────────────────────
 
   app.get("/api/v1/admin/users/export", {
@@ -141,58 +142,62 @@ export async function listRoutes(app: FastifyInstance) {
       conditions.push(sql`${users.createdAt} < ${end}`);
     }
 
-    const rows = await db
-      .select({
-        id: users.id,
-        email: users.email,
-        nickname: users.nickname,
-        phone: users.phone,
-        userType: users.userType,
-        role: users.role,
-        status: users.status,
-        balance: users.balance,
-        discountRate: users.discountRate,
-        realNameStatus: users.realNameStatus,
-        realName: users.realName,
-        companyName: users.companyName,
-        emailVerifiedAt: users.emailVerifiedAt,
-        lastLoginAt: users.lastLoginAt,
-        createdAt: users.createdAt,
-      })
-      .from(users)
-      .where(and(...conditions))
-      .orderBy(desc(users.createdAt));
+    const headers = [
+      "ID", "邮箱", "昵称", "手机号", "类型", "角色", "状态", "余额", "折扣", 
+      "实名状态", "姓名", "公司", "邮箱验证", "最后登录", "注册时间"
+    ];
 
-    // 生成 CSV
-    const header = "ID,邮箱,昵称,手机号,类型,角色,状态,余额,折扣,实名状态,姓名,公司,邮箱验证,最后登录,注册时间";
-    const csvRows = rows.map((r) => {
-      const escape = (v: unknown) => {
-        const s = String(v ?? "");
-        return s.includes(",") || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
-      };
-      return [
-        r.id,
-        r.email,
-        escape(r.nickname),
-        escape(r.phone),
-        r.userType,
-        r.role,
-        r.status,
-        r.balance,
-        r.discountRate,
-        r.realNameStatus,
-        escape(r.realName),
-        escape(r.companyName),
-        r.emailVerifiedAt?.toISOString() ?? "",
-        r.lastLoginAt?.toISOString() ?? "",
-        r.createdAt.toISOString(),
-      ].join(",");
-    });
-
-    const csv = "\uFEFF" + [header, ...csvRows].join("\n"); // BOM for Chinese Excel
-
-    reply.header("Content-Type", "text/csv; charset=utf-8");
-    reply.header("Content-Disposition", `attachment; filename="users_export_${Date.now()}.csv"`);
-    reply.status(200).send(csv);
+    await streamExportCsv(
+      reply,
+      {
+        filename: `users_export_${Date.now()}.csv`,
+        maxRows: EXPORT_CONFIG.MAX_EXPORT_ROWS,
+        batchSize: EXPORT_CONFIG.BATCH_SIZE,
+        timeoutMs: EXPORT_CONFIG.TIMEOUT_MS,
+      },
+      async (offset: number, limit: number) => {
+        return await db
+          .select({
+            id: users.id,
+            email: users.email,
+            nickname: users.nickname,
+            phone: users.phone,
+            userType: users.userType,
+            role: users.role,
+            status: users.status,
+            balance: users.balance,
+            discountRate: users.discountRate,
+            realNameStatus: users.realNameStatus,
+            realName: users.realName,
+            companyName: users.companyName,
+            emailVerifiedAt: users.emailVerifiedAt,
+            lastLoginAt: users.lastLoginAt,
+            createdAt: users.createdAt,
+          })
+          .from(users)
+          .where(and(...conditions))
+          .orderBy(desc(users.createdAt))
+          .limit(limit)
+          .offset(offset);
+      },
+      (row: any) => [
+        String(row.id),
+        row.email,
+        row.nickname ?? "",
+        row.phone ?? "",
+        row.userType,
+        row.role,
+        row.status,
+        row.balance,
+        row.discountRate ?? "",
+        row.realNameStatus ?? "",
+        row.realName ?? "",
+        row.companyName ?? "",
+        row.emailVerifiedAt?.toISOString() ?? "",
+        row.lastLoginAt?.toISOString() ?? "",
+        row.createdAt.toISOString(),
+      ],
+      headers
+    );
   });
 }

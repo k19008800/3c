@@ -25,11 +25,42 @@ export const statusColor: Record<string, string> = {
   deleted: 'bg-slate-200 text-slate-500'
 }
 
+// 状态详细说明（hover提示）
+export const statusTooltip: Record<string, string> = {
+  active: '账户正常，已通过邮箱验证，可正常使用 API',
+  disabled: '账户被管理员禁用，无法使用 API 调度',
+  pending: '邮箱未验证 — 用户注册后未点击验证邮件中的链接，无法使用 API 调度',
+  deleted: '账户已注销，不可恢复'
+}
+
 export const realNameLabel: Record<string, string> = {
   approved: '已认证',
   pending_review: '审核中',
   rejected: '已拒绝',
   unverified: '未认证'
+}
+
+// 用户类型映射
+export const userTypeLabel: Record<string, string> = {
+  personal: '个人',
+  enterprise: '企业'
+}
+
+// 风控状态映射
+export const riskLabel: Record<string, string> = {
+  none: '-',
+  low: '低风险',
+  medium: '中风险',
+  high: '高风险',
+  banned: '已封禁'
+}
+
+export const riskColor: Record<string, string> = {
+  none: 'text-slate-500',
+  low: 'text-green-600',
+  medium: 'text-yellow-600',
+  high: 'text-orange-600',
+  banned: 'text-red-600'
 }
 
 export function fmt(v: string | null | undefined): string {

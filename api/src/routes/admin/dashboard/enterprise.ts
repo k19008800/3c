@@ -89,6 +89,15 @@ export async function enterpriseRoutes(app: FastifyInstance) {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterdayStart = new Date(todayStart.getTime() - 86400000);
 
+    // 【优化】先获取所有企业用户 ID，避免后续查询中的重复子查询
+    const enterpriseUsers = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(
+        and(eq(users.userType, "enterprise"), sql`${users.deletedAt} IS NULL`)
+      );
+    const enterpriseUserIds = enterpriseUsers.map(u => u.id);
+
     const [enterpriseStats] = await db
       .select({
         total: sql<number>`count(*)::int`,
@@ -106,54 +115,64 @@ export async function enterpriseRoutes(app: FastifyInstance) {
         and(eq(users.userType, "enterprise"), gte(users.createdAt, monthStart), sql`${users.deletedAt} IS NULL`)
       );
 
-    const [activeEnterprises] = await db
-      .select({ count: sql<number>`count(DISTINCT ${callLogs.userId})::int` })
-      .from(callLogs)
-      .where(
-        and(
-          gte(callLogs.createdAt, monthStart),
-          sql`${callLogs.userId} IN (SELECT id FROM ${users} WHERE user_type = 'enterprise' AND deleted_at IS NULL)`
-        )
-      );
+    // 【优化】使用预获取的企业用户 ID 列表，避免子查询
+    const activeEnterprises = enterpriseUserIds.length > 0
+      ? await db
+          .select({ count: sql<number>`count(DISTINCT ${callLogs.userId})::int` })
+          .from(callLogs)
+          .where(
+            and(
+              gte(callLogs.createdAt, monthStart),
+              inArray(callLogs.userId, enterpriseUserIds)
+            )
+          )
+      : { count: 0 };
 
-    const [monthConsumption] = await db
-      .select({
-        totalCalls: sql<number>`count(*)::int`,
-        totalCost: sql<string>`coalesce(sum(${callLogs.cost}::numeric), 0)`,
-        totalTokens: sql<number>`coalesce(sum(${callLogs.totalTokens}), 0)::bigint`,
-      })
-      .from(callLogs)
-      .where(
-        and(
-          gte(callLogs.createdAt, monthStart),
-          sql`${callLogs.userId} IN (SELECT id FROM ${users} WHERE user_type = 'enterprise' AND deleted_at IS NULL)`
-        )
-      );
+    // 【优化】使用预获取的企业用户 ID 列表
+    const monthConsumption = enterpriseUserIds.length > 0
+      ? await db
+          .select({
+            totalCalls: sql<number>`count(*)::int`,
+            totalCost: sql<string>`coalesce(sum(${callLogs.cost}::numeric), 0)`,
+            totalTokens: sql<number>`coalesce(sum(${callLogs.totalTokens}), 0)::bigint`,
+          })
+          .from(callLogs)
+          .where(
+            and(
+              gte(callLogs.createdAt, monthStart),
+              inArray(callLogs.userId, enterpriseUserIds)
+            )
+          )
+      : { totalCalls: 0, totalCost: "0", totalTokens: 0 };
 
-    const [monthRecharge] = await db
-      .select({
-        count: sql<number>`count(*)::int`,
-        total: sql<string>`coalesce(sum(${rechargeOrders.amount}::numeric), 0)`,
-      })
-      .from(rechargeOrders)
-      .where(
-        and(
-          gte(rechargeOrders.createdAt, monthStart),
-          eq(rechargeOrders.status, "paid"),
-          sql`${rechargeOrders.userId} IN (SELECT id FROM ${users} WHERE user_type = 'enterprise' AND deleted_at IS NULL)`
-        )
-      );
+    const monthRecharge = enterpriseUserIds.length > 0
+      ? await db
+          .select({
+            count: sql<number>`count(*)::int`,
+            total: sql<string>`coalesce(sum(${rechargeOrders.amount}::numeric), 0)`,
+          })
+          .from(rechargeOrders)
+          .where(
+            and(
+              gte(rechargeOrders.createdAt, monthStart),
+              eq(rechargeOrders.status, "paid"),
+              inArray(rechargeOrders.userId, enterpriseUserIds)
+            )
+          )
+      : { count: 0, total: "0" };
 
-    const [yesterdayConsumption] = await db
-      .select({ totalCost: sql<string>`coalesce(sum(${callLogs.cost}::numeric), 0)` })
-      .from(callLogs)
-      .where(
-        and(
-          gte(callLogs.createdAt, yesterdayStart),
-          lt(callLogs.createdAt, todayStart),
-          sql`${callLogs.userId} IN (SELECT id FROM ${users} WHERE user_type = 'enterprise' AND deleted_at IS NULL)`
-        )
-      );
+    const yesterdayConsumption = enterpriseUserIds.length > 0
+      ? await db
+          .select({ totalCost: sql<string>`coalesce(sum(${callLogs.cost}::numeric), 0)` })
+          .from(callLogs)
+          .where(
+            and(
+              gte(callLogs.createdAt, yesterdayStart),
+              lt(callLogs.createdAt, todayStart),
+              inArray(callLogs.userId, enterpriseUserIds)
+            )
+          )
+      : { totalCost: "0" };
 
     const [lowBalance] = await db
       .select({ count: sql<number>`count(*)::int` })
@@ -193,18 +212,18 @@ export async function enterpriseRoutes(app: FastifyInstance) {
       data: {
         totalEnterprises: enterpriseStats.total,
         totalBalance: enterpriseStats.totalBalance,
-        monthNewEnterprises: monthNew.count,
-        activeEnterprises: activeEnterprises.count,
+        monthNewEnterprises: (Array.isArray(monthNew) ? monthNew[0]?.count : monthNew.count) || 0,
+        activeEnterprises: (Array.isArray(activeEnterprises) ? activeEnterprises[0]?.count : activeEnterprises.count) || 0,
         monthConsumption: {
-          totalCalls: monthConsumption.totalCalls,
-          totalCost: monthConsumption.totalCost,
-          totalTokens: Number(monthConsumption.totalTokens),
+          totalCalls: (Array.isArray(monthConsumption) ? monthConsumption[0]?.totalCalls : monthConsumption.totalCalls) || 0,
+          totalCost: (Array.isArray(monthConsumption) ? monthConsumption[0]?.totalCost : monthConsumption.totalCost) || '0',
+          totalTokens: Number((Array.isArray(monthConsumption) ? monthConsumption[0]?.totalTokens : monthConsumption.totalTokens) || 0),
         },
         monthRecharge: {
-          count: monthRecharge.count,
-          total: monthRecharge.total,
+          count: Array.isArray(monthRecharge) ? monthRecharge[0]?.count : monthRecharge.count,
+          total: Array.isArray(monthRecharge) ? monthRecharge[0]?.total : monthRecharge.total,
         },
-        yesterdayConsumption: yesterdayConsumption.totalCost,
+        yesterdayConsumption: (Array.isArray(yesterdayConsumption) ? yesterdayConsumption[0]?.totalCost : yesterdayConsumption.totalCost) || '0',
         lowBalanceEnterpriseCount: lowBalance.count,
         lowBalanceEnterpriseList: lowBalanceEnterpriseList.map(u => ({
           id: u.id,
@@ -218,7 +237,7 @@ export async function enterpriseRoutes(app: FastifyInstance) {
       message: "ok",
     };
 
-    redis.setex("dashboard:enterprise-overview", 300, JSON.stringify(result)).catch(() => {});
+    redis.setex("dashboard:enterprise-overview", 60, JSON.stringify(result)).catch((err) => { console.error("[Redis Cache Error]", err); });
     reply.send(result);
   });
 
@@ -299,7 +318,7 @@ export async function enterpriseRoutes(app: FastifyInstance) {
       message: "ok",
     };
 
-    redis.setex(cacheKey, 300, JSON.stringify(result)).catch(() => {});
+    redis.setex(cacheKey, 60, JSON.stringify(result)).catch((err) => { console.error("[Redis Cache Error]", err); });
     reply.send(result);
   });
 
@@ -429,7 +448,7 @@ export async function enterpriseRoutes(app: FastifyInstance) {
       message: "ok",
     };
 
-    redis.setex(cacheKey, 300, JSON.stringify(result)).catch(() => {});
+    redis.setex(cacheKey, 60, JSON.stringify(result)).catch((err) => { console.error("[Redis Cache Error]", err); });
     reply.send(result);
   });
 
@@ -498,7 +517,7 @@ export async function enterpriseRoutes(app: FastifyInstance) {
       message: "ok",
     };
 
-    redis.setex(cacheKey, 300, JSON.stringify(result)).catch(() => {});
+    redis.setex(cacheKey, 60, JSON.stringify(result)).catch((err) => { console.error("[Redis Cache Error]", err); });
     reply.send(result);
   });
 }

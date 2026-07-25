@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { get, post } from '@/lib/api'
 import type { AdminUser, PaginatedData } from '@/types'
 
@@ -8,9 +8,17 @@ export interface UsersFilters {
   role: string
 }
 
+export interface UsersStats {
+  totalUsers: number
+  activeUsers: number
+  newThisMonth: number
+  newToday: number
+}
+
 export interface UseUsersReturn {
   users: AdminUser[]
   total: number
+  stats: UsersStats | null
   loading: boolean
   error: string
   page: number
@@ -22,19 +30,22 @@ export interface UseUsersReturn {
   
   // Actions
   setPage: (page: number) => void
+  setPageSize: (pageSize: number) => void
   setFilters: (filters: Partial<UsersFilters>) => void
   toggleSelect: (id: number) => void
   toggleAll: () => void
   handleBatchAction: (action: 'disable' | 'enable') => Promise<void>
   handleExportCSV: () => Promise<void>
   refreshUsers: () => Promise<void>
+  refreshStats: () => Promise<void>
 }
 
 export function useUsers(initialPage = 1, initialPageSize = 20): UseUsersReturn {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [total, setTotal] = useState(0)
+  const [stats, setStats] = useState<UsersStats | null>(null)
   const [page, setPage] = useState(initialPage)
-  const [pageSize, _] = useState(initialPageSize)
+  const [pageSize, setPageSize] = useState(initialPageSize)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filters, setFilters] = useState<UsersFilters>({
@@ -65,9 +76,22 @@ export function useUsers(initialPage = 1, initialPageSize = 20): UseUsersReturn 
     }
   }, [page, pageSize, filters.keyword, filters.status, filters.role])
 
+  const fetchStats = useCallback(async () => {
+    try {
+      const data = await get<UsersStats>('/api/v1/admin/users/stats')
+      setStats(data)
+    } catch (err: any) {
+      console.error('获取统计信息失败:', err)
+    }
+  }, [])
+
   const refreshUsers = useCallback(async () => {
     await fetchUsers()
   }, [fetchUsers])
+
+  const refreshStats = useCallback(async () => {
+    await fetchStats()
+  }, [fetchStats])
 
   const updateFilters = useCallback((newFilters: Partial<UsersFilters>) => {
     setFilters(prev => ({ ...prev, ...newFilters }))
@@ -130,9 +154,16 @@ export function useUsers(initialPage = 1, initialPageSize = 20): UseUsersReturn 
     }
   }, [filters.keyword, filters.status, filters.role])
 
+  // 组件挂载时自动获取数据
+  useEffect(() => {
+    fetchUsers()
+    fetchStats()
+  }, [fetchUsers, fetchStats])
+
   return {
     users,
     total,
+    stats,
     loading,
     error,
     page,
@@ -142,11 +173,16 @@ export function useUsers(initialPage = 1, initialPageSize = 20): UseUsersReturn 
     setSelectedIds,
     totalPages,
     setPage,
+    setPageSize: (newPageSize: number) => {
+      setPageSize(newPageSize)
+      setPage(1) // Reset to first page when page size changes
+    },
     setFilters: updateFilters,
     toggleSelect,
     toggleAll,
     handleBatchAction,
     handleExportCSV,
-    refreshUsers
+    refreshUsers,
+    refreshStats
   }
 }

@@ -144,7 +144,7 @@ export async function handleLoginFailure(
         riskLevel: "high",
         ip,
         detail: { failCount: userCount, banMinutes: cfg.userBanMinutes },
-      }).catch(() => {});
+      }).catch((err) => { console.error("[Redis Cache Error]", err); });
 
       // 获取用户邮箱发通知（异步）
       getUserEmail(userId).then((userEmail) => {
@@ -155,9 +155,9 @@ export async function handleLoginFailure(
             reason: `登录失败次数过多（${userCount}次/分钟）`,
             duration: `${cfg.userBanMinutes} 分钟`,
             unbanAt: new Date(Date.now() + cfg.userBanMinutes * 60_000).toISOString(),
-          }).catch(() => {});
+          }).catch((err) => { console.error("[Redis Cache Error]", err); });
         }
-      }).catch(() => {});
+      }).catch((err) => { console.error("[Redis Cache Error]", err); });
     }
 
     // 超过 24h 阈值 → 封禁 24 小时
@@ -171,7 +171,7 @@ export async function handleLoginFailure(
         riskLevel: "critical",
         ip,
         detail: { failCount: fail24hCount, banMinutes: 1440 },
-      }).catch(() => {});
+      }).catch((err) => { console.error("[Redis Cache Error]", err); });
     }
   }
 }

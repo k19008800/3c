@@ -122,7 +122,7 @@ export async function checkContent(stage: "pre_request" | "post_response", conte
       matchedPattern: rule.pattern,
       stage,
       requestSummary: content.slice(0, 100),
-    }).catch(() => {});
+    }).catch((err) => { console.error("[Redis Cache Error]", err); });
 
     switch (rule.action) {
       case "block":

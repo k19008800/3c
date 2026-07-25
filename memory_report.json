@@ -1,0 +1,1546 @@
+[
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\scripts\\check-redis-keys.ts",
+    "line": 4,
+    "code": "client.on(\"error\", (e: any) => console.error(\"redis err:\", e.message));",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\app\\index.ts",
+    "line": 329,
+    "code": "process.on(\"SIGINT\", () => shutdown(\"SIGINT\"));",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\app\\index.ts",
+    "line": 330,
+    "code": "process.on(\"SIGTERM\", () => shutdown(\"SIGTERM\"));",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\index.ts",
+    "line": 26,
+    "code": "pool.on('error', (err) => {",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\admin.ts",
+    "line": 38,
+    "code": "hashIdx: uniqueIndex(\"admin_api_keys_hash_idx\").on(table.keyHash),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\admin.ts",
+    "line": 39,
+    "code": "statusIdx: index(\"admin_api_keys_status_idx\").on(table.status),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\admin.ts",
+    "line": 60,
+    "code": "keyIdIdx: index(\"admin_key_usage_logs_key_id_idx\").on(table.keyId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\admin.ts",
+    "line": 61,
+    "code": "keyCreatedAtIdx: index(\"admin_key_usage_logs_key_created_at_idx\").on(table.keyId, table.createdAt.desc()),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 57,
+    "code": "userIdIdx: uniqueIndex(\"agents_user_id_idx\").on(table.userId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 58,
+    "code": "parentIdx: index(\"agents_parent_idx\").on(table.parentAgentId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 78,
+    "code": "agentIdIdx: index(\"agent_clients_agent_id_idx\").on(table.agentId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 79,
+    "code": "clientIdx: uniqueIndex(\"agent_clients_client_idx\").on(table.clientUserId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 115,
+    "code": "agentIdCreatedAtIdx: index(\"commission_logs_agent_id_created_at_idx\").on(table.agentId, table.createdAt.desc()),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 116,
+    "code": "statusCreatedAtIdx: index(\"commission_logs_status_created_at_idx\").on(table.status, table.createdAt.desc()),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 117,
+    "code": "agentIdStatusCreatedAtIdx: index(\"commission_logs_agent_status_date_idx\").on(table.agentId, table.status, table.createdAt.desc()),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 118,
+    "code": "voucherNoIdx: index(\"commission_logs_voucher_no_idx\").on(table.voucherNo),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 141,
+    "code": "agentCustomerIdx: uniqueIndex(\"agent_consumption_agent_customer_idx\").on(table.agentId, table.customerUserId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 142,
+    "code": "agentIdIdx: index(\"agent_consumption_agent_id_idx\").on(table.agentId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 180,
+    "code": "agentTypeIdx: uniqueIndex(\"commission_rules_agent_type_idx\").on(table.agentId, table.ruleType),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 226,
+    "code": "agentDateIdx: uniqueIndex(\"comm_rollup_agent_date_idx\").on(table.agentId, table.reportDate),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 227,
+    "code": "dateIdx: index(\"comm_rollup_date_idx\").on(table.reportDate),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 267,
+    "code": "agentIdIdx: index(\"withdraw_orders_agent_id_idx\").on(table.agentId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 268,
+    "code": "statusIdx: index(\"withdraw_orders_status_idx\").on(table.status),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 269,
+    "code": "voucherNoIdx: index(\"withdraw_orders_voucher_no_idx\").on(table.voucherNo),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 294,
+    "code": "agentIdx: index(\"abl_agent_idx\").on(table.agentId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 295,
+    "code": "agentCreatedIdx: index(\"abl_agent_created_idx\").on(table.agentId, table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 296,
+    "code": "balanceTypeIdx: index(\"abl_balance_type_idx\").on(table.balanceType),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\agents.ts",
+    "line": 297,
+    "code": "refCodeIdx: index(\"abl_ref_code_idx\").on(table.refCodeId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\api-keys.ts",
+    "line": 38,
+    "code": "hashIdx: uniqueIndex(\"api_keys_hash_idx\").on(table.keyHash),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\api-keys.ts",
+    "line": 39,
+    "code": "userIdIdx: index(\"api_keys_user_id_idx\").on(table.userId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\api-keys.ts",
+    "line": 40,
+    "code": "statusIdx: index(\"api_keys_status_idx\").on(table.status),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\billing.ts",
+    "line": 80,
+    "code": "userCreatedAtIdx: index(\"call_logs_user_created_at_idx\").on(table.userId, table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\billing.ts",
+    "line": 81,
+    "code": "apiKeyCreatedAtIdx: index(\"call_logs_api_key_created_at_idx\").on(table.apiKeyId, table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\billing.ts",
+    "line": 82,
+    "code": "vendorCreatedAtIdx: index(\"call_logs_vendor_created_at_idx\").on(table.vendorName, table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\billing.ts",
+    "line": 83,
+    "code": "statusCreatedAtIdx: index(\"call_logs_status_created_at_idx\").on(table.status, table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\billing.ts",
+    "line": 84,
+    "code": "modelNameCreatedAtIdx: index(\"call_logs_model_name_created_at_idx\").on(table.modelName, table.createdAt.desc()),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\billing.ts",
+    "line": 85,
+    "code": "createdAtIdx: index(\"call_logs_created_at_idx\").on(table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\billing.ts",
+    "line": 130,
+    "code": "orderNoIdx: uniqueIndex(\"recharge_orders_order_no_idx\").on(table.orderNo),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\billing.ts",
+    "line": 131,
+    "code": "userIdIdx: index(\"recharge_orders_user_id_idx\").on(table.userId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\billing.ts",
+    "line": 132,
+    "code": "userIdCreatedAtIdx: index(\"recharge_orders_user_created_at_idx\").on(table.userId, table.createdAt.desc()),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\billing.ts",
+    "line": 133,
+    "code": "statusIdx: index(\"recharge_orders_status_idx\").on(table.status),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\billing.ts",
+    "line": 155,
+    "code": "userCreatedAtIdx: index(\"balance_logs_user_created_at_idx\").on(table.userId, table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\billing.ts",
+    "line": 156,
+    "code": "typeIdx: index(\"balance_logs_type_idx\").on(table.type),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\billing.ts",
+    "line": 176,
+    "code": "userIdIdx: uniqueIndex(\"user_discounts_user_id_idx\").on(table.userId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\campaigns.ts",
+    "line": 40,
+    "code": "statusIdx: index(\"campaigns_status_idx\").on(table.status),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\campaigns.ts",
+    "line": 41,
+    "code": "createdByIdx: index(\"campaigns_created_by_idx\").on(table.createdBy),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\campaigns.ts",
+    "line": 42,
+    "code": "startEndIdx: index(\"campaigns_start_end_idx\").on(table.startAt, table.endAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\code-templates.ts",
+    "line": 36,
+    "code": "creatorIdx: index(\"code_templates_creator_idx\").on(table.createdByType, table.createdById),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\code-templates.ts",
+    "line": 57,
+    "code": "userIdx: index(\"codenotif_user_idx\").on(table.userId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\code-templates.ts",
+    "line": 58,
+    "code": "statusIdx: index(\"codenotif_status_idx\").on(table.status),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\finance.ts",
+    "line": 59,
+    "code": "reportDateIdx: uniqueIndex(\"daily_recon_summary_date_idx\").on(table.reportDate),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\finance.ts",
+    "line": 60,
+    "code": "balancedIdx: index(\"daily_recon_summary_balanced_idx\").on(table.isBalanced),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\finance.ts",
+    "line": 88,
+    "code": "periodIdx: index(\"fin_cost_period_idx\").on(table.period),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\finance.ts",
+    "line": 89,
+    "code": "costTypeIdx: index(\"fin_cost_type_idx\").on(table.costType),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\finance.ts",
+    "line": 90,
+    "code": "campaignIdx: index(\"fin_cost_campaign_idx\").on(table.campaignId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\finance.ts",
+    "line": 91,
+    "code": "agentIdx: index(\"fin_cost_agent_idx\").on(table.agentId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\finance.ts",
+    "line": 92,
+    "code": "statusIdx: index(\"fin_cost_status_idx\").on(table.status),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\finance.ts",
+    "line": 118,
+    "code": "uniquePeriodVm: uniqueIndex(\"fin_profit_period_vm_idx\").on(table.period, table.vendorModelId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\finance.ts",
+    "line": 119,
+    "code": "periodIdx: index(\"fin_profit_period_idx\").on(table.period),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\finance.ts",
+    "line": 120,
+    "code": "modelIdx: index(\"fin_profit_model_idx\").on(table.modelId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\finance.ts",
+    "line": 121,
+    "code": "vendorIdx: index(\"fin_profit_vendor_idx\").on(table.vendorId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\finance.ts",
+    "line": 141,
+    "code": "targetIdx: index(\"pch_target_idx\").on(table.targetType, table.targetId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\finance.ts",
+    "line": 142,
+    "code": "createdIdx: index(\"pch_created_idx\").on(table.createdAt.desc()),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\finance.ts",
+    "line": 184,
+    "code": "invUserIdIdx: index(\"inv_user_idx\").on(table.userId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\finance.ts",
+    "line": 185,
+    "code": "invStatusIdx: index(\"inv_status_idx\").on(table.status),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\finance.ts",
+    "line": 186,
+    "code": "invCreatedIdx: index(\"inv_created_idx\").on(table.createdAt.desc()),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\finance.ts",
+    "line": 216,
+    "code": "refUserIdIdx: index(\"ref_user_idx\").on(table.userId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\finance.ts",
+    "line": 217,
+    "code": "refStatusIdx: index(\"ref_status_idx\").on(table.status),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\notification.ts",
+    "line": 34,
+    "code": "userIdCreatedAtIdx: index(\"user_notifications_user_id_created_at_idx\").on(table.userId, table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\notification.ts",
+    "line": 35,
+    "code": "unreadIdx: index(\"user_notifications_unread_idx\").on(table.userId, table.readAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\prompt-audit.ts",
+    "line": 58,
+    "code": "userIdIdx: index(\"prompt_audit_user_idx\").on(table.userId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\prompt-audit.ts",
+    "line": 59,
+    "code": "apiKeyIdx: index(\"prompt_audit_api_key_idx\").on(table.apiKeyId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\prompt-audit.ts",
+    "line": 60,
+    "code": "modelNameIdx: index(\"prompt_audit_model_idx\").on(table.modelName),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\prompt-audit.ts",
+    "line": 61,
+    "code": "promptHashIdx: index(\"prompt_audit_hash_idx\").on(table.promptHash),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\prompt-audit.ts",
+    "line": 62,
+    "code": "isSensitiveIdx: index(\"prompt_audit_sensitive_idx\").on(table.isSensitive),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\prompt-audit.ts",
+    "line": 63,
+    "code": "auditStatusIdx: index(\"prompt_audit_status_idx\").on(table.auditStatus),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\prompt-audit.ts",
+    "line": 64,
+    "code": "createdAtIdx: index(\"prompt_audit_created_idx\").on(table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\prompt-audit.ts",
+    "line": 86,
+    "code": "wordIdx: index(\"sensitive_words_word_idx\").on(table.word),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\prompt-audit.ts",
+    "line": 87,
+    "code": "categoryIdx: index(\"sensitive_words_category_idx\").on(table.category),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\prompt-audit.ts",
+    "line": 88,
+    "code": "enabledIdx: index(\"sensitive_words_enabled_idx\").on(table.enabled),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\quotas.ts",
+    "line": 50,
+    "code": "userIdIdx: index(\"user_quotas_user_id_idx\").on(table.userId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\quotas.ts",
+    "line": 51,
+    "code": "userIdTypePeriodIdx: index(\"user_quotas_user_type_period_idx\").on(table.userId, table.quotaType, table.periodStart),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\quotas.ts",
+    "line": 52,
+    "code": "activeIdx: index(\"user_quotas_active_idx\").on(table.userId, table.quotaType, table.periodEnd),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\quotas.ts",
+    "line": 75,
+    "code": "apiKeyIdIdx: uniqueIndex(\"key_quotas_api_key_id_idx\").on(table.apiKeyId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\redemption.ts",
+    "line": 45,
+    "code": "creatorIdIdx: index(\"redemption_batches_creator_id_idx\").on(table.creatorId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\redemption.ts",
+    "line": 46,
+    "code": "statusIdx: index(\"redemption_batches_status_idx\").on(table.status),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\redemption.ts",
+    "line": 47,
+    "code": "expiresAtIdx: index(\"redemption_batches_expires_at_idx\").on(table.expiresAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\redemption.ts",
+    "line": 68,
+    "code": "codeIdx: uniqueIndex(\"redemption_codes_code_idx\").on(table.code),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\redemption.ts",
+    "line": 69,
+    "code": "batchIdIdx: index(\"redemption_codes_batch_id_idx\").on(table.batchId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\redemption.ts",
+    "line": 70,
+    "code": "statusIdx: index(\"redemption_codes_status_idx\").on(table.status),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\redemption.ts",
+    "line": 92,
+    "code": "codeIdIdx: index(\"redemption_logs_code_id_idx\").on(table.codeId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\redemption.ts",
+    "line": 93,
+    "code": "userIdIdx: index(\"redemption_logs_user_id_idx\").on(table.userId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\redemption.ts",
+    "line": 94,
+    "code": "userCreatedAtIdx: index(\"redemption_logs_user_created_at_idx\").on(table.userId, table.createdAt.desc()),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\redemption.ts",
+    "line": 118,
+    "code": "eventTypeIdx: index(\"redeem_fraud_events_type_idx\").on(table.eventType),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\redemption.ts",
+    "line": 119,
+    "code": "ipIdx: index(\"redeem_fraud_events_ip_idx\").on(table.ip),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\redemption.ts",
+    "line": 120,
+    "code": "severityIdx: index(\"redeem_fraud_events_severity_idx\").on(table.severity),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\redemption.ts",
+    "line": 121,
+    "code": "acknowledgedIdx: index(\"redeem_fraud_events_ack_idx\").on(table.acknowledged),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\redemption.ts",
+    "line": 122,
+    "code": "createdAtIdx: index(\"redeem_fraud_events_created_at_idx\").on(table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\redemption.ts",
+    "line": 141,
+    "code": "fromUserIdIdx: index(\"gift_logs_from_user_id_idx\").on(table.fromUserId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\redemption.ts",
+    "line": 142,
+    "code": "toUserIdIdx: index(\"gift_logs_to_user_id_idx\").on(table.toUserId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\redemption.ts",
+    "line": 143,
+    "code": "batchIdIdx: index(\"gift_logs_batch_id_idx\").on(table.batchId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\redemption.ts",
+    "line": 144,
+    "code": "createdAtIdx: index(\"gift_logs_created_at_idx\").on(table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\roles.ts",
+    "line": 32,
+    "code": "nameIdx: index(\"admin_roles_name_idx\").on(table.name),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\roles.ts",
+    "line": 33,
+    "code": "systemIdx: index(\"admin_roles_is_system_idx\").on(table.isSystem),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\roles.ts",
+    "line": 45,
+    "code": "uniquePair: uniqueIndex(\"user_role_assignments_user_role_idx\").on(table.userId, table.adminRoleId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\roles.ts",
+    "line": 46,
+    "code": "userIdIdx: index(\"user_role_assignments_user_id_idx\").on(table.userId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\roles.ts",
+    "line": 47,
+    "code": "roleIdIdx: index(\"user_role_assignments_role_id_idx\").on(table.adminRoleId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\security.ts",
+    "line": 39,
+    "code": "keyIdx: uniqueIndex(\"login_security_configs_key_idx\").on(table.key),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\security.ts",
+    "line": 63,
+    "code": "userIdIdx: index(\"security_events_user_id_idx\").on(table.userId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\security.ts",
+    "line": 64,
+    "code": "typeIdx: index(\"security_events_type_idx\").on(table.eventType),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\security.ts",
+    "line": 65,
+    "code": "createdAtIdx: index(\"security_events_created_at_idx\").on(table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\security.ts",
+    "line": 66,
+    "code": "riskIdx: index(\"security_events_risk_idx\").on(table.riskLevel),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\security.ts",
+    "line": 67,
+    "code": "unacknowledgedIdx: index(\"security_events_unack_idx\").on(table.acknowledged),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\security.ts",
+    "line": 92,
+    "code": "tokenIdx: uniqueIndex(\"sessions_token_idx\").on(table.sessionToken),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\security.ts",
+    "line": 93,
+    "code": "activeSessionIdx: index(\"sessions_active_idx\").on(table.userId, table.isActive),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\security.ts",
+    "line": 94,
+    "code": "userIdIdx: index(\"sessions_user_id_idx\").on(table.userId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\security.ts",
+    "line": 122,
+    "code": "eventTypeIdx: index(\"auto_rules_event_type_idx\").on(table.eventType),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\security.ts",
+    "line": 123,
+    "code": "enabledIdx: index(\"auto_rules_enabled_idx\").on(table.enabled),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\security.ts",
+    "line": 144,
+    "code": "vendorModelIdIdx: index(\"circuit_history_vm_id_idx\").on(table.vendorModelId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\security.ts",
+    "line": 145,
+    "code": "createdAtIdx: index(\"circuit_history_created_at_idx\").on(table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\security.ts",
+    "line": 173,
+    "code": "statusIdx: index(\"content_filters_status_idx\").on(table.status),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\security.ts",
+    "line": 174,
+    "code": "stageIdx: index(\"content_filters_stage_idx\").on(table.stage),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\security.ts",
+    "line": 196,
+    "code": "filterIdIdx: index(\"filter_logs_filter_idx\").on(table.filterId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\security.ts",
+    "line": 197,
+    "code": "createdAtIdx: index(\"filter_logs_created_idx\").on(table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\security.ts",
+    "line": 198,
+    "code": "actionIdx: index(\"filter_logs_action_idx\").on(table.action),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\system.ts",
+    "line": 43,
+    "code": "operatorIdx: index(\"audit_logs_operator_idx\").on(table.operatorId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\system.ts",
+    "line": 44,
+    "code": "actionIdx: index(\"audit_logs_action_idx\").on(table.action),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\system.ts",
+    "line": 45,
+    "code": "targetIdx: index(\"audit_logs_target_idx\").on(table.targetType, table.targetId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\system.ts",
+    "line": 46,
+    "code": "targetCreatedAtIdx: index(\"audit_logs_target_created_at_idx\").on(table.targetType, table.targetId, table.createdAt.desc()),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\system.ts",
+    "line": 47,
+    "code": "createdAtIdx: index(\"audit_logs_created_at_idx\").on(table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\system.ts",
+    "line": 85,
+    "code": "userTimeIdx: index(\"oplog_user_time_idx\").on(table.userId, table.createdAt.desc()),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\system.ts",
+    "line": 86,
+    "code": "categoryTimeIdx: index(\"oplog_category_time_idx\").on(table.category, table.createdAt.desc()),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\system.ts",
+    "line": 87,
+    "code": "actionTimeIdx: index(\"oplog_action_time_idx\").on(table.action, table.createdAt.desc()),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\system.ts",
+    "line": 88,
+    "code": "statusTimeIdx: index(\"oplog_status_time_idx\").on(table.status, table.createdAt.desc()),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\system.ts",
+    "line": 89,
+    "code": "targetIdx: index(\"oplog_target_idx\").on(table.targetType, table.targetId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\system.ts",
+    "line": 90,
+    "code": "createdAtIdx: index(\"oplog_created_at_idx\").on(table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\system.ts",
+    "line": 108,
+    "code": "keyIdx: uniqueIndex(\"system_configs_key_idx\").on(table.key),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\system.ts",
+    "line": 126,
+    "code": "nameIdx: uniqueIndex(\"email_templates_name_idx\").on(table.name),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\system.ts",
+    "line": 147,
+    "code": "slugIdx: uniqueIndex(\"page_contents_slug_idx\").on(table.slug),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\system.ts",
+    "line": 166,
+    "code": "userPageIdx: uniqueIndex(\"user_prefs_user_page_idx\").on(table.userId, table.pageKey),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\system.ts",
+    "line": 187,
+    "code": "statusIdx: index(\"announcements_status_idx\").on(table.status),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\system.ts",
+    "line": 188,
+    "code": "createdAtIdx: index(\"announcements_created_at_idx\").on(table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\users.ts",
+    "line": 88,
+    "code": "emailIdx: uniqueIndex(\"users_email_idx\").on(table.email),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\users.ts",
+    "line": 89,
+    "code": "statusIdx: index(\"users_status_idx\").on(table.status),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\users.ts",
+    "line": 90,
+    "code": "realNameStatusIdx: index(\"users_real_name_status_idx\").on(table.realNameStatus),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\users.ts",
+    "line": 111,
+    "code": "userIdIdx: uniqueIndex(\"admin_accounts_user_id_idx\").on(table.userId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\users.ts",
+    "line": 112,
+    "code": "roleIdx: index(\"admin_accounts_role_idx\").on(table.role),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\users.ts",
+    "line": 133,
+    "code": "userIdIdx: index(\"user_role_history_user_id_idx\").on(table.userId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\users.ts",
+    "line": 134,
+    "code": "createdAtIdx: index(\"user_role_history_created_at_idx\").on(table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\users.ts",
+    "line": 157,
+    "code": "userProviderIdx: uniqueIndex(\"user_oauth_user_provider_idx\").on(table.userId, table.provider),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\users.ts",
+    "line": 158,
+    "code": "providerUserIdx: uniqueIndex(\"user_oauth_provider_user_idx\").on(table.provider, table.providerUserId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\users.ts",
+    "line": 181,
+    "code": "userIdCreatedAtIdx: index(\"user_login_history_user_created_at_idx\").on(table.userId, table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\users.ts",
+    "line": 182,
+    "code": "createdAtIdx: index(\"user_login_history_created_at_idx\").on(table.createdAt),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\users.ts",
+    "line": 183,
+    "code": "cityIdx: index(\"user_login_history_city_idx\").on(table.city),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\users.ts",
+    "line": 204,
+    "code": "userIdIdx: index(\"user_notes_user_id_idx\").on(table.userId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\users.ts",
+    "line": 224,
+    "code": "userIdIpIdx: uniqueIndex(\"user_ip_whitelist_user_id_ip_idx\").on(table.userId, table.ip),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\users.ts",
+    "line": 260,
+    "code": "userIdVersionIdx: uniqueIndex(\"user_real_name_user_version_idx\").on(table.userId, table.version),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\users.ts",
+    "line": 261,
+    "code": "userIdIdx: index(\"user_real_name_user_id_idx\").on(table.userId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\users.ts",
+    "line": 262,
+    "code": "statusIdx: index(\"user_real_name_status_idx\").on(table.status),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\vendors.ts",
+    "line": 54,
+    "code": "nameIdx: uniqueIndex(\"vendors_name_idx\").on(table.name),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\vendors.ts",
+    "line": 55,
+    "code": "userIdIdx: index(\"vendors_user_id_idx\").on(table.userId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\vendors.ts",
+    "line": 74,
+    "code": "nameIdx: uniqueIndex(\"models_name_idx\").on(table.name),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\vendors.ts",
+    "line": 75,
+    "code": "typeStatusIdx: index(\"models_type_status_idx\").on(table.type, table.status),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\vendors.ts",
+    "line": 121,
+    "code": "vendorModelIdx: uniqueIndex(\"vendor_models_vendor_model_idx\").on(table.vendorId, table.modelId).where(sql`status = true`),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\vendors.ts",
+    "line": 122,
+    "code": "modelIdIdx: index(\"vendor_models_model_id_idx\").on(table.modelId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\vendors.ts",
+    "line": 123,
+    "code": "vendorDownIdx: index(\"vendor_models_vendor_down_idx\").on(table.vendorId, table.isDown),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\vendors.ts",
+    "line": 142,
+    "code": "vendorIdIdx: index(\"key_groups_vendor_idx\").on(table.vendorId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\vendors.ts",
+    "line": 175,
+    "code": "groupIdIdx: index(\"key_group_items_group_idx\").on(table.groupId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\vendors.ts",
+    "line": 198,
+    "code": "uniqueKeyModel: uniqueIndex(\"key_model_prices_key_model_idx\").on(table.keyGroupItemId, table.vendorModelId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\vendors.ts",
+    "line": 199,
+    "code": "modelIdx: index(\"key_model_prices_model_idx\").on(table.vendorModelId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\vendors.ts",
+    "line": 219,
+    "code": "hashIdx: uniqueIndex(\"vendor_api_keys_hash_idx\").on(table.keyHash),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\db\\schema\\vendors.ts",
+    "line": 220,
+    "code": "vendorIdIdx: index(\"vendor_api_keys_vendor_id_idx\").on(table.vendorId),",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\redis.ts",
+    "line": 25,
+    "code": "redis.on(\"error\", (err) => {",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\redis.ts",
+    "line": 29,
+    "code": "redis.on(\"connect\", () => {",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\routes\\admin\\dashboard\\enterprise.ts",
+    "line": 302,
+    "code": "redis.setex(cacheKey, 300, JSON.stringify(result)).catch(() => {});",
+    "issue": "Cache without expiry",
+    "severity": "LOW",
+    "recommendation": "Add TTL or LRU eviction policy"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\routes\\admin\\dashboard\\enterprise.ts",
+    "line": 432,
+    "code": "redis.setex(cacheKey, 300, JSON.stringify(result)).catch(() => {});",
+    "issue": "Cache without expiry",
+    "severity": "LOW",
+    "recommendation": "Add TTL or LRU eviction policy"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\routes\\admin\\dashboard\\enterprise.ts",
+    "line": 501,
+    "code": "redis.setex(cacheKey, 300, JSON.stringify(result)).catch(() => {});",
+    "issue": "Cache without expiry",
+    "severity": "LOW",
+    "recommendation": "Add TTL or LRU eviction policy"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\routes\\admin\\dashboard\\scheduling.ts",
+    "line": 167,
+    "code": "redis.setex(cacheKey, 10, JSON.stringify(result)).catch(() => {});",
+    "issue": "Cache without expiry",
+    "severity": "LOW",
+    "recommendation": "Add TTL or LRU eviction policy"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\routes\\admin\\dashboard\\trends.ts",
+    "line": 514,
+    "code": "redis.setex(cacheKey, 300, JSON.stringify(trendsResult)).catch(() => {});",
+    "issue": "Cache without expiry",
+    "severity": "LOW",
+    "recommendation": "Add TTL or LRU eviction policy"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\routes\\admin\\dashboard\\trends.ts",
+    "line": 581,
+    "code": "redis.setex(cacheKey, 300, JSON.stringify(result)).catch(() => {});",
+    "issue": "Cache without expiry",
+    "severity": "LOW",
+    "recommendation": "Add TTL or LRU eviction policy"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\routes\\proxy\\forward.ts",
+    "line": 1025,
+    "code": "request.raw.on(\"close\", () => {",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\routes\\proxy\\forward.ts",
+    "line": 1041,
+    "code": "nodeStream.on(\"end\", resolve);",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\routes\\proxy\\forward.ts",
+    "line": 1043,
+    "code": "nodeStream.on(\"error\", (err) => {",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\routes\\rate-limit-ws.ts",
+    "line": 104,
+    "code": "socket.on(\"close\", () => {",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\routes\\rate-limit-ws.ts",
+    "line": 155,
+    "code": "socket.on(\"close\", () => {",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\services\\agent-finance\\dashboard.ts",
+    "line": 111,
+    "code": "redis.setex(cacheKey, 60, JSON.stringify(result)).catch(() => {});",
+    "issue": "Cache without expiry",
+    "severity": "LOW",
+    "recommendation": "Add TTL or LRU eviction policy"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\services\\dashboards\\cache-warmup.ts",
+    "line": 28,
+    "code": "setTimeout(async () => {",
+    "issue": "Timer without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Store timer ID and clear in cleanup phase"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\services\\retry-fetch.ts",
+    "line": 70,
+    "code": "signal.addEventListener('abort', () => controller.abort(signal.reason), { once: true })",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\__tests__\\stress-full-flow.test.ts",
+    "line": 590,
+    "code": "const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));",
+    "issue": "Timer without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Store timer ID and clear in cleanup phase"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\test-sim\\pressure\\mock-upstream.ts",
+    "line": 31,
+    "code": "req.on(\"data\", (chunk) => (body += chunk));",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\test-sim\\pressure\\mock-upstream.ts",
+    "line": 32,
+    "code": "req.on(\"end\", () => {",
+    "issue": "Event listener without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Add cleanup logic to remove listeners"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\test-sim\\pressure\\mock-upstream.ts",
+    "line": 41,
+    "code": "setTimeout(() => {",
+    "issue": "Timer without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Store timer ID and clear in cleanup phase"
+  },
+  {
+    "file": "C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\test-sim\\pressure\\pressure-test.ts",
+    "line": 28,
+    "code": "return new Promise((r) => setTimeout(r, ms));",
+    "issue": "Timer without cleanup",
+    "severity": "MEDIUM",
+    "recommendation": "Store timer ID and clear in cleanup phase"
+  }
+]

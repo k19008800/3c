@@ -164,7 +164,7 @@ export async function schedulingRoutes(app: FastifyInstance) {
       message: "ok",
     };
 
-    redis.setex(cacheKey, 10, JSON.stringify(result)).catch(() => {});
+    redis.setex(cacheKey, 10, JSON.stringify(result)).catch((err) => { console.error("[Redis Cache Error]", err); });
     reply.send(result);
   });
 }

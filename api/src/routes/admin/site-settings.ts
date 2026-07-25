@@ -131,6 +131,23 @@ export async function adminSiteSettingsRoutes(app: FastifyInstance) {
       return;
     }
 
+    // ── 校验上传文件是否存在 ──
+    const uploadKeys = ["site_logo_url", "site_favicon_url", "site_wechat_qr_url"];
+    for (const u of updates) {
+      if (uploadKeys.includes(u.key) && u.value) {
+        // 提取文件路径 /uploads/site/xxx.png
+        const filePath = join(UPLOAD_DIR, u.value.replace("/uploads/site/", ""));
+        if (!existsSync(filePath)) {
+          reply.status(400).send({
+            code: 400,
+            data: null,
+            message: `文件不存在: ${u.value}，请先上传文件`,
+          });
+          return;
+        }
+      }
+    }
+
     const beforeSnapshot: Record<string, string> = {};
 
     await db.transaction(async (tx) => {
@@ -191,116 +208,186 @@ export async function adminSiteSettingsRoutes(app: FastifyInstance) {
   app.post("/api/v1/admin/site-settings/upload", {
     preHandler: [requirePerm(Perm.CONFIG_EDIT)],
   }, async (request, reply) => {
-    // 确保上传目录存在
-    if (!existsSync(UPLOAD_DIR)) {
-      mkdirSync(UPLOAD_DIR, { recursive: true });
-    }
+    const uploadLog = {
+      operatorId: (request.user as any)?.id,
+      ip: request.ip,
+      startTime: Date.now(),
+      filename: "",
+      success: false,
+      error: "" as string | undefined,
+    };
 
-    const data = await request.file();
+    try {
+      // 确保上传目录存在
+      if (!existsSync(UPLOAD_DIR)) {
+        mkdirSync(UPLOAD_DIR, { recursive: true });
+      }
 
-    if (!data) {
-      reply.status(400).send({ code: 400, data: null, message: "未上传文件" });
-      return;
-    }
+      // 检查磁盘空间（至少 100MB）
+      const stats = await import("node:fs/promises").then(m => m.statfs(UPLOAD_DIR));
+      const freeMB = (stats.bavail * stats.bsize) / (1024 * 1024);
+      if (freeMB < 100) {
+        uploadLog.error = `磁盘空间不足: 剩余 ${freeMB.toFixed(1)}MB`;
+        console.error("[Upload]", uploadLog);
+        reply.status(507).send({ code: 507, data: null, message: "服务器磁盘空间不足，请联系管理员" });
+        return;
+      }
 
-    if (!ALLOWED_MIME.has(data.mimetype)) {
-      reply.status(400).send({
-        code: 400,
-        data: null,
-        message: `不支持的文件类型: ${data.mimetype}，仅允许图片文件`,
-      });
-      return;
-    }
+      const data = await request.file();
 
-    // 校验文件大小
-    if (data.file.bytesRead > MAX_SIZE_BYTES) {
-      reply.status(400).send({
-        code: 400,
-        data: null,
-        message: "文件大小不能超过 5MB",
-      });
-      return;
-    }
+      if (!data) {
+        uploadLog.error = "未上传文件";
+        console.error("[Upload]", uploadLog);
+        reply.status(400).send({ code: 400, data: null, message: "未上传文件" });
+        return;
+      }
 
-    // 生成唯一文件名
-    const ext = extname(data.filename) || ".png";
-    const filename = `${randomUUID()}${ext}`;
-    const filePath = join(UPLOAD_DIR, filename);
+      uploadLog.filename = data.filename;
 
-    // 写入文件
-    const ws = createWriteStream(filePath);
-    await pipeline(data.file, ws);
+      if (!ALLOWED_MIME.has(data.mimetype)) {
+        uploadLog.error = `不支持的文件类型: ${data.mimetype}`;
+        console.error("[Upload]", uploadLog);
+        reply.status(400).send({
+          code: 400,
+          data: null,
+          message: `不支持的文件类型: ${data.mimetype}，仅允许图片文件`,
+        });
+        return;
+      }
 
-    // 获取 upload_type（multipart 非文件字段是 MultipartValue，通过 .value 读取）
-    const fields = data.fields;
-    const uploadType =
-      fields?.upload_type && typeof fields.upload_type === "object" && "value" in (fields.upload_type as any)
-        ? String((fields.upload_type as any).value)
-        : undefined;
-    const rule = uploadType ? PROCESS_RULES[uploadType] : undefined;
+      // 校验文件大小
+      if (data.file.bytesRead > MAX_SIZE_BYTES) {
+        uploadLog.error = `文件过大: ${data.file.bytesRead} bytes`;
+        console.error("[Upload]", uploadLog);
+        reply.status(400).send({
+          code: 400,
+          data: null,
+          message: "文件大小不能超过 5MB",
+        });
+        return;
+      }
 
-    let width = 0, height = 0, outputSize = 0;
-    let actualFilePath = filePath;
-    let actualFilename = filename;
+      // 生成唯一文件名
+      const ext = extname(data.filename) || ".png";
+      const filename = `${randomUUID()}${ext}`;
+      const filePath = join(UPLOAD_DIR, filename);
 
-    // SVG 无法被 sharp 处理，直接跳过
-    const isVector = data.mimetype === "image/svg+xml" || data.mimetype === "image/x-icon";
-
-    if (rule && !isVector) {
-      // 统一输出为 .png，用临时文件避免 sharp 读写同一路径
-      const pngFilename = filename.replace(/\.\w+$/, "") + ".png";
-      const pngPath = join(UPLOAD_DIR, pngFilename);
-
-      // 用临时文件做输出，再 rename 到最终路径
-      const tmpPath = pngPath + ".tmp";
-
-      const img = sharp(filePath);
-
-      const resizeOpts: ResizeOptions = rule.fit === "cover"
-        ? { width: rule.maxW, height: rule.maxH, fit: "cover", position: "centre", withoutEnlargement: true }
-        : { width: rule.maxW, height: rule.maxH, fit: "inside", withoutEnlargement: true };
-
-      // 缩放到临时文件
-      await img.resize(resizeOpts).png({ quality: 90 }).toFile(tmpPath);
-
-      // 删除原文件（已用不上），rename 临时文件到目标路径
-      try { unlinkSync(filePath); } catch {}
-      try { unlinkSync(pngPath); } catch {}
-      renameSync(tmpPath, pngPath);
-
-      actualFilePath = pngPath;
-      actualFilename = pngFilename;
-
-      const outMeta = await sharp(actualFilePath).metadata();
-      width = outMeta.width ?? 0;
-      height = outMeta.height ?? 0;
-      outputSize = outMeta.size ?? 0;
-    } else {
-      // 无处理规则 / SVG → 仅获取尺寸信息
+      // 写入文件
       try {
-        const meta = await sharp(filePath).metadata();
-        width = meta.width ?? 0;
-        height = meta.height ?? 0;
-        outputSize = (await sharp(filePath).toBuffer()).length;
-      } catch { /* 忽略无法解析的格式 */ }
+        const ws = createWriteStream(filePath);
+        await pipeline(data.file, ws);
+      } catch (writeErr) {
+        uploadLog.error = `文件写入失败: ${writeErr}`;
+        console.error("[Upload]", uploadLog);
+        reply.status(500).send({ code: 500, data: null, message: "文件写入失败，请重试" });
+        return;
+      }
+
+      // 验证文件是否成功写入
+      if (!existsSync(filePath)) {
+        uploadLog.error = "文件写入后不存在";
+        console.error("[Upload]", uploadLog);
+        reply.status(500).send({ code: 500, data: null, message: "文件写入失败，请重试" });
+        return;
+      }
+
+      // 获取 upload_type（multipart 非文件字段是 MultipartValue，通过 .value 读取）
+      const fields = data.fields;
+      const uploadType =
+        fields?.upload_type && typeof fields.upload_type === "object" && "value" in (fields.upload_type as any)
+          ? String((fields.upload_type as any).value)
+          : undefined;
+      const rule = uploadType ? PROCESS_RULES[uploadType] : undefined;
+
+      let width = 0, height = 0, outputSize = 0;
+      let actualFilePath = filePath;
+      let actualFilename = filename;
+
+      // SVG 无法被 sharp 处理，直接跳过
+      const isVector = data.mimetype === "image/svg+xml" || data.mimetype === "image/x-icon";
+
+      if (rule && !isVector) {
+        // 统一输出为 .png，用临时文件避免 sharp 读写同一路径
+        const pngFilename = filename.replace(/\.\w+$/, "") + ".png";
+        const pngPath = join(UPLOAD_DIR, pngFilename);
+
+        // 用临时文件做输出，再 rename 到最终路径
+        const tmpPath = pngPath + ".tmp";
+
+        try {
+          const img = sharp(filePath);
+
+          const resizeOpts: ResizeOptions = rule.fit === "cover"
+            ? { width: rule.maxW, height: rule.maxH, fit: "cover", position: "centre", withoutEnlargement: true }
+            : { width: rule.maxW, height: rule.maxH, fit: "inside", withoutEnlargement: true };
+
+          // 缩放到临时文件
+          await img.resize(resizeOpts).png({ quality: 90 }).toFile(tmpPath);
+
+          // 删除原文件（已用不上），rename 临时文件到目标路径
+          try { unlinkSync(filePath); } catch {}
+          try { unlinkSync(pngPath); } catch {}
+          renameSync(tmpPath, pngPath);
+
+          actualFilePath = pngPath;
+          actualFilename = pngFilename;
+
+          const outMeta = await sharp(actualFilePath).metadata();
+          width = outMeta.width ?? 0;
+          height = outMeta.height ?? 0;
+          outputSize = outMeta.size ?? 0;
+        } catch (sharpErr) {
+          uploadLog.error = `图片处理失败: ${sharpErr}`;
+          console.error("[Upload]", uploadLog);
+          // 清理临时文件
+          try { unlinkSync(filePath); } catch {}
+          try { unlinkSync(tmpPath); } catch {}
+          reply.status(500).send({ code: 500, data: null, message: "图片处理失败，请重试" });
+          return;
+        }
+      } else {
+        // 无处理规则 / SVG → 仅获取尺寸信息
+        try {
+          const meta = await sharp(filePath).metadata();
+          width = meta.width ?? 0;
+          height = meta.height ?? 0;
+          outputSize = (await sharp(filePath).toBuffer()).length;
+        } catch { /* 忽略无法解析的格式 */ }
+      }
+
+      // 最终验证文件存在
+      if (!existsSync(actualFilePath)) {
+        uploadLog.error = "处理后文件不存在";
+        console.error("[Upload]", uploadLog);
+        reply.status(500).send({ code: 500, data: null, message: "文件处理失败，请重试" });
+        return;
+      }
+
+      // 构造 URL
+      const url = `${UPLOAD_PREFIX}/${actualFilename}`;
+
+      uploadLog.success = true;
+      uploadLog.error = undefined;
+      console.log("[Upload]", uploadLog, `耗时: ${Date.now() - uploadLog.startTime}ms`);
+
+      reply.status(200).send({
+        code: 0,
+        data: {
+          url,
+          filename: actualFilename,
+          width,
+          height,
+          size: outputSize || data.file.bytesRead,
+          mimetype: "image/png",  // sharp 输出统一为 PNG
+          originalSize: data.file.bytesRead,
+          processed: !!rule,
+        },
+        message: "上传成功",
+      });
+    } catch (err) {
+      uploadLog.error = `未知错误: ${err}`;
+      console.error("[Upload]", uploadLog);
+      reply.status(500).send({ code: 500, data: null, message: "上传失败，请重试" });
     }
-
-    // 构造 URL
-    const url = `${UPLOAD_PREFIX}/${actualFilename}`;
-
-    reply.status(200).send({
-      code: 0,
-      data: {
-        url,
-        filename,
-        width,
-        height,
-        size: outputSize || data.file.bytesRead,
-        mimetype: "image/png",  // sharp 输出统一为 PNG
-        originalSize: data.file.bytesRead,
-        processed: !!rule,
-      },
-      message: "上传成功",
-    });
   });
 }

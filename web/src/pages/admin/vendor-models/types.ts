@@ -139,10 +139,54 @@ export interface EditModalProps {
 export interface DeleteModalProps {
   item: VendorModel
   onClose: () => void
-  onSuccess: () => void
+  onConfirm: () => void
 }
 
 export interface ModelOptions {
   vendors: Vendor[]
   models: AdminModel[]
+}
+
+/* ── New Components Props ── */
+
+export interface ModelFiltersProps {
+  keyword: string
+  statusFilter: string
+  onKeywordChange: (keyword: string) => void
+  onStatusFilterChange: (statusFilter: string) => void
+}
+
+export interface ModelListProps {
+  items: VendorModel[]
+  loading: boolean
+  total: number
+  page: number
+  totalPages: number
+  onPageChange: (page: number) => void
+  onEdit: (item: VendorModel) => void
+  onDelete: (item: VendorModel) => void
+}
+
+export interface ModelRowProps {
+  item: VendorModel
+  onEdit: (item: VendorModel) => void
+  onDelete: (item: VendorModel) => void
+}
+
+export interface ModelStatsProps {
+  items: VendorModel[]
+}
+
+export interface ModelFormProps {
+  mode: 'create' | 'edit'
+  item?: VendorModel
+  onClose: () => void
+  onSuccess: () => void
+}
+
+export interface DeleteModalProps {
+  item: VendorModel
+  onClose: () => void
+  onConfirm: () => void
+  onSuccess?: () => void
 }

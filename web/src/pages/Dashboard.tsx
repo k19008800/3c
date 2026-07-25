@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import QuickConnectPanel from '@/components/portal/QuickConnectPanel'
@@ -17,6 +17,14 @@ export default function Dashboard() {
   const { user } = useAuth()
   const [timeRange, setTimeRange] = useState<TimeRange>('today')
   const [curlCopied, setCurlCopied] = useState(false)
+  const curlTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 清理 setTimeout
+  useEffect(() => {
+    return () => {
+      if (curlTimeoutRef.current) clearTimeout(curlTimeoutRef.current)
+    }
+  }, [])
 
   const {
     summary,
@@ -52,7 +60,8 @@ export default function Dashboard() {
     try {
       await navigator.clipboard.writeText(curlCmd)
       setCurlCopied(true)
-      setTimeout(() => setCurlCopied(false), 2000)
+      if (curlTimeoutRef.current) clearTimeout(curlTimeoutRef.current)
+      curlTimeoutRef.current = setTimeout(() => setCurlCopied(false), 2000)
     } catch {
       const textarea = document.createElement('textarea')
       textarea.value = curlCmd
@@ -63,7 +72,8 @@ export default function Dashboard() {
       document.execCommand('copy')
       document.body.removeChild(textarea)
       setCurlCopied(true)
-      setTimeout(() => setCurlCopied(false), 2000)
+      if (curlTimeoutRef.current) clearTimeout(curlTimeoutRef.current)
+      curlTimeoutRef.current = setTimeout(() => setCurlCopied(false), 2000)
     }
   }
 

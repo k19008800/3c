@@ -3,13 +3,9 @@ import { Loader2, AlertCircle } from 'lucide-react'
 import { del } from '@/lib/api'
 import type { VendorModel } from '@/types'
 
-interface DeleteModalProps {
-  item: VendorModel
-  onClose: () => void
-  onSuccess: () => void
-}
+import type { DeleteModalProps } from '../types'
 
-export default function DeleteModal({ item, onClose, onSuccess }: DeleteModalProps) {
+export default function DeleteModal({ item, onClose, onConfirm }: DeleteModalProps) {
   const [deleting, setDeleting] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -18,7 +14,7 @@ export default function DeleteModal({ item, onClose, onSuccess }: DeleteModalPro
     setMessage('')
     try {
       await del(`/api/v1/admin/vendor-models/${item.id}`)
-      onSuccess()
+      onConfirm()
     } catch (err: any) {
       setMessage('删除失败：' + (err.message || ''))
     } finally {

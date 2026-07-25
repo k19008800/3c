@@ -17,6 +17,7 @@ import { registerRedemptionScheduler } from "../services/redemption-scheduler.js
 import { setupErrorHandler } from "./error-handler.js";
 import { registerPlugins } from "./plugins.js";
 import { registerRoutes } from "./routes.js";
+import "../middleware/disk-monitor.js"; // 磁盘空间监控
 
 // ══════════════════════════════════════════════
 //  buildApp — 构建 Fastify 实例
@@ -27,9 +28,10 @@ export async function buildApp() {
     trustProxy: true,
     logger: {
       level: config.log.level,
-      transport: config.isDev
-        ? { target: "pino-pretty", options: { colorize: true } }
-        : undefined,
+      // 禁用 pino-pretty（Windows + tsx watch 兼容性问题）
+      // transport: config.isDev
+      //   ? { target: "pino-pretty", options: { colorize: true } }
+      //   : undefined,
     },
   });
 
@@ -87,11 +89,36 @@ function checkSecurityConfig(app: Fastify.FastifyInstance) {
 //  Cron Jobs
 // ══════════════════════════════════════════════
 
-// 定时器句柄集合（用于优雅关闭）
-const timerHandles: { intervals: NodeJS.Timeout[]; timeouts: NodeJS.Timeout[] } = {
-  intervals: [],
-  timeouts: [],
+// 全局定时器注册表（用于优雅关闭）
+const globalTimers = {
+  intervals: new Set<NodeJS.Timeout>(),
+  timeouts: new Set<NodeJS.Timeout>(),
 };
+
+// 包装的定时器函数，确保所有定时器都被注册
+function registerInterval(callback: () => void, ms: number): NodeJS.Timeout {
+  const timer = setInterval(callback, ms);
+  globalTimers.intervals.add(timer);
+  return timer;
+}
+
+function registerTimeout(callback: () => void, ms: number): NodeJS.Timeout {
+  const timer = setTimeout(callback, ms);
+  globalTimers.timeouts.add(timer);
+  return timer;
+}
+
+// 清理所有定时器
+function cleanupTimers() {
+  for (const timer of globalTimers.intervals) {
+    clearInterval(timer);
+  }
+  for (const timer of globalTimers.timeouts) {
+    clearTimeout(timer);
+  }
+  globalTimers.intervals.clear();
+  globalTimers.timeouts.clear();
+}
 
 function registerCronJobs(app: Fastify.FastifyInstance) {
   // ── Commission auto-settlement (by config) ──
@@ -195,17 +222,15 @@ function registerCronJobs(app: Fastify.FastifyInstance) {
   app.log.info("[Cron] Partition cleanup scheduled: daily at 03:30");
 
   // ── 兑换码过期检查（每小时）──
-  const codeExpiryTimeout = setTimeout(async () => {
+  const codeExpiryTimeout = registerTimeout(async () => {
     const { runCodeExpiryCheck } = await import("../cron/code-expiry.js");
     await runCodeExpiryCheck();
   }, 30_000);
-  timerHandles.timeouts.push(codeExpiryTimeout);
 
-  const codeExpiryInterval = setInterval(async () => {
+  const codeExpiryInterval = registerInterval(async () => {
     const { runCodeExpiryCheck } = await import("../cron/code-expiry.js");
     await runCodeExpiryCheck();
   }, 60 * 60 * 1000);
-  timerHandles.intervals.push(codeExpiryInterval);
   app.log.info("[Cron] Code expiry check scheduled: every 1 hour, first run in 30s");
 
   // ── 安全自动规则检查（每 60 秒）──
@@ -226,6 +251,19 @@ function registerCronJobs(app: Fastify.FastifyInstance) {
     }
   });
   app.log.info("[Cron] Monthly quota reset scheduled: 1st day of month at 00:05");
+
+  // ── 孤儿文件清理（每周日 03:00）──
+  cron.schedule("0 3 * * 0", async () => {
+    try {
+      app.log.info("[Cron] 开始清理孤儿上传文件...");
+      const { cleanOrphanUploads } = await import("../cron/clean-uploads.js");
+      const result = await cleanOrphanUploads({ days: 7 });
+      app.log.info(`[Cron] 孤儿文件清理完成: ${result.count} 个文件，${(result.size / 1024 / 1024).toFixed(2)} MB`);
+    } catch (err) {
+      app.log.error({ err }, "[Cron] 孤儿文件清理失败");
+    }
+  });
+  app.log.info("[Cron] Orphan upload cleanup scheduled: every Sunday at 03:00");
 }
 
 // ══════════════════════════════════════════════
@@ -313,13 +351,9 @@ export async function startServer() {
     app.log.info(`Received ${signal}, shutting down...`);
     
     // 清理定时器
-    for (const handle of timerHandles.timeouts) {
-      clearTimeout(handle);
-    }
-    for (const handle of timerHandles.intervals) {
-      clearInterval(handle);
-    }
-    app.log.info(`Cleared ${timerHandles.timeouts.length} timeouts, ${timerHandles.intervals.length} intervals`);
+    // 清理所有定时器
+    cleanupTimers();
+    app.log.info(`Cleared ${globalTimers.intervals.size} intervals, ${globalTimers.timeouts.size} timeouts`);
     
     await app.close();
     await closeDb();

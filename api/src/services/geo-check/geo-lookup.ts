@@ -98,3 +98,85 @@ export async function lookupGeo(ip: string): Promise<GeoInfo | null> {
     return null;
   }
 }
+
+/**
+ * 批量查询 IP 地理信息
+ * 优化方案：批量读取缓存 + 批量查询数据库 + 批量设置缓存
+ */
+export async function lookupGeoBatch(ips: string[]): Promise<Map<string, GeoInfo | null>> {
+  // 去重并过滤内网 IP
+  const uniqueIps = [...new Set(ips)].filter(ip => !isPrivateIP(ip));
+  if (uniqueIps.length === 0) return new Map();
+
+  const redis = getRedis();
+  const resultMap = new Map<string, GeoInfo | null>();
+  
+  // 1. 批量读取 Redis 缓存
+  const cacheKeys = uniqueIps.map(ip => KEY.geoCache(ip));
+  const cachedResults = await redis.mget(...cacheKeys);
+  
+  // 2. 分离已缓存和未缓存的 IP
+  const uncachedIps: string[] = [];
+  
+  cachedResults.forEach((cached, index) => {
+    const ip = uniqueIps[index];
+    if (cached) {
+      try {
+        resultMap.set(ip, JSON.parse(cached));
+      } catch {
+        uncachedIps.push(ip);
+      }
+    } else {
+      uncachedIps.push(ip);
+    }
+  });
+  
+  // 3. 批量查询未缓存的 IP
+  if (uncachedIps.length > 0) {
+    const reader = await getReader();
+    if (reader) {
+      const pipeline = redis.pipeline();
+      
+      for (const ip of uncachedIps) {
+        try {
+          const result = reader.get(ip);
+          if (result) {
+            const geo: GeoInfo = {
+              country: result.country?.iso_code ?? "",
+              countryName: result.country?.names?.zh ?? result.country?.names?.en ?? "",
+              city: result.city?.names?.zh ?? result.city?.names?.en ?? "",
+              latitude: result.location?.latitude ?? 0,
+              longitude: result.location?.longitude ?? 0,
+            };
+            resultMap.set(ip, geo);
+            pipeline.setex(KEY.geoCache(ip), 86400, JSON.stringify(geo));
+          } else {
+            resultMap.set(ip, null);
+          }
+        } catch {
+          resultMap.set(ip, null);
+        }
+      }
+      
+      // 批量设置缓存
+      await pipeline.exec().catch(() => {
+        console.warn("[GeoIP] 批量设置缓存失败");
+      });
+    } else {
+      // 数据库加载失败，全部设为 null
+      uncachedIps.forEach(ip => resultMap.set(ip, null));
+    }
+  }
+  
+  // 4. 返回所有 IP 的结果（包括内网 IP 为 null）
+  const finalMap = new Map<string, GeoInfo | null>();
+  ips.forEach(ip => {
+    if (isPrivateIP(ip)) {
+      finalMap.set(ip, null);
+    } else {
+      finalMap.set(ip, resultMap.get(ip) ?? null);
+    }
+  });
+  
+  return finalMap;
+}

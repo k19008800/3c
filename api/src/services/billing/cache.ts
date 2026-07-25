@@ -20,7 +20,7 @@ export async function getPricingMultiplier(): Promise<number> {
 
 export function clearPricingMultiplierCache() { pricingMultiplierCache = null; }
 
-const discountRateCache = new LRUCache<number, number>(5000, 60_000); // 最多 5000 用户，60s TTL
+const discountRateCache = new LRUCache<number, number>(10000, 300_000); // 最多 10000 用户，300s TTL
 
 export async function getDiscountRate(userId: number): Promise<number> {
   const cached = discountRateCache.get(userId);
@@ -45,7 +45,7 @@ export async function getDiscountRate(userId: number): Promise<number> {
 
 export function clearDiscountRateCache(userId?: number) { if (userId !== undefined) discountRateCache.delete(userId); else discountRateCache.clear(); }
 
-const sellPriceCache = new LRUCache<number, SellPrices>(2000, 60_000); // 最多 2000 模型，60s TTL
+const sellPriceCache = new LRUCache<number, SellPrices>(5000, 300_000); // 最多 5000 模型，300s TTL
 
 export async function getSellPrices(vendorModelId: number): Promise<SellPrices> {
   const cached = sellPriceCache.get(vendorModelId);

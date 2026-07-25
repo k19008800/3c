@@ -9,6 +9,7 @@ import { eq, sql, and, gte, lte } from "drizzle-orm";
 import { sendEmail } from "./email-service.js";
 import { loadSecurityConfig } from "./login-security.js";
 import { getRedis } from "../redis.js";
+import { scanKeys } from "../utils/redis-scan.js";
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
   brute_force: "暴力破解",
@@ -94,18 +95,7 @@ export async function sendDailySecuritySummary(): Promise<boolean> {
       .orderBy(sql`created_at desc`)
       .limit(10);
 
-    // 5. 当前封禁状态（【优化】使用 SCAN 替代 KEYS 避免阻塞）
-    const scanKeys = async (pattern: string): Promise<string[]> => {
-      const keys: string[] = [];
-      let cursor = '0';
-      do {
-        const [nextCursor, batch] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
-        cursor = nextCursor;
-        keys.push(...batch);
-      } while (cursor !== '0');
-      return keys;
-    };
-
+    // 5. 当前封禁状态（使用 SCAN 替代 KEYS 避免阻塞）
     const [ipKeys, userKeys] = await Promise.all([
       scanKeys("risk:ban:ip:*"),
       scanKeys("risk:ban:user:*"),

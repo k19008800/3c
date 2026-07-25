@@ -109,7 +109,7 @@ export async function buildTopConsumers(db: any, redis: Redis): Promise<TopConsu
   };
 
   // PERF: Cache with 120s TTL
-  redis.setex("service:dashboard:top-consumers", 120, JSON.stringify(result)).catch(() => {});
+  redis.setex("service:dashboard:top-consumers", 120, JSON.stringify(result)).catch((err) => { console.error("[Redis Cache Error]", err); });
 
   return result;
 }

@@ -185,7 +185,7 @@ export async function aggregateUsage(
 
   // 写缓存
   if (useCache) {
-    redis.setex(cacheKey, CACHE_TTL, JSON.stringify(result)).catch(() => {});
+    redis.setex(cacheKey, CACHE_TTL, JSON.stringify(result)).catch((err) => { console.error("[Redis Cache Error]", err); });
   }
 
   return result;

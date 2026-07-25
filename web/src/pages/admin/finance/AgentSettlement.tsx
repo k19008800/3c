@@ -4,6 +4,7 @@ import {
   TrendingDown, TrendingUp, Lock, Unlock, Wallet,
 } from 'lucide-react';
 import FeatureDescription from '@/components/admin/FeatureDescription';
+import PaginationBar from '@/components/ui/PaginationBar';
 import api from '@/lib/api';
 
 // ── Types (matches backend response) ──
@@ -77,7 +78,7 @@ const AgentSettlement: React.FC = () => {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
   })
   const [page, setPage] = useState(1)
-  const [pageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(20)
 
   const fetchRecords = useCallback(async () => {
     setLoading(true)
@@ -247,20 +248,14 @@ const AgentSettlement: React.FC = () => {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between text-sm text-gray-500">
-              <span>共 {data.total} 条记录</span>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setPage(Math.max(1, page - 1))}
-                  disabled={page <= 1}
-                  className="px-3 py-1 rounded border border-gray-200 disabled:opacity-30 hover:bg-gray-50"
-                >上一页</button>
-                <span className="px-3 py-1">{page} / {totalPages}</span>
-                <button
-                  onClick={() => setPage(Math.min(totalPages, page + 1))}
-                  disabled={page >= totalPages}
-                  className="px-3 py-1 rounded border border-gray-200 disabled:opacity-30 hover:bg-gray-50"
-                >下一页</button>
-              </div>
+              <PaginationBar
+                page={page}
+                pageSize={pageSize}
+                total={data.total}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                onPageSizeChange={(s) => { setPageSize(s); setPage(1) }}
+              />
             </div>
           )}
         </>

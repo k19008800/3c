@@ -213,7 +213,7 @@ export async function adminFinanceRoutes(app: FastifyInstance) {
   });
 
   // ──────────────────────────────────────────────
-  //  GET /api/v1/admin/finance/reconciliation/export — CSV 导出
+  //  GET /api/v1/admin/finance/reconciliation/export — CSV 导出（流式优化）
   // ──────────────────────────────────────────────
 
   app.get("/api/v1/admin/finance/reconciliation/export", {
@@ -226,15 +226,17 @@ export async function adminFinanceRoutes(app: FastifyInstance) {
         granularity?: string
       };
       const gran = (query.granularity === 'week' || query.granularity === 'month') ? query.granularity : 'day';
-      const csv = await exportReconCsv({
+      
+      // 使用新的流式导出函数
+      const { streamExportReconCsv } = await import("../../services/reconciliation/index.js");
+      
+      await streamExportReconCsv(reply, {
         startDate: query.startDate,
         endDate: query.endDate,
         granularity: gran,
       });
-
-      reply.header('Content-Type', 'text/csv; charset=utf-8');
-      reply.header('Content-Disposition', `attachment; filename="reconciliation_${query.startDate || 'report'}.csv"`);
-      reply.status(200).send(csv);
+      
+      // 注意：streamExportReconCsv 会自己处理响应，这里不需要再 send
     } catch (err: any) {
       if (err instanceof AppError) {
         reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });
@@ -466,7 +468,7 @@ export async function adminFinanceRoutes(app: FastifyInstance) {
   });
 
   // ──────────────────────────────────────────────
-  //  GET /api/v1/admin/withdraws/export — CSV 导出
+  //  GET /api/v1/admin/withdraws/export — CSV 导出（流式优化）
   //  Query: ?status=pending_first_review (可选)
   // ──────────────────────────────────────────────
 
@@ -475,14 +477,18 @@ export async function adminFinanceRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     try {
       const query = request.query as { status?: string };
-      const csv = await exportWithdrawsCsv(query.status || undefined);
-
-      reply.header("Content-Type", "text/csv; charset=utf-8");
-      const filename = query.status
-        ? `withdraws_${query.status}_${new Date().toISOString().slice(0, 10)}.csv`
-        : `withdraws_all_${new Date().toISOString().slice(0, 10)}.csv`;
-      reply.header("Content-Disposition", `attachment; filename="${filename}"`);
-      reply.status(200).send(csv);
+      
+      // 使用新的流式导出函数
+      const { streamExportWithdrawsCsv } = await import("../../services/agent-withdraw/csv.js");
+      
+      await streamExportWithdrawsCsv(
+        reply,
+        query.status || undefined,
+        10000, // maxRows
+        1000   // batchSize
+      );
+      
+      // 注意：streamExportWithdrawsCsv 会自己处理响应，这里不需要再 send
     } catch (err: any) {
       if (err instanceof AppError) {
         reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });

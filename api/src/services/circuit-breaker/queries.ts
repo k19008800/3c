@@ -108,7 +108,7 @@ export async function resetCircuit(vendorModelId: number): Promise<void> {
     eventType: "circuit_recovery",
     riskLevel: "low",
     detail: { vendorModelId, state: "closed", reason: "手动恢复" },
-  }).catch(() => {});
+  }).catch((err) => { console.error("[Redis Cache Error]", err); });
 }
 
 // ──────────────────────────────────────────────

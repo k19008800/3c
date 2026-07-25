@@ -230,7 +230,7 @@ export async function adminLogRoutes(app: FastifyInstance) {
   });
 
   // ──────────────────────────────────────────────
-  //  GET /api/v1/admin/logs/analytics/export — 导出分析 CSV
+  //  GET /api/v1/admin/logs/analytics/export — 导出分析 CSV（流式优化）
   // ──────────────────────────────────────────────
 
   app.get("/api/v1/admin/logs/analytics/export", {
@@ -243,7 +243,27 @@ export async function adminLogRoutes(app: FastifyInstance) {
       const now = new Date();
       const since24h = new Date(now.getTime() - 86400000);
 
-      let csv = "﻿";
+      // 设置响应头
+      reply.raw.writeHead(200, {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="logs-analytics-${tab}.csv"`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      });
+
+      // 设置5分钟超时
+      reply.raw.setTimeout(300000, () => {
+        reply.raw.destroy();
+      });
+
+      // 写入BOM
+      reply.raw.write('\uFEFF');
+
+      // 逐行写入函数
+      const writeLine = (line: string) => {
+        reply.raw.write(line + '\n');
+      };
 
       if (tab === "errors") {
         const errors = await db
@@ -260,8 +280,11 @@ export async function adminLogRoutes(app: FastifyInstance) {
           .groupBy(callLogs.errorMessage)
           .orderBy(sql`count(*)::int desc`);
 
-        csv += "错误信息,次数\n";
-        csv += errors.map(e => `"${(e.errorMessage ?? "").replace(/"/g, '""')}",${e.count}`).join("\n");
+        writeLine("错误信息,次数");
+        for (const e of errors) {
+          const escapedError = (e.errorMessage ?? "").replace(/"/g, '""');
+          writeLine(`"${escapedError}",${e.count}`);
+        }
       } else if (tab === "hourly") {
         const hourly = await db
           .select({
@@ -273,8 +296,10 @@ export async function adminLogRoutes(app: FastifyInstance) {
           .groupBy(sql`extract(hour from ${callLogs.createdAt})`)
           .orderBy(sql`extract(hour from ${callLogs.createdAt}) asc`);
 
-        csv += "小时,调用量\n";
-        csv += hourly.map(h => `${h.hour},${h.count}`).join("\n");
+        writeLine("小时,调用量");
+        for (const h of hourly) {
+          writeLine(`${h.hour},${h.count}`);
+        }
       } else if (tab === "top") {
         const top = await db
           .select({
@@ -289,8 +314,10 @@ export async function adminLogRoutes(app: FastifyInstance) {
           .orderBy(sql`coalesce(sum(${callLogs.totalTokens}), 0) desc`)
           .limit(100);
 
-        csv += "邮箱,Token数,调用量\n";
-        csv += top.map(t => `${t.email},${t.totalTokens},${t.totalCalls}`).join("\n");
+        writeLine("邮箱,Token数,调用量");
+        for (const t of top) {
+          writeLine(`${t.email},${t.totalTokens},${t.totalCalls}`);
+        }
       } else {
         // summary
         const [summary] = await db
@@ -304,19 +331,27 @@ export async function adminLogRoutes(app: FastifyInstance) {
           .from(callLogs)
           .where(and(gte(callLogs.createdAt, since24h), lt(callLogs.createdAt, now)));
 
-        csv += "指标,值\n";
-        csv += `总调用量,${summary?.totalCalls ?? 0}\n`;
-        csv += `成功调用量,${summary?.successCalls ?? 0}\n`;
-        csv += `失败调用量,${summary?.failedCalls ?? 0}\n`;
-        csv += `总Token,${summary?.totalTokens ?? 0}\n`;
-        csv += `总花费,${summary?.totalCost ?? "0"}`;
+        writeLine("指标,值");
+        writeLine(`总调用量,${summary?.totalCalls ?? 0}`);
+        writeLine(`成功调用量,${summary?.successCalls ?? 0}`);
+        writeLine(`失败调用量,${summary?.failedCalls ?? 0}`);
+        writeLine(`总Token,${summary?.totalTokens ?? 0}`);
+        writeLine(`总花费,${summary?.totalCost ?? "0"}`);
       }
 
-      reply.header("Content-Type", "text/csv; charset=utf-8");
-      reply.header("Content-Disposition", `attachment; filename="logs-analytics-${tab}.csv"`);
-      reply.send(csv);
+      reply.raw.end();
     } catch (err) {
-      reply.status(500).send({ code: 500, data: null, message: "导出失败" });
+      console.error('[LogsAnalyticsExport] 导出失败:', err);
+      
+      try {
+        if (!reply.raw.headersSent) {
+          reply.status(500).send({ code: 500, data: null, message: "导出失败" });
+        } else {
+          reply.raw.destroy();
+        }
+      } catch {
+        // 忽略响应发送失败的错误
+      }
     }
   });
 }

@@ -201,7 +201,7 @@ export async function authenticateAdminKey(
         ip: request.ip,
         statusCode: 403,
         durationMs,
-      }).catch(() => {});
+      }).catch((err) => { console.error("[Redis Cache Error]", err); });
 
       reply.status(403).send({
         code: 403,
@@ -231,7 +231,7 @@ export async function authenticateAdminKey(
   db.update(adminApiKeys)
     .set({ lastUsedAt: new Date() })
     .where(eq(adminApiKeys.id, keyRecord.id))
-    .catch(() => {});
+    .catch((err) => { console.error("[Redis Cache Error]", err); });
 
   // ── 注入到 request ──
   request.adminKey = {

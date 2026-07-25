@@ -1,7 +1,8 @@
+import React from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 
-export default function CTASection() {
+function CTASection() {
   return (
     <section className="py-20 sm:py-28 bg-white">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -24,3 +25,5 @@ export default function CTASection() {
     </section>
   )
 }
+
+export default React.memo(CTASection)
