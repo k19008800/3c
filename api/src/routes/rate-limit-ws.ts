@@ -95,8 +95,8 @@ async function collectRateLimitWaterLevels(): Promise<{
 }
 
 export async function rateLimitWsRoutes(app: FastifyInstance) {
-  // 注册 @fastify/websocket
-  await app.register(import("@fastify/websocket"));
+  // WebSocket 已在 plugins.ts 中注册
+  // await app.register(import("@fastify/websocket"));
 
   app.get("/ws/rate-limits", { websocket: true }, (socket, _req) => {
     let closed = false;

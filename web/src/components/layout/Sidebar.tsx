@@ -88,6 +88,7 @@ const adminGroups: AdminGroup[] = [
       { to: '/console/admin/stats', icon: TrendingUp, label: '聚合统计', requiredPerms: [Perm.DASHBOARD_VIEW] },
       { to: '/console/admin/circuit-breakers', icon: Zap, label: '熔断看板', requiredPerms: [Perm.DASHBOARD_VIEW] },
       { to: '/console/admin/system-health', icon: Heart, label: '系统健康', requiredPerms: [Perm.DASHBOARD_VIEW, Perm.OPS_READ] },
+      { to: '/console/admin/monitoring', icon: Activity, label: '实时监控', requiredPerms: [Perm.DASHBOARD_VIEW, Perm.OPS_READ] },
     ],
   },
   {
@@ -156,6 +157,7 @@ const adminGroups: AdminGroup[] = [
     items: [
       { to: '/console/admin/audit-logs', icon: FileSearch, label: '审计日志', requiredPerms: [Perm.AUDIT_VIEW] },
       { to: '/console/admin/operation-logs', icon: Activity, label: '操作日志', requiredPerms: [Perm.AUDIT_VIEW] },
+      { to: '/console/admin/operation-types', icon: Settings, label: '操作类型管理', requiredPerms: [Perm.AUDIT_VIEW] },
       { to: '/console/admin/logs', icon: ScrollText, label: '调用日志', requiredPerms: [Perm.LOG_VIEW] },
       { to: '/console/admin/prompt-audit', icon: FileText, label: '提示词审计', requiredPerms: [Perm.AUDIT_VIEW] },
       { to: '/console/admin/sensitive-words', icon: AlertTriangle, label: '敏感词库', requiredPerms: [Perm.AUDIT_VIEW] },
@@ -376,6 +378,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
   const { isImpersonating, stopImpersonate } = useImpersonate()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [navUnreadCount, setNavUnreadCount] = useState(0)
+  const [annUnreadCount, setAnnUnreadCount] = useState(0)
   const role = user?.role || 'user'
   const perms = user?.permissions
 
@@ -389,11 +392,27 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
     }
   }, [])
 
+  // ── Poll unread announcement count for nav badge ──
+  const fetchAnnUnreadCount = useCallback(async () => {
+    try {
+      const res = await get<{ unreadCount: number }>('/api/v1/announcements/unread-count')
+      setAnnUnreadCount(res.unreadCount)
+    } catch {
+      // ignore
+    }
+  }, [])
+
   useEffect(() => {
     fetchUnreadCount()
     const interval = setInterval(fetchUnreadCount, 60000)
     return () => clearInterval(interval)
   }, [fetchUnreadCount])
+
+  useEffect(() => {
+    fetchAnnUnreadCount()
+    const interval = setInterval(fetchAnnUnreadCount, 60000)
+    return () => clearInterval(interval)
+  }, [fetchAnnUnreadCount])
 
   const isActive = (path: string) => {
     if (path === '/console') return location.pathname === '/console'
@@ -403,6 +422,8 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
 
   const renderNavItem = (item: NavItem) => {
     const isNotifItem = item.to === '/console/notifications'
+    const isAnnItem = item.to === '/console/announcements'
+    const itemUnreadCount = isNotifItem ? navUnreadCount : (isAnnItem ? annUnreadCount : 0)
     return (
       <Link
         key={item.to}
@@ -416,18 +437,18 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
       >
         <div className="relative">
           <item.icon size={20} />
-          {isNotifItem && navUnreadCount > 0 && (
+          {(isNotifItem || isAnnItem) && itemUnreadCount > 0 && (
             <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-4 px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
-              {navUnreadCount > 99 ? '99+' : navUnreadCount}
+              {itemUnreadCount > 99 ? '99+' : itemUnreadCount}
             </span>
           )}
         </div>
         {!collapsed && (
           <span className="text-sm flex-1">{item.label}</span>
         )}
-        {!collapsed && isNotifItem && navUnreadCount > 0 && (
+        {!collapsed && (isNotifItem || isAnnItem) && itemUnreadCount > 0 && (
           <span className="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold">
-            {navUnreadCount > 99 ? '99+' : navUnreadCount}
+            {itemUnreadCount > 99 ? '99+' : itemUnreadCount}
           </span>
         )}
       </Link>

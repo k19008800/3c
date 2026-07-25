@@ -1,0 +1,20 @@
+﻿
+> 3cloud-api@1.0.0 dev
+> chcp 65001>NUL && tsx watch src/index.ts
+
+node.exe : C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\admin\operation-types.ts:10
+所在位置 行:1 字符: 1
++ & "C:\nvm4w\nodejs/node.exe" "C:\nvm4w\nodejs/node_modules/npm/bin/np ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (C:\Users\ZH\.op...ion-types.ts:10:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+import { authenticateJWT, requireAdmin } from "../../middleware/auth.js";
+                          ^
+SyntaxError: The requested module '../../middleware/auth.js' does not provide an export named 'requireAdmin'
+    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)
+    at async node:internal/modules/esm/loader:643:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.18.0

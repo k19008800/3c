@@ -152,3 +152,36 @@ export interface TodoQueue {
   }
   unacknowledgedSecurityEvents: number
 }
+
+// ── 操作类型管理 ──
+
+export interface OperationType {
+  id: number
+  name: string
+  category: string
+  description: string | null
+  enabled: boolean
+  isSystem: boolean
+  createdBy: number | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface OperationTypeCategory {
+  label: string
+  color: string
+}
+
+export interface OperationTypeStats {
+  total: number
+  enabled: number
+  disabled: number
+  system: number
+  byCategory: Array<{
+    category: string
+    label: string
+    total: number
+    enabled: number
+    disabled: number
+  }>
+}

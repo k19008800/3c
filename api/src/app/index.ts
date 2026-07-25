@@ -120,7 +120,7 @@ function cleanupTimers() {
   globalTimers.timeouts.clear();
 }
 
-function registerCronJobs(app: Fastify.FastifyInstance) {
+async function registerCronJobs(app: Fastify.FastifyInstance) {
   // ── Commission auto-settlement (by config) ──
   async function tryAutoSettle() {
     try {
@@ -147,6 +147,13 @@ function registerCronJobs(app: Fastify.FastifyInstance) {
     scheduleDailyRecon();
   }).catch((err) => {
     app.log.error({ err }, "[App] 加载对账自动化失败");
+  });
+
+  // ── 每小时快速对账检查 (每小时第5分钟) ──
+  import("../cron/hourly-recon.js").then(({ scheduleHourlyRecon }) => {
+    scheduleHourlyRecon();
+  }).catch((err) => {
+    app.log.error({ err }, "[App] 加载每小时对账检查失败");
   });
 
   // ── Settlement cycle auto-settlement (02:00 + 14:00) ──
@@ -221,6 +228,16 @@ function registerCronJobs(app: Fastify.FastifyInstance) {
   });
   app.log.info("[Cron] Partition cleanup scheduled: daily at 03:30");
 
+  // ── 异常操作告警扫描（每 5 分钟）──
+  try {
+    const { startOperationAlertScheduler } = await import("../schedulers/operation-alert-scheduler.js");
+    if (typeof startOperationAlertScheduler === 'function') {
+      await startOperationAlertScheduler(app);
+    }
+  } catch (err) {
+    app.log.warn({ err }, "[App] 异常操作告警调度器加载跳过");
+  }
+
   // ── 兑换码过期检查（每小时）──
   const codeExpiryTimeout = registerTimeout(async () => {
     const { runCodeExpiryCheck } = await import("../cron/code-expiry.js");
@@ -232,6 +249,24 @@ function registerCronJobs(app: Fastify.FastifyInstance) {
     await runCodeExpiryCheck();
   }, 60 * 60 * 1000);
   app.log.info("[Cron] Code expiry check scheduled: every 1 hour, first run in 30s");
+
+  // ── API Key 过期禁用（每小时）──
+  const apiKeyExpiryTimeout = registerTimeout(async () => {
+    const { disableExpiredApiKeys } = await import("../jobs/disable-expired-api-keys.js");
+    const count = await disableExpiredApiKeys();
+    if (count > 0) {
+      app.log.info(`[Cron] Disabled ${count} expired API Keys`);
+    }
+  }, 60_000);
+
+  const apiKeyExpiryInterval = registerInterval(async () => {
+    const { disableExpiredApiKeys } = await import("../jobs/disable-expired-api-keys.js");
+    const count = await disableExpiredApiKeys();
+    if (count > 0) {
+      app.log.info(`[Cron] Disabled ${count} expired API Keys`);
+    }
+  }, 60 * 60 * 1000);
+  app.log.info("[Cron] API Key expiry check scheduled: every 1 hour, first run in 1min");
 
   // ── 安全自动规则检查（每 60 秒）──
   import("../cron/auto-rule-check.js").then(({ scheduleAutoRuleCheck }) => {
@@ -264,6 +299,49 @@ function registerCronJobs(app: Fastify.FastifyInstance) {
     }
   });
   app.log.info("[Cron] Orphan upload cleanup scheduled: every Sunday at 03:00");
+
+  // ── 公告定时发布检查（每分钟）──
+  import("../cron/publish-announcements.js").then(({ schedulePublishAnnouncements }) => {
+    schedulePublishAnnouncements();
+  }).catch((err) => {
+    app.log.error({ err }, "[App] 加载公告定时发布任务失败");
+  });
+
+  // ── 实时监控检查（每5分钟）──
+  cron.schedule("*/5 * * * *", async () => {
+    try {
+      app.log.info("[Cron] 开始执行监控检查...");
+      const { runMonitoringCheck } = await import("../cron/monitoring-check.js");
+      const result = await runMonitoringCheck();
+      
+      if (result.success) {
+        app.log.info(`[Cron] 监控检查完成: ${result.metricsCollected} 个指标, ${result.alertsTriggered} 个告警`);
+      } else {
+        app.log.error(`[Cron] 监控检查失败: ${result.error}`);
+      }
+    } catch (err) {
+      app.log.error({ err }, "[Cron] 监控检查失败");
+    }
+  });
+  app.log.info("[Cron] Monitoring check scheduled: every 5 minutes");
+
+  // ── 活动自动结束检查（每分钟）──
+  const endCampaignsTimeout = registerTimeout(async () => {
+    const { checkExpiredCampaigns } = await import("../cron/end-campaigns.js");
+    const count = await checkExpiredCampaigns();
+    if (count > 0) {
+      app.log.info(`[Cron] Auto-ended ${count} campaigns on startup`);
+    }
+  }, 60_000);
+
+  const endCampaignsInterval = registerInterval(async () => {
+    const { checkExpiredCampaigns } = await import("../cron/end-campaigns.js");
+    const count = await checkExpiredCampaigns();
+    if (count > 0) {
+      app.log.info(`[Cron] Auto-ended ${count} campaigns`);
+    }
+  }, 60 * 1000);
+  app.log.info("[Cron] Campaign auto-end check scheduled: every 1 minute, first run in 1min");
 }
 
 // ══════════════════════════════════════════════

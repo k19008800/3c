@@ -1,15 +1,36 @@
-import { Edit3, Trash2, Ban, HeartPulse, Activity } from 'lucide-react'
+import { Edit3, Trash2, Ban, HeartPulse, Activity, Check } from 'lucide-react'
 import type { VendorModel } from '@/types'
 
 interface ModelRowProps {
   item: VendorModel
   onEdit: (item: VendorModel) => void
   onDelete: (item: VendorModel) => void
+  selected?: boolean
+  onToggleSelect?: (id: number) => void
 }
 
-export default function ModelRow({ item, onEdit, onDelete }: ModelRowProps) {
+export default function ModelRow({ 
+  item, 
+  onEdit, 
+  onDelete, 
+  selected = false, 
+  onToggleSelect 
+}: ModelRowProps) {
   return (
-    <tr key={item.id} className="hover:bg-slate-50 transition">
+    <tr className={`hover:bg-slate-50 transition ${selected ? 'bg-blue-50' : ''}`}>
+      <td className="px-4 py-3">
+        <button
+          onClick={() => onToggleSelect?.(item.id)}
+          className={`w-5 h-5 rounded border-2 flex items-center justify-center transition ${
+            selected 
+              ? 'bg-blue-600 border-blue-600 text-white' 
+              : 'border-slate-300 hover:border-blue-400'
+          }`}
+          title={selected ? '取消选择' : '选择对比'}
+        >
+          {selected && <Check size={12} />}
+        </button>
+      </td>
       <td className="px-4 py-3 text-sm text-slate-600">{item.id}</td>
       <td className="px-4 py-3 text-sm text-slate-900">{item.vendorName || '-'}</td>
       <td className="px-4 py-3 text-sm text-slate-600">{item.modelName || '-'}</td>

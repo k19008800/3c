@@ -41,5 +41,23 @@ export * from "./admin.js";
 // ── API 密钥 ──
 export * from "./api-keys.js";
 
+// ── API Key 权限模板（已在 api-keys.js 中定义）──
+// apiKeyPermissionTemplates 已在 api-keys.js 中导出
+
 // ── 枚举 ──
 export * from "./enums.js";
+
+// ── 配置版本控制 ──
+export * from "./config-versions.js";
+
+// ── 监控告警 ──
+export * from "./monitoring.js";
+
+// ── 通知订阅与偏好 ──
+export * from "./notification-subscriptions.js";
+
+// ── 提示词模板 ──
+export * from "./prompt-templates.js";
+
+// ── 异常操作告警 ──
+export * from "./operation-alert.js";

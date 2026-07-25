@@ -11,6 +11,7 @@ export interface Campaign {
   budget_amount: string
   start_at: string | null
   end_at: string | null
+  auto_end: boolean // 是否自动结束
   createdAt: string
   updatedAt: string
 }
@@ -80,5 +81,6 @@ export const emptyForm = {
   description: '',
   start_at: '',
   end_at: '',
+  auto_end: true,
   budget_amount: '0',
 }

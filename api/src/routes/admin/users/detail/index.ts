@@ -3,6 +3,7 @@ import { registerInfoRoutes } from "./info.js";
 import { registerBalanceRoutes } from "./balance.js";
 import { registerLogsRoutes } from "./logs.js";
 import { registerActionsRoutes } from "./actions.js";
+import { registerActivityRoutes } from "./activity.js";
 
 /**
  * 用户详情路由入口。
@@ -13,4 +14,5 @@ export async function detailRoutes(app: FastifyInstance) {
   registerBalanceRoutes(app);
   registerLogsRoutes(app);
   registerActionsRoutes(app);
+  registerActivityRoutes(app);
 }

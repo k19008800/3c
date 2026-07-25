@@ -178,6 +178,10 @@ export const announcements = pgTable(
     type: varchar("type", { length: 50 }).notNull().default("system_announcement"),
     status: boolean("status").notNull().default(true),
     priority: integer("priority").notNull().default(0),
+    // 定时发布时间，NULL 表示立即发布
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
+    // 是否已发布，定时发布时在 scheduled_at 到期后自动设置为 TRUE
+    isPublished: boolean("is_published").notNull().default(true),
     createdBy: integer("created_by")
       .references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -186,5 +190,53 @@ export const announcements = pgTable(
   (table) => ({
     statusIdx: index("announcements_status_idx").on(table.status),
     createdAtIdx: index("announcements_created_at_idx").on(table.createdAt),
+    // 定时发布查询索引
+    scheduledPublishIdx: index("announcements_scheduled_publish_idx").on(table.scheduledAt),
+  })
+);
+
+// ── 公告阅读记录 ──
+
+export const announcementReads = pgTable(
+  "announcement_reads",
+  {
+    id: serial("id").primaryKey(),
+    announcementId: integer("announcement_id")
+      .notNull()
+      .references(() => announcements.id, { onDelete: "cascade" }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    readAt: timestamp("read_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    // 唯一约束：同一用户对同一公告只记录一次
+    userAnnouncementIdx: uniqueIndex("announcement_reads_user_announcement_idx").on(table.userId, table.announcementId),
+    // 用户索引：快速查询某用户的所有已读公告
+    userIdIdx: index("announcement_reads_user_id_idx").on(table.userId),
+    // 公告索引：快速查询某公告的所有已读用户
+    announcementIdIdx: index("announcement_reads_announcement_id_idx").on(table.announcementId),
+  })
+);
+
+// ── 操作类型（审计日志操作类型管理） ──
+
+export const operationTypes = pgTable(
+  "operation_types",
+  {
+    id: serial("id").primaryKey(),
+    name: varchar("name", { length: 100 }).notNull().unique(),        // 操作类型名称（唯一）
+    category: operationCategoryEnum("category").notNull(),          // 分类：auth/api_key/finance/profile/agent/system
+    description: text("description"),                               // 描述说明
+    enabled: boolean("enabled").notNull().default(true),           // 是否启用
+    isSystem: boolean("is_system").notNull().default(false),       // 是否系统内置（不可删除）
+    createdBy: integer("created_by").references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    nameIdx: uniqueIndex("operation_types_name_idx").on(table.name),
+    categoryIdx: index("operation_types_category_idx").on(table.category),
+    enabledIdx: index("operation_types_enabled_idx").on(table.enabled),
   })
 );

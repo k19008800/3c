@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   Loader2, AlertCircle, Plus, Copy, CheckCircle2, Trash2, Key, Power, PowerOff,
   BarChart3, ChevronDown, ChevronRight, TrendingUp, Clock, Download,
-  PieChart, Activity, X,
+  PieChart, Activity, X, Settings,
 } from 'lucide-react'
 
 // ── Types ──
@@ -40,6 +40,32 @@ function fmtTokens(n: number): string {
 function pct(a: number, b: number): string {
   if (b === 0) return '—'
   return `${((a / b) * 100).toFixed(1)}%`
+}
+
+// 计算剩余时间
+function getRemainingTime(expiresAt: string | null | undefined): { text: string; color: string; expired: boolean } {
+  if (!expiresAt) return { text: '永不过期', color: 'text-slate-500', expired: false }
+  
+  const now = new Date()
+  const expiry = new Date(expiresAt)
+  const diffMs = expiry.getTime() - now.getTime()
+  
+  if (diffMs <= 0) {
+    return { text: '已过期', color: 'text-red-600', expired: true }
+  }
+  
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  
+  if (diffDays > 30) {
+    return { text: `${diffDays} 天`, color: 'text-green-600', expired: false }
+  } else if (diffDays > 7) {
+    return { text: `${diffDays} 天`, color: 'text-amber-600', expired: false }
+  } else if (diffDays > 0) {
+    return { text: `${diffDays} 天 ${diffHours} 小时`, color: 'text-orange-600', expired: false }
+  } else {
+    return { text: `${diffHours} 小时`, color: 'text-red-600', expired: false }
+  }
 }
 
 // ── Usage Dashboard (deep expandable) ──
@@ -303,17 +329,27 @@ function KeyUsageDashboard({ keyId, allKeys }: { keyId: number; allKeys: ApiKey[
 
 // ── Main Page ──
 
+import { ApiKeyPermissionsDialog } from '@/components/ApiKeyPermissionsDialog'
+import type { ApiKeyPermissions } from '@/types/api-key'
+
 export default function ApiKeys() {
   const [keys, setKeys] = useState<ApiKey[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [newKeyName, setNewKeyName] = useState('')
+  const [newKeyExpiry, setNewKeyExpiry] = useState<string>('never') // 'never' | '7d' | '30d' | '90d' | '1y'
   const [creating, setCreating] = useState(false)
   const [createdKey, setCreatedKey] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [expandedKeyId, setExpandedKeyId] = useState<number | null>(null)
+  
+  // 权限配置相关状态
+  const [showPermissionsDialog, setShowPermissionsDialog] = useState(false)
+  const [selectedKeyId, setSelectedKeyId] = useState<number | null>(null)
+  const [selectedKeyPermissions, setSelectedKeyPermissions] = useState<ApiKeyPermissions | null>(null)
+  const [savingPermissions, setSavingPermissions] = useState(false)
 
   // 清理 setTimeout
   useEffect(() => {
@@ -337,9 +373,22 @@ export default function ApiKeys() {
     if (!newKeyName.trim()) return
     setCreating(true)
     try {
-      const data = await post<ApiKey>('/api/v1/api-keys', { name: newKeyName })
+      // 计算过期时间
+      let expiresAt: string | undefined = undefined
+      if (newKeyExpiry !== 'never') {
+        const now = new Date()
+        const days = newKeyExpiry === '7d' ? 7 : newKeyExpiry === '30d' ? 30 : newKeyExpiry === '90d' ? 90 : 365
+        now.setDate(now.getDate() + days)
+        expiresAt = now.toISOString()
+      }
+
+      const data = await post<ApiKey>('/api/v1/api-keys', { 
+        name: newKeyName,
+        expiresAt 
+      })
       setCreatedKey(data.key)
       setNewKeyName('')
+      setNewKeyExpiry('never')
       setShowCreate(false)
       fetchKeys()
     } catch (err: any) { setError(err.message || '创建密钥失败') }
@@ -367,6 +416,34 @@ export default function ApiKeys() {
       const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta)
       ta.select(); document.execCommand('copy'); document.body.removeChild(ta)
       setCopied(true); if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current); copyTimeoutRef.current = setTimeout(() => setCopied(false), 3000)
+    }
+  }
+
+  // 打开权限配置对话框
+  const handleOpenPermissions = (key: ApiKey) => {
+    setSelectedKeyId(key.id)
+    setSelectedKeyPermissions(key.permissions || null)
+    setShowPermissionsDialog(true)
+  }
+
+  // 保存权限配置
+  const handleSavePermissions = async (permissions: ApiKeyPermissions) => {
+    if (!selectedKeyId) return
+    
+    try {
+      setSavingPermissions(true)
+      await patch(`/api/v1/api-keys/${selectedKeyId}`, { permissions })
+      
+      // 更新本地状态
+      setKeys(prev => prev.map(k => 
+        k.id === selectedKeyId ? { ...k, permissions } : k
+      ))
+      
+      setShowPermissionsDialog(false)
+    } catch (err: any) {
+      setError(err.message || '保存权限配置失败')
+    } finally {
+      setSavingPermissions(false)
     }
   }
 
@@ -407,11 +484,27 @@ export default function ApiKeys() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
             <h2 className="text-lg font-semibold mb-4">创建 API 密钥</h2>
-            <input type="text" value={newKeyName} onChange={e => setNewKeyName(e.target.value)}
-              placeholder="密钥名称（如：生产环境）" autoFocus
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4" />
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => { setShowCreate(false); setNewKeyName('') }} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 transition">取消</button>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">密钥名称</label>
+                <input type="text" value={newKeyName} onChange={e => setNewKeyName(e.target.value)}
+                  placeholder="如：生产环境" autoFocus
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">过期时间</label>
+                <select value={newKeyExpiry} onChange={e => setNewKeyExpiry(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="never">永不过期</option>
+                  <option value="7d">7 天后</option>
+                  <option value="30d">30 天后</option>
+                  <option value="90d">90 天后</option>
+                  <option value="1y">1 年后</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end mt-6">
+              <button onClick={() => { setShowCreate(false); setNewKeyName(''); setNewKeyExpiry('never') }} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 transition">取消</button>
               <button onClick={handleCreate} disabled={creating || !newKeyName.trim()}
                 className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition flex items-center gap-1">
                 {creating && <Loader2 className="animate-spin" size={14} />} 确认创建
@@ -430,13 +523,16 @@ export default function ApiKeys() {
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">名称</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">密钥前缀</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">状态</th>
+                <th className="px-4 py-3 text-sm font-medium text-slate-500">过期时间</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">最后使用</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">创建时间</th>
                 <th className="px-4 py-3 text-sm font-medium text-slate-500">操作</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {keys.map(key => (
+              {keys.map(key => {
+                const expiryInfo = getRemainingTime(key.expiresAt)
+                return (
                 <>
                   <tr key={key.id} className={`hover:bg-slate-50 transition ${expandedKeyId === key.id ? 'bg-blue-50/50' : ''}`}>
                     <td className="px-3 py-3">
@@ -449,6 +545,10 @@ export default function ApiKeys() {
                     <td className="px-4 py-3"><code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono">{key.keyPrefix}...</code></td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${key.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{key.status ? '启用' : '停用'}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs font-medium ${expiryInfo.color}`}>{expiryInfo.text}</span>
+                      {expiryInfo.expired && !key.status && <span className="ml-1 text-xs text-red-500">(已禁用)</span>}
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-500">{key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleString('zh-CN') : '从未使用'}</td>
                     <td className="px-4 py-3 text-sm text-slate-500">{new Date(key.createdAt).toLocaleString('zh-CN')}</td>
@@ -466,6 +566,10 @@ export default function ApiKeys() {
                           className={`flex items-center gap-1 text-sm transition ${key.status ? 'text-amber-500 hover:text-amber-700' : 'text-green-500 hover:text-green-700'}`}>
                           {key.status ? <PowerOff size={14} /> : <Power size={14} />}
                         </button>
+                        <button onClick={() => handleOpenPermissions(key)}
+                          className="flex items-center gap-1 text-sm text-purple-500 hover:text-purple-700 transition">
+                          <Settings size={14} /> 权限
+                        </button>
                         <button onClick={() => handleDelete(key.id)}
                           className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700 transition">
                           <Trash2 size={14} /> 删除
@@ -479,7 +583,8 @@ export default function ApiKeys() {
                     </tr>
                   )}
                 </>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -491,6 +596,14 @@ export default function ApiKeys() {
           </div>
         )}
       </div>
+
+      {/* 权限配置对话框 */}
+      <ApiKeyPermissionsDialog
+        open={showPermissionsDialog}
+        onClose={() => setShowPermissionsDialog(false)}
+        onSave={handleSavePermissions}
+        initialPermissions={selectedKeyPermissions}
+      />
     </div>
   )
 }

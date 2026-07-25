@@ -9,6 +9,8 @@ export interface Announcement {
   type: string
   status: boolean
   priority: number
+  scheduledAt: string | null
+  isPublished: boolean
   createdBy: string
   createdAt: string
   updatedAt: string
@@ -19,6 +21,7 @@ export interface AnnouncementForm {
   content: string
   type: string
   priority: number
+  scheduledAt: string | null
 }
 
 export const emptyForm: AnnouncementForm = {
@@ -26,4 +29,5 @@ export const emptyForm: AnnouncementForm = {
   content: '',
   type: 'system_announcement',
   priority: 0,
+  scheduledAt: null,
 }

@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { get, patch } from '@/lib/api'
 import type { SecurityConfig } from '@/types'
-import { Loader2, AlertCircle, Save, Settings, RotateCcw, History, Clock, ArrowRight } from 'lucide-react'
+import { Loader2, AlertCircle, Save, Settings, RotateCcw, History, Clock, ArrowRight, GitBranch } from 'lucide-react'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 import PaginationBar from '@/components/ui/PaginationBar'
+import ConfigHistoryDialog from '@/components/admin/ConfigHistoryDialog'
 
 // ── 默认值映射（与 seed.ts 一致） ──
 const DEFAULT_VALUES: Record<string, any> = {
@@ -45,6 +46,9 @@ export default function AdminSecurityConfig() {
   const [historyPage, setHistoryPage] = useState(1)
   const [historyPageSize, setHistoryPageSize] = useState(20)
   const [historyTotal, setHistoryTotal] = useState(0)
+
+  // 配置版本控制
+  const [historyDialogKey, setHistoryDialogKey] = useState<string | null>(null)
 
   const fetchConfigs = useCallback(async () => {
     setLoading(true)
@@ -199,6 +203,13 @@ export default function AdminSecurityConfig() {
                             isModified(key) ? 'border-blue-400 bg-blue-50' : 'border-slate-300'
                           }`}
                         />
+                        <button
+                          onClick={() => setHistoryDialogKey(key)}
+                          title="查看历史版本"
+                          className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded transition"
+                        >
+                          <GitBranch size={14} />
+                        </button>
                         {!isDefault(key) && !isModified(key) && (
                           <button
                             onClick={() => handleReset(key)}
@@ -284,6 +295,17 @@ export default function AdminSecurityConfig() {
             />
           )}
         </div>
+      )}
+
+      {/* 配置历史对话框 */}
+      {historyDialogKey && (
+        <ConfigHistoryDialog
+          open
+          configKey={historyDialogKey}
+          configType="login_security"
+          onClose={() => setHistoryDialogKey(null)}
+          onReverted={fetchConfigs}
+        />
       )}
     </div>
   )

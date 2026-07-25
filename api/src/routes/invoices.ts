@@ -168,4 +168,44 @@ export async function invoiceRoutes(app: FastifyInstance) {
       }
     },
   });
+
+  // ──────────────────────────────────────────────
+  //  GET /api/v1/invoices/:id/download — 下载发票文件
+  // ──────────────────────────────────────────────
+
+  app.get("/api/v1/invoices/:id/download", {
+    preHandler: [authenticateJWT, guardNotImpersonatingWrite],
+    handler: async (request, reply) => {
+      try {
+        const { id } = request.params as { id: string };
+        const invoiceId = parseInt(id, 10);
+
+        if (isNaN(invoiceId)) {
+          reply.status(400).send({ code: 400, data: null, message: "无效的发票 ID" });
+          return;
+        }
+
+        const invoice = await getInvoiceDetail(invoiceId, request.user!.userId);
+
+        if (invoice.status !== "issued") {
+          reply.status(400).send({ code: 400, data: null, message: "发票尚未开具，无法下载" });
+          return;
+        }
+
+        if (!invoice.invoiceFileUrl) {
+          reply.status(404).send({ code: 404, data: null, message: "发票文件尚未上传" });
+          return;
+        }
+
+        // 重定向到文件 URL（OSS/CDN）
+        reply.redirect(invoice.invoiceFileUrl);
+      } catch (err: any) {
+        if (err instanceof AppError) {
+          reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });
+          return;
+        }
+        throw err;
+      }
+    },
+  });
 }

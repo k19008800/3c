@@ -23,6 +23,7 @@ declare module "fastify" {
     apiKey?: {
       id: number;
       userId: number;
+      permissions?: any; // ApiKeyPermissions
     };
     vendor?: {
       id: number;
@@ -204,6 +205,8 @@ export async function authenticateApiKey(
       userId: apiKeys.userId,
       status: apiKeys.status,
       expiresAt: apiKeys.expiresAt,
+      permissions: apiKeys.permissions,
+      templateId: apiKeys.templateId,
       userStatus: users.status,
       userRealNameStatus: users.realNameStatus,
       userDisabledUntil: users.disabledUntil,
@@ -269,14 +272,111 @@ export async function authenticateApiKey(
     return;
   }
 
+  // ══════════════════════════════════════════════
+  //  权限检查
+  // ══════════════════════════════════════════════
+
+  // 获取权限配置（优先使用 Key 自身配置，否则使用模板）
+  let permissions = keyRecord.permissions as any;
+
+  if (!permissions && keyRecord.templateId) {
+    const { apiKeyPermissionTemplates } = await import("../db/schema.js");
+    const [template] = await db
+      .select({ permissions: apiKeyPermissionTemplates.permissions })
+      .from(apiKeyPermissionTemplates)
+      .where(eq(apiKeyPermissionTemplates.id, keyRecord.templateId))
+      .limit(1);
+    permissions = template?.permissions as any;
+  }
+
+  if (permissions) {
+    // ── IP 白名单检查 ──
+    if (permissions.ipWhitelist && permissions.ipWhitelist.length > 0) {
+      const clientIp = request.ip;
+      if (!isIpAllowed(clientIp, permissions.ipWhitelist)) {
+        reply.status(403).send({
+          error: {
+            message: "IP 地址不在白名单中",
+            type: "access_denied",
+            code: "ip_not_allowed",
+          },
+        });
+        return;
+      }
+    }
+
+    // ── 端点权限检查 ──
+    if (permissions.allowedEndpoints && permissions.allowedEndpoints.length > 0) {
+      const endpoint = request.routeOptions?.url || request.url;
+      const isAllowed = permissions.allowedEndpoints.some((allowed: string) => {
+        // 支持通配符匹配，如 /v1/chat/*
+        if (allowed.endsWith('*')) {
+          return endpoint.startsWith(allowed.slice(0, -1));
+        }
+        return endpoint === allowed || endpoint.startsWith(allowed + '?');
+      });
+
+      if (!isAllowed) {
+        reply.status(403).send({
+          error: {
+            message: "此端点不允许访问",
+            type: "access_denied",
+            code: "endpoint_not_allowed",
+          },
+        });
+        return;
+      }
+    }
+
+    // ── 模型权限检查（在后续路由中通过 request.apiKey.permissions 传递）──
+    // 将权限信息附加到 request.apiKey
+    request.apiKey = {
+      id: keyRecord.id,
+      userId: keyRecord.userId,
+      permissions,
+    };
+  } else {
+    request.apiKey = { id: keyRecord.id, userId: keyRecord.userId };
+  }
+
   // 更新 lastUsedAt
   await db
     .update(apiKeys)
     .set({ lastUsedAt: new Date() })
     .where(eq(apiKeys.id, keyRecord.id));
 
-  request.apiKey = { id: keyRecord.id, userId: keyRecord.userId };
   request.user = { userId: keyRecord.userId, role: "user" };
+}
+
+// ── IP 白名单检查辅助函数 ──
+
+function isIpAllowed(clientIp: string, whitelist: string[]): boolean {
+  for (const allowed of whitelist) {
+    if (allowed === clientIp) return true;
+
+    // CIDR 匹配
+    if (allowed.includes('/')) {
+      const [network, prefixStr] = allowed.split('/');
+      const prefix = parseInt(prefixStr, 10);
+      if (isIpInCidr(clientIp, network, prefix)) return true;
+    }
+  }
+  return false;
+}
+
+function isIpInCidr(ip: string, network: string, prefix: number): boolean {
+  const ipNum = ipToNumber(ip);
+  const networkNum = ipToNumber(network);
+  if (ipNum === null || networkNum === null) return false;
+
+  const mask = (0xFFFFFFFF << (32 - prefix)) >>> 0;
+  return (ipNum & mask) === (networkNum & mask);
+}
+
+function ipToNumber(ip: string): number | null {
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4 || parts.some(p => isNaN(p) || p < 0 || p > 255)) return null;
+  return (parts[0] << 24) + (parts[1] << 16) + (parts[2] << 8) + parts[3];
 }
 
 // ── 角色权限检查 ──
@@ -372,6 +472,7 @@ export const Perm = {
   LOG_VIEW:             1n << 24n,
   OPS_READ:             1n << 25n,
   RECONCILIATION_VIEW:  1n << 26n,
+  RECONCILIATION_MANAGE: 1n << 29n,
   SECURITY_EDIT:        1n << 27n,
   AUDIT_REVIEW:         1n << 28n,
 } as const;
@@ -393,7 +494,7 @@ export const ROLE_PERMISSIONS: Record<string, bigint> = {
     Perm.LOG_VIEW | Perm.AUDIT_VIEW | Perm.AUDIT_REVIEW |
     Perm.FINANCE_VIEW | Perm.FINANCE_COMMISSION |
     Perm.FINANCE_WITHDRAW | Perm.FINANCE_RECHARGE |
-    Perm.RECONCILIATION_VIEW,
+    Perm.RECONCILIATION_VIEW | Perm.RECONCILIATION_MANAGE,
 
   // finance_ops: 财务专员 — 仪表盘 + 全部财务功能 + 用户查看(充值审核需要看到用户信息)
   finance_ops:
@@ -401,7 +502,7 @@ export const ROLE_PERMISSIONS: Record<string, bigint> = {
     Perm.USER_LIST | Perm.USER_VIEW | Perm.USER_BALANCE |
     Perm.FINANCE_VIEW | Perm.FINANCE_COMMISSION |
     Perm.FINANCE_WITHDRAW | Perm.FINANCE_RECHARGE |
-    Perm.RECONCILIATION_VIEW |
+    Perm.RECONCILIATION_VIEW | Perm.RECONCILIATION_MANAGE |
     Perm.LOG_VIEW |
     Perm.AGENT_LIST,
 

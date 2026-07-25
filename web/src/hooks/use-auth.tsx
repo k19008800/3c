@@ -12,6 +12,7 @@ interface AuthState {
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string, captcha?: string, captchaSession?: string) => Promise<void>
+  verify2FA: (userId: number, token: string) => Promise<void>
   register: (email: string, password: string, confirmPassword: string) => Promise<void>
   logout: () => void
   getAccessToken: () => string | null
@@ -86,7 +87,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('验证码错误或已过期')
     }
 
+    // 需要 2FA 验证
+    if (data.requires2FA) {
+      const err: any = new Error('2FA_REQUIRED')
+      err.requires2FA = true
+      err.userId = data.userId
+      throw err
+    }
+
     // 正常登录成功
+    localStorage.setItem('accessToken', data.accessToken)
+    localStorage.setItem('refreshToken', data.refreshToken)
+    localStorage.setItem('user', JSON.stringify(data.user))
+    setState({ user: data.user, isAuthenticated: true, isLoading: false })
+    navigate('/console')
+  }, [navigate])
+
+  // 2FA 验证
+  const verify2FA = useCallback(async (userId: number, token: string) => {
+    const res = await axios.post('/api/v1/auth/2fa/verify', { userId, token })
+    const responseData = res.data
+
+    if (responseData.code !== 0) {
+      throw new Error(responseData.message || '验证失败')
+    }
+
+    const data = responseData.data
     localStorage.setItem('accessToken', data.accessToken)
     localStorage.setItem('refreshToken', data.refreshToken)
     localStorage.setItem('user', JSON.stringify(data.user))
@@ -112,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout, getAccessToken }}>
+    <AuthContext.Provider value={{ ...state, login, verify2FA, register, logout, getAccessToken }}>
       {children}
     </AuthContext.Provider>
   )

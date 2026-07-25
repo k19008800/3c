@@ -285,6 +285,193 @@ export async function adminFinanceRoutes(app: FastifyInstance) {
   });
 
   // ──────────────────────────────────────────────
+  //  POST /api/v1/admin/finance/reconciliation/run — 手动触发对账
+  //  Body: { startDate?, endDate?, reconType?, forceRun? }
+  // ──────────────────────────────────────────────
+
+  app.post("/api/v1/admin/finance/reconciliation/run", {
+    preHandler: [requirePerm(Perm.RECONCILIATION_MANAGE)],
+  }, async (request, reply) => {
+    try {
+      const body = request.body as {
+        startDate?: string;
+        endDate?: string;
+        reconType?: 'full' | 'recharge' | 'balance' | 'commission';
+        forceRun?: boolean;
+      };
+      
+      // 默认值
+      const endDate = body.endDate || new Date().toISOString().slice(0, 10);
+      const startDate = body.startDate || endDate;
+      const reconType = body.reconType || 'full';
+      
+      // 导入自动对账服务
+      const { runAutoReconciliation } = await import("../../services/reconciliation/auto-reconciliation.js");
+      
+      const result = await runAutoReconciliation({
+        startDate,
+        endDate,
+        reconType,
+        createdBy: request.user!.userId,
+      });
+      
+      reply.status(200).send({
+        code: 0,
+        data: result,
+        message: "对账任务已启动",
+      });
+    } catch (err: any) {
+      if (err instanceof AppError) {
+        reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // ──────────────────────────────────────────────
+  //  GET /api/v1/admin/finance/reconciliation/reports — 对账报告列表
+  //  params: page?, pageSize?, reconType?, status?
+  // ──────────────────────────────────────────────
+
+  app.get("/api/v1/admin/finance/reconciliation/reports", {
+    preHandler: [requirePerm(Perm.RECONCILIATION_VIEW)],
+  }, async (request, reply) => {
+    try {
+      const query = request.query as {
+        page?: string;
+        pageSize?: string;
+        reconType?: string;
+        status?: string;
+      };
+      
+      const { listReconciliationReports } = await import("../../services/reconciliation/auto-reconciliation.js");
+      
+      const result = await listReconciliationReports({
+        page: query.page ? parseInt(query.page, 10) : undefined,
+        pageSize: query.pageSize ? parseInt(query.pageSize, 10) : undefined,
+        reconType: query.reconType,
+        status: query.status,
+      });
+      
+      reply.status(200).send({
+        code: 0,
+        data: result,
+        message: "ok",
+      });
+    } catch (err: any) {
+      if (err instanceof AppError) {
+        reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // ──────────────────────────────────────────────
+  //  GET /api/v1/admin/finance/reconciliation/reports/:id — 对账报告详情
+  // ──────────────────────────────────────────────
+
+  app.get("/api/v1/admin/finance/reconciliation/reports/:id", {
+    preHandler: [requirePerm(Perm.RECONCILIATION_VIEW)],
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const reportId = parseInt(id, 10);
+      
+      if (!reportId) {
+        reply.status(400).send({ code: 400, data: null, message: "无效的报告ID" });
+        return;
+      }
+      
+      const { getReconciliationReportDetail } = await import("../../services/reconciliation/auto-reconciliation.js");
+      
+      const result = await getReconciliationReportDetail(reportId);
+      
+      reply.status(200).send({
+        code: 0,
+        data: result,
+        message: "ok",
+      });
+    } catch (err: any) {
+      if (err instanceof AppError) {
+        reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // ──────────────────────────────────────────────
+  //  POST /api/v1/admin/finance/reconciliation/mismatches/:id/resolve — 标记异常为已解决
+  // ──────────────────────────────────────────────
+
+  app.post("/api/v1/admin/finance/reconciliation/mismatches/:id/resolve", {
+    preHandler: [requirePerm(Perm.RECONCILIATION_MANAGE)],
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const mismatchId = parseInt(id, 10);
+      const body = request.body as { note?: string };
+      
+      if (!mismatchId) {
+        reply.status(400).send({ code: 400, data: null, message: "无效的异常ID" });
+        return;
+      }
+      
+      const { resolveMismatch } = await import("../../services/reconciliation/auto-reconciliation.js");
+      
+      await resolveMismatch(mismatchId, request.user!.userId, body.note);
+      
+      reply.status(200).send({
+        code: 0,
+        data: null,
+        message: "异常已标记为已解决",
+      });
+    } catch (err: any) {
+      if (err instanceof AppError) {
+        reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // ──────────────────────────────────────────────
+  //  GET /api/v1/admin/finance/reconciliation/:id/export-pdf — PDF导出对账报告
+  // ──────────────────────────────────────────────
+
+  app.get("/api/v1/admin/finance/reconciliation/:id/export-pdf", {
+    preHandler: [requirePerm(Perm.RECONCILIATION_VIEW)],
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const reportId = parseInt(id, 10);
+      
+      if (!reportId) {
+        reply.status(400).send({ code: 400, data: null, message: "无效的报告ID" });
+        return;
+      }
+      
+      const { exportReconciliationPDF } = await import("../../services/reconciliation/pdf-export.js");
+      
+      const result = await exportReconciliationPDF(reportId);
+      
+      // 设置响应头 - 返回HTML，实际项目中可转换为PDF
+      reply.header("Content-Type", "text/html; charset=utf-8");
+      reply.header("Content-Disposition", `attachment; filename="${result.fileName}.html"`);
+      
+      reply.status(200).send(result.html);
+    } catch (err: any) {
+      if (err instanceof AppError) {
+        reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // ──────────────────────────────────────────────
   //  POST /api/v1/admin/finance/commissions/settle — 批量结算佣金
   // ──────────────────────────────────────────────
 

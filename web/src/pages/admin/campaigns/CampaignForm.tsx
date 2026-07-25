@@ -23,6 +23,7 @@ export default function CampaignForm({ campaign, onClose, onSuccess }: CampaignF
           description: campaign!.description || '',
           start_at: campaign!.start_at ? campaign!.start_at.slice(0, 16) : '',
           end_at: campaign!.end_at ? campaign!.end_at.slice(0, 16) : '',
+          auto_end: campaign!.auto_end ?? true,
           budget_amount: campaign!.budget_amount,
         }
       : { ...emptyForm },
@@ -53,6 +54,7 @@ export default function CampaignForm({ campaign, onClose, onSuccess }: CampaignF
         description: form.description.trim() || undefined,
         start_at: form.start_at ? new Date(form.start_at).toISOString() : null,
         end_at: form.end_at ? new Date(form.end_at).toISOString() : null,
+        auto_end: form.auto_end,
         budget_amount: form.budget_amount,
       }
 
@@ -155,6 +157,21 @@ export default function CampaignForm({ campaign, onClose, onSuccess }: CampaignF
                 step="0.01"
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="auto_end"
+                checked={form.auto_end}
+                onChange={(e) => updateField('auto_end', e.target.checked)}
+                className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+              />
+              <label htmlFor="auto_end" className="text-sm text-slate-700">
+                到期自动结束
+              </label>
+              <span className="text-xs text-slate-400">
+                （关闭后需手动结束活动）
+              </span>
             </div>
           </div>
 

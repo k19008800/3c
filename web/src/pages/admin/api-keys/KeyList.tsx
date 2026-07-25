@@ -1,5 +1,6 @@
 // ── KeyList — 管理 API Key 列表表格 ──
 // 包含权限展示、状态切换、复制前缀、日志查看、使用示例展开、MiniChart 趋势列
+// 支持批量选择
 
 import React, { useState, useCallback } from 'react'
 import { Badge } from '@/components/ui/badge'
@@ -39,12 +40,16 @@ interface KeyListProps {
   onDelete: (key: AdminApiKeyItem) => void
   trends: Record<number, MiniChartDataPoint[]>
   trendsLoading: boolean
+  // 批量选择
+  selectedIds?: number[]
+  onSelectChange?: (ids: number[]) => void
 }
 
 export default function KeyList({
   keys, total, loading, error, page, pageSize, totalPages,
   onPageChange, onPageSizeChange, onToggleStatus, onViewLogs, onDelete,
   trends, trendsLoading,
+  selectedIds = [], onSelectChange,
 }: KeyListProps) {
   const [usageExampleOpen, setUsageExampleOpen] = useState<number | null>(null)
 
@@ -54,7 +59,32 @@ export default function KeyList({
     })
   }, [])
 
-  const colSpan = 9
+  // ── 批量选择逻辑 ──
+  const isAllSelected = keys.length > 0 && keys.every(k => selectedIds.includes(k.id))
+  const isPartialSelected = keys.some(k => selectedIds.includes(k.id)) && !isAllSelected
+
+  const handleSelectAll = useCallback(() => {
+    if (!onSelectChange) return
+    if (isAllSelected) {
+      // 取消全选
+      onSelectChange(selectedIds.filter(id => !keys.some(k => k.id === id)))
+    } else {
+      // 全选当前页
+      const currentPageIds = keys.map(k => k.id)
+      onSelectChange([...new Set([...selectedIds, ...currentPageIds])])
+    }
+  }, [keys, selectedIds, isAllSelected, onSelectChange])
+
+  const handleSelectOne = useCallback((keyId: number) => {
+    if (!onSelectChange) return
+    if (selectedIds.includes(keyId)) {
+      onSelectChange(selectedIds.filter(id => id !== keyId))
+    } else {
+      onSelectChange([...selectedIds, keyId])
+    }
+  }, [selectedIds, onSelectChange])
+
+  const colSpan = onSelectChange ? 10 : 9
 
   if (loading) {
     return (
@@ -91,6 +121,19 @@ export default function KeyList({
         <table className="w-full">
           <thead>
             <tr className="bg-slate-50 text-left">
+              {onSelectChange && (
+                <th className="px-4 py-3 w-12">
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    ref={el => {
+                      if (el) el.indeterminate = isPartialSelected
+                    }}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  />
+                </th>
+              )}
               <th className="px-4 py-3 text-sm font-medium text-slate-500">名称</th>
               <th className="px-4 py-3 text-sm font-medium text-slate-500">Key 前缀</th>
               <th className="px-4 py-3 text-sm font-medium text-slate-500">权限</th>
@@ -105,7 +148,17 @@ export default function KeyList({
           <tbody className="divide-y divide-slate-200">
             {keys.map((k) => (
               <React.Fragment key={k.id}>
-                <tr className={`hover:bg-slate-50 transition ${usageExampleOpen === k.id ? 'bg-indigo-50/30' : ''}`}>
+                <tr className={`hover:bg-slate-50 transition ${usageExampleOpen === k.id ? 'bg-indigo-50/30' : ''} ${selectedIds.includes(k.id) ? 'bg-indigo-50/50' : ''}`}>
+                  {onSelectChange && (
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(k.id)}
+                        onChange={() => handleSelectOne(k.id)}
+                        className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                    </td>
+                  )}
                   <td className="px-4 py-3 text-sm font-medium text-slate-900 whitespace-nowrap">{k.name}</td>
                   <td className="px-4 py-3 text-sm font-mono text-slate-500">{k.keyPrefix}...</td>
                   <td className="px-4 py-3">

@@ -88,3 +88,37 @@ export interface ExpensiveCall {
   durationMs: number | null
   createdAt: string
 }
+
+// ── 用户操作轨迹 ──
+
+export interface UserActivityItem {
+  id: number
+  userId: number
+  userRole: string
+  category: string
+  categoryLabel: string
+  action: string
+  actionLabel: string
+  actionIcon: string
+  targetType: string | null
+  targetId: number | null
+  resourceName: string | null
+  summary: string | null
+  metadata: Record<string, any> | null
+  status: string
+  errorReason: string | null
+  ip: string | null
+  userAgent: string | null
+  createdAt: string
+}
+
+export interface UserActivityStats {
+  total: number
+  byCategory: Record<string, number>
+}
+
+export interface UserActivitySummary {
+  trends: Array<{ date: string; count: number }>
+  byAction: Array<{ action: string; actionLabel: string; count: number }>
+  byStatus: Record<string, number>
+}

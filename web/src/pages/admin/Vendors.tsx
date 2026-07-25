@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Loader2, AlertCircle, RefreshCw, Plus, X } from 'lucide-react'
+import { Loader2, AlertCircle, RefreshCw, Plus, X, Sparkles } from 'lucide-react'
 import PaginationBar from '@/components/ui/PaginationBar'
 import { usePersistedFilters } from '@/hooks/use-persisted-filters'
 import { VendorTable } from './vendors/components'
 import { useVendors } from './vendors/hooks'
 import { STATUS_OPTIONS } from './vendors/types'
 import type { Vendor } from '@/types'
+import RoutingRecommendations from './vendors/RoutingRecommendations'
 
 export default function AdminVendors() {
   const { vendors, total, loading, error, fetchVendors, createVendor, updateVendor, deleteVendor } = useVendors()
@@ -19,6 +20,7 @@ export default function AdminVendors() {
   const [editVendor, setEditVendor] = useState<Vendor | null>(null)
   const [deleteVendorConfirm, setDeleteVendorConfirm] = useState<Vendor | null>(null)
   const [form, setForm] = useState({ name: '', baseUrl: '', description: '', status: 'active' })
+  const [showRecommendations, setShowRecommendations] = useState(false)
 
   useEffect(() => {
     fetchVendors({ keyword, status, page, pageSize })
@@ -48,6 +50,13 @@ export default function AdminVendors() {
         <h1 className="text-2xl font-bold">供应商管理</h1>
         <div className="flex gap-2">
           <button
+            onClick={() => setShowRecommendations(!showRecommendations)}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg ${showRecommendations ? 'bg-purple-50 border-purple-300 text-purple-700' : 'hover:bg-slate-50'}`}
+          >
+            <Sparkles size={16} />
+            智能推荐
+          </button>
+          <button
             onClick={() => fetchVendors({ keyword, status, page, pageSize })}
             className="flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg hover:bg-slate-50"
           >
@@ -63,6 +72,11 @@ export default function AdminVendors() {
           </button>
         </div>
       </div>
+
+      {/* 智能推荐面板 */}
+      {showRecommendations && (
+        <RoutingRecommendations />
+      )}
 
       {/* Filters */}
       <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">

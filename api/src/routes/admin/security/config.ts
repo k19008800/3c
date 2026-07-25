@@ -12,6 +12,7 @@ import { getDb } from "../../../db/index.js";
 import { loginSecurityConfigs, auditLogs } from "../../../db/schema.js";
 import { requirePerm, Perm } from "../../../middleware/auth.js";
 import { clearSecurityConfigCache } from "../../../services/login-security.js";
+import { recordConfigChange } from "../../../services/config-version.js";
 
 export async function securityConfigRoutes(app: FastifyInstance) {
   // ── 配置列表 ──
@@ -157,6 +158,7 @@ export async function securityConfigRoutes(app: FastifyInstance) {
         .set({ value: JSON.parse(JSON.stringify(value)), updatedAt: new Date() })
         .where(eq(loginSecurityConfigs.key, key));
 
+      // 记录到 audit_logs
       await tx.insert(auditLogs).values({
         operatorId,
         action: "config_update" as any,
@@ -167,6 +169,17 @@ export async function securityConfigRoutes(app: FastifyInstance) {
         ip: request.ip,
         description: `更新安全配置 ${key}`,
       });
+    });
+
+    // 记录到 config_versions
+    await recordConfigChange({
+      configKey: key,
+      configType: "login_security",
+      oldValue: existing.value,
+      newValue: value,
+      changedBy: operatorId,
+      changeReason: `更新安全配置 ${key}`,
+      ip: request.ip,
     });
 
     clearSecurityConfigCache();

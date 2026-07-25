@@ -1,5 +1,14 @@
+// ============================================================
+//  3cloud (3C) — 用户操作路由（管理员）
+//  POST /api/v1/admin/users/:id/recharge — 手动调余额
+//  POST /api/v1/admin/users/:id/reset-pwd — 重置密码
+//  POST /api/v1/admin/users/impersonate — 模拟登录
+//  
+//  注意：batch/disable 和 batch/enable 已移至 batch.ts
+// ============================================================
+
 import { FastifyInstance } from "fastify";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getDb } from "../../../db/index.js";
 import {
   users,
@@ -13,13 +22,9 @@ import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { config } from "../../../config.js";
 import {
-  adminBatchDisableSchema,
-  adminBatchEnableSchema,
   adminImpersonateSchema,
 } from "../../../schemas.js";
 import type {
-  AdminBatchDisableInput,
-  AdminBatchEnableInput,
   AdminImpersonateInput,
 } from "../../../schemas.js";
 
@@ -206,116 +211,6 @@ export async function actionsRoutes(app: FastifyInstance) {
       code: 0,
       data: null,
       message: "密码重置成功",
-    });
-  });
-
-  // ──────────────────────────────────────────────
-  //  POST /api/v1/admin/users/batch/disable — 批量禁用
-  // ──────────────────────────────────────────────
-
-  app.post("/api/v1/admin/users/batch/disable", {
-    preHandler: [requirePerm(Perm.USER_EDIT)],
-  }, async (request, reply) => {
-    const db = getDb();
-    const operatorId = request.user!.userId;
-
-    const parsed = adminBatchDisableSchema.parse(request.body);
-
-    const usersFound = await db
-      .select({ id: users.id, status: users.status })
-      .from(users)
-      .where(sql`${users.id} = ANY(${sql`ARRAY[${sql.join(parsed.userIds, sql`,`)}]::int[]`})`);
-
-    if (usersFound.length === 0) {
-      reply.status(404).send({ code: 404, data: null, message: "未找到有效用户" });
-      return;
-    }
-
-    await db.transaction(async (tx) => {
-      await tx
-        .update(users)
-        .set({
-          status: "disabled",
-          disabledReason: parsed.reason ?? null,
-          disabledBy: operatorId,
-          disabledAt: new Date(),
-          disabledUntil: parsed.disabledUntil ? new Date(parsed.disabledUntil) : null,
-        })
-        .where(sql`${users.id} = ANY(${sql`ARRAY[${sql.join(parsed.userIds, sql`,`)}]::int[]`})`);
-
-      for (const u of usersFound) {
-        await tx.insert(auditLogs).values({
-          operatorId,
-          action: "user_disable",
-          targetType: "user",
-          targetId: u.id,
-          before: { status: u.status },
-          after: { status: "disabled" },
-          ip: request.ip,
-          description: `批量禁用${parsed.reason ? `: ${parsed.reason}` : ""}`,
-        });
-      }
-    });
-
-    reply.status(200).send({
-      code: 0,
-      data: { affected: usersFound.length },
-      message: `已禁用 ${usersFound.length} 个用户`,
-    });
-  });
-
-  // ──────────────────────────────────────────────
-  //  POST /api/v1/admin/users/batch/enable — 批量启用
-  // ──────────────────────────────────────────────
-
-  app.post("/api/v1/admin/users/batch/enable", {
-    preHandler: [requirePerm(Perm.USER_EDIT)],
-  }, async (request, reply) => {
-    const db = getDb();
-    const operatorId = request.user!.userId;
-
-    const parsed = adminBatchEnableSchema.parse(request.body);
-
-    const usersFound = await db
-      .select({ id: users.id, status: users.status })
-      .from(users)
-      .where(sql`${users.id} = ANY(${sql`ARRAY[${sql.join(parsed.userIds, sql`,`)}]::int[]`})`);
-
-    if (usersFound.length === 0) {
-      reply.status(404).send({ code: 404, data: null, message: "未找到有效用户" });
-      return;
-    }
-
-    await db.transaction(async (tx) => {
-      await tx
-        .update(users)
-        .set({
-          status: "active",
-          disabledReason: null,
-          disabledBy: null,
-          disabledAt: null,
-          disabledUntil: null,
-        })
-        .where(sql`${users.id} = ANY(${sql`ARRAY[${sql.join(parsed.userIds, sql`,`)}]::int[]`})`);
-
-      for (const u of usersFound) {
-        await tx.insert(auditLogs).values({
-          operatorId,
-          action: "user_enable",
-          targetType: "user",
-          targetId: u.id,
-          before: { status: u.status, disabledReason: null },
-          after: { status: "active" },
-          ip: request.ip,
-          description: "批量启用",
-        });
-      }
-    });
-
-    reply.status(200).send({
-      code: 0,
-      data: { affected: usersFound.length },
-      message: `已启用 ${usersFound.length} 个用户`,
     });
   });
 

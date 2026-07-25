@@ -29,6 +29,7 @@ export const campaigns = pgTable(
     status: campaignStatusEnum("status").notNull().default("draft"),
     startAt: timestamp("start_at", { withTimezone: true }),
     endAt: timestamp("end_at", { withTimezone: true }),
+    autoEnd: integer("auto_end").notNull().default(1), // 1=自动结束, 0=手动结束
     budgetAmount: bigint("budget_amount", { mode: "number" }).notNull().default(0),
     createdBy: integer("created_by")
       .notNull()

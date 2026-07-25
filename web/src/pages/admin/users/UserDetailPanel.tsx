@@ -14,11 +14,13 @@ import {
 } from './UserDetailTabs'
 import ApiKeysTab from './UserKeyPanel'
 import { LoginHistoryTab, AuditLogsTab, CallStatsTab } from './UserLogPanel'
+import { UserActivityTab } from './UserActivityTab'
 import { ExportDataButton, ImpersonateButton, ChangeRoleDialog } from './ActionButtons'
-import { CheckCircle2, Lock, RefreshCw, User, Shield, History, Activity, MessageSquare, Key, Globe, FileText, Wallet } from 'lucide-react'
+import { CheckCircle2, Lock, RefreshCw, User, Shield, History, Activity, MessageSquare, Key, Globe, FileText, Wallet, Route } from 'lucide-react'
 
 const TABS = [
   { key: 'info', label: '基本信息', icon: User },
+  { key: 'activity', label: '操作轨迹', icon: Route },
   { key: 'real-name', label: '实名历史', icon: Shield },
   { key: 'login-history', label: '登录历史', icon: History },
   { key: 'call-stats', label: '调用统计', icon: Activity },
@@ -71,6 +73,7 @@ export default function UserDetailModal({ user, onClose }: UserDetailModalProps)
         <div className="flex-1 overflow-y-auto p-6">
           {msg && <div className="mb-4 p-3 text-sm rounded-lg bg-blue-50 text-blue-700 flex items-center gap-2"><CheckCircle2 size={16} /> {msg}</div>}
           {tab === 'info' && <InfoTab user={user} onMsg={setMsg} />}
+          {tab === 'activity' && <UserActivityTab userId={user.id} onMsg={setMsg} />}
           {tab === 'real-name' && <RealNameHistoryTab userId={user.id} />}
           {tab === 'login-history' && <LoginHistoryTab userId={user.id} />}
           {tab === 'call-stats' && <CallStatsTab userId={user.id} />}

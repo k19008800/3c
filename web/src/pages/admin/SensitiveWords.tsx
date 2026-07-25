@@ -1,10 +1,12 @@
 import { useState, useCallback, useEffect } from 'react'
-import { Plus, RefreshCw, AlertCircle, Upload } from 'lucide-react'
+import { Plus, RefreshCw, AlertCircle, Upload, Search } from 'lucide-react'
 import PaginationBar from '@/components/ui/PaginationBar'
 import { usePersistedFilters } from '@/hooks/use-persisted-filters'
 import { WordTable, WordForm } from './sensitive-words/components'
 import { useSensitiveWords } from './sensitive-words/hooks'
+import SensitiveWordTest from './sensitive-words/SensitiveWordTest'
 import type { SensitiveWord, WordForm as WordFormType } from './sensitive-words/types'
+import { CATEGORIES } from './sensitive-words/types'
 
 export default function SensitiveWords() {
   const {
@@ -34,6 +36,7 @@ export default function SensitiveWords() {
   const [editWord, setEditWord] = useState<SensitiveWord | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [importText, setImportText] = useState('')
+  const [showTest, setShowTest] = useState(false)
 
   // Load on mount and filter change
   useEffect(() => {
@@ -103,6 +106,13 @@ export default function SensitiveWords() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">敏感词库管理</h1>
         <div className="flex gap-2">
+          <button
+            onClick={() => setShowTest(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg hover:bg-slate-50"
+          >
+            <Search size={16} />
+            测试工具
+          </button>
           <button
             onClick={() => setShowImport(true)}
             className="flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg hover:bg-slate-50"
@@ -244,6 +254,18 @@ export default function SensitiveWords() {
                 导入
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Test Modal */}
+      {showTest && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
+            <SensitiveWordTest
+              categories={CATEGORIES}
+              onClose={() => setShowTest(false)}
+            />
           </div>
         </div>
       )}

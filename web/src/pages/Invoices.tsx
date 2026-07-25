@@ -192,11 +192,19 @@ export default function InvoicesPage() {
     }
   }
 
-  const handleDownloadInvoice = async (invoiceId: number) => {
+  const handleDownloadInvoice = async (invoiceId: number, invoiceNo?: string) => {
     try {
-      const response = await get(`/api/v1/invoices/${invoiceId}/download`)
-      // 这里处理PDF下载逻辑
-      console.log('下载发票:', invoiceId)
+      // 直接打开下载链接（后端会重定向到 OSS）
+      const downloadUrl = `/api/v1/invoices/${invoiceId}/download`
+      
+      // 创建一个隐藏的 <a> 标签来触发下载
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.target = '_blank'
+      link.download = `发票_${invoiceNo || invoiceId}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
     } catch (err) {
       setError('下载发票失败')
     }
@@ -424,7 +432,7 @@ export default function InvoicesPage() {
                             <div className="flex items-center gap-2">
                               {invoice.status === 'issued' && (
                                 <button
-                                  onClick={() => handleDownloadInvoice(invoice.id)}
+                                  onClick={() => handleDownloadInvoice(invoice.id, invoice.invoiceNumber)}
                                   className="flex items-center gap-1 text-sm text-blue-500 hover:text-blue-700 transition"
                                 >
                                   <Download size={14} />

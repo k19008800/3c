@@ -13,6 +13,9 @@ interface ModelListProps {
   onPageSizeChange?: (size: number) => void
   onEdit: (item: VendorModel) => void
   onDelete: (item: VendorModel) => void
+  // 对比选择
+  selectedIds: number[]
+  onToggleSelect: (id: number) => void
 }
 
 export default function ModelList({
@@ -25,6 +28,8 @@ export default function ModelList({
   onPageSizeChange,
   onEdit,
   onDelete,
+  selectedIds,
+  onToggleSelect,
 }: ModelListProps) {
   if (loading) {
     return (
@@ -52,6 +57,9 @@ export default function ModelList({
         <table className="w-full">
           <thead>
             <tr className="bg-slate-50 text-left">
+              <th className="px-4 py-3 text-sm font-medium text-slate-500 w-10">
+                {/* 复选框列头 */}
+              </th>
               <th className="px-4 py-3 text-sm font-medium text-slate-500">ID</th>
               <th className="px-4 py-3 text-sm font-medium text-slate-500">供应商</th>
               <th className="px-4 py-3 text-sm font-medium text-slate-500">模型</th>
@@ -73,6 +81,8 @@ export default function ModelList({
                 item={item}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                selected={selectedIds.includes(item.id)}
+                onToggleSelect={onToggleSelect}
               />
             ))}
           </tbody>

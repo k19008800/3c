@@ -19,6 +19,7 @@ export async function createCampaignRoutes(app: FastifyInstance) {
         description?: string;
         start_at?: string;
         end_at?: string;
+        auto_end?: boolean;
         budget_amount?: number;
       };
 
@@ -37,6 +38,7 @@ export async function createCampaignRoutes(app: FastifyInstance) {
           description: body.description ?? null,
           startAt: body.start_at ? new Date(body.start_at) : null,
           endAt: body.end_at ? new Date(body.end_at) : null,
+          autoEnd: body.auto_end !== false ? 1 : 0, // 默认自动结束
           budgetAmount: body.budget_amount ?? 0,
           createdBy: userId,
         })
@@ -51,6 +53,7 @@ export async function createCampaignRoutes(app: FastifyInstance) {
           status: campaign.status,
           startAt: campaign.startAt?.toISOString() ?? null,
           endAt: campaign.endAt?.toISOString() ?? null,
+          autoEnd: campaign.autoEnd === 1,
           budgetAmount: campaign.budgetAmount,
           createdBy: campaign.createdBy,
           createdAt: campaign.createdAt.toISOString(),

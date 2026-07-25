@@ -471,7 +471,7 @@ export async function logRoutes(app: FastifyInstance) {
   });
 
   // ──────────────────────────────────────────────
-  //  GET /api/v1/logs/export — CSV 导出
+  //  GET /api/v1/logs/export — CSV/JSON 导出
   // ──────────────────────────────────────────────
 
   app.get("/api/v1/logs/export", async (request, reply) => {
@@ -507,37 +507,72 @@ export async function logRoutes(app: FastifyInstance) {
         ip: callLogs.ip,
         userAgent: callLogs.userAgent,
         createdAt: callLogs.createdAt,
+        apiKeyId: callLogs.apiKeyId,
       })
       .from(callLogs)
       .where(and(...conditions))
       .orderBy(desc(callLogs.createdAt));
 
+    // 获取 API Key 名称映射
+    const apiKeyIds = [...new Set(rows.map(r => r.apiKeyId).filter((id): id is number => id !== null))];
+    const apiKeyMap = new Map<number, string>();
+    
+    if (apiKeyIds.length > 0) {
+      const { apiKeys } = await import("../db/schema/api-keys.js");
+      const keyRows = await db
+        .select({ id: apiKeys.id, name: apiKeys.name })
+        .from(apiKeys)
+        .where(sql`${apiKeys.id} IN ${apiKeyIds}`);
+      keyRows.forEach(k => apiKeyMap.set(k.id, k.name));
+    }
+
+    const filename = `call-logs-${new Date().toISOString().slice(0, 10)}`;
+
     if (format === "csv") {
-      const headers = ["ID","模型","供应商","Prompt Token","Completion Token","总 Token","费用","耗时(ms)","状态","流式","错误信息","IP","User-Agent","时间"];
+      const headers = ["时间","模型","供应商","状态","Prompt Token","Completion Token","总 Token","费用","耗时(ms)","Key 名称","流式","IP","错误信息"];
       const csvRows = rows.map((r) => [
-        r.id,
+        r.createdAt.toISOString(),
         escapeCsv(String(r.modelName ?? "")),
         escapeCsv(String(r.vendorName ?? "")),
+        r.status,
         r.promptTokens,
         r.completionTokens,
         r.totalTokens,
         String(r.cost),
         r.durationMs ?? "",
-        r.status,
+        escapeCsv(String(r.apiKeyId ? apiKeyMap.get(r.apiKeyId) ?? "" : "")),
         r.isStreaming ? "是" : "否",
-        escapeCsv(String(r.errorMessage ?? "")),
         r.ip ?? "",
-        escapeCsv(String(r.userAgent ?? "")),
-        r.createdAt.toISOString(),
+        escapeCsv(String(r.errorMessage ?? "")),
       ]);
 
       const csv = [headers.join(","), ...csvRows.map((row) => row.join(","))].join("\r\n");
 
       reply.header("Content-Type", "text/csv; charset=utf-8");
-      reply.header("Content-Disposition", `attachment; filename="call-logs-${new Date().toISOString().slice(0, 10)}.csv"`);
+      reply.header("Content-Disposition", `attachment; filename="${filename}.csv"`);
       reply.status(200).send(csv);
+    } else if (format === "json") {
+      const jsonData = rows.map((r) => ({
+        timestamp: r.createdAt.toISOString(),
+        model: r.modelName,
+        vendor: r.vendorName,
+        status: r.status,
+        inputTokens: r.promptTokens,
+        outputTokens: r.completionTokens,
+        totalTokens: r.totalTokens,
+        cost: r.cost,
+        latencyMs: r.durationMs,
+        keyName: r.apiKeyId ? apiKeyMap.get(r.apiKeyId) ?? null : null,
+        isStreaming: r.isStreaming,
+        ip: r.ip,
+        errorMessage: r.errorMessage,
+      }));
+
+      reply.header("Content-Type", "application/json; charset=utf-8");
+      reply.header("Content-Disposition", `attachment; filename="${filename}.json"`);
+      reply.status(200).send(JSON.stringify(jsonData, null, 2));
     } else {
-      reply.status(400).send({ code: 400, data: null, message: "不支持的导出格式" });
+      reply.status(400).send({ code: 400, data: null, message: "不支持的导出格式，仅支持 csv 或 json" });
     }
   });
 

@@ -17,6 +17,7 @@ export async function getUserProfile(userId: number) {
     bankAccount: users.bankAccount, rejectReason: users.rejectReason, balance: users.balance,
     discountRate: users.discountRate, rpmOverride: users.rpmOverride, tpmOverride: users.tpmOverride,
     emailVerifiedAt: users.emailVerifiedAt, createdAt: users.createdAt,
+    theme: users.theme,
   }).from(users).where(eq(users.id, userId)).limit(1);
 
   if (!user) throw new AppError("USER_NOT_FOUND", "用户不存在", 404);

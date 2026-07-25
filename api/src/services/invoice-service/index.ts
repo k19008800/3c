@@ -5,4 +5,4 @@
 export type { BankInfo, InvoiceExportFilters } from "./types.js";
 export { getUserRechargeTotal, getUserInvoices, getInvoiceDetail, listAllInvoiceRequests, exportInvoicesCsv } from "./queries.js";
 export { createInvoiceRequest } from "./create.js";
-export { approveInvoice, rejectInvoice, issueInvoice } from "./admin.js";
+export { approveInvoice, rejectInvoice, issueInvoice, updateInvoiceFileUrl } from "./admin.js";

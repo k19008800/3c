@@ -10,13 +10,14 @@ import { FastifyInstance } from "fastify";
 import { eq, and, sql, gte, desc } from "drizzle-orm";
 import { createHash, randomBytes } from "node:crypto";
 import { getDb } from "../db/index.js";
-import { apiKeys, callLogs } from "../db/schema.js";
+import { apiKeys, callLogs, apiKeyPermissionTemplates } from "../db/schema.js";
 import { authenticateJWT, guardNotImpersonating } from "../middleware/auth.js";
 import { logOperation } from "../services/operation-log.js";
 import {
   createApiKeySchema,
   updateApiKeySchema,
 } from "../schemas.js";
+import { ApiKeyAuthService } from "../services/api-key-auth-service.js";
 
 export async function apiKeyRoutes(app: FastifyInstance) {
   // 创建 API Key
@@ -40,12 +41,16 @@ export async function apiKeyRoutes(app: FastifyInstance) {
             keyHash,
             keyPrefix,
             expiresAt: parsed.expiresAt ? new Date(parsed.expiresAt) : null,
+            templateId: parsed.templateId,
+            permissions: parsed.permissions,
           })
           .returning({
             id: apiKeys.id,
             name: apiKeys.name,
             keyPrefix: apiKeys.keyPrefix,
             expiresAt: apiKeys.expiresAt,
+            templateId: apiKeys.templateId,
+            permissions: apiKeys.permissions,
           });
 
         reply.status(200).send({
@@ -56,6 +61,8 @@ export async function apiKeyRoutes(app: FastifyInstance) {
             key: rawKey, // 仅展示一次
             keyPrefix: key.keyPrefix,
             expiresAt: key.expiresAt?.toISOString() ?? null,
+            templateId: key.templateId,
+            permissions: key.permissions,
           },
           message: "ok",
         });
@@ -100,6 +107,10 @@ export async function apiKeyRoutes(app: FastifyInstance) {
           expiresAt: apiKeys.expiresAt,
           lastUsedAt: apiKeys.lastUsedAt,
           createdAt: apiKeys.createdAt,
+          permissions: apiKeys.permissions,
+          templateId: apiKeys.templateId,
+          dailyUsage: apiKeys.dailyUsage,
+          monthlyUsage: apiKeys.monthlyUsage,
         })
         .from(apiKeys)
         .where(eq(apiKeys.userId, request.user!.userId))
@@ -120,6 +131,8 @@ export async function apiKeyRoutes(app: FastifyInstance) {
             expiresAt: k.expiresAt?.toISOString() ?? null,
             lastUsedAt: k.lastUsedAt?.toISOString() ?? null,
             createdAt: k.createdAt?.toISOString() ?? null,
+            dailyUsage: k.dailyUsage ? Number(k.dailyUsage) : 0,
+            monthlyUsage: k.monthlyUsage ? Number(k.monthlyUsage) : 0,
           })),
           total: Number(countResult?.count || 0),
           page,
@@ -155,6 +168,9 @@ export async function apiKeyRoutes(app: FastifyInstance) {
         const setValues: Record<string, any> = {};
         if (parsed.name !== undefined) setValues.name = parsed.name;
         if (parsed.status !== undefined) setValues.status = parsed.status;
+        if (parsed.expiresAt !== undefined) setValues.expiresAt = parsed.expiresAt ? new Date(parsed.expiresAt) : null;
+        if (parsed.templateId !== undefined) setValues.templateId = parsed.templateId;
+        if (parsed.permissions !== undefined) setValues.permissions = parsed.permissions;
 
         if (Object.keys(setValues).length > 0) {
           await db.update(apiKeys).set(setValues).where(eq(apiKeys.id, id));
@@ -532,5 +548,174 @@ export async function apiKeyRoutes(app: FastifyInstance) {
       },
       message: "ok",
     });
+  });
+
+  // ── 权限模板管理 ──
+
+  // 创建权限模板
+  app.post("/api/v1/api-keys/permission-templates", {
+    preHandler: [authenticateJWT, guardNotImpersonating],
+    handler: async (request, reply) => {
+      try {
+        const { name, description, permissions } = request.body as any;
+        const db = getDb();
+
+        const [template] = await db
+          .insert(apiKeyPermissionTemplates)
+          .values({
+            name,
+            description,
+            permissions,
+          })
+          .returning({
+            id: apiKeyPermissionTemplates.id,
+            name: apiKeyPermissionTemplates.name,
+            description: apiKeyPermissionTemplates.description,
+            permissions: apiKeyPermissionTemplates.permissions,
+            createdAt: apiKeyPermissionTemplates.createdAt,
+          });
+
+        reply.status(200).send({
+          code: 0,
+          data: {
+            ...template,
+            createdAt: template.createdAt?.toISOString() ?? null,
+          },
+          message: "ok",
+        });
+      } catch (err: any) {
+        reply.status(500).send({ code: 500, data: null, message: err.message || "创建权限模板失败" });
+      }
+    },
+  });
+
+  // 获取权限模板列表
+  app.get("/api/v1/api-keys/permission-templates", {
+    preHandler: [authenticateJWT],
+    handler: async (request, reply) => {
+      const db = getDb();
+      const { includeSystem = "false" } = request.query as any;
+
+      let query = db
+        .select({
+          id: apiKeyPermissionTemplates.id,
+          name: apiKeyPermissionTemplates.name,
+          description: apiKeyPermissionTemplates.description,
+          permissions: apiKeyPermissionTemplates.permissions,
+          isSystem: apiKeyPermissionTemplates.isSystem,
+          createdAt: apiKeyPermissionTemplates.createdAt,
+          updatedAt: apiKeyPermissionTemplates.updatedAt,
+        })
+        .from(apiKeyPermissionTemplates);
+
+      if (includeSystem !== "true") {
+        query = query.where(eq(apiKeyPermissionTemplates.isSystem, false));
+      }
+
+      const templates = await query.orderBy(apiKeyPermissionTemplates.createdAt);
+
+      reply.status(200).send({
+        code: 0,
+        data: templates.map(t => ({
+          ...t,
+          createdAt: t.createdAt?.toISOString() ?? null,
+          updatedAt: t.updatedAt?.toISOString() ?? null,
+        })),
+        message: "ok",
+      });
+    },
+  });
+
+  // 更新权限模板
+  app.patch("/api/v1/api-keys/permission-templates/:id", {
+    preHandler: [authenticateJWT, guardNotImpersonating],
+    handler: async (request, reply) => {
+      try {
+        const { id } = request.params as any;
+        const { name, description, permissions } = request.body as any;
+        const db = getDb();
+
+        // 检查模板是否存在且不是系统模板
+        const [existing] = await db
+          .select({ id: apiKeyPermissionTemplates.id, isSystem: apiKeyPermissionTemplates.isSystem })
+          .from(apiKeyPermissionTemplates)
+          .where(eq(apiKeyPermissionTemplates.id, parseInt(id)))
+          .limit(1);
+
+        if (!existing) {
+          reply.status(404).send({ code: 404, data: null, message: "权限模板不存在" });
+          return;
+        }
+
+        if (existing.isSystem) {
+          reply.status(403).send({ code: 403, data: null, message: "系统模板不可修改" });
+          return;
+        }
+
+        const setValues: Record<string, any> = {};
+        if (name !== undefined) setValues.name = name;
+        if (description !== undefined) setValues.description = description;
+        if (permissions !== undefined) setValues.permissions = permissions;
+        setValues.updatedAt = new Date();
+
+        await db
+          .update(apiKeyPermissionTemplates)
+          .set(setValues)
+          .where(eq(apiKeyPermissionTemplates.id, parseInt(id)));
+
+        reply.status(200).send({ code: 0, data: null, message: "ok" });
+      } catch (err: any) {
+        reply.status(500).send({ code: 500, data: null, message: err.message || "更新权限模板失败" });
+      }
+    },
+  });
+
+  // 删除权限模板
+  app.delete("/api/v1/api-keys/permission-templates/:id", {
+    preHandler: [authenticateJWT, guardNotImpersonating],
+    handler: async (request, reply) => {
+      try {
+        const { id } = request.params as any;
+        const db = getDb();
+
+        // 检查模板是否存在且不是系统模板
+        const [existing] = await db
+          .select({ id: apiKeyPermissionTemplates.id, isSystem: apiKeyPermissionTemplates.isSystem })
+          .from(apiKeyPermissionTemplates)
+          .where(eq(apiKeyPermissionTemplates.id, parseInt(id)))
+          .limit(1);
+
+        if (!existing) {
+          reply.status(404).send({ code: 404, data: null, message: "权限模板不存在" });
+          return;
+        }
+
+        if (existing.isSystem) {
+          reply.status(403).send({ code: 403, data: null, message: "系统模板不可删除" });
+          return;
+        }
+
+        // 检查是否有 API Key 在使用此模板
+        const [apiKeyUsingTemplate] = await db
+          .select({ id: apiKeys.id })
+          .from(apiKeys)
+          .where(eq(apiKeys.templateId, parseInt(id)))
+          .limit(1);
+
+        if (apiKeyUsingTemplate) {
+          reply.status(400).send({ code: 400, data: null, message: "该模板正在被 API Key 使用，无法删除" });
+          return;
+        }
+
+        await db
+          .deleteFrom(apiKeyPermissionTemplates)
+          .where(eq(apiKeyPermissionTemplates.id, parseInt(id)))
+          .execute();
+
+        reply.status(200).send({ code: 0, data: null, message: "ok" });
+      } catch (err: any) {
+        reply.status(500).send({ code: 500, data: null, message: err.message || "删除权限模板失败" });
+      }
+    },
   });
 }

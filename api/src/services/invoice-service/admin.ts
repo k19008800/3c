@@ -130,3 +130,45 @@ export async function issueInvoice(
 
   return updated;
 }
+
+// ──────────────────────────────────────────────
+//  更新发票文件 URL
+// ──────────────────────────────────────────────
+
+export async function updateInvoiceFileUrl(
+  invoiceId: number,
+  fileUrl: string,
+  issuedBy: number,
+) {
+  const db = getDb();
+
+  const [record] = await db
+    .select()
+    .from(invoiceRequests)
+    .where(eq(invoiceRequests.id, invoiceId))
+    .limit(1);
+
+  if (!record) {
+    throw new AppError("INVOICE_NOT_FOUND", "开票申请不存在", 404);
+  }
+
+  const now = new Date();
+  
+  // 如果还没有发票号，生成一个默认的
+  const invoiceNo = record.invoiceNo || `INV-${invoiceId.toString().padStart(6, '0')}`;
+  
+  const [updated] = await db
+    .update(invoiceRequests)
+    .set({
+      status: "issued",
+      invoiceNo,
+      invoiceFileUrl: fileUrl,
+      issuedAt: record.issuedAt || now,
+      issuedBy,
+      updatedAt: now,
+    })
+    .where(eq(invoiceRequests.id, invoiceId))
+    .returning();
+
+  return updated;
+}

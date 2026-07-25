@@ -7,6 +7,7 @@ import { deductUserQuota } from "../quota-service.js";
 import { getPricingMultiplier, getDiscountRate, getSellPrices } from "./cache.js";
 import { processCommission } from "./commission.js";
 import type { BillingInput, BillingResult } from "./types.js";
+import { pushActivityEvent } from "../activity-push-service.js";
 
 const ALERT_LOW_BALANCE_COOLDOWN = 3600;
 
@@ -107,6 +108,22 @@ export async function charge(input: BillingInput): Promise<BillingResult> {
 
     return { cost: costStr, balanceBefore: balanceBefore.toFixed(6), balanceAfter: userBalanceStr, callLogId };
   });
+
+  // 推送实时活动事件
+  try {
+    await pushActivityEvent(input.userId, {
+      id: `${input.userId}-${billingResult.callLogId}`,
+      timestamp: new Date(),
+      model: input.modelName,
+      status: input.status === 'success' ? 'success' : 'error',
+      inputTokens: input.promptTokens,
+      outputTokens: input.completionTokens,
+      cost: Number(billingResult.cost),
+      keyName: undefined, // 可从 apiKeyId 查询，但为简化暂不查询
+    });
+  } catch (err) {
+    console.error(`[Billing] Activity push error (userId=${input.userId}):`, err);
+  }
 
   if (input.status === "success") {
     deductQuotaAfterCharge(input.userId, billingResult.cost).catch((err) => console.error(`[Billing] 额度扣减失败 (userId=${input.userId}):`, err));

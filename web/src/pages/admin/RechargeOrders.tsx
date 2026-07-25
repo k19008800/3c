@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { get, post } from '@/lib/api'
 import type { RechargeOrder, PaginatedData } from '@/types'
-import { Loader2, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Loader2, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Download } from 'lucide-react'
+import ExportDialog from '@/components/admin/ExportDialog'
+import { useExport } from '@/hooks/useExport'
 
 export default function AdminRechargeOrders() {
   const [orders, setOrders] = useState<RechargeOrder[]>([])
@@ -13,6 +15,8 @@ export default function AdminRechargeOrders() {
   const [statusFilter, setStatusFilter] = useState('')
   const [channelFilter, setChannelFilter] = useState('')
   const [msg, setMsg] = useState('')
+  const [showExportDialog, setShowExportDialog] = useState(false)
+  const { exportAndDownload } = useExport()
 
   const totalPages = Math.ceil(total / pageSize)
 
@@ -89,35 +93,44 @@ export default function AdminRechargeOrders() {
       )}
 
       <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <div className="flex gap-4">
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">状态</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">全部</option>
-              <option value="pending">待支付</option>
-              <option value="paid">已支付</option>
-              <option value="confirmed">已确认</option>
-              <option value="failed">失败</option>
-              <option value="expired">已过期</option>
-            </select>
+        <div className="flex items-center justify-between">
+          <div className="flex gap-4">
+            <div>
+              <label className="block text-xs text-slate-500 mb-1">状态</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">全部</option>
+                <option value="pending">待支付</option>
+                <option value="paid">已支付</option>
+                <option value="confirmed">已确认</option>
+                <option value="failed">失败</option>
+                <option value="expired">已过期</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-500 mb-1">支付方式</label>
+              <select
+                value={channelFilter}
+                onChange={(e) => setChannelFilter(e.target.value)}
+                className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">全部</option>
+                <option value="wechat_scan">微信支付</option>
+                <option value="alipay_scan">支付宝</option>
+                <option value="bank_transfer">银行转账</option>
+              </select>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">支付方式</label>
-            <select
-              value={channelFilter}
-              onChange={(e) => setChannelFilter(e.target.value)}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">全部</option>
-              <option value="wechat_scan">微信支付</option>
-              <option value="alipay_scan">支付宝</option>
-              <option value="bank_transfer">银行转账</option>
-            </select>
-          </div>
+          <button
+            onClick={() => setShowExportDialog(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+          >
+            <Download size={16} />
+            导出报表
+          </button>
         </div>
       </div>
 
@@ -206,6 +219,17 @@ export default function AdminRechargeOrders() {
           </div>
         )}
       </div>
+
+      <ExportDialog
+        isOpen={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        onExport={async (config) => {
+          const result = await exportAndDownload(config)
+          setMsg(`已导出 ${result.recordCount} 条记录`)
+        }}
+        type="recharge"
+        title="充值记录"
+      />
     </div>
   )
 }

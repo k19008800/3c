@@ -92,6 +92,7 @@ export async function detailCampaignRoutes(app: FastifyInstance) {
           status: campaign.status,
           startAt: campaign.startAt?.toISOString() ?? null,
           endAt: campaign.endAt?.toISOString() ?? null,
+          autoEnd: campaign.autoEnd === 1,
           budgetAmount: campaign.budgetAmount,
           createdBy: campaign.createdBy,
           createdAt: campaign.createdAt.toISOString(),
@@ -148,6 +149,7 @@ export async function detailCampaignRoutes(app: FastifyInstance) {
         description?: string;
         start_at?: string;
         end_at?: string;
+        auto_end?: boolean;
         budget_amount?: number;
       };
 
@@ -167,6 +169,9 @@ export async function detailCampaignRoutes(app: FastifyInstance) {
       }
       if (body.budget_amount !== undefined) {
         updateData.budgetAmount = body.budget_amount;
+      }
+      if (body.auto_end !== undefined) {
+        updateData.autoEnd = body.auto_end ? 1 : 0;
       }
 
       if (Object.keys(updateData).length === 0) {
@@ -197,6 +202,7 @@ export async function detailCampaignRoutes(app: FastifyInstance) {
           status: updated!.status,
           startAt: updated!.startAt?.toISOString() ?? null,
           endAt: updated!.endAt?.toISOString() ?? null,
+          autoEnd: updated!.autoEnd === 1,
           budgetAmount: updated!.budgetAmount,
           createdBy: updated!.createdBy,
           createdAt: updated!.createdAt.toISOString(),

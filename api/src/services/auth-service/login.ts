@@ -69,6 +69,16 @@ export async function loginUser(email: string, password: string, ip?: string, us
     throw new AppError("INVALID_CREDENTIALS", "邮箱或密码错误", 401);
   }
 
+  // 检查是否启用了 2FA
+  if (user.twoFactorEnabled) {
+    return {
+      user: { id: user.id, email: user.email, nickname: user.nickname, userType: user.userType as "personal" | "enterprise", role: user.role, status: user.status, balance: user.balance, emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null },
+      tokens: null as any,
+      captchaRequired: false,
+      requires2FA: true,
+    };
+  }
+
   await handleLoginSuccess(ip ?? "unknown", user.id);
 
   // 异步准备地理位置检测

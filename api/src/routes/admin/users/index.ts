@@ -22,6 +22,7 @@ import { mutationsRoutes } from "./mutations.js";
 import { roleRoutes } from "./role.js";
 import { actionsRoutes } from "./actions.js";
 import { statsRoutes } from "./stats.js";
+import { batchRoutes } from "./batch.js";
 
 export async function adminUserRoutes(app: FastifyInstance) {
   app.addHook("preHandler", authenticateJWT);
@@ -32,4 +33,5 @@ export async function adminUserRoutes(app: FastifyInstance) {
   await app.register(roleRoutes, { prefix: "" });
   await app.register(actionsRoutes, { prefix: "" });
   await app.register(statsRoutes, { prefix: "" });
+  await app.register(batchRoutes, { prefix: "" });
 }

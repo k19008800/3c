@@ -7,9 +7,13 @@ import CommissionStats from './components/CommissionStats'
 import { useFinanceCommissions } from './hooks'
 import { fmt, toCSV, triggerDownload } from './utils'
 import type { CommissionRollupRow } from '@/types'
+import ExportDialog from '@/components/admin/ExportDialog'
+import { useExport } from '@/hooks/useExport'
 
 export default function FinanceCommissionsPage() {
   const { rows, total, loading, error, fetchCommissions } = useFinanceCommissions()
+  const [showExportDialog, setShowExportDialog] = useState(false)
+  const { exportAndDownload } = useExport()
 
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -73,7 +77,14 @@ export default function FinanceCommissionsPage() {
             className="flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg hover:bg-slate-50"
           >
             <Download size={16} />
-            导出
+            快速导出
+          </button>
+          <button
+            onClick={() => setShowExportDialog(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            <Download size={16} />
+            导出报表
           </button>
         </div>
       </div>
@@ -116,6 +127,17 @@ export default function FinanceCommissionsPage() {
           />
         </div>
       </div>
+
+      <ExportDialog
+        isOpen={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        onExport={async (config) => {
+          const result = await exportAndDownload(config)
+          alert(`已导出 ${result.recordCount} 条记录`)
+        }}
+        type="commission"
+        title="佣金记录"
+      />
     </div>
   )
 }

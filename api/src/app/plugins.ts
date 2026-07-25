@@ -51,6 +51,11 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
     },
   });
 
+  // ── WebSocket 支持 ──
+  await app.register(import("@fastify/websocket"), {
+    options: { maxPayload: 1048576 }, // 1MB
+  });
+
   // ── DB & Redis Decorate ──
   const { default: dbPlugin } = await import("../plugins/db.js");
   await app.register(dbPlugin, {});

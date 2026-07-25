@@ -1,0 +1,309 @@
+﻿
+> cuserszh-openclawworkspace3cloudweb@0.0.0 predev
+> node ../scripts/check-encoding.js
+
+🔍 编码检查: 扫描中文编码腐烂...
+
+node.exe :   ℹ️  web\src\pages\admin\announcements\AnnounceList.tsx:100:35 代理对(可能是 emoji) U+D83D  "<EmptyState icon="📢
+" title="暂无公告" description="点击右上角「发布公告」创建一个" />"
+At line:1 char:1
++ & "C:\nvm4w\nodejs/node.exe" "C:\nvm4w\nodejs/node_modules/npm/bin/np ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (  ℹ️  web\src\p...「发布公告」创建一个" />":String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  ℹ️  web\src\pages\admin\dashboard\AlertBar.tsx:19:37 代理对(可能是 emoji) U+D83D  "<span className="text-lg">🚨</span>"
+  ℹ️  web\src\pages\admin\dashboard\KpiCards.tsx:30:15 代理对(可能是 emoji) U+D83D  "label: '📞 总调用量',"
+  ℹ️  web\src\pages\admin\dashboard\KpiCards.tsx:38:15 代理对(可能是 emoji) U+D83E  "label: '🪙 Token 消耗',"
+  ℹ️  web\src\pages\admin\dashboard\KpiCards.tsx:48:15 代理对(可能是 emoji) U+D83D  "label: '💰 营收',"
+  ℹ️  web\src\pages\admin\dashboard\KpiCards.tsx:56:15 代理对(可能是 emoji) U+D83D  "label: '👤 活跃用户',"
+  ℹ️  web\src\pages\admin\dashboard\KpiCards.tsx:79:15 代理对(可能是 emoji) U+D83D  "label: '💰 平台总余额',"
+  ℹ️  web\src\pages\admin\dashboard\KpiCards.tsx:85:15 代理对(可能是 emoji) U+D83D  "label: '💰 代理佣金',"
+  ℹ️  web\src\pages\admin\dashboard\ModelRankBar.tsx:33:64 代理对(可能是 emoji) U+D83D  "<h3 className="text-sm font-semibold
+ text-slate-800">🔥 {title}</h3>"
+  ℹ️  web\src\pages\admin\dashboard\QuickActions.tsx:47:62 代理对(可能是 emoji) U+D83D  "<h3 className="text-sm font-semibold
+ text-slate-800">🔥 快捷操作</h3>"
+  ℹ️  web\src\pages\admin\dashboard\RevenueBreakdown.tsx:28:67 代理对(可能是 emoji) U+D83D  "<h3 className="text-sm font-semi
+bold text-slate-800 mb-3">💰 今日营收构成</h3>"
+  ℹ️  web\src\pages\admin\dashboard\RevenueBreakdown.tsx:42:64 代理对(可能是 emoji) U+D83D  "<h3 className="text-sm font-semi
+bold text-slate-800">💰 今日营收构成</h3>"
+  ℹ️  web\src\pages\admin\dashboard\TimeRangeSelector.tsx:21:60 代理对(可能是 emoji) U+D83D  "<span className="text-xs text-s
+late-500 font-medium">📅 时间：</span>"
+  ℹ️  web\src\pages\admin\dashboard\TodoQueue.tsx:11:67 代理对(可能是 emoji) U+D83D  "<h3 className="text-sm font-semibold te
+xt-slate-800 mb-3">📋 运营待办队列</h3>"
+  ℹ️  web\src\pages\admin\dashboard\TodoQueue.tsx:32:62 代理对(可能是 emoji) U+D83D  "<h3 className="text-sm font-semibold te
+xt-slate-800">📋 运营待办队列</h3>"
+  ℹ️  web\src\pages\admin\dashboard\TodoQueue.tsx:38:70 代理对(可能是 emoji) U+D83D  "<div className="text-xs font-semibold t
+ext-red-600 mb-2">🔴 紧急</div>"
+  ℹ️  web\src\pages\admin\dashboard\TodoQueue.tsx:55:70 代理对(可能是 emoji) U+D83D  "<div className="text-xs font-semibold t
+ext-amber-600 mb-2">🟡 待处理</div>"
+  ℹ️  web\src\pages\admin\dashboard\TodoQueue.tsx:58:48 代理对(可能是 emoji) U+D83D  "<span className="text-slate-600">📄 实名待
+审</span>"
+  ℹ️  web\src\pages\admin\dashboard\TodoQueue.tsx:62:48 代理对(可能是 emoji) U+D83D  "<span className="text-slate-600">💳 对公待
+一审</span>"
+  ℹ️  web\src\pages\admin\dashboard\TodoQueue.tsx:68:48 代理对(可能是 emoji) U+D83D  "<span className="text-slate-600">💳 对公待
+二审</span>"
+  ℹ️  web\src\pages\admin\dashboard\TodoQueue.tsx:74:48 代理对(可能是 emoji) U+D83C  "<span className="text-slate-600">🏦 提现待
+一审</span>"
+  ℹ️  web\src\pages\admin\dashboard\TodoQueue.tsx:80:48 代理对(可能是 emoji) U+D83C  "<span className="text-slate-600">🏦 提现待
+二审</span>"
+  ℹ️  web\src\pages\admin\dashboard\TodoQueue.tsx:87:50 代理对(可能是 emoji) U+D83D  "<span className="text-slate-600">🚨 未确认
+安全事件</span>"
+  ℹ️  web\src\pages\admin\dashboard\TodoQueue.tsx:101:13 代理对(可能是 emoji) U+D83D  "📋 打开运营工作台 →"
+  ℹ️  web\src\pages\admin\dashboard\TopUsersTable.tsx:12:64 代理对(可能是 emoji) U+D83C  "<h3 className="text-sm font-semibol
+d text-slate-800">🏆 Top 消费用户</h3>"
+  ℹ️  web\src\pages\admin\dashboard\TopUsersTable.tsx:42:55 代理对(可能是 emoji) U+D83C  "{c.userType === 'enterprise' ? '🏢'
+ : '👤'}"
+  ℹ️  web\src\pages\admin\dashboard\VendorHealthPanel.tsx:15:67 代理对(可能是 emoji) U+D83C  "<h3 className="text-sm font-sem
+ibold text-slate-800 mb-3">🏭 厂商健康状态</h3>"
+  ℹ️  web\src\pages\admin\dashboard\VendorHealthPanel.tsx:62:64 代理对(可能是 emoji) U+D83C  "<h3 className="text-sm font-sem
+ibold text-slate-800">🏭 厂商健康状态</h3>"
+  ℹ️  web\src\pages\admin\dashboard\VendorHealthPanel.tsx:86:27 代理对(可能是 emoji) U+D83D  "{v.down ? ' 🔴' : ''}"
+  ℹ️  web\src\pages\admin\feature-descriptions.ts:16:7 代理对(可能是 emoji) U+D83D  "//  📊 总览看板"
+  ℹ️  web\src\pages\admin\feature-descriptions.ts:108:7 代理对(可能是 emoji) U+D83D  "//  👤 用户运营"
+  ℹ️  web\src\pages\admin\feature-descriptions.ts:195:7 代理对(可能是 emoji) U+D83E  "//  🤖 资源管理"
+  ℹ️  web\src\pages\admin\feature-descriptions.ts:283:7 代理对(可能是 emoji) U+D83D  "//  💰 财务结算"
+  ℹ️  web\src\pages\admin\feature-descriptions.ts:525:7 代理对(可能是 emoji) U+D83D  "//  🛡️ 安全风控"
+  ℹ️  web\src\pages\admin\feature-descriptions.ts:686:7 代理对(可能是 emoji) U+D83D  "//  📋 审计合规"
+  ℹ️  web\src\pages\admin\feature-descriptions.ts:828:7 代理对(可能是 emoji) U+D83E  "//  🤖 资源管理（续）"
+  ℹ️  web\src\pages\admin\feature-descriptions.ts:851:7 代理对(可能是 emoji) U+D83D  "//  🛡️ 安全风控（续）"
+  ℹ️  web\src\pages\admin\feature-descriptions.ts:872:7 代理对(可能是 emoji) U+D83D  "//  🛠️ 调试工具"
+  ℹ️  web\src\pages\admin\FinanceDashboard.tsx:79:16 BOM(可能是 CSV 前缀) U+FEFF  "const BOM = '﻿'"
+  ℹ️  web\src\pages\admin\real-name\ReviewDetail.tsx:85:33 代理对(可能是 emoji) U+D83D  "<FileImage size={14} /> 📸 OCR 识别结果"
+  ℹ️  web\src\pages\admin\trends\ComparisonChart.tsx:30:16 代理对(可能是 emoji) U+D83C  "icon: '🏆',"
+  ℹ️  web\src\pages\admin\trends\ComparisonChart.tsx:45:16 代理对(可能是 emoji) U+D83D  "icon: '📊',"
+  ℹ️  web\src\pages\admin\trends\ComparisonChart.tsx:67:16 代理对(可能是 emoji) U+D83D  "icon: '📈',"
+  ℹ️  web\src\pages\admin\trends\ExportControls.tsx:69:42 代理对(可能是 emoji) U+D83D  "<span className="text-red-500">🔺</sp
+an>"
+  ℹ️  web\src\pages\admin\trends\TimeSeriesChart.tsx:110:96 代理对(可能是 emoji) U+D83C  "<title>{d.label} ({dayOfWeek(d.labe
+l)})\n{formatValue(d.value)} {unit}{isPk ? '\"
+  ℹ️  web\src\pages\admin\trends\TimeSeriesChart.tsx:119:133 代理对(可能是 emoji) U+D83D  "<text x={barX(peakIndex) + bw / 2}
+ y={toY(max) - 6} textAnchor="middle" fontSize"
+  ℹ️  web\src\pages\admin\trends\TimeSeriesChart.tsx:184:124 代理对(可能是 emoji) U+D83D  "{isPk && <text x={x + bw2 / 2} y={
+y - 4} textAnchor="middle" fontSize="7" fill=""
+  ℹ️  web\src\pages\admin\TrendsCharts.tsx:218:76 代理对(可能是 emoji) U+D83C  "{s.calls.total === callMax && <span className
+="ml-1">🏆</span>}"
+  ℹ️  web\src\pages\admin\users\components\ActivityTimeline.tsx:187:38 代理对(可能是 emoji) U+D83D  "<p className="text-4xl m
+b-2">📭</p>"
+  ℹ️  web\src\pages\admin\vendor-key-groups\components\GroupList.tsx:90:56 代理对(可能是 emoji) U+D83D  "<span className="tex
+t-green-600">🟢{g.activeCount}</span>"
+  ℹ️  web\src\pages\admin\vendor-key-groups\components\GroupList.tsx:91:74 代理对(可能是 emoji) U+D83D  "{g.downCount > 0 && 
+<span className="text-red-600">🔴{g.downCount}</span>}"
+  ⚠️  web\src\pages\admin\vendor-key-groups\VendorKeyGroupsPage.tsx:1:1 可疑字符 U+FEFF  "import React, { useEffect, useSta
+te } from 'react'"
+  ℹ️  web\src\pages\dashboard\components\ModelOptimizationTip.tsx:209:13 代理对(可能是 emoji) U+D83D  "💡 优化建议仅供参考，实际效果取决于您的具
+体使用场景"
+  ℹ️  web\src\pages\Models.tsx:552:47 BOM(可能是 CSV 前缀) U+FEFF  "const blob = new Blob(['﻿' + csv], { type: 'text/csv;cha
+rset=utf-8' })"
+  ℹ️  web\src\pages\Stats.tsx:223:31 BOM(可能是 CSV 前缀) U+FEFF  "const blob = new Blob(['﻿' + csvRows.join('\n')], { type:
+ 'text/csv;charset=utf-"
+  ℹ️  web\src\components\admin\AlertNotification.tsx:93:20 代理对(可能是 emoji) U+D83D  "critical: "🔴","
+  ℹ️  web\src\components\admin\FeatureDescription.tsx:106:62 代理对(可能是 emoji) U+D83D  "<span className="font-medium text-
+slate-500">💡 日常操作：</span>"
+  ℹ️  web\src\components\layout\Sidebar.tsx:84:13 代理对(可能是 emoji) U+D83D  "label: '📊 总览看板',"
+  ℹ️  web\src\components\layout\Sidebar.tsx:95:13 代理对(可能是 emoji) U+D83D  "label: '👤 用户运营',"
+  ℹ️  web\src\components\layout\Sidebar.tsx:105:13 代理对(可能是 emoji) U+D83E  "label: '🤖 资源管理',"
+  ℹ️  web\src\components\layout\Sidebar.tsx:116:13 代理对(可能是 emoji) U+D83D  "label: '💰 财务结算',"
+  ℹ️  web\src\components\layout\Sidebar.tsx:135:13 代理对(可能是 emoji) U+D83D  "label: '🛡️ 安全风控',"
+  ℹ️  web\src\components\layout\Sidebar.tsx:156:13 代理对(可能是 emoji) U+D83D  "label: '📋 审计合规',"
+  ℹ️  web\src\components\layout\Sidebar.tsx:537:96 代理对(可能是 emoji) U+D83C  "{!collapsed && <p className="text-xs text-sl
+ate-400 uppercase tracking-wider mb-"
+  ℹ️  web\src\components\ui\CaptchaDialog.tsx:35:40 代理对(可能是 emoji) U+D83D  "<span className="text-2xl">🔐</span>"
+  ℹ️  web\src\components\ui\EmptyState.tsx:11:11 代理对(可能是 emoji) U+D83D  "icon = '📭',"
+  ℹ️  api\src\app\index.ts:412:23 代理对(可能是 emoji) U+D83D  "app.log.info(`\n  🚀 3cloud API 已启动`);"
+  ℹ️  api\src\app\index.ts:413:21 代理对(可能是 emoji) U+D83D  "app.log.info(`  📡 http://${config.server.host}:${config.serv
+er.port}`);"
+  ℹ️  api\src\app\index.ts:414:21 代理对(可能是 emoji) U+D83C  "app.log.info(`  🏥 http://localhost:${config.server.port}/hea
+lth`);"
+  ℹ️  api\src\constants\error-codes.ts:562:61 代理对(可能是 emoji) U+D83D  "{ key: 'balance', label: '余额', labelEn: 'Balance'
+, icon: '💰' },"
+  ℹ️  api\src\constants\error-codes.ts:563:65 代理对(可能是 emoji) U+D83D  "{ key: 'auth', label: '认证', labelEn: 'Authenticat
+ion', icon: '🔐' },"
+  ℹ️  api\src\constants\error-codes.ts:564:57 代理对(可能是 emoji) U+D83E  "{ key: 'model', label: '模型', labelEn: 'Model', ic
+on: '🤖' },"
+  ℹ️  api\src\constants\error-codes.ts:566:61 代理对(可能是 emoji) U+D83D  "{ key: 'request', label: '请求', labelEn: 'Request'
+, icon: '📤' },"
+  ℹ️  api\src\constants\error-codes.ts:567:61 代理对(可能是 emoji) U+D83D  "{ key: 'service', label: '服务', labelEn: 'Service'
+, icon: '🔧' },"
+  ℹ️  api\src\constants\error-codes.ts:568:68 代理对(可能是 emoji) U+D83C  "{ key: 'redemption', label: '兑换码', labelEn: 'Rede
+mption', icon: '🎁' },"
+  ℹ️  api\src\constants\error-codes.ts:570:61 代理对(可能是 emoji) U+D83D  "{ key: 'invoice', label: '发票', labelEn: 'Invoice'
+, icon: '📄' },"
+  ℹ️  api\src\constants\error-codes.ts:572:57 代理对(可能是 emoji) U+D83D  "{ key: 'agent', label: '代理', labelEn: 'Agent', ic
+on: '👥' },"
+  ℹ️  api\src\cron\daily-recon.ts:49:27 代理对(可能是 emoji) U+D83D  "`[DailyRecon] 🔴 对账不平！日期: ${dateStr}, 差额: ${summary.bal
+anceDiff}`"
+  ℹ️  api\src\cron\hourly-recon.ts:62:35 代理对(可能是 emoji) U+D83D  "console.warn(`[HourlyRecon] 🔴 发现异常:\\n${anomalyMessag
+e}`);"
+  ℹ️  api\src\db\migrate.ts:115:18 代理对(可能是 emoji) U+D83D  "console.log(`\n📦 3cloud Migration Runner`);"
+  ℹ️  api\src\db\migrations\2026-06-29-backfill-agent-consumption.ts:32:16 代理对(可能是 emoji) U+D83D  "console.log(`📊 共 ${
+allAgents.length} 个代理商\n`);"
+  ℹ️  api\src\db\migrations\2026-06-29-backfill-agent-consumption.ts:39:18 代理对(可能是 emoji) U+D83C  "console.log(`🏢 代理商 
+#${agent.id} (userId=${agent.userId})`);"
+  ℹ️  api\src\db\migrations\2026-06-29-backfill-agent-consumption.ts:118:16 代理对(可能是 emoji) U+D83D  "console.log("🔍 检查遗
+漏绑定记录...");"
+  ℹ️  api\src\db\migrations\2026-06-29-backfill-agent-consumption.ts:158:18 代理对(可能是 emoji) U+D83D  "console.log(`  📊 a
+gent_customer_consumption 总行数: ${Number(aggCount.count)}`);"
+  ℹ️  api\src\db\migrations\2026-07-09-redemption-fix-columns.ts:48:16 代理对(可能是 emoji) U+D83C  "console.log("🎉 Redempti
+on schema fix complete!");"
+  ℹ️  api\src\db\migrations\seed-v2-data.ts:192:16 代理对(可能是 emoji) U+D83D  "console.log("📊 验证新表数据");"
+  ℹ️  api\src\db\migrations\seed-v2-data.ts:210:18 代理对(可能是 emoji) U+D83C  "console.log("\n🎉 测试数据填充完成！");"
+  ℹ️  api\src\db\migrations\setup-call-logs-partitions.ts:44:16 代理对(可能是 emoji) U+D83D  "console.log("🔧 call_logs 分区设置脚
+本\n");"
+  ℹ️  api\src\db\migrations\setup-call-logs-partitions.ts:54:18 代理对(可能是 emoji) U+D83D  "console.log("  🔄 删除旧的 call_log
+s 普通表...");"
+  ℹ️  api\src\db\migrations\setup-call-logs-partitions.ts:60:20 代理对(可能是 emoji) U+D83D  "console.log("\n  🔄 创建分区父表...")
+;"
+  ℹ️  api\src\db\migrations\setup-call-logs-partitions.ts:97:22 代理对(可能是 emoji) U+D83D  "console.log(`\n  📦 创建分区: ${par
+titionName}`);"
+  ℹ️  api\src\db\migrations\setup-call-logs-partitions.ts:156:22 代理对(可能是 emoji) U+D83D  "console.log(`  📦 补充分区: ${part
+itionName} [${range.from}, ${range.to})`);"
+  ℹ️  api\src\db\migrations\setup-commission-logs-partitions.ts:41:16 代理对(可能是 emoji) U+D83D  "console.log("🔧 commissio
+n_logs 分区设置脚本\n");"
+  ℹ️  api\src\db\migrations\setup-commission-logs-partitions.ts:51:18 代理对(可能是 emoji) U+D83D  "console.log("  🔄 备份现有数据.
+..");"
+  ℹ️  api\src\db\migrations\setup-commission-logs-partitions.ts:57:20 代理对(可能是 emoji) U+D83D  "console.log("\n  🔄 删除旧的 
+commission_logs 普通表...");"
+  ℹ️  api\src\db\migrations\setup-commission-logs-partitions.ts:63:20 代理对(可能是 emoji) U+D83D  "console.log("\n  🔄 创建分区父
+表...");"
+  ℹ️  api\src\db\migrations\setup-commission-logs-partitions.ts:101:22 代理对(可能是 emoji) U+D83D  "console.log(`\n  📦 创建分区
+: ${partitionName}`);"
+  ℹ️  api\src\db\migrations\setup-commission-logs-partitions.ts:119:22 代理对(可能是 emoji) U+D83D  "console.log(`\n  🔄 恢复 $
+{oldRows.length} 条旧数据...`);"
+  ℹ️  api\src\db\migrations\setup-commission-logs-partitions.ts:172:22 代理对(可能是 emoji) U+D83D  "console.log(`  📦 补充分区: 
+${partitionName} [${range.from}, ${range.to})`);"
+  ℹ️  api\src\db\migrations\v2-create-all-tables.ts:178:16 代理对(可能是 emoji) U+D83C  "console.log("🎉 V2 migration complet
+e!");"
+  ℹ️  api\src\db\scripts\backfill-commission-rollup.ts:53:16 代理对(可能是 emoji) U+D83D  "console.log(`🔄 开始回填佣金日汇总`);"
+  ℹ️  api\src\db\seed-10000-commissions.ts:69:16 代理对(可能是 emoji) U+D83D  "console.log(`📋 代理商: 分佣比例 ${(AGENT_RATE * 100)
+.toFixed(1)}% (来自 commission_rules"
+  ℹ️  api\src\db\seed-10000-commissions.ts:80:16 代理对(可能是 emoji) U+D83D  "console.log(`👥 客户: ${clientList.length} 个\n`)
+;"
+  ℹ️  api\src\db\seed-10000-commissions.ts:109:18 代理对(可能是 emoji) U+D83D  "console.log(`\n📞 生成 ${TOTAL} 条 call_logs + c
+ommission_logs...`);"
+  ℹ️  api\src\db\seed-10000-commissions.ts:293:16 代理对(可能是 emoji) U+D83D  "console.log(`📊 最终统计:\n`);"
+  ℹ️  api\src\db\seed-10000-commissions.ts:300:18 代理对(可能是 emoji) U+D83D  "console.log(`\n💰 代理商余额:\n`);"
+  ℹ️  api\src\db\seed-10000-commissions.ts:306:18 代理对(可能是 emoji) U+D83D  "console.log(`\n🔹 测试方法:\n`);"
+  ℹ️  api\src\db\seed-admin.ts:32:18 代理对(可能是 emoji) U+D83D  "console.log("\n🔐 创建管理员账号...\n");"
+  ℹ️  api\src\db\seed-admin.ts:49:24 代理对(可能是 emoji) U+D83D  "console.log(`  🔄 更新 ${account.email} 角色: ${existing[0].ro
+le} → ${account.role}`"
+  ℹ️  api\src\db\seed-admin.ts:82:18 代理对(可能是 emoji) U+D83C  "console.log("\n🎉 管理员账号创建完成！");"
+  ℹ️  api\src\db\seed-admin.ts:83:18 代理对(可能是 emoji) U+D83D  "console.log("\n📋 账号列表:");"
+  ℹ️  api\src\db\seed-agent-clients.ts:366:16 代理对(可能是 emoji) U+D83D  "console.log("📦 获取现有厂商/模型...");"
+  ℹ️  api\src\db\seed-agent-clients.ts:479:16 代理对(可能是 emoji) U+D83C  "console.log(`🏢 代理商: ${AGENT_EMAIL}, 分佣比例: ${rate
+Pct}%\n`);"
+  ℹ️  api\src\db\seed-agent-clients.ts:482:16 代理对(可能是 emoji) U+D83D  "console.log("👤 创建客户用户...\n");"
+  ℹ️  api\src\db\seed-agent-clients.ts:613:18 代理对(可能是 emoji) U+D83C  "console.log(`\n🎯 共 ${createdClientIds.length} 个客
+户就绪\n`);"
+  ℹ️  api\src\db\seed-agent-clients.ts:616:16 代理对(可能是 emoji) U+D83D  "console.log("📞 生成 API 调用记录...\n");"
+  ℹ️  api\src\db\seed-agent-clients.ts:720:18 代理对(可能是 emoji) U+D83D  "console.log(`\n💰 分佣统计:`);"
+  ℹ️  api\src\db\seed-agent-clients.ts:725:18 代理对(可能是 emoji) U+D83C  "console.log(`\n🏧 处理提现记录...`);"
+  ℹ️  api\src\db\seed-agent-clients.ts:780:18 代理对(可能是 emoji) U+D83D  "console.log(`\n📊 最终统计\n`);"
+  ℹ️  api\src\db\seed-settlement-data.ts:90:16 代理对(可能是 emoji) U+D83D  "console.log("📋 代理商当前余额:");"
+  ℹ️  api\src\db\seed-settlement-data.ts:113:18 代理对(可能是 emoji) U+D83D  "console.log("\n📊 生成佣金日汇总 (30 天)...");"
+  ℹ️  api\src\db\seed-settlement-data.ts:179:18 代理对(可能是 emoji) U+D83D  "console.log("\n📒 生成日终对账汇总 (30 天)...");"
+  ℹ️  api\src\db\seed-settlement-data.ts:228:18 代理对(可能是 emoji) U+D83C  "console.log("\n🏧 生成提现记录 (8 笔, 覆盖全状态)...");"
+  ℹ️  api\src\db\seed-settlement-data.ts:517:16 代理对(可能是 emoji) U+D83D  "console.log("📊 最终数据统计:\n");"
+  ℹ️  api\src\db\seed-settlement-data.ts:528:18 代理对(可能是 emoji) U+D83D  "console.log("\n💰 代理商余额:\n");"
+  ℹ️  api\src\db\seed-settlement-data.ts:535:18 代理对(可能是 emoji) U+D83D  "console.log("\n📋 提现记录明细:\n");"
+  ℹ️  api\src\db\seed-test-agents.ts:54:18 代理对(可能是 emoji) U+D83D  "console.log("  📦 创建测试用模型和厂商...");"
+  ℹ️  api\src\db\seed-test-agents.ts:92:16 代理对(可能是 emoji) U+D83E  "console.log("🧪 开始填充代理商测试数据...\n");"
+  ℹ️  api\src\db\seed-test-agents.ts:95:16 代理对(可能是 emoji) U+D83D  "console.log("📦 基础数据检查...");"
+  ℹ️  api\src\db\seed-test-agents.ts:112:16 代理对(可能是 emoji) U+D83D  "console.log("👤 创建用户...");"
+  ℹ️  api\src\db\seed-test-agents.ts:174:18 代理对(可能是 emoji) U+D83C  "console.log("\n🏢 创建代理商记录...");"
+  ℹ️  api\src\db\seed-test-agents.ts:211:18 代理对(可能是 emoji) U+D83D  "console.log("\n🔗 绑定客户到代理商...");"
+  ℹ️  api\src\db\seed-test-agents.ts:243:18 代理对(可能是 emoji) U+D83D  "console.log("\n💰 模拟消费和分佣...");"
+  ℹ️  api\src\db\seed-test-agents.ts:307:22 代理对(可能是 emoji) U+D83D  "console.log(`  💳  客户 #${clientUserId}: ${numCalls}
+ 次调用, 消费 ¥${totalCostDisplay}"
+  ℹ️  api\src\db\seed-test-agents.ts:336:26 代理对(可能是 emoji) U+D83D  "console.log(`  💰  代理商 #${agentId}: +¥${commission.
+toFixed(2)} 分佣 (${(rate * 100"
+  ℹ️  api\src\db\seed-test-agents.ts:342:18 代理对(可能是 emoji) U+D83D  "console.log("\n📊 ====== 测试数据概览 ======");"
+  ℹ️  api\src\db\seed-test-agents.ts:378:20 代理对(可能是 emoji) U+D83C  "console.log(`  🏢 ${a.nickname} (${a.email}) | 分佣 $
+{ratePct}% | 客户 ${a.clientCou"
+  ℹ️  api\src\db\seed-test-agents.ts:400:20 代理对(可能是 emoji) U+D83D  "console.log(`  👤 ${c.nickname || c.email} | 余额 ¥${
+parseFloat(c.balance).toFixed"
+  ℹ️  api\src\db\seed.ts:108:29 代理对(可能是 emoji) U+D83D  "<h2 style="color:#2563eb">📧 邮箱验证</h2>"
+  ℹ️  api\src\db\seed.ts:122:29 代理对(可能是 emoji) U+D83D  "<h2 style="color:#2563eb">📧 Email Verification</h2>"
+  ℹ️  api\src\db\seed.ts:143:29 代理对(可能是 emoji) U+D83D  "<h2 style="color:#2563eb">🔑 密码重置</h2>"
+  ℹ️  api\src\db\seed.ts:157:29 代理对(可能是 emoji) U+D83D  "<h2 style="color:#2563eb">🔑 Password Reset</h2>"
+  ℹ️  api\src\db\seed.ts:178:29 代理对(可能是 emoji) U+D83D  "<h2 style="color:#16a34a">💰 充值到账</h2>"
+  ℹ️  api\src\db\seed.ts:193:29 代理对(可能是 emoji) U+D83D  "<h2 style="color:#16a34a">💰 Recharge Confirmed</h2>"
+  ℹ️  api\src\db\seed.ts:248:29 代理对(可能是 emoji) U+D83D  "<h2 style="color:#c62828">🔒 账号临时封禁</h2>"
+  ℹ️  api\src\db\seed.ts:262:29 代理对(可能是 emoji) U+D83D  "<h2 style="color:#c62828">🔒 Account Temporarily Suspended</h2>
+"
+  ℹ️  api\src\db\seed.ts:302:16 代理对(可能是 emoji) U+D83D  "console.log("📋 系统配置...");"
+  ℹ️  api\src\db\seed.ts:322:18 代理对(可能是 emoji) U+D83D  "console.log(`  📊 配置：插入 ${inserted} 条，跳过 ${skipped} 条\n`);"
+  ℹ️  api\src\db\seed.ts:326:16 代理对(可能是 emoji) U+D83D  "console.log("🛡️ 安全配置...");"
+  ℹ️  api\src\db\seed.ts:350:18 代理对(可能是 emoji) U+D83D  "console.log(`  📊 安全配置：插入 ${inserted} 条，跳过 ${skipped} 条\n`);"
+  ℹ️  api\src\db\seed.ts:354:16 代理对(可能是 emoji) U+D83D  "console.log("📧 邮件模板...");"
+  ℹ️  api\src\db\seed.ts:376:18 代理对(可能是 emoji) U+D83D  "console.log(`  📊 模板：插入 ${inserted} 条，跳过 ${skipped} 条\n`);"
+  ℹ️  api\src\db\seed.ts:381:16 代理对(可能是 emoji) U+D83C  "console.log("🌱 3cloud 种子数据\n" + "═".repeat(30));"
+  ℹ️  api\src\routes\admin\stats.ts:578:20 BOM(可能是 CSV 前缀) U+FEFF  "const csv = "﻿" + csvHeaders + "\n" + csvRows.join(
+"\n");"
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:56:11 代理对(可能是 emoji) U+D83D  "login: "🔐","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:57:12 代理对(可能是 emoji) U+D83D  "logout: "🚪","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:58:14 代理对(可能是 emoji) U+D83D  "register: "📝","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:59:21 代理对(可能是 emoji) U+D83D  "change_password: "🔑","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:60:16 代理对(可能是 emoji) U+D83D  "oauth_bind: "🔗","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:61:18 代理对(可能是 emoji) U+D83D  "oauth_unbind: "🔓","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:62:20 代理对(可能是 emoji) U+D83D  "api_key_create: "🔑","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:63:20 代理对(可能是 emoji) U+D83D  "api_key_delete: "🗑️","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:65:19 代理对(可能是 emoji) U+D83D  "api_key_reset: "🔄","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:66:21 代理对(可能是 emoji) U+D83D  "recharge_submit: "💰","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:67:20 代理对(可能是 emoji) U+D83C  "redemption_use: "🎟️","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:68:22 代理对(可能是 emoji) U+D83D  "withdraw_request: "💸","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:69:19 代理对(可能是 emoji) U+D83D  "invoice_apply: "📄","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:71:21 代理对(可能是 emoji) U+D83E  "realname_submit: "🪪","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:72:20 代理对(可能是 emoji) U+D83D  "profile_update: "👤","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:73:20 代理对(可能是 emoji) U+D83D  "security_setup: "🛡️","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:74:25 代理对(可能是 emoji) U+D83D  "agent_client_create: "👥","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:76:24 代理对(可能是 emoji) U+D83D  "agent_quota_adjust: "📊","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:77:20 代理对(可能是 emoji) U+D83D  "agent_withdraw: "💸","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:78:29 代理对(可能是 emoji) U+D83C  "agent_redemption_create: "🎫","
+  ℹ️  api\src\routes\admin\users\detail\activity.ts:175:46 代理对(可能是 emoji) U+D83D  "actionIcon: ACTION_ICONS[r.action] |
+| "📌","
+  ℹ️  api\src\routes\api-keys.ts:444:19 BOM(可能是 CSV 前缀) U+FEFF  "reply.send('﻿' + header + '\n' + csv);"
+  ℹ️  api\src\scripts\auto-settle-commissions.ts:16:6 代理对(可能是 emoji) U+D83D  "// 🐛 FIX: 使用 Asia/Shanghai 时区计算截止日期"
+  ℹ️  api\src\scripts\check-agent-commissions.ts:9:18 代理对(可能是 emoji) U+D83D  "console.log(`\n🔍 检查代理商: ${email}\n`);"
+  ℹ️  api\src\scripts\data-factory.ts:505:18 代理对(可能是 emoji) U+D83C  "console.log(`  🎉 数据工厂完成`);"
+  ℹ️  api\src\scripts\import-geo-csv.ts:166:16 代理对(可能是 emoji) U+D83C  "console.log("🌍 GeoIP 块数据导入\n");"
+  ℹ️  api\src\scripts\import-geo-csv.ts:188:22 代理对(可能是 emoji) U+D83D  "console.log("  🔄 清空旧数据...");"
+  ℹ️  api\src\scripts\import-geo-csv.ts:199:22 代理对(可能是 emoji) U+D83D  "console.log("\n  🔄 ANALYZE...");"
+  ℹ️  api\src\scripts\simulate-calls.ts:319:18 代理对(可能是 emoji) U+D83C  "console.log(`  🎉 全链路模拟完成`);"
+  ℹ️  api\src\scripts\verify-fix.ts:18:16 代理对(可能是 emoji) U+D83D  "console.log("📊 agent_customer_consumption 表：");"
+  ℹ️  api\src\scripts\verify-fix.ts:40:18 代理对(可能是 emoji) U+D83D  "console.log("\n📊 API 返回字段验证（模拟 agent /api/v1/agent/c
+lients）：");"
+  ℹ️  api\src\scripts\verify-fix.ts:49:20 代理对(可能是 emoji) U+D83C  "console.log(`\n🏢 代理商 #${agent.id} (${agentUser?.emai
+l || '?'}) ${agentUser?.nic"
+  ℹ️  api\src\scripts\verify-fix.ts:115:18 代理对(可能是 emoji) U+D83D  "console.log("\n📊 代理商统计：");"
+  ℹ️  api\src\scripts\verify-fix.ts:126:20 代理对(可能是 emoji) U+D83C  "console.log(`  🏢 代理商 #${a.id}: totalCommission=${a.
+totalCommission} | pendingWi"
+  ℹ️  api\src\services\daily-summary.ts:161:54 代理对(可能是 emoji) U+D83D  "<h1 style="color:#fff;margin:0;font-size:20px">�
+� 每日安全摘要</h1>"
+  ℹ️  api\src\services\daily-summary.ts:174:66 代理对(可能是 emoji) U+D83D  "<h2 style="font-size:15px;color:#1e293b;margin:1
+6px 0 8px">📊 风险等级分布</h2>"
+  ℹ️  api\src\services\daily-summary.ts:188:66 代理对(可能是 emoji) U+D83D  "<h2 style="font-size:15px;color:#1e293b;margin:1
+6px 0 8px">📋 事件类型分布</h2>"
+  ℹ️  api\src\services\daily-summary.ts:202:66 代理对(可能是 emoji) U+D83D  "<h2 style="font-size:15px;color:#1e293b;margin:1
+6px 0 8px">🚫 当前封禁</h2>"
+  ℹ️  api\src\services\daily-summary.ts:251:17 代理对(可能是 emoji) U+D83D  "subject: `🔒 3cloud 每日安全摘要 — ${dateStr}`,"
+  ℹ️  api\src\__tests__\edge-cases.test.ts:156:21 代理对(可能是 emoji) U+D83D  "name: "测试厂商 🚀 日本語 한국어","
+  ℹ️  api\src\__tests__\edge-cases.test.ts:170:17 代理对(可能是 emoji) U+D83C  "title: "🎉 系统公告 — 测试","
+
+📊 扫描完成: 1181 个文件
+
+ℹ️ 找到部分代理对（可能是 emoji），非编译阻塞项。
+
+ℹ️ 找到 BOM 字符（可能是 CSV BOM 前缀），非编译阻塞项。
+✅ 编码检查通过（无阻塞项）。
+
+
+> cuserszh-openclawworkspace3cloudweb@0.0.0 dev
+> vite
+
+
+  [32m[1mVITE[22m v8.1.0[39m  [2mready in [0m[1m269[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5175[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m

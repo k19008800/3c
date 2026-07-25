@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import {
-  User, Shield, Monitor, Clock, Bell,
+  User, Shield, Monitor, Clock, Bell, Palette,
 } from 'lucide-react'
 import ProfileSettings from './ProfileSettings'
 import SecuritySettings from './SecuritySettings'
 import SessionSettings from './SessionSettings'
 import LoginHistorySettings from './LoginHistorySettings'
 import PreferenceSettings from './PreferenceSettings'
+import ThemeSettings from './ThemeSettings'
 
-type Tab = 'profile' | 'security' | 'sessions' | 'login-history' | 'notifications'
+type Tab = 'profile' | 'security' | 'sessions' | 'login-history' | 'notifications' | 'theme'
 
 // ── 个人设置（用户端）─-
 //
@@ -31,6 +32,7 @@ export default function Settings() {
 
   const tabs: { key: Tab; label: string; icon: any }[] = [
     { key: 'profile', label: '个人资料', icon: User },
+    { key: 'theme', label: '主题设置', icon: Palette },
     { key: 'security', label: '安全', icon: Shield },
     { key: 'sessions', label: '会话管理', icon: Monitor },
     { key: 'login-history', label: '登录历史', icon: Clock },
@@ -66,6 +68,7 @@ export default function Settings() {
       </div>
 
       {tab === 'profile' && <ProfileSettings user={user} />}
+      {tab === 'theme' && <ThemeSettings />}
       {tab === 'security' && <SecuritySettings />}
       {tab === 'sessions' && <SessionSettings />}
       {tab === 'login-history' && <LoginHistorySettings />}

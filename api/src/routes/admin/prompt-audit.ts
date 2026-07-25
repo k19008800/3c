@@ -468,6 +468,80 @@ export async function promptAuditRoutes(app: FastifyInstance) {
   });
 
   // ──────────────────────────────────────────────
+  //  POST /api/v1/admin/sensitive-words/test — 测试敏感词匹配
+  // ──────────────────────────────────────────────
+
+  app.post("/api/v1/admin/sensitive-words/test", {
+    preHandler: [requirePerm(Perm.AUDIT_VIEW)],
+  }, async (request, reply) => {
+    const db = getDb();
+    const body = request.body as {
+      text: string;
+      category?: string;
+    };
+
+    if (!body.text || body.text.trim().length === 0) {
+      return reply.status(400).send({ code: 400, data: null, message: "测试文本不能为空" });
+    }
+
+    // 构建查询条件
+    const conditions: any[] = [eq(sensitiveWords.enabled, true)];
+    if (body.category) {
+      conditions.push(eq(sensitiveWords.category, body.category));
+    }
+
+    // 获取启用的敏感词
+    const wordList = await db
+      .select({
+        word: sensitiveWords.word,
+        category: sensitiveWords.category,
+        severity: sensitiveWords.severity,
+      })
+      .from(sensitiveWords)
+      .where(and(...conditions));
+
+    const testText = body.text;
+    const lowerText = testText.toLowerCase();
+    const matches: Array<{
+      word: string;
+      position: number;
+      category: string;
+      severity: string;
+    }> = [];
+
+    // 精确匹配 + 大小写不敏感
+    for (const { word, category, severity } of wordList) {
+      const lowerWord = word.toLowerCase();
+      let pos = 0;
+      while (true) {
+        const idx = lowerText.indexOf(lowerWord, pos);
+        if (idx === -1) break;
+        matches.push({
+          word,
+          position: idx,
+          category,
+          severity,
+        });
+        pos = idx + 1; // 继续查找下一个匹配
+      }
+    }
+
+    // 按位置排序
+    matches.sort((a, b) => a.position - b.position);
+
+    reply.send({
+      code: 0,
+      data: {
+        matched: matches.length > 0,
+        matches,
+        totalMatches: matches.length,
+        uniqueWords: [...new Set(matches.map(m => m.word))].length,
+      },
+      message: matches.length > 0 ? `检测到 ${matches.length} 处匹配` : "未检测到敏感词",
+    });
+  });
+
+  // ──────────────────────────────────────────────
   //  POST /api/v1/admin/prompt-audit/analyze — 手动触发敏感词分析
   // ──────────────────────────────────────────────
 
@@ -519,5 +593,47 @@ export async function promptAuditRoutes(app: FastifyInstance) {
       data: { analyzed: logs.length, updated },
       message: `分析完成，${updated} 条标记为敏感`,
     });
+  });
+
+  // ──────────────────────────────────────────────
+  //  GET /api/v1/admin/sensitive-words/export — 导出敏感词列表
+  // ──────────────────────────────────────────────
+
+  app.get("/api/v1/admin/sensitive-words/export", {
+    preHandler: [requirePerm(Perm.AUDIT_VIEW)],
+  }, async (request, reply) => {
+    const db = getDb();
+    const query = request.query as { format?: string };
+    const format = query.format === "json" ? "json" : "csv";
+
+    const words = await db
+      .select({
+        word: sensitiveWords.word,
+        category: sensitiveWords.category,
+        severity: sensitiveWords.severity,
+        enabled: sensitiveWords.enabled,
+        createdAt: sensitiveWords.createdAt,
+      })
+      .from(sensitiveWords)
+      .orderBy(sensitiveWords.word);
+
+    if (format === "json") {
+      reply.header("Content-Type", "application/json; charset=utf-8");
+      reply.header("Content-Disposition", `attachment; filename="sensitive-words-${new Date().toISOString().slice(0, 10)}.json"`);
+      reply.send({ code: 0, data: words, message: "ok" });
+      return;
+    }
+
+    // CSV with BOM for Excel
+    const header = "单词,分类,严重级别,启用,创建时间";
+    const rows = words.map((w) => {
+      const created = w.createdAt ? new Date(w.createdAt).toISOString().slice(0, 10) : "";
+      return `"${w.word}","${w.category || ""}","${w.severity || ""}",${w.enabled ? "是" : "否"},${created}`;
+    });
+    const csv = "\uFEFF" + header + "\n" + rows.join("\n");
+
+    reply.header("Content-Type", "text/csv; charset=utf-8");
+    reply.header("Content-Disposition", `attachment; filename="sensitive-words-${new Date().toISOString().slice(0, 10)}.csv"`);
+    reply.send(csv);
   });
 }

@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { useSiteConfig } from '@/hooks/use-site-config'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { Loader2, AlertCircle, Shield } from 'lucide-react'
 import CaptchaDialog from '@/components/ui/CaptchaDialog'
 
 export default function Login() {
-  const { login, isAuthenticated } = useAuth()
+  const { login, isAuthenticated, verify2FA } = useAuth()
   const { config: siteConfig } = useSiteConfig()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -14,6 +14,10 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [captchaSession, setCaptchaSession] = useState<string | null>(null)
   const [captchaLoading, setCaptchaLoading] = useState(false)
+  const [requires2FA, setRequires2FA] = useState(false)
+  const [userId2FA, setUserId2FA] = useState<number | null>(null)
+  const [twoFACode, setTwoFACode] = useState('')
+  const [twoFALoading, setTwoFALoading] = useState(false)
 
   if (isAuthenticated) {
     return <Navigate to="/console" replace />
@@ -26,8 +30,13 @@ export default function Login() {
     try {
       await login(email, password)
     } catch (err: any) {
+      // 需要 2FA 验证
+      if (err.requires2FA) {
+        setRequires2FA(true)
+        setUserId2FA(err.userId)
+      }
       // 需要验证码
-      if (err.captchaSession) {
+      else if (err.captchaSession) {
         setCaptchaSession(err.captchaSession)
         setError('检测到异常登录，请输入邮箱验证码')
       } else {
@@ -35,6 +44,20 @@ export default function Login() {
       }
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 2FA 验证
+  const handle2FAVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setTwoFALoading(true)
+    try {
+      await verify2FA(userId2FA!, twoFACode)
+    } catch (err: any) {
+      setError(err.message || '验证失败')
+    } finally {
+      setTwoFALoading(false)
     }
   }
 
@@ -66,15 +89,64 @@ export default function Login() {
           <p className="text-slate-500 mt-2">AI Token 聚合平台</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 rounded-lg">
-              <AlertCircle size={16} />
-              {error}
+        {/* 2FA 验证表单 */}
+        {requires2FA ? (
+          <form onSubmit={handle2FAVerify} className="space-y-4">
+            <div className="flex items-center justify-center mb-4">
+              <Shield className="text-blue-600" size={48} />
             </div>
-          )}
+            <h2 className="text-lg font-semibold text-center text-slate-900 mb-2">
+              双因素认证
+            </h2>
+            <p className="text-sm text-slate-500 text-center mb-4">
+              请输入认证应用显示的 6 位验证码
+            </p>
+            {error && (
+              <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 rounded-lg">
+                <AlertCircle size={16} />
+                {error}
+              </div>
+            )}
+            <input
+              type="text"
+              value={twoFACode}
+              onChange={(e) => setTwoFACode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="000000"
+              maxLength={6}
+              autoFocus
+              className="w-full px-4 py-3 text-center text-2xl font-mono border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="submit"
+              disabled={twoFALoading || twoFACode.length !== 6}
+              className="w-full py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
+            >
+              {twoFALoading && <Loader2 className="animate-spin" size={18} />}
+              验证
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setRequires2FA(false)
+                setUserId2FA(null)
+                setTwoFACode('')
+                setError('')
+              }}
+              className="w-full py-2 text-slate-600 hover:text-slate-800 transition"
+            >
+              返回登录
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 rounded-lg">
+                <AlertCircle size={16} />
+                {error}
+              </div>
+            )}
 
-          <div>
+            <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">邮箱</label>
             <input
               type="email"
@@ -119,6 +191,7 @@ export default function Login() {
             </Link>
           </p>
         </form>
+        )}
       </div>
 
       {captchaSession && (

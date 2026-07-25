@@ -140,6 +140,32 @@ export async function authLoginRoutes(app: FastifyInstance) {
 
 
 
+      // 检查是否需要 2FA 验证
+
+      if (result.requires2FA) {
+
+        reply.status(200).send({
+
+          code: 0,
+
+          data: {
+
+            requires2FA: true,
+
+            userId: result.user!.id,
+
+          },
+
+          message: "需要双因素认证",
+
+        });
+
+        return;
+
+      }
+
+
+
       reply.status(200).send({
 
         code: 0,

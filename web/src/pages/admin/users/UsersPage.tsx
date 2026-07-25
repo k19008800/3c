@@ -6,6 +6,8 @@ import StatsCards from './components/StatsCards'
 import UserFilters from './components/UserFilters'
 import UsersList from './components/UsersList'
 import UserActions from './components/UserActions'
+import UserDetailPanel from './UserDetailPanel'
+import BatchOperationDialog, { BatchActionType } from '@/components/admin/BatchOperationDialog'
 import { useUsers } from './hooks/useUsers'
 import { useUserActions } from './hooks/useUserActions'
 
@@ -13,6 +15,8 @@ const UsersPage: React.FC = () => {
   const navigate = useNavigate()
   const [showCreate, setShowCreate] = useState(false)
   const [selectedUser, setSelectedUser] = useState<any>(null)
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false)
+  const [batchActionType, setBatchActionType] = useState<BatchActionType>('disable')
   
   const {
     users,
@@ -31,7 +35,6 @@ const UsersPage: React.FC = () => {
     setFilters,
     toggleSelect,
     toggleAll,
-    handleBatchAction,
     handleExportCSV,
     refreshUsers,
     refreshStats
@@ -69,8 +72,20 @@ const UsersPage: React.FC = () => {
 
   const handleViewDetail = (user: any) => {
     setSelectedUser(user)
-    // You could open a modal or navigate to detail page here
     console.log('View user detail:', user)
+  }
+
+  // 批量操作处理
+  const openBatchDialog = (action: BatchActionType) => {
+    setBatchActionType(action)
+    setBatchDialogOpen(true)
+  }
+
+  const handleBatchSuccess = async () => {
+    setBatchDialogOpen(false)
+    setSelectedIds(new Set())
+    await refreshUsers()
+    await refreshStats()
   }
 
   return (
@@ -128,8 +143,11 @@ const UsersPage: React.FC = () => {
       {selectedIds.size > 0 && (
         <UserActions
           selectedCount={selectedIds.size}
-          onDisable={() => handleBatchAction('disable')}
-          onEnable={() => handleBatchAction('enable')}
+          onDisable={() => openBatchDialog('disable')}
+          onEnable={() => openBatchDialog('enable')}
+          onBalance={() => openBatchDialog('balance')}
+          onLevel={() => openBatchDialog('level')}
+          onExport={() => openBatchDialog('export')}
           onClear={() => setSelectedIds(new Set())}
           loading={actionsLoading}
         />
@@ -159,9 +177,23 @@ const UsersPage: React.FC = () => {
         />
       )}
 
-      {/* TODO: Add UserFormModal and UserDetailModal components */}
-      {/* {showCreate && <UserFormModal onClose={() => setShowCreate(false)} />}
-      {selectedUser && <UserDetailModal user={selectedUser} onClose={() => setSelectedUser(null)} />} */}
+      {/* User Detail Panel */}
+      {selectedUser && (
+        <UserDetailPanel
+          user={selectedUser}
+          onClose={() => setSelectedUser(null)}
+        />
+      )}
+
+      {/* Batch Operation Dialog */}
+      <BatchOperationDialog
+        isOpen={batchDialogOpen}
+        onClose={() => setBatchDialogOpen(false)}
+        actionType={batchActionType}
+        selectedCount={selectedIds.size}
+        selectedIds={Array.from(selectedIds)}
+        onSuccess={handleBatchSuccess}
+      />
     </div>
   )
 }

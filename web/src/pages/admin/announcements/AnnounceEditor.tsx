@@ -5,7 +5,7 @@
 import { useState, useCallback } from 'react'
 import { post, patch } from '@/lib/api'
 import {
-  Loader2, AlertCircle, CheckCircle2,
+  Loader2, AlertCircle, CheckCircle2, Calendar,
 } from 'lucide-react'
 import type { Announcement, AnnouncementForm } from './types'
 import { emptyForm } from './types'
@@ -20,9 +20,16 @@ export default function AnnounceEditor({ announcement, onClose, onSuccess }: Ann
   const isEdit = !!announcement
   const [form, setForm] = useState<AnnouncementForm>(
     isEdit
-      ? { title: announcement!.title, content: announcement!.content, type: announcement!.type, priority: announcement!.priority }
+      ? { 
+          title: announcement!.title, 
+          content: announcement!.content, 
+          type: announcement!.type, 
+          priority: announcement!.priority,
+          scheduledAt: announcement!.scheduledAt,
+        }
       : { ...emptyForm }
   )
+  const [enableScheduled, setEnableScheduled] = useState(!!announcement?.scheduledAt)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -37,6 +44,15 @@ export default function AnnounceEditor({ announcement, onClose, onSuccess }: Ann
     if (!form.title.trim()) { setError('请输入公告标题'); return }
     if (!form.content.trim()) { setError('请输入公告内容'); return }
 
+    // 验证定时发布时间
+    if (enableScheduled && form.scheduledAt) {
+      const scheduledDate = new Date(form.scheduledAt)
+      if (scheduledDate <= new Date()) {
+        setError('定时发布时间必须在未来');
+        return
+      }
+    }
+
     setSaving(true)
     try {
       if (isEdit) {
@@ -45,6 +61,12 @@ export default function AnnounceEditor({ announcement, onClose, onSuccess }: Ann
         if (form.content !== announcement!.content) body.content = form.content.trim()
         if (form.type !== announcement!.type) body.type = form.type
         if (form.priority !== announcement!.priority) body.priority = form.priority
+        if (enableScheduled && form.scheduledAt) {
+          body.scheduledAt = form.scheduledAt
+        } else if (!enableScheduled && announcement!.scheduledAt) {
+          // 取消定时发布
+          body.cancelScheduled = true
+        }
         await patch(`/api/v1/admin/announcements/${announcement!.id}`, body)
         setMessage('公告已更新')
       } else {
@@ -53,8 +75,9 @@ export default function AnnounceEditor({ announcement, onClose, onSuccess }: Ann
           content: form.content.trim(),
           type: form.type,
           priority: form.priority,
+          scheduledAt: enableScheduled ? form.scheduledAt : undefined,
         })
-        setMessage('公告已发布')
+        setMessage(enableScheduled ? '定时公告已创建' : '公告已发布')
       }
       setTimeout(onSuccess, 800)
     } catch (err: any) {
@@ -62,7 +85,7 @@ export default function AnnounceEditor({ announcement, onClose, onSuccess }: Ann
     } finally {
       setSaving(false)
     }
-  }, [isEdit, form, announcement, onSuccess])
+  }, [isEdit, form, announcement, enableScheduled, onSuccess])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -134,6 +157,40 @@ export default function AnnounceEditor({ announcement, onClose, onSuccess }: Ann
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
+            </div>
+
+            {/* 定时发布选项 */}
+            <div className="border-t border-slate-200 pt-3 mt-3">
+              <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={enableScheduled}
+                  onChange={(e) => {
+                    setEnableScheduled(e.target.checked)
+                    if (!e.target.checked) {
+                      setForm(f => ({ ...f, scheduledAt: null }))
+                    }
+                  }}
+                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                />
+                <Calendar size={16} className="text-indigo-500" />
+                定时发布
+              </label>
+              
+              {enableScheduled && (
+                <div className="mt-2 ml-6">
+                  <input
+                    type="datetime-local"
+                    value={form.scheduledAt || ''}
+                    onChange={(e) => setForm(f => ({ ...f, scheduledAt: e.target.value }))}
+                    min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    公告将在指定时间自动发布，发布前用户不可见
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

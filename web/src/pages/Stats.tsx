@@ -794,7 +794,10 @@ function KeyUsagePanel({ keyId, keyName }: { keyId: number; keyName: string }) {
             )}
           </div>
         )}
-      </div>
+      
+      {/* 历史对比 */}
+      <StatsCompareCard />
+</div>
     </div>
   )
 }

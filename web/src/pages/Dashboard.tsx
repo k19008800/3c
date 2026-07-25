@@ -2,12 +2,19 @@ import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import QuickConnectPanel from '@/components/portal/QuickConnectPanel'
+import OnboardingGuide from './dashboard/components/OnboardingGuide'
+import ExportButton from '@/components/ExportButton'
 import {
   Loader2, DollarSign, Activity, Cpu, Wallet, Key, FileText, AlertCircle, Shield,
   CheckCircle2, XCircle, Gauge, Copy, Terminal, BarChart3, TrendingUp,
   PieChart, ChevronDown, ChevronRight, Clock,
 } from 'lucide-react'
 import { StatCard } from './dashboard/components/StatCard'
+import { BillingCycleCard } from './dashboard/components/BillingCycleCard'
+import { CostForecastCard } from './dashboard/components/CostForecastCard'
+import AlertCenter from './dashboard/components/AlertCenter'
+import ModelOptimizationTip from './dashboard/components/ModelOptimizationTip'
+import LiveActivityFeed from './dashboard/components/LiveActivityFeed'
 import { useDashboard } from './dashboard/hooks/useDashboard'
 import { TIME_RANGE_LABELS } from './dashboard/constants'
 import { fmtCost, fmtTokens, pct } from './dashboard/utils'
@@ -97,8 +104,23 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Onboarding Guide - 新用户引导 */}
+      <OnboardingGuide
+        hasApiKey={apiKeyList.length > 0}
+        hasCallHistory={summary ? summary.totalCalls > 0 : false}
+        apiKeys={apiKeyList}
+        baseUrl={window.location.origin}
+        defaultModel="deepseek-chat"
+      />
+
       {/* Quick Connect */}
       {apiKeyList.length > 0 && (<QuickConnectPanel apiKeys={apiKeyList} baseUrl={window.location.origin} defaultModel="deepseek-chat" />)}
+
+      {/* Alert Center */}
+      <AlertCenter defaultExpanded={false} refreshInterval={60000} />
+
+      {/* Live Activity Feed */}
+      <LiveActivityFeed />
 
       {/* Time Range Toggle */}
       <div className="flex items-center gap-2">
@@ -163,6 +185,9 @@ export default function Dashboard() {
         ) : null}
       </div>
 
+      {/* Billing Cycle Card */}
+      <BillingCycleCard />
+
       {/* Quota Usage */}
       {!quotaLoading && quota && (
         <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
@@ -204,8 +229,11 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Model Optimization Tips */}
+      <ModelOptimizationTip />
+
       {/* ── 用量总览 Expandable Section ── */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative">
         {/* Expand toggle header */}
         <button
           onClick={() => setUsageOpen(!usageOpen)}
@@ -223,6 +251,13 @@ export default function Dashboard() {
             {usageOpen ? <ChevronDown size={18} className="text-slate-400" /> : <ChevronRight size={18} className="text-slate-400" />}
           </div>
         </button>
+
+        {/* Export button - shown when panel is open */}
+        {usageOpen && (
+          <div className="absolute top-6 right-6">
+            <ExportButton />
+          </div>
+        )}
 
         {usageOpen && (
           <div className="px-6 pb-6 space-y-4 bg-gradient-to-b from-blue-50/30 to-white border-t border-blue-100">
@@ -420,6 +455,9 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Cost Forecast */}
+      <CostForecastCard />
 
       {/* Quick Actions */}
       <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">

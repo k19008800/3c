@@ -77,6 +77,14 @@ export const users = pgTable(
     phone: varchar("phone", { length: 20 }),
     avatarUrl: varchar("avatar_url", { length: 500 }),
 
+    // 双因素认证 (2FA)
+    twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
+    twoFactorSecret: varchar("two_factor_secret", { length: 255 }),
+    twoFactorBackupCodes: jsonb("two_factor_backup_codes").$type<string[]>(),
+
+    // 主题偏好
+    theme: varchar("theme", { length: 10 }).notNull().default("system"), // 'light' | 'dark' | 'system'
+
     // 时间
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { RefreshCw, AlertCircle } from 'lucide-react'
+import { RefreshCw, AlertCircle, Search } from 'lucide-react'
+import SensitiveWordTest from './prompt-audit/SensitiveWordTest'
 import PaginationBar from '@/components/ui/PaginationBar'
 import { usePersistedFilters } from '@/hooks/use-persisted-filters'
 import { AuditTable, AuditDetail } from './prompt-audit/components'
@@ -27,6 +28,7 @@ export default function PromptAudit() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [detail, setDetail] = useState<PromptAuditDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [showTestTool, setShowTestTool] = useState(false)
 
   // Load on mount and filter change
   useEffect(() => {
@@ -64,16 +66,25 @@ export default function PromptAudit() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">提示词审计</h1>
-        <button
-          onClick={() => loadLogs({
-            page: filters.page,
-            pageSize: filters.pageSize,
-          })}
-          className="flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg hover:bg-slate-50"
-        >
-          <RefreshCw size={16} />
-          刷新
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowTestTool(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg hover:bg-slate-50"
+          >
+            <Search size={16} />
+            敏感词测试
+          </button>
+          <button
+            onClick={() => loadLogs({
+              page: filters.page,
+              pageSize: filters.pageSize,
+            })}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg hover:bg-slate-50"
+          >
+            <RefreshCw size={16} />
+            刷新
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -189,6 +200,23 @@ export default function PromptAudit() {
             }
           }}
         />
+      )}
+
+      {/* Sensitive Word Test Modal */}
+      {showTestTool && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
+            <SensitiveWordTest />
+            <div className="flex justify-end mt-4 pt-4 border-t">
+              <button
+                onClick={() => setShowTestTool(false)}
+                className="px-4 py-2 border rounded-lg text-sm hover:bg-slate-50"
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

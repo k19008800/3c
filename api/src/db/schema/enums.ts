@@ -140,6 +140,7 @@ export const auditActionEnum = pgEnum("audit_action", [
   "withdraw_paid",
   "agent_create",
   "agent_update",
+  "agent_level_change",
   "config_update",
   "vendor_create",
   "vendor_update",
@@ -152,6 +153,7 @@ export const auditActionEnum = pgEnum("audit_action", [
   "model_update",
   "user_update",
   "user_impersonate",
+  "user_export",
   "order_cancel",
   "recharge_confirm",
   "recharge_first_confirm",
@@ -175,6 +177,12 @@ export const auditActionEnum = pgEnum("audit_action", [
   "content_filter_create",
   "content_filter_update",
   "content_filter_delete",
+  // API Key 批量操作
+  "batch_disable",
+  "batch_enable",
+  "batch_rate_limit",
+  "batch_assign_user",
+  "batch_export",
 ]);
 
 // ── 通知 ──
@@ -273,4 +281,24 @@ export const responseStatusEnum = pgEnum("response_status", [
   "error",
   "filtered",
   "timeout",
+]);
+
+// ── 实时告警 ──
+
+export const alertTypeEnum = pgEnum("alert_type", [
+  "failure_rate_spike",
+  "quota_exhaustion", 
+  "suspicious_login",
+  "abnormal_call_pattern",
+  "security_event",
+  "system_maintenance",
+  "feature_update",
+  "billing_reminder"
+]);
+
+export const alertLevelEnum = pgEnum("alert_level", [
+  "info",
+  "warning",
+  "error",
+  "critical"
 ]);

@@ -217,3 +217,76 @@ export const refundRequests = pgTable(
     refStatusIdx: index("ref_status_idx").on(table.status),
   })
 );
+
+// ══════════════════════════════════════════════════════════════
+//  自动对账报告
+// ══════════════════════════════════════════════════════════════
+
+export const reconciliationReports = pgTable(
+  "reconciliation_reports",
+  {
+    id: serial("id").primaryKey(),
+    // 时间范围
+    startDate: varchar("start_date", { length: 10 }).notNull(),
+    endDate: varchar("end_date", { length: 10 }).notNull(),
+    // 汇总数据
+    totalOrders: integer("total_orders").notNull().default(0),
+    matchedOrders: integer("matched_orders").notNull().default(0),
+    mismatchedOrders: integer("mismatched_orders").notNull().default(0),
+    totalAmount: numeric("total_amount", { precision: 18, scale: 6 }).notNull().default("0.000000"),
+    difference: numeric("difference", { precision: 18, scale: 6 }).notNull().default("0.000000"),
+    // 对账类型
+    reconType: varchar("recon_type", { length: 20 }).notNull().default("full"), // full | recharge | balance | commission
+    // 状态
+    status: varchar("status", { length: 20 }).notNull().default("pending"), // pending | running | completed | failed
+    // 异常记录（JSON）
+    mismatches: jsonb("mismatches").notNull().default([]),
+    // 元数据
+    createdBy: integer("created_by").references(() => users.id),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    errorMessage: text("error_message"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    periodIdx: index("recon_reports_period_idx").on(table.startDate, table.endDate),
+    typeIdx: index("recon_reports_type_idx").on(table.reconType),
+    statusIdx: index("recon_reports_status_idx").on(table.status),
+    createdIdx: index("recon_reports_created_idx").on(table.createdAt.desc()),
+  })
+);
+
+// ══════════════════════════════════════════════════════════════
+//  对账异常明细
+// ══════════════════════════════════════════════════════════════
+
+export const reconciliationMismatches = pgTable(
+  "reconciliation_mismatches",
+  {
+    id: serial("id").primaryKey(),
+    reportId: integer("report_id").notNull().references(() => reconciliationReports.id, { onDelete: "cascade" }),
+    // 关联记录
+    orderId: integer("order_id"),
+    refType: varchar("ref_type", { length: 50 }).notNull(), // recharge_order | balance_log | commission_log | payment_callback
+    refId: integer("ref_id").notNull(),
+    // 异常信息
+    mismatchType: varchar("mismatch_type", { length: 50 }).notNull(), // status_mismatch | amount_mismatch | missing_record | calculation_error
+    expectedValue: numeric("expected_value", { precision: 18, scale: 6 }),
+    actualValue: numeric("actual_value", { precision: 18, scale: 6 }),
+    reason: text("reason").notNull(),
+    severity: varchar("severity", { length: 10 }).notNull().default("medium"), // low | medium | high | critical
+    // 处理状态
+    resolved: boolean("resolved").notNull().default(false),
+    resolvedBy: integer("resolved_by").references(() => users.id),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolutionNote: text("resolution_note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    reportIdx: index("recon_mismatch_report_idx").on(table.reportId),
+    refIdx: index("recon_mismatch_ref_idx").on(table.refType, table.refId),
+    typeIdx: index("recon_mismatch_type_idx").on(table.mismatchType),
+    severityIdx: index("recon_mismatch_severity_idx").on(table.severity),
+    resolvedIdx: index("recon_mismatch_resolved_idx").on(table.resolved),
+  })
+);

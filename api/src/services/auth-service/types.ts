@@ -44,4 +44,5 @@ export interface LoginResult {
   tokens: TokenPair | null;
   captchaRequired?: boolean;
   captchaSession?: string;
+  requires2FA?: boolean;
 }

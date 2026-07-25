@@ -1,0 +1,2 @@
+ALTER TABLE announcements ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP;
+ALTER TABLE announcements ADD COLUMN IF NOT EXISTS published BOOLEAN DEFAULT false;

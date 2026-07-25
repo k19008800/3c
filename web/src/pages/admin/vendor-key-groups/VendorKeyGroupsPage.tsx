@@ -387,7 +387,7 @@ const VendorKeyGroupsPage: React.FC = () => {
                       <ul className="mt-1.5 space-y-1">
                         {routeAdvice.reasons.map((r, i) => (
                           <li key={i} className="text-xs text-blue-700 flex items-start gap-1">
-                            <span className="mt-0.5">鈥?/span>
+                            <span className="mt-0.5">&bull;</span>
                             {r}
                           </li>
                         ))}
