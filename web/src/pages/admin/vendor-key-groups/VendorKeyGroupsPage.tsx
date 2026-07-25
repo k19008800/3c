@@ -4,13 +4,17 @@ import GroupList from './components/GroupList'
 import KeyItemsTable from './components/KeyItemsTable'
 import FiltersPanel from './components/FiltersPanel'
 import BatchOperations from './components/BatchOperations'
+import GroupDialog from './GroupDialog'
 import PaginationBar from '@/components/ui/PaginationBar'
 import { useVendorKeyGroups } from './hooks/useVendorKeyGroups'
 import { usePagination } from '@/hooks/use-pagination'
+import { patch, del } from '@/lib/api'
 
 const VendorKeyGroupsPage: React.FC = () => {
   const pagination = usePagination(20)
   const [showCreateGroup, setShowCreateGroup] = useState(false)
+  const [showEditGroup, setShowEditGroup] = useState(false)
+  const [editingGroup, setEditingGroup] = useState<any>(null)
   const [showCreateItem, setShowCreateItem] = useState(false)
   const [editingNotes, setEditingNotes] = useState<Record<number, string>>({})
 
@@ -55,6 +59,7 @@ const VendorKeyGroupsPage: React.FC = () => {
     
     // Data loading
     loadVendors,
+    loadGroups,
     loadGroups,
     loadItems,
     loadChannels,
@@ -107,20 +112,20 @@ const VendorKeyGroupsPage: React.FC = () => {
   }
 
   const handleGroupEdit = (group: any) => {
-    // TODO: Implement group edit modal
-    console.log('Edit group:', group)
+    setEditingGroup(group)
+    setShowEditGroup(true)
   }
 
   const handleGroupDelete = async (group: any) => {
     if (window.confirm(`确定删除分组 "${group.name}"?`)) {
-      // TODO: Implement group deletion
-      console.log('Delete group:', group)
+      await del(`/api/v1/admin/vendor-key-groups/${group.id}`)
+      loadGroups(selectedVendorId)
     }
   }
 
   const handleGroupToggle = async (group: any) => {
-    // TODO: Implement group toggle
-    console.log('Toggle group:', group)
+    await patch(`/api/v1/admin/vendor-key-groups/${group.id}/toggle`, {})
+    loadGroups(selectedVendorId)
   }
 
   const handleItemDelete = async (item: any) => {
@@ -332,9 +337,25 @@ const VendorKeyGroupsPage: React.FC = () => {
         </div>
       )}
 
-      {/* TODO: Add modals for create/edit forms */}
-      {/* {showCreateGroup && <CreateGroupModal onClose={() => setShowCreateGroup(false)} />}
-      {showCreateItem && <CreateItemModal onClose={() => setShowCreateItem(false)} />} */}
+      {showCreateGroup && (
+        <GroupDialog
+          mode="create"
+          vendorId={selectedVendorId}
+          vendorName={vendors.find((v: any) => v.id === selectedVendorId)?.name}
+          onClose={() => setShowCreateGroup(false)}
+          onSuccess={() => loadGroups(selectedVendorId)}
+        />
+      )}
+      {showEditGroup && editingGroup && (
+        <GroupDialog
+          mode="edit"
+          vendorId={selectedVendorId}
+          vendorName={vendors.find((v: any) => v.id === selectedVendorId)?.name}
+          group={editingGroup}
+          onClose={() => { setShowEditGroup(false); setEditingGroup(null) }}
+          onSuccess={() => loadGroups(selectedVendorId)}
+        />
+      )}
     </div>
   )
 }

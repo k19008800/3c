@@ -52,7 +52,7 @@ const AdminLogs = lazy(() => import('@/pages/admin/AdminLogs'))
 const AdminPromptAudit = lazy(() => import('@/pages/admin/PromptAudit'))
 const AdminPromptTemplates = lazy(() => import('@/pages/admin/PromptTemplates'))
 const AdminOperationAlerts = lazy(() => import('@/pages/admin/OperationAlerts'))
-const AdminCircuitBreaker = lazy(() => import('@/pages/admin/CircuitBreaker'))
+
 const AdminSensitiveWords = lazy(() => import('@/pages/admin/SensitiveWords'))
 const AdminRechargeOrders = lazy(() => import('@/pages/admin/RechargeOrders'))
 const AdminConfigs = lazy(() => import('@/pages/admin/Configs'))
@@ -76,7 +76,7 @@ const AdminSecurityAlerts = lazy(() => import('@/pages/admin/SecurityAlerts'))
 const AdminSecurityAutoRules = lazy(() => import('@/pages/admin/SecurityAutoRules'))
 const AdminEmailTemplates = lazy(() => import('@/pages/admin/EmailTemplates'))
 const AdminEnterpriseAnalysis = lazy(() => import('@/pages/admin/EnterpriseAnalysis'))
-const AdminCircuitBreakers = lazy(() => import('@/pages/admin/CircuitBreakers'))
+const AdminCircuitBreaker = lazy(() => import('@/pages/admin/CircuitBreakers'))
 const AdminStats = lazy(() => import('@/pages/admin/Stats'))
 const AdminAnnouncements = lazy(() => import('@/pages/admin/Announcements'))
 const AdminRedemptionCodes = lazy(() => import('@/pages/admin/RedemptionCodes'))
@@ -210,7 +210,7 @@ export default function App() {
               <Route path="admin/security/alerts" element={withSuspense(<AdminSecurityAlerts />)} />
               <Route path="admin/security/auto-rules" element={withSuspense(<AdminSecurityAutoRules />)} />
               <Route path="admin/enterprise-analysis" element={withSuspense(<AdminEnterpriseAnalysis />)} />
-              <Route path="admin/circuit-breakers" element={withSuspense(<AdminCircuitBreakers />)} />
+              <Route path="admin/circuit-breaker" element={withSuspense(<AdminCircuitBreaker />)} />
               <Route path="admin/stats" element={withSuspense(<AdminStats />)} />
               <Route path="admin/announcements" element={withSuspense(<AdminAnnouncements />)} />
               <Route path="admin/redemption-codes" element={withSuspense(<AdminRedemptionCodes />)} />
@@ -227,7 +227,6 @@ export default function App() {
               <Route path="admin/prompt-audit" element={withSuspense(<AdminPromptAudit />)} />
               <Route path="admin/prompt-templates" element={withSuspense(<AdminPromptTemplates />)} />
               <Route path="admin/operation-alerts" element={withSuspense(<AdminOperationAlerts />)} />
-              <Route path="admin/circuit-breaker" element={withSuspense(<AdminCircuitBreaker />)} />
               <Route path="admin/sensitive-words" element={withSuspense(<AdminSensitiveWords />)} />
               <Route path="admin/monitoring" element={withSuspense(<AdminMonitoring />)} />
               <Route path="admin/operation-types" element={withSuspense(<AdminOperationTypes />)} />
