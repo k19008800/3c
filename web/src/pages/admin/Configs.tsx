@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
-import { get, patch } from '@/lib/api'
+import { get, patch, post } from '@/lib/api'
 import type { AdminConfig, PaginatedData } from '@/types'
-import { Loader2, AlertCircle, CheckCircle2, Edit2, Save } from 'lucide-react'
+import { Loader2, AlertCircle, CheckCircle2, Edit2, Save, Download, Upload, FileDown } from 'lucide-react'
 import FeatureDescription from '@/components/admin/FeatureDescription'
 
 export default function AdminConfigs() {
@@ -53,9 +53,62 @@ export default function AdminConfigs() {
     )
   }
 
+  const handleExport = async () => {
+    try {
+      const res = await get<{ data: AdminConfig[] }>('/api/v1/admin/configs/export')
+      if (!res?.data) { setError('导出失败：无数据'); return }
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `system-configs-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      setMsg('配置导出成功')
+    } catch (err: any) {
+      setError(err.message || '导出失败')
+    }
+  }
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const text = await file.text()
+      const configs = JSON.parse(text)
+      await post('/api/v1/admin/configs/import', { configs })
+      setMsg(`导入成功：${configs.length} 项配置`)
+      loadConfigs()
+    } catch (err: any) {
+      setError(err.message || '导入失败')
+    }
+    if (e.target) e.target.value = ''
+  }
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">系统配置</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-900">系统配置</h1>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 transition"
+          >
+            <Download size={14} />
+            导出配置
+          </button>
+          <label className="flex items-center gap-1.5 px-3 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 transition cursor-pointer">
+            <Upload size={14} />
+            导入配置
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleImport}
+              className="hidden"
+            />
+          </label>
+        </div>
+      </div>
       <FeatureDescription page="admin/configs" className="ml-2" />
 
       {msg && (
