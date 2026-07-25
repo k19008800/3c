@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react'
+﻿import React, { useEffect, useState, useMemo } from 'react'
 import VendorSelector from './components/VendorSelector'
 import GroupList from './components/GroupList'
 import KeyItemsTable from './components/KeyItemsTable'
@@ -9,6 +9,7 @@ import PaginationBar from '@/components/ui/PaginationBar'
 import { useVendorKeyGroups } from './hooks/useVendorKeyGroups'
 import { usePagination } from '@/hooks/use-pagination'
 import { patch, del } from '@/lib/api'
+import { Cpu, Lightbulb, TrendingUp, Shield, Activity, RefreshCw } from 'lucide-react'
 
 const VendorKeyGroupsPage: React.FC = () => {
   const pagination = usePagination(20)
@@ -181,6 +182,63 @@ const VendorKeyGroupsPage: React.FC = () => {
     // This would typically clear the selectedIds state
   }
 
+  const [showRouteAdvice, setShowRouteAdvice] = useState(false)
+
+  // Calculate route recommendation based on key health data
+  const routeAdvice = useMemo(() => {
+    if (!items || items.length === 0) return null
+    const total = filteredItems.length
+    const downCount = filteredItems.filter((i: any) => i.isDown).length
+    const disabledCount = filteredItems.filter((i: any) => !i.status).length
+    const activeCount = total - downCount - disabledCount
+    const hasPriority = filteredItems.some((i: any) => i.priority > 0)
+    const hasWeight = filteredItems.some((i: any) => i.weight > 1)
+
+    if (total === 0) return null
+
+    const downRatio = downCount / total
+    const activeRatio = activeCount / total
+
+    let recommended = ''
+    let reasons: string[] = []
+
+    if (downRatio >= 0.5) {
+      recommended = 'failover'
+      reasons = ['超过 50% 的 Key 处于故障状态，建议启用故障转移策略自动切换到健康 Key']
+    } else if (hasPriority) {
+      recommended = 'priority'
+      reasons = ['检测到部分 Key 设置了优先级，建议使用优先级策略']
+    } else if (hasWeight) {
+      recommended = 'weighted'
+      reasons = ['检测到 Key 权重配置不一致，建议使用加权轮询策略']
+    } else if (activeRatio >= 0.8 && total >= 3) {
+      recommended = 'round_robin'
+      reasons = ['所有 Key 健康且数量充足（≥3），建议使用轮询均衡负载']
+    } else if (total === 1) {
+      recommended = 'round_robin'
+      reasons = ['只有一个 Key，任何策略效果相同']
+    } else {
+      recommended = 'round_robin'
+      reasons = ['当前 Key 状态适合使用轮询策略']
+    }
+
+    return { total, downCount, disabledCount, activeCount, recommended, reasons, items: filteredItems }
+  }, [filteredItems])
+
+  const strategyLabels: Record<string, string> = {
+    round_robin: '轮询',
+    weighted: '加权轮询',
+    failover: '故障转移',
+    priority: '优先级',
+  }
+
+  const strategyIcons: Record<string, any> = {
+    round_robin: RefreshCw,
+    weighted: TrendingUp,
+    failover: Shield,
+    priority: Activity,
+  }
+
   return (
     <div className="space-y-6">
       {/* Page header */}
@@ -305,6 +363,47 @@ const VendorKeyGroupsPage: React.FC = () => {
               <div className="text-sm text-yellow-600">禁用密钥</div>
             </div>
           </div>
+
+          {/* Route recommendation */}
+          {routeAdvice && (
+            <div className="pt-4">
+              <button
+                onClick={() => setShowRouteAdvice(!showRouteAdvice)}
+                className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800"
+              >
+                <Lightbulb size={14} />
+                智能路由推荐
+              </button>
+              {showRouteAdvice && (
+                <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Cpu size={20} className="text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-medium text-blue-900">推荐策略：{strategyLabels[routeAdvice.recommended]}</h4>
+                      </div>
+                      <ul className="mt-1.5 space-y-1">
+                        {routeAdvice.reasons.map((r, i) => (
+                          <li key={i} className="text-xs text-blue-700 flex items-start gap-1">
+                            <span className="mt-0.5">鈥?/span>
+                            {r}
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="mt-2 flex items-center gap-4 text-xs text-blue-600">
+                        <span>健康 Key：{routeAdvice.activeCount}</span>
+                        <span>故障 Key：{routeAdvice.downCount}</span>
+                        <span>禁用 Key：{routeAdvice.disabledCount}</span>
+                        <span>总计：{routeAdvice.total}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
 
