@@ -3903,3 +3903,211 @@ js:2:11190)
 }
 
 Node.js v24.18.0
+c01:34:10 [tsx] change in ./src\app\routes.ts Rerunning...
+node:internal/modules/esm/resolve:271
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module 'C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\db\index.js' im
+ported from C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\me\stats\compare.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:992:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:701:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:721:38)
+    at nextStep (node:internal/modules/customization_hooks:189:26)
+    at resolveBaseSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:
+2:8745)
+    at resolveDirectorySync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi
+.mjs:2:9958)
+    at resolveTsPathsSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.m
+js:2:11190)
+    at resolve2 (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:2:12977
+) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/src/routes/db/index.js'
+}
+
+Node.js v24.18.0
+c01:34:46 [tsx] change in ./src\app\routes.ts Rerunning...
+node:internal/modules/esm/resolve:271
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module 'C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\db\index.js' im
+ported from C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\me\stats\compare.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:992:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:701:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:721:38)
+    at nextStep (node:internal/modules/customization_hooks:189:26)
+    at resolveBaseSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:
+2:8745)
+    at resolveDirectorySync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi
+.mjs:2:9958)
+    at resolveTsPathsSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.m
+js:2:11190)
+    at resolve2 (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:2:12977
+) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/src/routes/db/index.js'
+}
+
+Node.js v24.18.0
+c02:31:22 [tsx] change in ./src\app\routes.ts Rerunning...
+node:internal/modules/esm/resolve:271
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module 'C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\db\index.js' im
+ported from C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\me\stats\compare.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:992:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:701:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:721:38)
+    at nextStep (node:internal/modules/customization_hooks:189:26)
+    at resolveBaseSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:
+2:8745)
+    at resolveDirectorySync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi
+.mjs:2:9958)
+    at resolveTsPathsSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.m
+js:2:11190)
+    at resolve2 (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:2:12977
+) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/src/routes/db/index.js'
+}
+
+Node.js v24.18.0
+c02:31:31 [tsx] change in ./src\app\routes.ts Rerunning...
+node:internal/modules/esm/resolve:271
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module 'C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\db\index.js' im
+ported from C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\me\stats\compare.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:992:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:701:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:721:38)
+    at nextStep (node:internal/modules/customization_hooks:189:26)
+    at resolveBaseSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:
+2:8745)
+    at resolveDirectorySync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi
+.mjs:2:9958)
+    at resolveTsPathsSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.m
+js:2:11190)
+    at resolve2 (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:2:12977
+) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/src/routes/db/index.js'
+}
+
+Node.js v24.18.0
+c03:53:59 [tsx] change in ./src\app\routes.ts Rerunning...
+node:internal/modules/esm/resolve:271
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module 'C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\db\index.js' im
+ported from C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\me\stats\compare.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:992:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:701:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:721:38)
+    at nextStep (node:internal/modules/customization_hooks:189:26)
+    at resolveBaseSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:
+2:8745)
+    at resolveDirectorySync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi
+.mjs:2:9958)
+    at resolveTsPathsSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.m
+js:2:11190)
+    at resolve2 (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:2:12977
+) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/src/routes/db/index.js'
+}
+
+Node.js v24.18.0
+c03:54:18 [tsx] change in ./src\app\routes.ts Rerunning...
+node:internal/modules/esm/resolve:271
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module 'C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\db\index.js' im
+ported from C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\me\stats\compare.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:992:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:701:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:721:38)
+    at nextStep (node:internal/modules/customization_hooks:189:26)
+    at resolveBaseSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:
+2:8745)
+    at resolveDirectorySync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi
+.mjs:2:9958)
+    at resolveTsPathsSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.m
+js:2:11190)
+    at resolve2 (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:2:12977
+) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/src/routes/db/index.js'
+}
+
+Node.js v24.18.0
+c04:58:15 [tsx] change in ./src\app\routes.ts Rerunning...
+node:internal/modules/esm/resolve:271
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module 'C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\db\index.js' im
+ported from C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\me\stats\compare.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:992:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:701:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:721:38)
+    at nextStep (node:internal/modules/customization_hooks:189:26)
+    at resolveBaseSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:
+2:8745)
+    at resolveDirectorySync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi
+.mjs:2:9958)
+    at resolveTsPathsSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.m
+js:2:11190)
+    at resolve2 (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:2:12977
+) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/src/routes/db/index.js'
+}
+
+Node.js v24.18.0
+c04:58:29 [tsx] change in ./src\app\routes.ts Rerunning...
+node:internal/modules/esm/resolve:271
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module 'C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\db\index.js' im
+ported from C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\me\stats\compare.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:992:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:701:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:721:38)
+    at nextStep (node:internal/modules/customization_hooks:189:26)
+    at resolveBaseSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:
+2:8745)
+    at resolveDirectorySync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi
+.mjs:2:9958)
+    at resolveTsPathsSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.m
+js:2:11190)
+    at resolve2 (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:2:12977
+) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/src/routes/db/index.js'
+}
+
+Node.js v24.18.0

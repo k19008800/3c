@@ -140,6 +140,7 @@ const adminGroups: AdminGroup[] = [
       { to: '/console/admin/security/bans', icon: Lock, label: '封禁管理', requiredPerms: [Perm.SECURITY_ACTION] },
       { to: '/console/admin/security/alerts', icon: Bell, label: '告警通知', requiredPerms: [Perm.SECURITY_VIEW] },
       { to: '/console/admin/security/auto-rules', icon: Zap, label: '自动规则', requiredPerms: [Perm.SECURITY_VIEW] },
+      { to: '/console/admin/risk-control', icon: ShieldAlert, label: 'AI 风控模型', requiredPerms: [Perm.SECURITY_VIEW] },
     ],
   },
   {

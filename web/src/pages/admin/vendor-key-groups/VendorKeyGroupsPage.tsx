@@ -68,6 +68,7 @@ const VendorKeyGroupsPage: React.FC = () => {
     // Key operations
     toggleSelect,
     toggleAll,
+    clearSelection,
     handleRevealKey,
     handleCopyKey,
     handleToggleItem,
@@ -119,20 +120,26 @@ const VendorKeyGroupsPage: React.FC = () => {
 
   const handleGroupDelete = async (group: any) => {
     if (window.confirm(`确定删除分组 "${group.name}"?`)) {
-      await del(`/api/v1/admin/vendor-key-groups/${group.id}`)
+      await del(`/api/v1/admin/key-groups/${group.id}`)
       loadGroups(selectedVendorId)
     }
   }
 
   const handleGroupToggle = async (group: any) => {
-    await patch(`/api/v1/admin/vendor-key-groups/${group.id}/toggle`, {})
+    await patch(`/api/v1/admin/key-groups/${group.id}`, { status: !group.status })
     loadGroups(selectedVendorId)
   }
 
   const handleItemDelete = async (item: any) => {
     if (window.confirm(`确定删除密钥 #${item.id}?`)) {
-      // TODO: Implement item deletion
-      console.log('Delete item:', item)
+      try {
+        await del(`/api/v1/admin/key-group-items/${item.id}`)
+        if (selectedGroupId) {
+          loadItems(selectedGroupId, pagination.page, pagination.pageSize)
+        }
+      } catch (err: any) {
+        console.error('删除密钥失败:', err)
+      }
     }
   }
 
@@ -149,25 +156,47 @@ const VendorKeyGroupsPage: React.FC = () => {
     })
   }
 
-  const handleBatchEnable = () => {
-    // TODO: Implement batch enable
-    console.log('Batch enable:', Array.from(selectedIds))
+  const handleBatchEnable = async () => {
+    const itemIds = Array.from(selectedIds)
+    const gId = selectedGroupId
+    if (itemIds.length === 0 || !gId) return
+    try {
+      await patch(`/api/v1/admin/key-groups/${gId}/items/batch-status`, { status: true, itemIds })
+      loadItems(gId, pagination.page, pagination.pageSize)
+    } catch (err: any) {
+      console.error('批量启用失败:', err)
+    }
   }
 
-  const handleBatchDisable = () => {
-    // TODO: Implement batch disable
-    console.log('Batch disable:', Array.from(selectedIds))
+  const handleBatchDisable = async () => {
+    const itemIds = Array.from(selectedIds)
+    const gId = selectedGroupId
+    if (itemIds.length === 0 || !gId) return
+    try {
+      await patch(`/api/v1/admin/key-groups/${gId}/items/batch-status`, { status: false, itemIds })
+      loadItems(gId, pagination.page, pagination.pageSize)
+    } catch (err: any) {
+      console.error('批量禁用失败:', err)
+    }
   }
 
-  const handleBatchDelete = () => {
+  const handleBatchDelete = async () => {
+    const itemIds = Array.from(selectedIds)
+    if (itemIds.length === 0) return
     if (window.confirm(`确定删除 ${selectedIds.size} 个选中的密钥?`)) {
-      // TODO: Implement batch delete
-      console.log('Batch delete:', Array.from(selectedIds))
+      try {
+        await Promise.all(itemIds.map(id => del(`/api/v1/admin/key-group-items/${id}`)))
+        if (selectedGroupId) {
+          loadItems(selectedGroupId, pagination.page, pagination.pageSize)
+        }
+      } catch (err: any) {
+        console.error('批量删除失败:', err)
+      }
     }
   }
 
   const handleBatchExport = () => {
-    // TODO: Implement batch export
+    // Batch export is not yet implemented
     console.log('Batch export:', Array.from(selectedIds))
   }
 
@@ -178,8 +207,7 @@ const VendorKeyGroupsPage: React.FC = () => {
   }
 
   const handleClearSelection = () => {
-    // Implement clear selection logic
-    // This would typically clear the selectedIds state
+    clearSelection()
   }
 
   const [showRouteAdvice, setShowRouteAdvice] = useState(false)

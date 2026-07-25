@@ -116,6 +116,7 @@ export interface UseVendorKeyGroupsReturn {
   // Key operations
   toggleSelect: (id: number) => void
   toggleAll: () => void
+  clearSelection: () => void
   handleRevealKey: (item: KeyItem) => Promise<void>
   handleCopyKey: (fullKey: string) => Promise<void>
   handleToggleItem: (item: KeyItem) => Promise<void>
@@ -300,6 +301,10 @@ export function useVendorKeyGroups(
   }, [items])
 
   // Selection operations
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set())
+  }, [])
+
   const toggleSelect = useCallback((id: number) => {
     setSelectedIds(prev => {
       const next = new Set(prev)
@@ -531,6 +536,7 @@ export function useVendorKeyGroups(
     // Key operations
     toggleSelect,
     toggleAll,
+    clearSelection,
     handleRevealKey,
     handleCopyKey,
     handleToggleItem,

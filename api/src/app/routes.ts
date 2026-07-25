@@ -106,6 +106,13 @@ import { uploadRoutes } from "../routes/admin/upload/index.js";
 import { twoFactorRoutes, twoFactorVerifyLoginRoute } from "../routes/me/2fa.js";
 import { userSettingsRoutes } from "../routes/user-settings.js";
 import { adminRoutingRecommendationsRoutes } from "../routes/admin/routing/recommendations.js";
+import { adminRiskControlRoutes } from "../routes/admin/risk-control.js";
+import { adminBehaviorAnalysisRoutes } from "../routes/admin/behavior-analysis.js";
+import { adminThreatIntelRoutes } from "../routes/admin/threat-intel.js";
+import { adminABTestingRoutes } from "../routes/admin/ab-testing.js";
+import { adminEnvironmentRoutes } from "../routes/admin/environments.js";
+import { adminHealthScoreRoutes } from "../routes/admin/health-score.js";
+import { adminReportRoutes } from "../routes/admin/reports.js";
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // ── Auth 路由 ──
@@ -410,4 +417,25 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
   // ── 智能路由推荐 ──
   await app.register(adminRoutingRecommendationsRoutes, { prefix: "" });
+
+  // ── AI 风控模型管理 ──
+  await app.register(adminRiskControlRoutes, { prefix: "" });
+
+  // ── 用户行为分析 ──
+  await app.register(adminBehaviorAnalysisRoutes, { prefix: "" });
+
+  // ── 威胁情报管理 ──
+  await app.register(adminThreatIntelRoutes, { prefix: "" });
+
+  // ── A/B 测试管理 ──
+  await app.register(adminABTestingRoutes, { prefix: "" });
+
+  // ── 自定义报表 ──
+  await app.register(adminReportRoutes, { prefix: "" });
+
+  // ── 多环境管理 ──
+  await app.register(adminEnvironmentRoutes, { prefix: "" });
+
+  // ── 系统健康评分 ──
+  await app.register(adminHealthScoreRoutes, { prefix: "" });
 }

@@ -74,6 +74,7 @@ const AdminSecurityEvents = lazy(() => import('@/pages/admin/SecurityEvents'))
 const AdminSecurityBans = lazy(() => import('@/pages/admin/SecurityBans'))
 const AdminSecurityAlerts = lazy(() => import('@/pages/admin/SecurityAlerts'))
 const AdminSecurityAutoRules = lazy(() => import('@/pages/admin/SecurityAutoRules'))
+const AdminRiskControl = lazy(() => import('@/pages/admin/risk-control'))
 const AdminEmailTemplates = lazy(() => import('@/pages/admin/EmailTemplates'))
 const AdminEnterpriseAnalysis = lazy(() => import('@/pages/admin/EnterpriseAnalysis'))
 const AdminCircuitBreaker = lazy(() => import('@/pages/admin/CircuitBreakers'))
@@ -97,6 +98,12 @@ const AdminInvoices = lazy(() => import('@/pages/admin/finance/Invoices'))
 const AdminRefunds = lazy(() => import('@/pages/admin/finance/Refunds'))
 const AdminMonitoring = lazy(() => import('@/pages/admin/Monitoring'))
 const AdminOperationTypes = lazy(() => import('@/pages/admin/OperationTypes'))
+const AdminBehaviorAnalysis = lazy(() => import('@/pages/admin/BehaviorAnalysis'))
+const AdminThreatIntel = lazy(() => import('@/pages/admin/ThreatIntel'))
+const AdminEnvironments = lazy(() => import('@/pages/admin/Environments'))
+const AdminHealthScore = lazy(() => import('@/pages/admin/HealthScore'))
+const AdminABTesting = lazy(() => import('@/pages/admin/ABTesting'))
+const AdminReports = lazy(() => import('@/pages/admin/Reports'))
 
 // ── 用户端财务 ──
 const UserInvoices = lazy(() => import('@/pages/finance/Invoices'))
@@ -209,6 +216,7 @@ export default function App() {
               <Route path="admin/security/bans" element={withSuspense(<AdminSecurityBans />)} />
               <Route path="admin/security/alerts" element={withSuspense(<AdminSecurityAlerts />)} />
               <Route path="admin/security/auto-rules" element={withSuspense(<AdminSecurityAutoRules />)} />
+              <Route path="admin/risk-control" element={withSuspense(<AdminRiskControl />)} />
               <Route path="admin/enterprise-analysis" element={withSuspense(<AdminEnterpriseAnalysis />)} />
               <Route path="admin/circuit-breaker" element={withSuspense(<AdminCircuitBreaker />)} />
               <Route path="admin/stats" element={withSuspense(<AdminStats />)} />
@@ -230,6 +238,12 @@ export default function App() {
               <Route path="admin/sensitive-words" element={withSuspense(<AdminSensitiveWords />)} />
               <Route path="admin/monitoring" element={withSuspense(<AdminMonitoring />)} />
               <Route path="admin/operation-types" element={withSuspense(<AdminOperationTypes />)} />
+              <Route path="admin/behavior-analysis" element={withSuspense(<AdminBehaviorAnalysis />)} />
+              <Route path="admin/threat-intel" element={withSuspense(<AdminThreatIntel />)} />
+              <Route path="admin/environments" element={withSuspense(<AdminEnvironments />)} />
+              <Route path="admin/health-score" element={withSuspense(<AdminHealthScore />)} />
+              <Route path="admin/ab-testing" element={withSuspense(<AdminABTesting />)} />
+              <Route path="admin/reports" element={withSuspense(<AdminReports />)} />
             </Route>
 
             {/* User routes */}

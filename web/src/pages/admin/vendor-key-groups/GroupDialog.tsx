@@ -42,9 +42,9 @@ export default function GroupDialog({ mode, vendorId, vendorName, group, onClose
     setError('')
     try {
       if (isEdit) {
-        await patch(`/api/v1/admin/vendor-key-groups/${group!.id}`, { name, strategy, description })
+        await patch(`/api/v1/admin/key-groups/${group!.id}`, { name, strategy, description })
       } else {
-        await post('/api/v1/admin/vendor-key-groups', { vendorId, name, strategy, description })
+        await post(`/api/v1/admin/vendors/${vendorId}/key-groups`, { name, strategy, description })
       }
       onSuccess()
       onClose()
