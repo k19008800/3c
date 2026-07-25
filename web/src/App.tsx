@@ -3,6 +3,7 @@ import type { JSX } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from '@/hooks/use-auth'
 import { ImpersonateProvider } from '@/hooks/use-impersonate'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 import AppLayout from '@/components/layout/AppLayout'
 import PublicLayout from '@/components/portal/PublicLayout'
 import AdminRoute from '@/components/layout/AdminRoute'
@@ -30,6 +31,7 @@ const RealName = lazy(() => import('@/pages/RealName'))
 const Redemption = lazy(() => import('@/pages/Redemption'))
 const Docs = lazy(() => import('@/pages/Docs'))
 const Security = lazy(() => import('@/pages/Security'))
+const ErrorCodeReference = lazy(() => import('@/pages/ErrorCodeReference'))
 const Stats = lazy(() => import('@/pages/Stats'))
 const Notifications = lazy(() => import('@/pages/Notifications'))
 const Announcements = lazy(() => import('@/pages/Announcements'))
@@ -48,6 +50,9 @@ const AdminAgents = lazy(() => import('@/pages/admin/Agents'))
 const AdminAgentDetail = lazy(() => import('@/pages/admin/AgentDetail'))
 const AdminLogs = lazy(() => import('@/pages/admin/AdminLogs'))
 const AdminPromptAudit = lazy(() => import('@/pages/admin/PromptAudit'))
+const AdminPromptTemplates = lazy(() => import('@/pages/admin/PromptTemplates'))
+const AdminOperationAlerts = lazy(() => import('@/pages/admin/OperationAlerts'))
+const AdminCircuitBreaker = lazy(() => import('@/pages/admin/CircuitBreaker'))
 const AdminSensitiveWords = lazy(() => import('@/pages/admin/SensitiveWords'))
 const AdminRechargeOrders = lazy(() => import('@/pages/admin/RechargeOrders'))
 const AdminConfigs = lazy(() => import('@/pages/admin/Configs'))
@@ -90,6 +95,8 @@ const AdminVendorSelfMgmt = lazy(() => import('@/pages/admin/VendorSelfMgmt'))
 const AdminPrices = lazy(() => import('@/pages/admin/finance/Prices'))
 const AdminInvoices = lazy(() => import('@/pages/admin/finance/Invoices'))
 const AdminRefunds = lazy(() => import('@/pages/admin/finance/Refunds'))
+const AdminMonitoring = lazy(() => import('@/pages/admin/Monitoring'))
+const AdminOperationTypes = lazy(() => import('@/pages/admin/OperationTypes'))
 
 // ── 用户端财务 ──
 const UserInvoices = lazy(() => import('@/pages/finance/Invoices'))
@@ -131,8 +138,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <ImpersonateProvider>
-        <Routes>
+        <ThemeProvider>
+          <ImpersonateProvider>
+            <Routes>
           {/* ── 公开门户页面 (无需登录) ── */}
           <Route element={withSuspense(<PublicLayout />)}>
             <Route index element={withSuspense(<PortalHome />)} />
@@ -146,6 +154,10 @@ export default function App() {
           <Route path="/register" element={withSuspense(<Register />)} />
           <Route path="/forgot-password" element={withSuspense(<ForgotPassword />)} />
           <Route path="/reset-password" element={withSuspense(<ResetPassword />)} />
+
+          {/* ── 公开错误码参考文档 (无需登录) ── */}
+          <Route path="/error-codes" element={withSuspense(<ErrorCodeReference />)} />
+          <Route path="/error-codes/:code" element={withSuspense(<ErrorCodeReference />)} />
 
           {/* ── 认证控制台 (需登录) ── */}
           <Route path="/console" element={<AppLayout />}>
@@ -213,7 +225,12 @@ export default function App() {
               <Route path="admin/site-settings" element={withSuspense(<AdminSiteSettings />)} />
               <Route path="admin/playground" element={withSuspense(<AdminPlayground />)} />
               <Route path="admin/prompt-audit" element={withSuspense(<AdminPromptAudit />)} />
+              <Route path="admin/prompt-templates" element={withSuspense(<AdminPromptTemplates />)} />
+              <Route path="admin/operation-alerts" element={withSuspense(<AdminOperationAlerts />)} />
+              <Route path="admin/circuit-breaker" element={withSuspense(<AdminCircuitBreaker />)} />
               <Route path="admin/sensitive-words" element={withSuspense(<AdminSensitiveWords />)} />
+              <Route path="admin/monitoring" element={withSuspense(<AdminMonitoring />)} />
+              <Route path="admin/operation-types" element={withSuspense(<AdminOperationTypes />)} />
             </Route>
 
             {/* User routes */}
@@ -264,7 +281,8 @@ export default function App() {
           <Route path="/invoices" element={<Navigate to="/console/invoices" replace />} />
           <Route path="/refunds" element={<Navigate to="/console/refunds" replace />} />
         </Routes>
-        </ImpersonateProvider>
+          </ImpersonateProvider>
+        </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>
   )

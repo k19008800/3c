@@ -12,6 +12,7 @@ import { adminVendorModelRoutes } from "../routes/admin/vendor-models.js";
 import { adminKeyGroupRoutes } from "../routes/admin/vendor-key-groups.js";
 import { adminKeyModelPricesRoutes } from "../routes/admin/key-model-prices.js";
 import { adminBatchRoutes } from "../routes/admin/batch.js";
+import { adminKeyBatchRoutes } from "../routes/admin/keys/batch.js";
 import { adminContentFilterRoutes } from "../routes/admin/content-filters.js";
 import { adminLogAnalysisRoutes } from "../routes/admin/log-analysis.js";
 import { playgroundRoutes } from "../routes/playground.js";
@@ -31,9 +32,13 @@ import { adminCampaignRoutes } from "../routes/admin/campaigns.js";
 import { adminDashboardRoutes } from "../routes/admin/dashboard/index.js";
 import { adminLogRoutes } from "../routes/admin/logs.js";
 import { promptAuditRoutes } from "../routes/admin/prompt-audit.js";
+import { promptTemplatesRoutes } from "../routes/admin/prompt-templates.js";
 import { adminFinanceRoutes } from "../routes/admin/finance.js";
+import { adminFinanceExportRoutes } from "../routes/admin/finance/export.js";
 import { adminAuditLogRoutes } from "../routes/admin/audit-logs.js";
 import { adminOperationLogRoutes } from "../routes/admin/operation-logs.js";
+import { adminOperationAlertRoutes } from "../routes/admin/operation-alerts.js";
+import { adminOperationTypeRoutes } from "../routes/admin/operation-types.js";
 import { userOperationLogRoutes } from "../routes/operation-logs.js";
 import { adminQuotaRoutes } from "../routes/admin/quotas.js";
 import { adminRateLimitRoutes } from "../routes/admin/rate-limits.js";
@@ -41,6 +46,11 @@ import { adminCircuitRoutes } from "../routes/admin/circuits.js";
 import { adminStatsRoutes } from "../routes/admin/stats.js";
 import { adminStatsUsageRoutes } from "../routes/admin/stats-usage.js";
 import { meStatsRoutes } from "../routes/stats.js";
+import { meStatsForecastRoutes } from "../routes/me/stats/forecast.js";
+import { meStatsOptimizationRoutes } from "../routes/me/stats/optimization.js";
+import { meStatsExportRoutes } from "../routes/me/stats/export.js";
+import { meStatsCompareRoutes } from "../routes/me/stats/compare.js";
+import { meSessionRoutes } from "../routes/me/sessions.js";
 import { statsUsageRoutes } from "../routes/stats-usage.js";
 import { agentStatsUsageRoutes } from "../routes/agent/stats-usage.js";
 import { redemptionRoutes } from "../routes/redemption/index.js";
@@ -48,15 +58,19 @@ import { redemptionGiftRoutes } from "../routes/redemption-gift.js";
 import { adminAgentRedemptionRoutes } from "../routes/admin/agent-redemption.js";
 import { adminRedemptionFraudRoutes } from "../routes/admin/redemption-fraud.js";
 import { adminFinanceCodeRoutes } from "../routes/admin/finance/codes/index.js";
+import { adminReconciliationRoutes } from "../routes/admin/finance/reconciliation.js";
 import { vendorSelfRoutes, vendorJWTRoutes } from "../routes/vendor-self.js";
 import { adminKeyManagementRoutes } from "../routes/admin/admin-keys.js";
 import { adminRoleRoutes } from "../routes/admin/roles.js";
 import { realNameFileRoutes } from "../routes/real-name-file.js";
+import { apiKeyPermissionRoutes } from "../routes/admin/keys/permissions.js";
 import { notificationRoutes } from "../routes/notifications.js";
 import { authSecurityRoutes } from "../routes/auth-security.js";
 import { adminSecurityRoutes } from "../routes/admin/security/index.js";
 import { adminAnnouncementRoutes } from "../routes/admin/announcements.js";
+// import { adminAnnouncementStatsRoutes } from "../routes/admin/announcements/stats.js";
 import { announcementRoutes } from "../routes/announcements.js";
+import { announcementReadStatusRoutes } from "../routes/me/announcements/read-status.js";
 import { preferenceRoutes } from "../routes/preferences.js";
 import { realNameOcrRoutes } from "../routes/real-name-ocr.js";
 import { invoiceRoutes } from "../routes/invoices.js";
@@ -70,13 +84,28 @@ import { redemptionUserRoutes } from "../routes/redemption-user.js";
 import { agentRedemptionRoutes } from "../routes/agent/redemption.js";
 import { agentFinanceRoutes } from "../routes/agent/finance.js";
 import { adminEmailTemplateRoutes } from "../routes/admin/email-templates.js";
+import { adminEmailTemplatePreviewRoutes } from "../routes/admin/email-templates-preview.js";
 import { adminPageContentRoutes } from "../routes/admin/page-contents.js";
 import { adminPerfCacheStatsRoutes } from "../routes/admin/perf-stats.js";
 import { adminSiteSettingsRoutes } from "../routes/admin/site-settings.js";
 import { quickConnectRoutes } from "../routes/quick-connect.js";
 import { publicSiteConfigRoutes } from "../routes/public/site-config.js";
+import { publicErrorCodesRoutes } from "../routes/public/error-codes.js";
 import { userTransactionRoutes } from "../routes/user-transactions.js";
 import { userQuotaRoutes } from "../routes/user-quota.js";
+import { alertRoutes } from "../routes/alerts.js";
+import { billingCurrentPeriodRoutes } from "../routes/me/billing/current-period.js";
+import { adminAlertStreamRoutesProtected } from "../routes/admin/alerts/stream.js";
+import { adminAlertSubscriptionRoutes } from "../routes/admin/alerts/subscriptions.js";
+import { adminAlertRoutes } from "../routes/admin/alerts/index.js";
+import { adminMonitoringRoutes } from "../routes/admin/monitoring/index.js";
+import { configHistoryRoutes, configImportExportRoutes } from "../routes/admin/config/index.js";
+import { configVersionsRoutes } from "../routes/admin/config/versions.js";
+import { enhancedSystemRoutes } from "../routes/admin/config/enhanced.js";
+import { uploadRoutes } from "../routes/admin/upload/index.js";
+import { twoFactorRoutes, twoFactorVerifyLoginRoute } from "../routes/me/2fa.js";
+import { userSettingsRoutes } from "../routes/user-settings.js";
+import { adminRoutingRecommendationsRoutes } from "../routes/admin/routing/recommendations.js";
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // ── Auth 路由 ──
@@ -96,6 +125,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   await app.register(adminKeyGroupRoutes, { prefix: "" });
   await app.register(adminKeyModelPricesRoutes, { prefix: "" });
   await app.register(adminBatchRoutes, { prefix: "" });
+  await app.register(adminKeyBatchRoutes, { prefix: "" });
   await app.register(adminContentFilterRoutes, { prefix: "" });
   await app.register(adminLogAnalysisRoutes, { prefix: "" });
   await app.register(playgroundRoutes, { prefix: "" });
@@ -138,8 +168,14 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // ── Admin 公告管理 ──
   await app.register(adminAnnouncementRoutes, { prefix: "" });
 
+  // ── Admin 公告阅读统计（已在 admin/announcements.ts 中注册）──
+  // await app.register(adminAnnouncementStatsRoutes, { prefix: "" });
+
   // ── 用户端公告 ──
   await app.register(announcementRoutes, { prefix: "" });
+
+  // ── 用户端公告已读状态 ──
+  await app.register(announcementReadStatusRoutes, { prefix: "" });
 
   // ── 发票管理（用户端）──
   await app.register(invoiceRoutes, { prefix: "" });
@@ -171,11 +207,21 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // ── Admin 提示词审计 ──
   await app.register(promptAuditRoutes, { prefix: "" });
 
+  // ── Admin 提示词模板库 ──
+  await app.register(promptTemplatesRoutes, { prefix: "" });
+
   // ── Admin 财务管理 ──
   await app.register(adminFinanceRoutes, { prefix: "" });
 
+  // ── Admin 财务报表导出 ──
+  await app.register(adminFinanceExportRoutes, { prefix: "" });
+
   // ── Admin 财务成本核算 ──
   await app.register(adminFinanceCodeRoutes, { prefix: "" });
+
+  // ── Admin 自动对账 ──
+  // ── 对账路由已移至 finance.ts ──
+  // await app.register(adminReconciliationRoutes, { prefix: "" });
 
   // ── Admin 利润分析 ──
   await app.register(profitRoutes, { prefix: "" });
@@ -196,8 +242,17 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   await app.register(userOperationLogRoutes, { prefix: "" });
   await app.register(adminOperationLogRoutes, { prefix: "" });
 
+  // ── 操作类型管理 ──
+  await app.register(adminOperationTypeRoutes, { prefix: "" });
+
+  // ── 异常操作告警 ──
+  await app.register(adminOperationAlertRoutes, { prefix: "" });
+
   // ── 管理 API Key 管理（admin_api_keys 表）──
   await app.register(adminKeyManagementRoutes, { prefix: "" });
+
+  // ── API Key 权限管理 ──
+  await app.register(apiKeyPermissionRoutes, { prefix: "" });
 
   // ── 角色权限管理 ──
   await app.register(adminRoleRoutes, { prefix: "" });
@@ -244,6 +299,21 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // ── 用户端统计 & 额度 ──
   await app.register(meStatsRoutes, { prefix: "" });
 
+  // ── 用户端成本预测 ──
+  await app.register(meStatsForecastRoutes, { prefix: "" });
+
+  // ── 用户端统计对比 ──
+  await app.register(meStatsCompareRoutes, { prefix: "" });
+
+  // ── 用户端模型优化建议 ──
+  await app.register(meStatsOptimizationRoutes, { prefix: "" });
+
+  // ── 用户端用量导出 ──
+  await app.register(meStatsExportRoutes, { prefix: "" });
+
+  // ── 用户端登录会话管理 ──
+  await app.register(meSessionRoutes, { prefix: "" });
+
   // ── 用户端用量聚合统计（V2.0 新增）──
   await app.register(statsUsageRoutes, { prefix: "" });
 
@@ -258,6 +328,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
   // ── Admin 邮件模板管理 ──
   await app.register(adminEmailTemplateRoutes, { prefix: "" });
+  await app.register(adminEmailTemplatePreviewRoutes, { prefix: "" });
 
   // ── Admin 页面内容管理 ──
   await app.register(adminPageContentRoutes, { prefix: "" });
@@ -272,9 +343,30 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // ── 公开站点配置（免认证）──
   await app.register(publicSiteConfigRoutes, { prefix: "" });
 
+  // ── 公开错误码参考文档（免认证）──
+  await app.register(publicErrorCodesRoutes, { prefix: "" });
+
   // ── Token 代理 ──
   await app.register(userTransactionRoutes, { prefix: "" });
   await app.register(userQuotaRoutes, { prefix: "" });
+
+  // ── 用户账单周期概览 ──
+  await app.register(billingCurrentPeriodRoutes, { prefix: "" });
+
+  // ── 用户端告警中心 ──
+  await app.register(alertRoutes, { prefix: "" });
+
+  // ── 管理后台告警实时推送 ──
+  await app.register(adminAlertStreamRoutesProtected, { prefix: "" });
+
+  // ── 管理后台告警订阅管理 ──
+  await app.register(adminAlertSubscriptionRoutes, { prefix: "" });
+
+  // ── 管理后台告警确认/解决 ──
+  await app.register(adminAlertRoutes, { prefix: "" });
+
+  // ── 管理后台实时监控告警 ──
+  await app.register(adminMonitoringRoutes, { prefix: "" });
 
   // -- Token 代理 --
   await app.register(proxyRoutes, { prefix: "" });
@@ -282,4 +374,40 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // ── WebSocket 限流水位 ──
   const { rateLimitWsRoutes } = await import("../routes/rate-limit-ws.js");
   await app.register(rateLimitWsRoutes, { prefix: "" });
+
+  // ── 实时告警WebSocket推送 ──
+  const { alertWsRoutes } = await import("../routes/alert-ws.js");
+  await app.register(alertWsRoutes, { prefix: "" });
+
+  // ── 实时活动流WebSocket推送 ──
+  const { activityWsRoutes } = await import("../routes/ws/activity.js");
+  await app.register(activityWsRoutes, { prefix: "" });
+
+  // ── 通知订阅管理 ──
+  const { notificationSubscriptionRoutes } = await import("../routes/notification-subscriptions.js");
+  await app.register(notificationSubscriptionRoutes, { prefix: "" });
+
+  // ── 配置版本控制 ──
+  await app.register(configHistoryRoutes, { prefix: "" });
+
+  // ── 配置导入导出 ──
+  await app.register(configImportExportRoutes, { prefix: "" });
+  
+  // ── 增强版配置版本控制 ──
+  // TODO: 修复 configSnapshots/configChangeRequests schema
+  // await app.register(configVersionsRoutes, { prefix: "" });
+  // await app.register(enhancedSystemRoutes, { prefix: "" });
+
+  // ── 富文本图片上传 ──
+  await app.register(uploadRoutes, { prefix: "" });
+
+  // ── 双因素认证 ──
+  await app.register(twoFactorRoutes, { prefix: "" });
+  await app.register(twoFactorVerifyLoginRoute, { prefix: "" });
+
+  // ── 用户设置（主题等）──
+  await app.register(userSettingsRoutes, { prefix: "" });
+
+  // ── 智能路由推荐 ──
+  await app.register(adminRoutingRecommendationsRoutes, { prefix: "" });
 }
