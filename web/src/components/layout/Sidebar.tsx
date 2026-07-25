@@ -7,6 +7,7 @@ import {
   Building2, GitBranch, Handshake, ScrollText, BarChart3, DollarSign,
   AlertTriangle, Lock, Bell, Settings2, Mail, ShieldAlert, PieChart, Megaphone,
   Zap, TrendingUp, Gift, Gauge, Newspaper, Activity, RotateCcw, Heart, Globe,
+  FlaskConical, Server,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useImpersonate } from '@/hooks/use-impersonate'
@@ -141,6 +142,9 @@ const adminGroups: AdminGroup[] = [
       { to: '/console/admin/security/alerts', icon: Bell, label: '告警通知', requiredPerms: [Perm.SECURITY_VIEW] },
       { to: '/console/admin/security/auto-rules', icon: Zap, label: '自动规则', requiredPerms: [Perm.SECURITY_VIEW] },
       { to: '/console/admin/risk-control', icon: ShieldAlert, label: 'AI 风控模型', requiredPerms: [Perm.SECURITY_VIEW] },
+      { to: '/console/admin/behavior-analysis', icon: Activity, label: '行为分析', requiredPerms: [Perm.SECURITY_VIEW] },
+      { to: '/console/admin/threat-intel', icon: Globe, label: '威胁情报', requiredPerms: [Perm.SECURITY_VIEW] },
+      { to: '/console/admin/ab-testing', icon: FlaskConical, label: 'A/B 测试', requiredPerms: [Perm.SECURITY_VIEW] },
     ],
   },
   {
@@ -151,6 +155,9 @@ const adminGroups: AdminGroup[] = [
       { to: '/console/admin/rate-limits', icon: Activity, label: '限流管理', requiredPerms: [Perm.OPS_READ] },
       { to: '/console/admin/email-templates', icon: Mail, label: '邮件模板', requiredPerms: [Perm.CONFIG_VIEW] },
       { to: '/console/admin/page-contents', icon: FileText, label: '内容管理', requiredPerms: [Perm.CONFIG_VIEW] },
+      { to: '/console/admin/environments', icon: Server, label: '多环境管理', requiredPerms: [Perm.OPS_READ] },
+      { to: '/console/admin/health-score', icon: Heart, label: '健康评分', requiredPerms: [Perm.OPS_READ] },
+      { to: '/console/admin/custom-reports', icon: BarChart3, label: '自定义报表', requiredPerms: [Perm.OPS_READ] },
     ],
   },
   {
