@@ -103,6 +103,7 @@ const AdminThreatIntel = lazy(() => import('@/pages/admin/ThreatIntel'))
 const AdminEnvironments = lazy(() => import('@/pages/admin/Environments'))
 const AdminHealthScore = lazy(() => import('@/pages/admin/HealthScore'))
 const AdminABTesting = lazy(() => import('@/pages/admin/ABTesting'))
+const AdminCustomReports = lazy(() => import('@/pages/admin/CustomReports'))
 const AdminReports = lazy(() => import('@/pages/admin/Reports'))
 
 // ── 用户端财务 ──
@@ -243,6 +244,7 @@ export default function App() {
               <Route path="admin/environments" element={withSuspense(<AdminEnvironments />)} />
               <Route path="admin/health-score" element={withSuspense(<AdminHealthScore />)} />
               <Route path="admin/ab-testing" element={withSuspense(<AdminABTesting />)} />
+              <Route path="admin/custom-reports" element={withSuspense(<AdminCustomReports />)} />
               <Route path="admin/reports" element={withSuspense(<AdminReports />)} />
             </Route>
 

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { get, post, put, del } from '@/lib/api'
 import {
   Loader2, AlertCircle, FlaskConical, Plus, RefreshCw,
-  Play, Pause, CheckCircle2, Trash2, Edit, X
+  Play, Pause, CheckCircle2, Trash2, Edit3, GitBranch
 } from 'lucide-react'
 
 interface ABVariant {
@@ -26,51 +26,46 @@ interface ABTest {
   createdBy: number
 }
 
-interface ABTestDetail extends ABTest {
-  results: {
-    variant: string
-    impressions: number
-    conversions: number
-    metrics: Record<string, number>
-  }[]
+interface ABTestResult {
+  id: number
+  testId: number
+  variant: string
+  impressions: number
+  conversions: number
+  metrics: Record<string, number>
+  updatedAt: string
 }
 
-const statusColors: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-600',
-  running: 'bg-green-100 text-green-700',
-  paused: 'bg-yellow-100 text-yellow-700',
-  completed: 'bg-blue-100 text-blue-700',
+const statusStyles: Record<string, { label: string; color: string }> = {
+  draft: { label: '草稿', color: 'text-gray-600 bg-gray-100' },
+  running: { label: '运行中', color: 'text-green-600 bg-green-50' },
+  paused: { label: '已暂停', color: 'text-orange-600 bg-orange-50' },
+  completed: { label: '已完成', color: 'text-blue-600 bg-blue-50' },
 }
-
-const statusLabels: Record<string, string> = {
-  draft: '草稿',
-  running: '运行中',
-  paused: '已暂停',
-  completed: '已完成',
-}
-
-const defaultMetrics = ['latency', 'error_rate', 'token_usage']
 
 export default function AdminABTesting() {
   const [tests, setTests] = useState<ABTest[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [showCreate, setShowCreate] = useState(false)
-  const [detailId, setDetailId] = useState<number | null>(null)
-  const [detail, setDetail] = useState<ABTestDetail | null>(null)
-  const [detailLoading, setDetailLoading] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  const [editId, setEditId] = useState<number | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [testResults, setTestResults] = useState<Record<number, ABTestResult[]>>({})
+  const [loadingDetail, setLoadingDetail] = useState(false)
 
-  // 创建表单
-  const [formName, setFormName] = useState('')
-  const [formDesc, setFormDesc] = useState('')
-  const [formTraffic, setFormTraffic] = useState(50)
-  const [formVariants, setFormVariants] = useState<ABVariant[]>([
-    { name: 'A', weight: 50, config: {} },
-    { name: 'B', weight: 50, config: {} },
-  ])
-  const [formMetrics, setFormMetrics] = useState(defaultMetrics.join(', '))
-  const [formRoute, setFormRoute] = useState('')
-  const [creating, setCreating] = useState(false)
+  // 表单
+  const [form, setForm] = useState({
+    name: '',
+    description: '',
+    trafficPercent: 10,
+    targetRoute: '',
+    metrics: 'latency, error_rate',
+    variants: [
+      { name: '对照组', weight: 50, config: '{}' },
+      { name: '实验组', weight: 50, config: '{}' },
+    ] as { name: string; weight: number; config: string }[],
+  })
 
   const fetchTests = useCallback(async () => {
     setLoading(true)
@@ -79,7 +74,7 @@ export default function AdminABTesting() {
       const res = await get<{ list: ABTest[] }>('/api/v1/admin/ab-testing')
       setTests(res.list)
     } catch (err: any) {
-      setError(err.message || '获取实验列表失败')
+      setError(err.message || '获取失败')
     } finally {
       setLoading(false)
     }
@@ -87,204 +82,111 @@ export default function AdminABTesting() {
 
   useEffect(() => { fetchTests() }, [fetchTests])
 
-  // ── 查看详情 ──
-
-  const openDetail = async (id: number) => {
-    setDetailId(id)
-    setDetailLoading(true)
-    setError('')
-    try {
-      const res = await get<ABTestDetail>(`/api/v1/admin/ab-testing/${id}`)
-      setDetail(res)
-    } catch (err: any) {
-      setError(err.message || '获取详情失败')
-    } finally {
-      setDetailLoading(false)
-    }
+  const openCreate = () => {
+    setEditId(null)
+    setForm({ name: '', description: '', trafficPercent: 10, targetRoute: '', metrics: 'latency, error_rate',
+      variants: [{ name: '对照组', weight: 50, config: '{}' }, { name: '实验组', weight: 50, config: '{}' }] })
+    setShowForm(true)
   }
 
-  // ── 状态操作 ──
+  const openEdit = (test: ABTest) => {
+    setEditId(test.id)
+    setForm({
+      name: test.name,
+      description: test.description,
+      trafficPercent: test.trafficPercent,
+      targetRoute: test.targetRoute,
+      metrics: test.metrics.join(', '),
+      variants: test.variants.map(v => ({ name: v.name, weight: v.weight, config: JSON.stringify(v.config, null, 2) })),
+    })
+    setShowForm(true)
+  }
 
-  const changeStatus = async (id: number, action: 'start' | 'pause' | 'complete') => {
+  const handleSave = async () => {
+    setSaving(true)
     setError('')
     try {
-      await post(`/api/v1/admin/ab-testing/${id}/${action}`)
+      const variants = form.variants.map(v => ({
+        name: v.name,
+        weight: v.weight,
+        config: v.config ? JSON.parse(v.config) : {},
+      }))
+
+      const body = {
+        name: form.name,
+        description: form.description,
+        trafficPercent: form.trafficPercent,
+        targetRoute: form.targetRoute,
+        metrics: form.metrics.split(',').map(m => m.trim()).filter(Boolean),
+        variants,
+      }
+
+      if (editId) {
+        await put(`/api/v1/admin/ab-testing/${editId}`, body)
+      } else {
+        await post('/api/v1/admin/ab-testing', body)
+      }
+
+      setShowForm(false)
       await fetchTests()
-      setDetailId(null)
     } catch (err: any) {
-      setError(err.message || '操作失败')
+      setError(err.message || '保存失败')
+    } finally {
+      setSaving(false)
     }
   }
 
-  // ── 删除 ──
-
-  const deleteTest = async (id: number) => {
+  const handleDelete = async (id: number) => {
     if (!confirm('确定删除此实验？')) return
     setError('')
     try {
       await del(`/api/v1/admin/ab-testing/${id}`)
       await fetchTests()
-      if (detailId === id) setDetailId(null)
     } catch (err: any) {
       setError(err.message || '删除失败')
     }
   }
 
-  // ── 创建实验 ──
-
-  const handleCreate = async () => {
-    if (!formName.trim()) {
-      setError('请输入实验名称')
-      return
-    }
-
-    setCreating(true)
+  const handleStatus = async (id: number, action: 'start' | 'pause' | 'complete') => {
     setError('')
-
-    // 验证权重总和
-    const weightSum = formVariants.reduce((s, v) => s + (v.weight || 0), 0)
-    if (weightSum !== 100) {
-      setError(`变量权重必须为 100（当前 ${weightSum}）`)
-      setCreating(false)
-      return
-    }
-
     try {
-      await post('/api/v1/admin/ab-testing', {
-        name: formName,
-        description: formDesc,
-        trafficPercent: formTraffic,
-        variants: formVariants,
-        metrics: formMetrics.split(',').map(m => m.trim()).filter(Boolean),
-        targetRoute: formRoute,
-      })
-      setShowCreate(false)
-      resetForm()
+      await post(`/api/v1/admin/ab-testing/${id}/${action}`)
       await fetchTests()
+      if (expandedId === id) handleExpand(id) // 刷新展开详情
     } catch (err: any) {
-      setError(err.message || '创建失败')
-    } finally {
-      setCreating(false)
+      setError(err.message || '操作失败')
     }
   }
 
-  const resetForm = () => {
-    setFormName('')
-    setFormDesc('')
-    setFormTraffic(50)
-    setFormVariants([{ name: 'A', weight: 50, config: {} }, { name: 'B', weight: 50, config: {} }])
-    setFormMetrics(defaultMetrics.join(', '))
-    setFormRoute('')
+  const handleExpand = async (id: number) => {
+    if (expandedId === id) { setExpandedId(null); return }
+    setExpandedId(id)
+    setLoadingDetail(true)
+    try {
+      const res = await get<ABTest & { results: ABTestResult[] }>(`/api/v1/admin/ab-testing/${id}`)
+      setTestResults(prev => ({ ...prev, [id]: res.results || [] }))
+    } catch (err: any) {
+      setError(err.message || '获取详情失败')
+    } finally {
+      setLoadingDetail(false)
+    }
   }
 
-  const updateVariant = (i: number, field: keyof ABVariant, value: any) => {
-    setFormVariants(prev => prev.map((v, idx) => idx === i ? { ...v, [field]: value } : v))
+  // 变体表单管理
+  const updateVariant = (index: number, field: string, value: any) => {
+    setForm(prev => {
+      const variants = [...prev.variants]
+      variants[index] = { ...variants[index], [field]: value }
+      return { ...prev, variants }
+    })
   }
 
   const addVariant = () => {
-    if (formVariants.length >= 10) return
-    const equalWeight = Math.floor(100 / (formVariants.length + 1))
-    setFormVariants(prev => [...prev.map(v => ({ ...v, weight: equalWeight })), { name: `V${prev.length + 1}`, weight: 100 - equalWeight * prev.length, config: {} }])
+    setForm(prev => ({ ...prev, variants: [...prev.variants, { name: '', weight: 0, config: '{}' }] }))
   }
 
-  const removeVariant = (i: number) => {
-    if (formVariants.length <= 2) return
-    setFormVariants(prev => prev.filter((_, idx) => idx !== i))
-  }
-
-  // ── 渲染详情面板 ──
-
-  function renderDetail() {
-    if (!detailId) return null
-
-    return (
-      <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4" onClick={() => setDetailId(null)}>
-        <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-auto p-6 space-y-4" onClick={e => e.stopPropagation()}>
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold">{detail?.name || '加载中...'}</h2>
-            <button onClick={() => setDetailId(null)} className="p-1 hover:bg-gray-100 rounded"><X size={20} /></button>
-          </div>
-
-          {detailLoading ? (
-            <div className="flex justify-center py-10"><Loader2 className="animate-spin" size={24} /></div>
-          ) : detail ? (
-            <>
-              <div className="flex items-center gap-2">
-                <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[detail.status]}`}>
-                  {statusLabels[detail.status]}
-                </span>
-                <span className="text-sm text-gray-500">流量: {detail.trafficPercent}%</span>
-                {detail.targetRoute && <span className="text-sm text-gray-500">路由: {detail.targetRoute}</span>}
-              </div>
-              <p className="text-sm text-gray-600">{detail.description || '暂无描述'}</p>
-
-              {/* 变量权重 */}
-              <div>
-                <h4 className="text-sm font-medium mb-2">变量</h4>
-                {detail.variants.map(v => (
-                  <div key={v.name} className="flex items-center gap-2 mb-1">
-                    <span className="text-sm w-10 font-mono">{v.name}</span>
-                    <div className="flex-1 bg-gray-100 rounded-full h-5">
-                      <div className="h-5 bg-indigo-400 rounded-full text-xs text-white flex items-center justify-center" style={{ width: `${v.weight}%` }}>
-                        {v.weight}%
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* 结果 */}
-              {detail.results.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2">实验结果</h4>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b text-left">
-                          <th className="pb-1 font-medium">变量</th>
-                          <th className="pb-1 font-medium">访问数</th>
-                          <th className="pb-1 font-medium">转化数</th>
-                          <th className="pb-1 font-medium">转化率</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {detail.results.map(r => (
-                          <tr key={r.variant} className="border-b last:border-0">
-                            <td className="py-1 font-mono">{r.variant}</td>
-                            <td className="py-1">{r.impressions}</td>
-                            <td className="py-1">{r.conversions}</td>
-                            <td className="py-1">{r.impressions > 0 ? `${((r.conversions / r.impressions) * 100).toFixed(1)}%` : '-'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* 操作按钮 */}
-              <div className="flex items-center gap-2 pt-2">
-                {detail.status === 'draft' && (
-                  <button onClick={() => changeStatus(detail.id, 'start')} className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600">
-                    <Play size={14} /> 启动
-                  </button>
-                )}
-                {detail.status === 'running' && (
-                  <button onClick={() => changeStatus(detail.id, 'pause')} className="flex items-center gap-1 px-3 py-1.5 text-sm bg-yellow-500 text-white rounded-lg hover:bg-yellow-600">
-                    <Pause size={14} /> 暂停
-                  </button>
-                )}
-                {(detail.status === 'draft' || detail.status === 'paused') && (
-                  <button onClick={() => changeStatus(detail.id, 'complete')} className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-                    <CheckCircle2 size={14} /> 完成
-                  </button>
-                )}
-              </div>
-            </>
-          ) : null}
-        </div>
-      </div>
-    )
+  const removeVariant = (index: number) => {
+    setForm(prev => ({ ...prev, variants: prev.variants.filter((_, i) => i !== index) }))
   }
 
   return (
@@ -293,15 +195,15 @@ export default function AdminABTesting() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <FlaskConical className="text-purple-500" size={28} />
-            A/B 测试
+            A/B 测试管理
           </h1>
-          <p className="text-sm text-gray-500 mt-1">创建与管理 A/B 实验，配置分流比例，查看实验结果</p>
+          <p className="text-sm text-gray-500 mt-1">创建与运行 A/B 实验，对比不同配置的效果</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={fetchTests} className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">
             <RefreshCw size={14} /> 刷新
           </button>
-          <button onClick={() => { resetForm(); setShowCreate(true) }} className="flex items-center gap-1.5 px-4 py-2 text-sm bg-purple-500 text-white rounded-lg hover:bg-purple-600">
+          <button onClick={openCreate} className="flex items-center gap-1.5 px-4 py-2 text-sm bg-purple-500 text-white rounded-lg hover:bg-purple-600">
             <Plus size={16} /> 新建实验
           </button>
         </div>
@@ -309,124 +211,181 @@ export default function AdminABTesting() {
 
       {error && <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 rounded-lg"><AlertCircle size={16} /> {error}</div>}
 
-      {/* 实验列表 */}
-      {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="animate-spin" size={32} /></div>
-      ) : tests.length === 0 ? (
-        <div className="text-center py-20 text-gray-400">
-          <FlaskConical size={48} className="mx-auto mb-3 opacity-30" />
-          <p>暂无 A/B 实验</p>
-          <p className="text-sm mt-1">点击「新建实验」创建一个实验</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {tests.map(test => (
-            <div key={test.id} className="border rounded-xl p-4 hover:shadow-sm transition-shadow cursor-pointer" onClick={() => openDetail(test.id)}>
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <h3 className="font-medium">{test.name}</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">{test.description || '-'}</p>
-                </div>
-                <span className={`px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${statusColors[test.status]}`}>
-                  {statusLabels[test.status]}
-                </span>
-              </div>
-              <div className="flex items-center gap-3 text-xs text-gray-500">
-                <span>流量: {test.trafficPercent}%</span>
-                <span>变量: {test.variants.length}</span>
-                <span>指标: {test.metrics.join(', ')}</span>
-              </div>
-              <div className="mt-2 flex items-center gap-1">
-                {test.variants.map(v => (
-                  <span key={v.name} className="text-xs font-mono text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
-                    {v.name}: {v.weight}%
-                  </span>
-                ))}
-              </div>
-              <div className="flex items-center justify-between mt-3 pt-2 border-t">
-                <span className="text-xs text-gray-400">{new Date(test.createdAt).toLocaleString('zh-CN')}</span>
-                <button
-                  onClick={e => { e.stopPropagation(); deleteTest(test.id) }}
-                  className="text-red-400 hover:text-red-600 p-1"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
+      {/* 新建/编辑表单 */}
+      {showForm && (
+        <div className="border rounded-xl p-5 space-y-4">
+          <h2 className="font-semibold">{editId ? '编辑实验' : '新建实验'}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">实验名称</label>
+              <input type="text" value={form.name} onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full border rounded px-3 py-2 text-sm" placeholder="如：新定价策略测试" />
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* 创建弹窗 */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4" onClick={() => setShowCreate(false)}>
-          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[80vh] overflow-auto p-6 space-y-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold">新建 A/B 实验</h2>
-              <button onClick={() => setShowCreate(false)} className="p-1 hover:bg-gray-100 rounded"><X size={20} /></button>
-            </div>
-
             <div>
-              <label className="block text-sm font-medium mb-1">实验名称 *</label>
-              <input type="text" value={formName} onChange={e => setFormName(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="例如：AI 路由优化实验" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">流量百分比</label>
+              <input type="number" min={1} max={100} value={form.trafficPercent}
+                onChange={e => setForm(prev => ({ ...prev, trafficPercent: parseInt(e.target.value) || 1 }))}
+                className="w-full border rounded px-3 py-2 text-sm" />
             </div>
-
             <div>
-              <label className="block text-sm font-medium mb-1">描述</label>
-              <textarea value={formDesc} onChange={e => setFormDesc(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 text-sm" rows={2} placeholder="实验目的..." />
+              <label className="block text-sm font-medium text-gray-700 mb-1">目标路由</label>
+              <input type="text" value={form.targetRoute} onChange={e => setForm(prev => ({ ...prev, targetRoute: e.target.value }))}
+                className="w-full border rounded px-3 py-2 text-sm" placeholder="可选" />
             </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">参与流量比例 {formTraffic}%</label>
-              <input type="range" min={1} max={100} value={formTraffic} onChange={e => setFormTraffic(parseInt(e.target.value))} className="w-full" />
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">观测指标（逗号分隔）</label>
+              <input type="text" value={form.metrics} onChange={e => setForm(prev => ({ ...prev, metrics: e.target.value }))}
+                className="w-full border rounded px-3 py-2 text-sm" />
             </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-sm font-medium">变量</label>
-                {formVariants.length < 10 && (
-                  <button onClick={addVariant} className="text-xs text-purple-600 hover:text-purple-700">+ 添加变量</button>
-                )}
-              </div>
-              {formVariants.map((v, i) => (
-                <div key={i} className="flex items-center gap-2 mb-2">
-                  <input type="text" value={v.name} onChange={e => updateVariant(i, 'name', e.target.value)}
-                    className="w-16 border rounded px-2 py-1 text-sm font-mono" />
-                  <input type="number" min={1} max={100} value={v.weight} onChange={e => updateVariant(i, 'weight', parseInt(e.target.value) || 0)}
-                    className="w-20 border rounded px-2 py-1 text-sm" />
-                  <span className="text-xs text-gray-400">%</span>
-                  {formVariants.length > 2 && (
-                    <button onClick={() => removeVariant(i)} className="text-red-400 hover:text-red-600 p-1"><X size={14} /></button>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">变量配置</label>
+              {form.variants.map((v, i) => (
+                <div key={i} className="flex items-start gap-3 mb-2 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <input type="text" value={v.name} onChange={e => updateVariant(i, 'name', e.target.value)}
+                      className="w-full border rounded px-2 py-1.5 text-sm mb-1" placeholder="变量名" />
+                    <textarea value={v.config} onChange={e => updateVariant(i, 'config', e.target.value)}
+                      rows={2} className="w-full border rounded px-2 py-1.5 text-xs font-mono" placeholder="{}" />
+                  </div>
+                  <div className="w-20">
+                    <input type="number" min={1} max={100} value={v.weight}
+                      onChange={e => updateVariant(i, 'weight', parseInt(e.target.value) || 1)}
+                      className="w-full border rounded px-2 py-1.5 text-sm" placeholder="权重" />
+                    <span className="text-xs text-gray-400">权重%</span>
+                  </div>
+                  {form.variants.length > 2 && (
+                    <button onClick={() => removeVariant(i)} className="p-1.5 text-red-400 hover:bg-red-50 rounded">
+                      <Trash2 size={14} />
+                    </button>
                   )}
                 </div>
               ))}
-              <p className="text-xs text-gray-400">总和: {formVariants.reduce((s, v) => s + (v.weight || 0), 0)}%（必须=100）</p>
+              <button onClick={addVariant} className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-1">
+                <Plus size={14} /> 添加变量
+              </button>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">观测指标</label>
-              <input type="text" value={formMetrics} onChange={e => setFormMetrics(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="latency, error_rate, token_usage" />
-              <p className="text-xs text-gray-400 mt-1">逗号分隔</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">目标路由</label>
-              <input type="text" value={formRoute} onChange={e => setFormRoute(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="例如: /api/v1/chat" />
-            </div>
-
-            <button onClick={handleCreate} disabled={creating}
-              className="w-full py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50">
-              {creating ? '创建中...' : '创建实验'}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleSave} disabled={saving || !form.name}
+              className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm hover:bg-purple-600 disabled:opacity-50">
+              {saving ? '保存中...' : (editId ? '保存修改' : '创建实验')}
             </button>
+            <button onClick={() => setShowForm(false)} className="px-4 py-2 border rounded-lg text-sm">取消</button>
           </div>
         </div>
       )}
 
-      {renderDetail()}
+      {/* 实验列表 */}
+      {loading ? (
+        <div className="flex items-center justify-center py-20"><Loader2 className="animate-spin" size={32} /></div>
+      ) : (
+        <div className="space-y-3">
+          {tests.length === 0 ? (
+            <div className="text-center py-20 text-gray-400">
+              <FlaskConical size={48} className="mx-auto mb-3 opacity-30" />
+              <p>暂无 A/B 实验</p>
+              <button onClick={openCreate} className="mt-2 text-sm text-purple-600 hover:text-purple-700">创建第一个实验</button>
+            </div>
+          ) : (
+            tests.map(test => {
+              const s = statusStyles[test.status] || statusStyles.draft
+              return (
+                <div key={test.id}>
+                  <div className="border rounded-xl p-4 hover:shadow-sm transition-shadow">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handleExpand(test.id)}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${s.color}`}>{s.label}</span>
+                          <span className="font-medium">{test.name}</span>
+                          <span className="text-xs text-gray-400">流量 {test.trafficPercent}%</span>
+                        </div>
+                        {test.description && <p className="text-sm text-gray-500 truncate">{test.description}</p>}
+                        <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
+                          <span>{test.variants.length} 个变量</span>
+                          <span>指标: {test.metrics.join(', ')}</span>
+                          {test.startedAt && <span>开始: {new Date(test.startedAt).toLocaleDateString('zh-CN')}</span>}
+                          <span className="text-xs text-gray-400">ID: {test.id}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {test.status === 'draft' && (
+                          <button onClick={() => handleStatus(test.id, 'start')}
+                            className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-green-600 bg-green-50 rounded-lg hover:bg-green-100">
+                            <Play size={12} /> 启动
+                          </button>
+                        )}
+                        {test.status === 'running' && (
+                          <button onClick={() => handleStatus(test.id, 'pause')}
+                            className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-orange-600 bg-orange-50 rounded-lg hover:bg-orange-100">
+                            <Pause size={12} /> 暂停
+                          </button>
+                        )}
+                        {(test.status === 'running' || test.status === 'paused') && (
+                          <button onClick={() => handleStatus(test.id, 'complete')}
+                            className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100">
+                            <CheckCircle2 size={12} /> 完成
+                          </button>
+                        )}
+                        <button onClick={() => openEdit(test)} className="p-1.5 text-gray-400 hover:text-gray-600">
+                          <Edit3 size={14} />
+                        </button>
+                        {test.status === 'draft' && (
+                          <button onClick={() => handleDelete(test.id)} className="p-1.5 text-red-400 hover:text-red-600">
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 变量权重条 */}
+                    <div className="flex h-2 rounded-full overflow-hidden mt-3 bg-gray-100">
+                      {test.variants.map((v, i) => (
+                        <div key={i}
+                          className={`h-full ${['bg-purple-400', 'bg-green-400', 'bg-orange-400', 'bg-blue-400', 'bg-red-400'][i % 5]}`}
+                          style={{ width: `${v.weight}%` }}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex gap-4 mt-1 text-xs text-gray-500">
+                      {test.variants.map((v, i) => (
+                        <span key={i}>{v.name} ({v.weight}%)</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 展开详情 */}
+                  {expandedId === test.id && (
+                    <div className="ml-4 pl-4 border-l-2 border-purple-200 space-y-2 py-2">
+                      {loadingDetail ? (
+                        <div className="flex items-center gap-2 text-sm text-gray-500 py-2"><Loader2 className="animate-spin" size={14} /> 加载中...</div>
+                      ) : (
+                        <>
+                          {testResults[test.id] && testResults[test.id].length > 0 ? (
+                            <div className="text-sm space-y-1">
+                              {testResults[test.id].map(r => (
+                                <div key={r.variant} className="flex items-center gap-2 px-2 py-1 bg-gray-50 rounded text-xs">
+                                  <span className="font-medium">{r.variant}</span>
+                                  <span>曝光 {r.impressions}</span>
+                                  <span>转化 {r.conversions}</span>
+                                  {Object.entries(r.metrics).map(([k, v]) => (
+                                    <span key={k}>{k}: {v}</span>
+                                  ))}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-400 py-1">暂无实验数据</p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })
+          )}
+        </div>
+      )}
     </div>
   )
 }

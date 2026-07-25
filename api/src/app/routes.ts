@@ -112,6 +112,7 @@ import { adminThreatIntelRoutes } from "../routes/admin/threat-intel.js";
 import { adminABTestingRoutes } from "../routes/admin/ab-testing.js";
 import { adminEnvironmentRoutes } from "../routes/admin/environments.js";
 import { adminHealthScoreRoutes } from "../routes/admin/health-score.js";
+import { adminCustomReportsRoutes } from "../routes/admin/custom-reports.js";
 import { adminReportRoutes } from "../routes/admin/reports.js";
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
@@ -438,4 +439,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
   // ── 系统健康评分 ──
   await app.register(adminHealthScoreRoutes, { prefix: "" });
+
+  // ── 自定义报表 ──
+  await app.register(adminCustomReportsRoutes, { prefix: "" });
 }
