@@ -46,7 +46,7 @@ export default function AdminDashboard() {
         get<TopConsumersData>('/api/v1/admin/dashboard/top-consumers'),
         get<TodoQueueData>('/api/v1/admin/dashboard/todo-queue'),
         get<DashboardHealth>('/api/v1/admin/dashboard/health'),
-        get<{ series: DaySeries[] }>('/api/v1/admin/dashboard/trends', { days }),
+        get<{ range: any; granularity: string; series: DaySeries[] }>('/api/v1/admin/dashboard/trends', { days }),
       ])
       setStats(s)
       setSummary(summaryData)
@@ -54,7 +54,7 @@ export default function AdminDashboard() {
       setTopConsumers(tc)
       setTodoQueue(tq)
       setHealth(h)
-      setTrends(tr.series)
+      setTrends(tr?.series ?? [])
     } catch (err: any) {
       setError(err.message || '获取看板数据失败')
     } finally {

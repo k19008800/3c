@@ -13,7 +13,7 @@ export function useScheduling() {
     setLoading(true)
     setError(null)
     try {
-      const res = await get<SchedulingRealtime>('/api/v1/admin/scheduling/realtime', {})
+      const res = await get<SchedulingRealtime>('/api/v1/admin/dashboard/scheduling-realtime', {})
       setData(res)
     } catch (err: any) {
       setError(err.message || '加载失败')

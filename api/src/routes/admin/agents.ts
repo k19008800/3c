@@ -8,9 +8,9 @@
 // ============================================================
 
 import { FastifyInstance } from "fastify";
-import { eq } from "drizzle-orm";
+import { eq, and, gte, sql } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
-import { auditLogs } from "../../db/schema.js";
+import { auditLogs, agents, withdrawOrders } from "../../db/schema.js";
 import { authenticateJWT, requirePerm, Perm } from "../../middleware/auth.js";
 import { AppError } from "../../services/auth-service/index.js";
 import {
@@ -49,6 +49,46 @@ import type {
 
 export async function adminAgentRoutes(app: FastifyInstance) {
   app.addHook("preHandler", authenticateJWT);
+
+  // ──────────────────────────────────────────────
+  //  GET /api/v1/admin/agents/stats — 代理商统计
+  // ──────────────────────────────────────────────
+
+  app.get("/api/v1/admin/agents/stats", {
+    preHandler: [requirePerm(Perm.AGENT_LIST)],
+  }, async (request, reply) => {
+    const db = getDb();
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // 总代理数 + 总佣金
+    const [summary] = await db.select({
+      totalAgents: sql<number>`count(*)::int`,
+      totalCommission: sql<string>`coalesce(sum(${agents.totalCommission}::numeric), 0)`,
+      pendingWithdraw: sql<string>`coalesce(sum(${agents.pendingWithdraw}::numeric), 0)`,
+    }).from(agents);
+
+    // 本月提现统计（代理商提现）
+    const [monthWithdraw] = await db.select({
+      total: sql<string>`coalesce(sum(${withdrawOrders.amount}::numeric), 0)`,
+    }).from(withdrawOrders)
+      .where(and(
+        sql`${withdrawOrders.agentId} IS NOT NULL`, // 代理商提现
+        eq(withdrawOrders.status, "paid"), // 已完成提现
+        gte(withdrawOrders.createdAt, monthStart),
+      ));
+
+    reply.status(200).send({
+      code: 0,
+      data: {
+        totalAgents: summary.totalAgents,
+        totalCommission: summary.totalCommission,
+        monthPendingWithdraw: summary.pendingWithdraw,
+        monthWithdrawn: monthWithdraw?.total ?? "0",
+      },
+      message: "ok",
+    });
+  });
 
   // ──────────────────────────────────────────────
   //  GET /api/v1/admin/agents — 代理商列表
