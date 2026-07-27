@@ -8913,3 +8913,38 @@ SyntaxError: The requested module '../../db/schema.js' does not provide an expor
     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
 
 Node.js v24.18.0
+c13:57:28 [tsx] change in ./src\db\schema\config-versions.ts Rerunning...
+c13:58:03 [tsx] change in ./src\db\schema\config-versions.ts Restarting...
+c{"level":30,"time":1785131907814,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"[Middleware] Request ID tracking enabled"}
+[AutoSettle] Cron scheduled: 02:00 and 14:00 daily
+[DailyRecon] 瀹氭椂浠诲姟宸叉敞鍐? 姣忓ぉ 03:00
+[HourlyRecon] 瀹氭椂浠诲姟宸叉敞鍐? 姣忓皬鏃剁殑绗?鍒嗛挓
+{"level":40,"time":1785131914148,"pid":7948,"hostname":"DESKTOP-LC0FIIC","title":"馃敶 纾佺洏绌洪棿涓ラ噸涓嶈冻","message":"**鏈嶅姟鍣?*: 鏈湴 (Windows 10)\n**鐩綍**: C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\public\\uploads\\site\n**鍓╀綑绌洪棿**: 0.0 MB (0.00 GB)\n**闃堝€?*: 灏忎簬 200MB\n**寤鸿**: 绔嬪嵆娓呯悊 uploads 鐩綍鎴栨墿灞曠鐩?,"level":"critical","msg":"[SystemAlert] 绯荤粺鍛婅"}
+{"level":30,"time":1785131909749,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"[QueryTimeout] Enhanced plugin loaded - Default timeout: 5000ms"}
+{"level":30,"time":1785131909749,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"[QueryTimeout] Long timeout routes configured:"}
+{"level":30,"time":1785131909749,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"  /api/v1/admin/dashboard/: 10000ms"}
+{"level":30,"time":1785131909749,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"  /api/v1/admin/stats/: 15000ms"}
+{"level":30,"time":1785131909749,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"  /api/v1/admin/reports/: 30000ms"}
+{"level":30,"time":1785131909749,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"  /api/v1/analytics/: 20000ms"}
+{"level":30,"time":1785131909749,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"  /api/v1/dashboard/: 15000ms"}
+{"level":30,"time":1785131911035,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"鉁?鍝嶅簲鍘嬬缉鎻掍欢宸插惎鐢?(gzip/deflate/br, threshold=1KB)"}
+{"level":30,"time":1785131911272,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"鉁?鍏ㄥ眬闄愭祦淇濇姢宸插惎鐢?(100 璇锋眰/鍒嗛挓)"}
+{"level":30,"time":1785131913595,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Commission auto-settlement scheduled: daily at 3:00"}
+{"level":30,"time":1785131913684,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Daily recon summary scheduled: daily at 4:00"}
+{"level":30,"time":1785131913684,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Daily security summary scheduled: daily at 9:00"}
+{"level":30,"time":1785131913684,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Commission daily rollup scheduled: daily at 00:30"}
+{"level":30,"time":1785131913684,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Audit log archival scheduled: daily at 02:00 (purge >90d)"}
+{"level":30,"time":1785131913685,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Partition cleanup scheduled: daily at 03:30"}
+{"level":30,"time":1785131913686,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"[operation-alert-scheduler] Started (interval: 300s)"}
+{"level":30,"time":1785131913686,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Code expiry check scheduled: every 1 hour, first run in 30s"}
+{"level":30,"time":1785131913686,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] API Key expiry check scheduled: every 1 hour, first run in 1min"}
+{"level":30,"time":1785131913881,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Monthly quota reset scheduled: 1st day of month at 00:05"}
+{"level":30,"time":1785131913882,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Orphan upload cleanup scheduled: every Sunday at 03:00"}
+{"level":30,"time":1785131914120,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Monitoring check scheduled: every 5 minutes"}
+{"level":30,"time":1785131914120,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Campaign auto-end check scheduled: every 1 minute, first run in 1min"}
+{"level":50,"time":1785131914139,"pid":7948,"hostname":"DESKTOP-LC0FIIC","err":{"type":"ReferenceError","message":"require is not defined","stack":"ReferenceError: require is not defined\n    at schedulePublishAnnouncements (C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\cron\\publish-announcements.ts:104:16)\n    at <anonymous> (C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\app\\index.ts:305:5)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)"},"msg":"[App] 鍔犺浇鍏憡瀹氭椂鍙戝竷浠诲姟澶辫触"}
+[Redis] Connected
+{"level":30,"time":1785131916191,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"鉁?call_logs 琛ㄥ凡鍚敤鍒嗗尯"}
+{"level":30,"time":1785131916192,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"鉁?commission_logs 琛ㄥ凡鍚敤鍒嗗尯"}
+{"level":30,"time":1785131916193,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"[Redemption Scheduler] 宸叉敞鍐岋紝姣?60 鍒嗛挓鎵ц涓€娆?}
+{"level":50,"time":1785131916270,"pid":7948,"hostname":"DESKTOP-LC0FIIC","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3000","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3000\n    at Server.setupListenHandle [as _listen2] (node:net:2009:16)\n    at listenInCluster (node:net:2066:12)\n    at node:net:2275:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","code":"EADDRINUSE","errno":-4091,"syscall":"listen","address":"0.0.0.0","port":3000},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3000"}
