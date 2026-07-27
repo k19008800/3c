@@ -95,13 +95,39 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold text-white">欢迎回来！</h1>
         <p className="mt-2 opacity-90">{user?.email}</p>
         <div className="flex gap-4 mt-3">
-          <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
-            余额：¥{Number(user?.balance || 0).toFixed(4)}
+          <span className={`px-3 py-1 rounded-full text-sm flex items-center gap-2 ${(() => {
+            const bal = Number(user?.balance || 0);
+            if (bal <= 1) return 'bg-red-500/70 text-white ring-2 ring-red-300';
+            if (bal <= 10) return 'bg-amber-400/70 text-white';
+            return 'bg-white/20';
+          })()}`}>
+            <span>余额：¥{Number(user?.balance || 0).toFixed(4)}</span>
+            {Number(user?.balance || 0) <= 10 && (
+              <Link to="/recharge" className={`ml-1 font-bold ${Number(user?.balance || 0) <= 1 ? 'text-lg animate-pulse' : 'text-sm'} hover:underline`}>
+                {Number(user?.balance || 0) <= 1 ? '⚠️ 紧急充值' : '立即充值 →'}
+              </Link>
+            )}
           </span>
           <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
             角色：{user?.role === 'super_admin' ? '超级管理员' : user?.role === 'admin' ? '管理员' : '用户'}
           </span>
+          {user?.createdAt && (() => {
+            const daysSinceCreation = Math.floor((Date.now() - new Date(user.createdAt).getTime()) / 86400000);
+            if (daysSinceCreation < 7) {
+              const remaining = 7 - daysSinceCreation;
+              return <span className="bg-green-400/30 px-3 py-1 rounded-full text-sm flex items-center gap-1">🛡️ 新用户保护期 剩余 {remaining} 天</span>;
+            }
+            return null;
+          })()}
         </div>
+        {Number(user?.balance || 0) < 0 && (
+          <div className="mt-3 flex items-center gap-2 bg-red-500/30 p-3 rounded-lg text-sm">
+            <span>⚠️ 账户欠费，请立即充值以恢复服务</span>
+            <Link to="/recharge" className="ml-auto px-4 py-1.5 bg-white text-red-600 font-semibold rounded-lg hover:bg-red-50 transition animate-pulse">
+              立即充值
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Onboarding Guide - 新用户引导 */}
@@ -413,6 +439,7 @@ export default function Dashboard() {
                         <thead>
                           <tr className="bg-slate-50 text-left">
                             <th className="px-4 py-2.5 font-medium text-slate-500">密钥</th>
+                            <th className="px-4 py-2.5 font-medium text-slate-500">状态</th>
                             <th className="px-4 py-2.5 font-medium text-slate-500 text-right">调用</th>
                             <th className="px-4 py-2.5 font-medium text-slate-500 text-right">Token</th>
                             <th className="px-4 py-2.5 font-medium text-slate-500 text-right">费用</th>
@@ -423,11 +450,31 @@ export default function Dashboard() {
                         <tbody className="divide-y divide-slate-100">
                           {keyActivities.map(k => {
                             const totalTokens = keyActivities.reduce((a, b) => a + b.totalTokens, 0)
+                            // 闲置状态判断
+                            let keyStatus: { label: string; color: string } | null = null
+                            if (k.lastUsedAt) {
+                              const lastUsed = new Date(k.lastUsedAt).getTime()
+                              const now = Date.now()
+                              const daysSinceLastUse = (now - lastUsed) / 86400000
+                              if (daysSinceLastUse > 30) keyStatus = { label: '沉睡', color: 'text-red-500 bg-red-50' }
+                              else if (daysSinceLastUse > 7) keyStatus = { label: '闲置', color: 'text-amber-600 bg-amber-50' }
+                            } else if (!k.lastUsedAt && k.createdAt) {
+                              // 从未使用
+                              keyStatus = { label: '未使用', color: 'text-yellow-600 bg-yellow-50' }
+                            }
+                            const rowBg = keyStatus?.label === '沉睡' ? 'bg-red-50/40' : keyStatus?.label === '闲置' ? 'bg-amber-50/30' : keyStatus?.label === '未使用' ? 'bg-yellow-50/30' : ''
                             return (
-                              <tr key={k.id} className={`hover:bg-slate-50 ${k.callCount === 0 ? 'text-slate-400' : ''}`}>
+                              <tr key={k.id} className={`hover:bg-slate-50/80 ${k.callCount === 0 ? 'text-slate-400' : ''} ${rowBg}`}>
                                 <td className="px-4 py-2.5 font-medium text-slate-700">
                                   {k.name || `Key #${k.id}`}
                                   <span className="ml-1 text-[10px] text-slate-400 font-mono">{k.keyPrefix}...</span>
+                                </td>
+                                <td className="px-4 py-2.5">
+                                  {keyStatus && (
+                                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${keyStatus.color}`}>
+                                      {keyStatus.label}
+                                    </span>
+                                  )}
                                 </td>
                                 <td className="px-4 py-2.5 text-right text-slate-600">{k.callCount.toLocaleString()}</td>
                                 <td className="px-4 py-2.5 text-right text-slate-600 font-mono">{fmtTokens(k.totalTokens)}</td>
@@ -520,19 +567,31 @@ export default function Dashboard() {
           <Link to="/security" className="ml-auto text-xs text-blue-600 hover:underline">查看全部 →</Link>
         </div>
         <div className="space-y-2">
-          {loginHistory.slice(0, 3).map((h) => (
-            <div key={h.id} className="flex items-center gap-3 text-sm">
-              {h.success
-                ? <CheckCircle2 size={14} className="text-green-500 shrink-0" />
-                : <XCircle size={14} className="text-red-500 shrink-0" />
-              }
-              <span className="text-slate-600">
-                {h.city ? `${h.city} ` : ''}
-                {new Date(h.createdAt).toLocaleString('zh-CN')}
-              </span>
-              <span className="text-xs text-slate-400 font-mono">{h.ip}</span>
-            </div>
-          ))}
+          {(() => {
+            // 获取最近 3 次成功登录的城市列表用于异常检测
+            const recentCities = loginHistory.filter(h => h.success).slice(0, 3).map(h => h.city).filter(Boolean)
+            return loginHistory.slice(0, 4).map((h) => {
+              const isAnomaly = h.success && h.city && recentCities.length >= 2 && recentCities[0] !== h.city && recentCities.slice(1).indexOf(h.city) === -1
+              return (
+                <div key={h.id} className="flex items-center gap-3 text-sm">
+                  {h.success
+                    ? <CheckCircle2 size={14} className="text-green-500 shrink-0" />
+                    : <XCircle size={14} className="text-red-500 shrink-0" />
+                  }
+                  <span className="text-slate-600">
+                    {h.city ? `${h.city} ` : ''}
+                    {new Date(h.createdAt).toLocaleString('zh-CN')}
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">{h.ip}</span>
+                  {isAnomaly && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium text-red-600 bg-red-50">
+                      异地登录
+                    </span>
+                  )}
+                </div>
+              )
+            })
+          })()}
         </div>
       </div>
       )}

@@ -33,8 +33,7 @@ import { adminDashboardRoutes } from "../routes/admin/dashboard/index.js";
 import { adminLogRoutes } from "../routes/admin/logs.js";
 import { promptAuditRoutes } from "../routes/admin/prompt-audit.js";
 import { promptTemplatesRoutes } from "../routes/admin/prompt-templates.js";
-import { adminFinanceRoutes } from "../routes/admin/finance.js";
-import { adminFinanceExportRoutes } from "../routes/admin/finance/export.js";
+import { adminFinanceRoutes } from "../routes/admin/finance/index.js";
 import { adminAuditLogRoutes } from "../routes/admin/audit-logs.js";
 import { adminOperationLogRoutes } from "../routes/admin/operation-logs.js";
 import { adminOperationAlertRoutes } from "../routes/admin/operation-alerts.js";
@@ -57,8 +56,7 @@ import { redemptionRoutes } from "../routes/redemption/index.js";
 import { redemptionGiftRoutes } from "../routes/redemption-gift.js";
 import { adminAgentRedemptionRoutes } from "../routes/admin/agent-redemption.js";
 import { adminRedemptionFraudRoutes } from "../routes/admin/redemption-fraud.js";
-import { adminFinanceCodeRoutes } from "../routes/admin/finance/codes/index.js";
-import { adminReconciliationRoutes } from "../routes/admin/finance/reconciliation.js";
+
 import { vendorSelfRoutes, vendorJWTRoutes } from "../routes/vendor-self.js";
 import { adminKeyManagementRoutes } from "../routes/admin/admin-keys.js";
 import { adminRoleRoutes } from "../routes/admin/roles.js";
@@ -91,6 +89,8 @@ import { adminSiteSettingsRoutes } from "../routes/admin/site-settings.js";
 import { quickConnectRoutes } from "../routes/quick-connect.js";
 import { publicSiteConfigRoutes } from "../routes/public/site-config.js";
 import { publicErrorCodesRoutes } from "../routes/public/error-codes.js";
+import { publicStatsRoutes } from "../routes/public/stats.js";
+import { publicSystemStatusRoutes } from "../routes/public/system-status.js";
 import { userTransactionRoutes } from "../routes/user-transactions.js";
 import { userQuotaRoutes } from "../routes/user-quota.js";
 import { alertRoutes } from "../routes/alerts.js";
@@ -114,6 +114,7 @@ import { adminEnvironmentRoutes } from "../routes/admin/environments.js";
 import { adminHealthScoreRoutes } from "../routes/admin/health-score.js";
 import { adminCustomReportsRoutes } from "../routes/admin/custom-reports.js";
 import { adminReportRoutes } from "../routes/admin/reports.js";
+import { adminOperationalKpiRoutes } from "../routes/admin/operational-kpi.js";
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // ── Auth 路由 ──
@@ -218,18 +219,8 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // ── Admin 提示词模板库 ──
   await app.register(promptTemplatesRoutes, { prefix: "" });
 
-  // ── Admin 财务管理 ──
+  // ── Admin 财务管理（子模块：工作台、佣金、提现、充值订单、导出、成本核算）──
   await app.register(adminFinanceRoutes, { prefix: "" });
-
-  // ── Admin 财务报表导出 ──
-  await app.register(adminFinanceExportRoutes, { prefix: "" });
-
-  // ── Admin 财务成本核算 ──
-  await app.register(adminFinanceCodeRoutes, { prefix: "" });
-
-  // ── Admin 自动对账 ──
-  // ── 对账路由已移至 finance.ts ──
-  // await app.register(adminReconciliationRoutes, { prefix: "" });
 
   // ── Admin 利润分析 ──
   await app.register(profitRoutes, { prefix: "" });
@@ -354,6 +345,12 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // ── 公开错误码参考文档（免认证）──
   await app.register(publicErrorCodesRoutes, { prefix: "" });
 
+  // ── 公开统计信息（门户首页实时数据）──
+  await app.register(publicStatsRoutes, { prefix: "" });
+
+  // ── 公开系统状态（门户状态页）──
+  await app.register(publicSystemStatusRoutes, { prefix: "" });
+
   // ── Token 代理 ──
   await app.register(userTransactionRoutes, { prefix: "" });
   await app.register(userQuotaRoutes, { prefix: "" });
@@ -442,4 +439,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
   // ── 自定义报表 ──
   await app.register(adminCustomReportsRoutes, { prefix: "" });
+
+  // ── 运营 KPI & 用户分层 ──
+  await app.register(adminOperationalKpiRoutes, { prefix: "" });
 }

@@ -20,6 +20,7 @@ import RevenueChart from './dashboard/RevenueChart'
 import UsageChart from './dashboard/UsageChart'
 import RecentActivity from './dashboard/RecentActivity'
 import TopModels from './dashboard/TopModels'
+import OperationalKpiPanel from './dashboard/OperationalKpiPanel'
 import type { DaySeries } from './dashboard/types'
 import { fmtMoney } from './dashboard/types'
 
@@ -86,6 +87,7 @@ export default function AdminDashboard() {
       </div>
       <SummaryBar data={summary?.stats ?? summary} />
       <QuickActions />
+      <OperationalKpiPanel />
       {summary?.recentAnomalies?.length > 0 && (
         <div className="bg-white rounded-xl p-4 shadow-sm border border-red-100">
           <div className="flex items-center gap-2 mb-3"><AlertCircle size={16} className="text-red-500" /><span className="text-sm font-semibold text-red-700">最近异常（{summary.recentAnomalies.length}）</span></div>

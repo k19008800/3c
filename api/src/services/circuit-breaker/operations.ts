@@ -60,6 +60,9 @@ export async function shouldSkipVendor(vendorModelId: number): Promise<boolean> 
   const openMs = cfg.circuit_breaker_open_ms ?? DEFAULT_OPEN_MS;
   const halfOpenMs = cfg.circuit_breaker_halfopen_ms ?? DEFAULT_HALF_OPEN_MS;
   const tripThreshold = cfg.circuit_breaker_trip ?? DEFAULT_TRIP_THRESHOLD;
+  const level1Threshold = cfg.circuit_breaker_level1_threshold ?? LEVEL1_FAIL_THRESHOLD;
+  const level2Threshold = cfg.circuit_breaker_level2_threshold ?? LEVEL2_FAIL_THRESHOLD;
+  const level3ProbeLimit = cfg.circuit_breaker_level3_probe_limit ?? LEVEL3_PROBE_FAIL_LIMIT;
 
   // Level 1: 检查是否处于软降级
   const weightReduced = await redis.get(KEY.weightReduced(vendorModelId));
@@ -102,7 +105,7 @@ export async function shouldSkipVendor(vendorModelId: number): Promise<boolean> 
 
   // 3. Level 1: 短窗口失败计数触发软降级
   const failCount = parseInt(await redis.get(KEY.failures(vendorModelId)) || "0", 10);
-  if (failCount >= LEVEL1_FAIL_THRESHOLD && failCount < LEVEL2_FAIL_THRESHOLD) {
+  if (failCount >= level1Threshold && failCount < level2Threshold) {
     // 进入软降级
     await dbTransitionDegraded(vendorModelId);
     await redis.setex(KEY.weightReduced(vendorModelId), 120, "1");
@@ -110,7 +113,7 @@ export async function shouldSkipVendor(vendorModelId: number): Promise<boolean> 
   }
 
   // Level 2: 达到硬熔断阈值
-  if (failCount >= LEVEL2_FAIL_THRESHOLD) {
+  if (failCount >= level2Threshold) {
     // 触发硬熔断
     await dbTransitionHalfOpen(vendorModelId);
     await redis.setex(KEY.open(vendorModelId), Math.ceil(openMs / 1000) + 30, String(Date.now()));
@@ -173,7 +176,7 @@ export async function recordVendorModelFailure(
       await redis.expire(KEY.level3ProbeFails(vendorModelId), 300);
     }
 
-    if (probeFails >= LEVEL3_PROBE_FAIL_LIMIT) {
+    if (probeFails >= level3ProbeLimit) {
       await dbTransitionDead(vendorModelId);
       await redis.del(KEY.halfOpen(vendorModelId));
       await redis.del(KEY.open(vendorModelId));
@@ -229,7 +232,8 @@ export async function getAdjustedWeight(vendorModelId: number, originalWeight: n
   const redis = getRedis();
   const weightReduced = await redis.get(KEY.weightReduced(vendorModelId));
   if (weightReduced) {
-    return WEIGHT_REDUCED;
+    const cfg = await loadSecurityConfig();
+    return cfg.circuit_breaker_weight_reduced ?? WEIGHT_REDUCED;
   }
   return originalWeight;
 }

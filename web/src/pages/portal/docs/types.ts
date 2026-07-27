@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Cpu, LinkIcon, DollarSign, BookOpen, Code } from 'lucide-react'
+import { Cpu, LinkIcon, DollarSign, BookOpen, Code, AlertCircle } from 'lucide-react'
 
 export interface DocSection {
   id: string
@@ -13,6 +13,7 @@ export const sections: DocSection[] = [
   { id: 'pricing', label: '定价收费', icon: DollarSign },
   { id: 'usage', label: '使用指南', icon: BookOpen },
   { id: 'codes', label: '代码示例', icon: Code },
+  { id: 'errors', label: '错误码参考', icon: AlertCircle },
 ]
 
 export type { ModelItem } from '@/types'

@@ -387,7 +387,7 @@ export default function RefundsPage() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="text-sm text-slate-600 max-w-xs">
-                              {truncateText(refund.reason, legal 60)}
+                              {truncateText(refund.reason, 60)}
                             </div>
                           </td>
                           <td className="px-4 py-3">

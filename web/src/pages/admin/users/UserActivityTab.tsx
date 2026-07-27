@@ -4,8 +4,8 @@
 
 import { useState, useMemo } from 'react'
 import { get } from '@/lib/api'
-import { useUserActivity, CATEGORY_OPTIONS, STATUS_OPTIONS, ACTION_OPTIONS_BY_CATEGORY } from '../hooks/useUserActivity'
-import { ActivityTimeline } from '../components/ActivityTimeline'
+import { useUserActivity, CATEGORY_OPTIONS, STATUS_OPTIONS, ACTION_OPTIONS_BY_CATEGORY } from './hooks/useUserActivity'
+import { ActivityTimeline } from './components/ActivityTimeline'
 import { Loader2, Download, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface UserActivityTabProps {

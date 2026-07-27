@@ -11,6 +11,11 @@ export default function PortalDocs() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeSection, setActiveSection] = useState('models')
+
+  // 错误码数据
+  const [errorCodes, setErrorCodes] = useState<any[]>([])
+  const [errorCodesLoading, setErrorCodesLoading] = useState(true)
+  const [errorCodesError, setErrorCodesError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
 
   /* ── 数据获取 ── */
@@ -23,6 +28,15 @@ export default function PortalDocs() {
       })
       .catch((err) => setError(err.message || '获取模型列表失败'))
       .finally(() => setLoading(false))
+
+    axios
+      .get('/api/v1/public/error-codes?limit=200')
+      .then((res) => {
+        const codes = res.data?.data?.errorCodes || []
+        setErrorCodes(codes)
+      })
+      .catch((err) => setErrorCodesError(err.message || '获取错误码失败'))
+      .finally(() => setErrorCodesLoading(false))
   }, [])
 
   /* ── 计算属性 ── */
@@ -93,6 +107,9 @@ export default function PortalDocs() {
               loading={loading}
               error={error}
               baseUrl={baseUrl}
+              errorCodes={errorCodes}
+              errorCodesLoading={errorCodesLoading}
+              errorCodesError={errorCodesError}
             />
           </div>
         </div>

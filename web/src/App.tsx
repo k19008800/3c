@@ -16,6 +16,7 @@ const PortalHome = lazy(() => import('@/pages/portal/Home'))
 const PortalPricing = lazy(() => import('@/pages/portal/Pricing'))
 const PortalDocs = lazy(() => import('@/pages/portal/Docs'))
 const PortalModels = lazy(() => import('@/pages/portal/Models'))
+const PortalStatus = lazy(() => import('@/pages/portal/Status'))
 
 // ── 公共页面 ──
 const Login = lazy(() => import('@/pages/Login'))
@@ -97,6 +98,7 @@ const AdminPrices = lazy(() => import('@/pages/admin/finance/Prices'))
 const AdminInvoices = lazy(() => import('@/pages/admin/finance/Invoices'))
 const AdminRefunds = lazy(() => import('@/pages/admin/finance/Refunds'))
 const AdminMonitoring = lazy(() => import('@/pages/admin/Monitoring'))
+const AdminAlertRules = lazy(() => import('@/pages/admin/AlertRules'))
 const AdminOperationTypes = lazy(() => import('@/pages/admin/OperationTypes'))
 const AdminBehaviorAnalysis = lazy(() => import('@/pages/admin/BehaviorAnalysis'))
 const AdminThreatIntel = lazy(() => import('@/pages/admin/ThreatIntel'))
@@ -118,6 +120,7 @@ const AgentWithdraw = lazy(() => import('@/pages/agent/Withdraw'))
 const AgentRedemption = lazy(() => import('@/pages/agent/Redemption'))
 const AgentFinance = lazy(() => import('@/pages/agent/Finance'))
 const AgentReconciliation = lazy(() => import('@/pages/agent/Reconciliation'))
+const AgentProfile = lazy(() => import('@/pages/agent/Profile'))
 
 // ── Vendor 页面 ──
 const VendorLogin = lazy(() => import('@/pages/vendor/VendorLogin'))
@@ -155,6 +158,7 @@ export default function App() {
             <Route path="pricing" element={withSuspense(<PortalPricing />)} />
             <Route path="docs" element={withSuspense(<PortalDocs />)} />
             <Route path="models" element={withSuspense(<PortalModels />)} />
+            <Route path="status" element={withSuspense(<PortalStatus />)} />
           </Route>
 
           {/* ── 认证页面 (无布局) ── */}
@@ -238,6 +242,7 @@ export default function App() {
               <Route path="admin/operation-alerts" element={withSuspense(<AdminOperationAlerts />)} />
               <Route path="admin/sensitive-words" element={withSuspense(<AdminSensitiveWords />)} />
               <Route path="admin/monitoring" element={withSuspense(<AdminMonitoring />)} />
+              <Route path="admin/alert-rules" element={withSuspense(<AdminAlertRules />)} />
               <Route path="admin/operation-types" element={withSuspense(<AdminOperationTypes />)} />
               <Route path="admin/behavior-analysis" element={withSuspense(<AdminBehaviorAnalysis />)} />
               <Route path="admin/threat-intel" element={withSuspense(<AdminThreatIntel />)} />
@@ -266,6 +271,7 @@ export default function App() {
             <Route path="invoices" element={withSuspense(<UserInvoices />)} />
             <Route path="refunds" element={withSuspense(<UserRefunds />)} />
             <Route path="agent/notifications" element={withSuspense(<Notifications />)} />
+            <Route path="agent/profile" element={withSuspense(<AgentProfile />)} />
           </Route>
 
           {/* ── 供应商路由 ── */}

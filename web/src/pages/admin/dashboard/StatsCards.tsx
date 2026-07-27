@@ -64,15 +64,19 @@ interface CardDef {
   color: string
   miniData: { value: number }[]
   miniDataKey: string
+  /** 异常级别: 0=正常 1=警告 2=危险 */
+  alertLevel?: 0 | 1 | 2
 }
 
 function StatCard({ c }: { c: CardDef }) {
+  const alertBorder = c.alertLevel === 2 ? 'border-red-400 ring-1 ring-red-200' : c.alertLevel === 1 ? 'border-amber-300' : 'border-slate-200'
+  const alertValue = c.alertLevel === 2 ? 'text-red-600 animate-pulse' : c.alertLevel === 1 ? 'text-amber-700' : 'text-slate-900'
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+    <div className={`bg-white rounded-xl shadow-sm border p-4 transition-colors ${alertBorder}`}>
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">
           <p className="text-xs text-slate-500 mb-1 truncate">{c.label}</p>
-          <p className="text-2xl font-bold text-slate-900">{c.value}</p>
+          <p className={`text-2xl font-bold ${alertValue}`}>{c.value}</p>
         </div>
         <div
           className="p-2 rounded-lg shrink-0"
@@ -135,6 +139,17 @@ const StatsCardsBase = React.memo(function StatsCardsBase({ stats, trends, loadi
   const mkMini = (fn: (d: DaySeries) => number) =>
     (trends ?? []).map((d) => ({ value: fn(d) }))
 
+  /* 计算异常级别 */
+  const callChange = todayCalls.total > 0 && yesterdayCalls.total > 0
+    ? (todayCalls.total - yesterdayCalls.total) / yesterdayCalls.total
+    : 0
+  const successRateNum = todayCalls.total > 0 ? (todayCalls.success / todayCalls.total) * 100 : 100
+  // 失败率 > 5% 危险, 3-5% 警告
+  const failRate = 100 - successRateNum
+  const failAlertLevel: 0 | 1 | 2 = failRate > 5 ? 2 : failRate > 3 ? 1 : 0
+  // 收入环比下降 > 20% 危险, > 10% 警告 | 收入上升 > 20% 高光
+  const revenueAlertLevel: 0 | 1 | 2 = callChange < -0.2 ? 2 : callChange < -0.1 ? 1 : 0
+
   const cards: CardDef[] = [
     {
       label: '总调用量',
@@ -145,6 +160,7 @@ const StatsCardsBase = React.memo(function StatsCardsBase({ stats, trends, loadi
       color: '#0984e3',
       miniData: mkMini((d) => d.calls.total),
       miniDataKey: 'value',
+      alertLevel: revenueAlertLevel,
     },
     {
       label: 'Token 消耗',
@@ -161,20 +177,22 @@ const StatsCardsBase = React.memo(function StatsCardsBase({ stats, trends, loadi
     {
       label: '营收（充值）',
       value: `¥${fmtMoney(s.revenue.todayRecharge)}`,
-      change: '+15.2%',
-      up: true,
-      sub: '今日充值收入',
+      change: pct(parseFloat(s.revenue.todayRecharge) || 0, parseFloat(s.revenue.yesterdayRecharge) || 0),
+      up: (parseFloat(s.revenue.todayRecharge) || 0) >= (parseFloat(s.revenue.yesterdayRecharge) || 0),
+      sub: '较昨日',
       color: '#00b894',
       miniData: mkMini((d) => parseFloat(d.revenue.total)),
       miniDataKey: 'value',
+      alertLevel: callChange < -0.2 ? 2 : callChange < -0.1 ? 1 : 0,
     },
     {
-      label: '活跃用户（昨日DAU）',
-      value: s.yesterdayDau.toLocaleString(),
-      sub: `总用户 ${s.users.total.toLocaleString()}`,
-      color: '#e17055',
-      miniData: mkMini((d) => d.newUsers),
+      label: '成功率',
+      value: `${successRateNum.toFixed(1)}%`,
+      sub: `今日 ${todayCalls.total.toLocaleString()} 次请求`,
+      color: failRate > 5 ? '#e74c3c' : failRate > 3 ? '#f39c12' : '#2ecc71',
+      miniData: mkMini((d) => d.calls.total > 0 ? (d.calls.success / d.calls.total) * 100 : 100),
       miniDataKey: 'value',
+      alertLevel: failAlertLevel,
     },
   ]
 

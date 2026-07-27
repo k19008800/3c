@@ -686,4 +686,97 @@ export async function adminAgentRoutes(app: FastifyInstance) {
       throw err;
     }
   });
+
+  // ──────────────────────────────────────────────
+  //  POST /api/v1/admin/agents/:id/audit — 代理等级审核 (PRD 3.1)
+  //  审核预备代理晋升为一级代理, 或一级代理晋升为高级代理
+  //  请求体: { action: "approve" | "reject", level: "primary" | "advanced", remark?: string }
+  // ──────────────────────────────────────────────
+
+  app.post("/api/v1/admin/agents/:id/audit", {
+    preHandler: [requirePerm(Perm.AGENT_MANAGE)],
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const agentId = parseInt(id, 10);
+      if (isNaN(agentId)) {
+        reply.status(400).send({ code: 400, data: null, message: "无效的代理商 ID" });
+        return;
+      }
+
+      const body = request.body as {
+        action: "approve" | "reject";
+        level?: "primary" | "advanced";
+        remark?: string;
+      };
+
+      if (!["approve", "reject"].includes(body.action)) {
+        reply.status(400).send({ code: 400, data: null, message: "action 必须为 approve 或 reject" });
+        return;
+      }
+
+      if (body.action === "approve" && !body.level) {
+        reply.status(400).send({ code: 400, data: null, message: "approve 时必须指定 level" });
+        return;
+      }
+
+      const db = getDb();
+      const [agent] = await db
+        .select({ id: agents.id, level: agents.level, auditStatus: agents.auditStatus })
+        .from(agents)
+        .where(eq(agents.id, agentId))
+        .limit(1);
+
+      if (!agent) {
+        reply.status(404).send({ code: 404, data: null, message: "代理商不存在" });
+        return;
+      }
+
+      if (agent.auditStatus !== "pending") {
+        reply.status(400).send({ code: 400, data: null, message: "该代理不在待审核状态" });
+        return;
+      }
+
+      if (body.action === "approve") {
+        await db
+          .update(agents)
+          .set({
+            level: body.level as any,
+            auditStatus: "approved",
+            auditRemark: body.remark ?? null,
+            auditedBy: request.user!.userId,
+            auditedAt: new Date(),
+          })
+          .where(eq(agents.id, agentId));
+
+        reply.status(200).send({
+          code: 0,
+          data: { agentId, level: body.level, auditStatus: "approved" },
+          message: `代理已晋升为 ${body.level}`,
+        });
+      } else {
+        await db
+          .update(agents)
+          .set({
+            auditStatus: "rejected",
+            auditRemark: body.remark ?? "审核未通过",
+            auditedBy: request.user!.userId,
+            auditedAt: new Date(),
+          })
+          .where(eq(agents.id, agentId));
+
+        reply.status(200).send({
+          code: 0,
+          data: { agentId, auditStatus: "rejected" },
+          message: "已拒绝代理晋升申请",
+        });
+      }
+    } catch (err: any) {
+      if (err instanceof AppError) {
+        reply.status(err.statusCode).send({ code: err.statusCode, data: null, message: err.message });
+        return;
+      }
+      throw err;
+    }
+  });
 }

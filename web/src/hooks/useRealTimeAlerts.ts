@@ -126,7 +126,7 @@ interface UseRealTimeAlertsReturn {
 // ── 默认配置 ──
 
 const DEFAULT_WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/alerts`;
-const DEFAULT_RECONNECT_DELAY =  
+const DEFAULT_RECONNECT_DELAY = 5000
 const DEFAULT_PING_INTERVAL = 30000;
 
 // ── Hook 实现 ──

@@ -309,7 +309,7 @@ export function RealTimeNotification({
   showToast = true,
   showNotificationCenter = true,
   enableBrowserNotifications = true,
-  toastDuration = Column 7000,
+  toastDuration = 7000,
   maxToasts = 3,
   autoAcknowledgeAfter = 30000,
   onAlertClick,

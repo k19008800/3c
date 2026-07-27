@@ -20,15 +20,26 @@ const DEFAULT_VALUES: Record<string, any> = {
   circuit_breaker_trip: 3,
   circuit_breaker_open_ms: 30000,
   circuit_breaker_halfopen_ms: 120000,
+  circuit_breaker_level1_threshold: 5,
+  circuit_breaker_level2_threshold: 10,
+  circuit_breaker_level3_probe_limit: 3,
+  circuit_breaker_weight_reduced: 10,
   max_concurrent_sessions_default: 5,
   session_expire_hours: 168,
+  // 健康检查参数（PRD 5.1.4）
+  health_check_interval_ms: 30000,
+  failure_threshold: 5,
+  probe_count: 3,
+  probe_interval_ms: 10000,
+  circuit_timeout_ms: 30000,
 }
 
 const configGroups = [
   { title: 'IP 级风控', keys: ['max_ip_fail_per_min', 'ip_ban_minutes'] },
   { title: '账号级风控', keys: ['max_user_fail_per_min', 'user_captcha_after', 'user_ban_minutes', 'max_user_fail_24h'] },
   { title: '异地登录检测', keys: ['geo_check_enabled', 'geo_physical_impossible_kmh', 'high_risk_countries'] },
-  { title: '厂商熔断', keys: ['circuit_breaker_trip', 'circuit_breaker_open_ms', 'circuit_breaker_halfopen_ms'] },
+  { title: '厂商熔断', keys: ['circuit_breaker_trip', 'circuit_breaker_open_ms', 'circuit_breaker_halfopen_ms', 'circuit_breaker_level1_threshold', 'circuit_breaker_level2_threshold', 'circuit_breaker_level3_probe_limit', 'circuit_breaker_weight_reduced'] },
+  { title: '健康检查 (PRD 5.1.4)', keys: ['health_check_interval_ms', 'failure_threshold', 'probe_count', 'probe_interval_ms', 'circuit_timeout_ms'] },
   { title: '会话管理', keys: ['max_concurrent_sessions_default', 'session_expire_hours'] },
 ]
 

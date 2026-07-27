@@ -73,6 +73,8 @@ export function useDashboard(timeRange: TimeRange) {
             totalCost: result.value.summary.totalCost || '0',
             successCount: result.value.summary.successCalls || 0,
             failedCount: result.value.summary.failedCalls || 0,
+            lastUsedAt: key.lastUsedAt,
+            createdAt: key.createdAt,
           })
         } else {
           activities.push({
@@ -84,6 +86,8 @@ export function useDashboard(timeRange: TimeRange) {
             totalCost: '0',
             successCount: 0,
             failedCount: 0,
+            lastUsedAt: key.lastUsedAt,
+            createdAt: key.createdAt,
           })
         }
       })

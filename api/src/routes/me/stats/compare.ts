@@ -5,9 +5,9 @@
 
 import { FastifyInstance } from "fastify";
 import { and, eq, gte, lt, sql } from "drizzle-orm";
-import { getDb } from "../../db/index.js";
-import { callLogs } from "../../db/schema.js";
-import { authenticateJWT } from "../../middleware/auth.js";
+import { getDb } from "../../../db/index.js";
+import { callLogs } from "../../../db/schema.js";
+import { authenticateJWT } from "../../../middleware/auth.js";
 
 interface PeriodStats {
   calls: number;

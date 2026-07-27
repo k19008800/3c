@@ -70,7 +70,7 @@ export default function InvoicesPage() {
   
   const [pagination, setPagination] = useState({
     page: 1,
-    pageSize: card, 20,
+    pageSize: 20,
     total: 0,
     totalPages: 1,
   })

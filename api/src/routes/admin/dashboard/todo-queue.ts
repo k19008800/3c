@@ -7,7 +7,7 @@ import { FastifyInstance } from "fastify";
 import { eq, and, gte, sql } from "drizzle-orm";
 import { getDb } from "../../../db/index.js";
 import { getRedis } from "../../../redis.js";
-import { users, rechargeOrders, withdrawOrders } from "../../../db/schema.js";
+import { users, rechargeOrders, withdrawOrders, agents, announcements } from "../../../db/schema.js";
 import { requirePerm, Perm } from "../../../middleware/auth.js";
 
 export async function todoQueueRoutes(app: FastifyInstance) {
@@ -101,6 +101,23 @@ export async function todoQueueRoutes(app: FastifyInstance) {
       securityEventCount = await getUnacknowledgedHighRiskCount();
     } catch {}
 
+    // 8. 待审核代理晋升 (PRD 3.1)
+    const [pendingAgentAudit] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(agents)
+      .where(eq(agents.auditStatus, "pending"));
+
+    // 9. 待推送公告 (PRD 4.1: scheduled_at <= now)
+    const [pendingAnnouncements] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(announcements)
+      .where(
+        and(
+          eq(announcements.status, "draft"),
+          sql`${announcements.scheduledAt} <= NOW()`
+        )
+      );
+
     const result = {
       code: 0,
       data: {
@@ -115,6 +132,8 @@ export async function todoQueueRoutes(app: FastifyInstance) {
           needSecondReview: { count: withdrawSecond.count, totalAmount: withdrawSecond.total },
         },
         unacknowledgedSecurityEvents: securityEventCount,
+        agentAuditPending: pendingAgentAudit.count,
+        pendingAnnouncements: pendingAnnouncements.count,
       },
       message: "ok",
     };

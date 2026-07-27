@@ -1,4 +1,4 @@
-import { Edit2, Trash2, RefreshCw } from 'lucide-react'
+import { Edit2, Trash2, RefreshCw, Wifi, WifiOff, Wrench } from 'lucide-react'
 import type { Vendor } from '@/types'
 import { getStatusBadge } from '../types'
 
@@ -7,9 +7,16 @@ interface VendorTableProps {
   onEdit: (v: Vendor) => void
   onDelete: (v: Vendor) => void
   onSync: (v: Vendor) => void
+  onStatusSwitch: (v: Vendor, status: 'active' | 'maintenance' | 'offline') => void
 }
 
-export default function VendorTable({ vendors, onEdit, onDelete, onSync }: VendorTableProps) {
+const STATUS_ACTIONS: { status: 'active' | 'maintenance' | 'offline'; icon: React.ReactNode; label: string; color: string }[] = [
+  { status: 'active', icon: <Wifi size={14} />, label: '上线', color: 'text-green-600 hover:bg-green-50' },
+  { status: 'maintenance', icon: <Wrench size={14} />, label: '维护', color: 'text-amber-600 hover:bg-amber-50' },
+  { status: 'offline', icon: <WifiOff size={14} />, label: '下线', color: 'text-red-600 hover:bg-red-50' },
+]
+
+export default function VendorTable({ vendors, onEdit, onDelete, onSync, onStatusSwitch }: VendorTableProps) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -41,25 +48,37 @@ export default function VendorTable({ vendors, onEdit, onDelete, onSync }: Vendo
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    {/* 状态切换按钮 */}
+                    {STATUS_ACTIONS.filter(a => a.status !== (v.status || 'active')).map(a => (
+                      <button
+                        key={a.status}
+                        onClick={() => onStatusSwitch(v, a.status)}
+                        className={`p-1.5 rounded-lg text-xs transition ${a.color}`}
+                        title={`切换${a.label}`}
+                      >
+                        {a.icon}
+                      </button>
+                    ))}
+                    <span className="w-px h-4 bg-slate-200 mx-1" />
                     <button
                       onClick={() => onSync(v)}
-                      className="p-1 text-slate-400 hover:text-blue-600"
+                      className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition"
                       title="同步模型"
                     >
-                      <RefreshCw size={16} />
+                      <RefreshCw size={14} />
                     </button>
                     <button
                       onClick={() => onEdit(v)}
-                      className="p-1 text-slate-400 hover:text-blue-600"
+                      className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition"
                     >
-                      <Edit2 size={16} />
+                      <Edit2 size={14} />
                     </button>
                     <button
                       onClick={() => onDelete(v)}
-                      className="p-1 text-slate-400 hover:text-red-600"
+                      className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </td>

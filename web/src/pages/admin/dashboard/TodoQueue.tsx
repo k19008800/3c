@@ -14,7 +14,7 @@ export default function TodoQueue({ queue }: Props) {
     )
   }
 
-  const urgentItems: { label: string; count: number; amount?: string }[] = []
+  const urgentItems: { label: string; count: number; amount?: string; href?: string }[] = []
   if (queue.bankTransfer.needFirstReview.count > 0) {
     urgentItems.push({
       label: '对公转账待一审',
@@ -23,7 +23,7 @@ export default function TodoQueue({ queue }: Props) {
     })
   }
   if (queue.realNamePending > 0) {
-    urgentItems.push({ label: '实名认证待审', count: queue.realNamePending })
+    urgentItems.push({ label: '实名认证待审', count: queue.realNamePending, href: '/console/admin/real-name-review' })
   }
 
   return (
@@ -82,6 +82,22 @@ export default function TodoQueue({ queue }: Props) {
                 {queue.withdraws.needSecondReview.count} 笔
               </span>
             </div>
+            {queue.agentAuditPending > 0 && (
+              <div className="flex justify-between text-sm">
+                <a href="/console/admin/agents" className="text-slate-600 hover:text-blue-600">
+                  👤 代理晋升待审
+                </a>
+                <span className="font-semibold text-amber-600">{queue.agentAuditPending} 条</span>
+              </div>
+            )}
+            {queue.pendingAnnouncements > 0 && (
+              <div className="flex justify-between text-sm">
+                <a href="/console/admin/announcements" className="text-slate-600 hover:text-blue-600">
+                  📢 公告待推送
+                </a>
+                <span className="font-semibold text-amber-600">{queue.pendingAnnouncements} 条</span>
+              </div>
+            )}
             {queue.unacknowledgedSecurityEvents > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-slate-600">🚨 未确认安全事件</span>

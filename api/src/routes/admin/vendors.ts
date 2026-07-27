@@ -1011,4 +1011,64 @@ export async function adminVendorRoutes(app: FastifyInstance) {
     const status = getSyncStatus(vendorId);
     reply.send({ code: 0, data: status, message: "ok" });
   });
+
+  // ── 状态切换影响信息 (PRD 4.3) ──
+  app.get("/api/v1/admin/vendors/:id/switch-info", {
+    preHandler: [requirePerm(Perm.MODEL_MANAGE)],
+  }, async (request, reply) => {
+    const vendorId = parseInt((request.params as any).id);
+    const query = request.query as { targetStatus?: string };
+
+    const db = getDb();
+
+    // 1. 该供应商提供的模型数量
+    const [modelCount] = await db
+      .select({ count: sql<number>`count(distinct ${vendorModels.modelId})::int` })
+      .from(vendorModels)
+      .where(eq(vendorModels.vendorId, vendorId));
+
+    // 2. 近7天受影响的调用量
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
+    const [callImpact] = await db.execute(sql`
+      SELECT count(*)::int as count, count(distinct cl.user_id)::int as dau
+      FROM (
+        SELECT vm.model_id
+        FROM vendor_models vm
+        WHERE vm.vendor_id = ${vendorId}
+      ) vm
+      JOIN call_logs cl ON cl.model_name IN (
+        SELECT m.name FROM models m
+        JOIN vendor_models vm2 ON vm2.model_id = m.id
+        WHERE vm2.vendor_id = ${vendorId}
+      )
+      WHERE cl.created_at >= ${sevenDaysAgo}
+    `);
+
+    // 3. 其他可用供应商
+    const backupVendors = await db
+      .select({ id: vendors.id, name: vendors.name, status: vendors.status })
+      .from(vendors)
+      .where(and(
+        sql`${vendors.id} != ${vendorId}`,
+        eq(vendors.status, "active"),
+        sql`EXISTS (
+          SELECT 1 FROM vendor_models vm3
+          JOIN vendor_models vm4 ON vm3.model_id = vm4.model_id
+          WHERE vm3.vendor_id = ${vendorId}
+          AND vm4.vendor_id = ${vendors.id}
+        )`
+      ))
+      .limit(5);
+
+    reply.send({
+      code: 0,
+      data: {
+        totalModels: modelCount?.count ?? 0,
+        affectedCalls: callImpact?.count ?? 0,
+        affectedDau: callImpact?.dau ?? 0,
+        backupVendors,
+      },
+      message: "ok",
+    });
+  });
 }

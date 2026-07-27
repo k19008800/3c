@@ -46,6 +46,8 @@ interface KeyActivity {
   totalCost: string
   successCount: number
   failedCount: number
+  lastUsedAt?: string | null
+  createdAt?: string | null
 }
 
 export type {

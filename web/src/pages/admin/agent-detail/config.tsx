@@ -12,6 +12,7 @@ import {
   DollarSign,
   Tag,
 } from 'lucide-react'
+import { Shield, TrendingUp as LevelIcon } from 'lucide-react'
 import type { DetailTab } from './types'
 
 export interface DetailTabConfig {
@@ -24,7 +25,22 @@ export const DETAIL_TABS: DetailTabConfig[] = [
   { key: 'rules', label: '佣金规则', icon: <Percent size={16} /> },
   { key: 'parent', label: '上级代理商', icon: <Link2 size={16} /> },
   { key: 'clients', label: '客户管理', icon: <Users size={16} /> },
+  { key: 'level', label: '等级审核', icon: <Shield size={16} /> },
 ]
+
+// 等级标签与颜色
+export const AGENT_LEVEL_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  preparatory: { label: '预备代理', color: 'text-slate-500', bg: 'bg-slate-100' },
+  primary: { label: '一级代理', color: 'text-blue-600', bg: 'bg-blue-50' },
+  advanced: { label: '高级代理', color: 'text-purple-600', bg: 'bg-purple-50' },
+  sub: { label: '子代理', color: 'text-green-600', bg: 'bg-green-50' },
+}
+
+export const AGENT_AUDIT_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  pending: { label: '待审核', color: 'text-amber-600', bg: 'bg-amber-50' },
+  approved: { label: '已通过', color: 'text-green-600', bg: 'bg-green-50' },
+  rejected: { label: '已拒绝', color: 'text-red-600', bg: 'bg-red-50' },
+}
 
 export const RULE_TYPE_CONFIG: Record<
   string,

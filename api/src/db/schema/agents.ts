@@ -22,6 +22,8 @@ import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import {
   commissionStatusEnum,
   withdrawStatusEnum,
+  agentLevelEnum,
+  agentAuditStatusEnum,
 } from "./enums.js";
 import { users } from "./users.js";
 import { redemptionCodes } from "./redemption.js";
@@ -50,12 +52,27 @@ export const agents = pgTable(
     // 团队层级
     parentAgentId: integer("parent_agent_id").references((): AnyPgColumn => agents.id),
     teamDepth: integer("team_depth").default(0),
+    // 代理等级
+    level: agentLevelEnum("level").notNull().default("preparatory"),
+    // 审核状态 (预备→一级/高级 需审核)
+    auditStatus: agentAuditStatusEnum("audit_status").notNull().default("approved"),
+    auditRemark: text("audit_remark"),
+    auditedBy: integer("audited_by").references(() => users.id),
+    auditedAt: timestamp("audited_at", { withTimezone: true }),
+    // 提现限制
+    minWithdrawAmount: numeric("min_withdraw_amount", { precision: 18, scale: 6 }).notNull().default("10.000000"),
+    withdrawCooldownHours: integer("withdraw_cooldown_hours").notNull().default(24),
+    withdrawFreezeDays: integer("withdraw_freeze_days").notNull().default(7),
+    // 高级代理专用
+    accountManager: varchar("account_manager", { length: 128 }),
+    prioritySupport: boolean("priority_support").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
     userIdIdx: uniqueIndex("agents_user_id_idx").on(table.userId),
     parentIdx: index("agents_parent_idx").on(table.parentAgentId),
+    levelIdx: index("agents_level_idx").on(table.level),
   })
 );
 

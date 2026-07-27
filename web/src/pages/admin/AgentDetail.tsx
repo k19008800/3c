@@ -15,6 +15,7 @@ import DetailHeader from './agent-detail/DetailHeader'
 import CommissionRulesTab from './agent-detail/CommissionTab'
 import AgentInfoTab from './agent-detail/AgentInfoTab'
 import AgentClientsTab from './agent-detail/AgentClientsTab'
+import AgentLevelTab from './agent-detail/AgentLevelTab'
 
 export default function AdminAgentDetail() {
   const { agentId } = useParams<{ agentId: string }>()
@@ -103,6 +104,8 @@ export default function AdminAgentDetail() {
         return <AgentInfoTab agentId={id} />
       case 'clients':
         return <AgentClientsTab agentId={id} />
+      case 'level':
+        return <AgentLevelTab agentId={id} onLevelChanged={fetchAgent} />
     }
   }, [tab, id])
 

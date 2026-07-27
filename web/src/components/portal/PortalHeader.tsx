@@ -7,6 +7,7 @@ const NAV_LINKS = [
   { href: '/', label: '首页' },
   { href: '/models', label: '模型' },
   { href: '/pricing', label: '定价' },
+  { href: '/status', label: '状态' },
   { href: '/docs', label: '文档' },
 ]
 

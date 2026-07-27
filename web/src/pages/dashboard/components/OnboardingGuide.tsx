@@ -178,6 +178,27 @@ export default function OnboardingGuide({
     }
   }, [onboarding.currentStep])
 
+  // 3 步全部完成 → 显示完成横幅（5 秒后隐藏）
+  const [showBanner, setShowBanner] = useState(false)
+  useEffect(() => {
+    if (onboarding.completedAt && onboarding.skipped === false) {
+      setShowBanner(true)
+      const timer = setTimeout(() => setShowBanner(false), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [onboarding.completedAt, onboarding.skipped])
+
+  if (showBanner) {
+    return (
+      <div className="fixed top-0 left-0 right-0 z-50 animate-slideDown">
+        <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-4 shadow-lg text-center">
+          <p className="text-lg font-bold">🎉 恭喜！您已完成快速接入</p>
+          <p className="text-sm opacity-90 mt-1">现在可以开始使用 API 了</p>
+        </div>
+      </div>
+    )
+  }
+
   // 如果已跳过或已完成，不显示
   if (onboarding.skipped || !onboarding.visible || !shouldShow) {
     return null
@@ -495,11 +516,22 @@ export default function OnboardingGuide({
           from { opacity: 0; transform: scale(0.95); }
           to { opacity: 1; transform: scale(1); }
         }
+        @keyframes slideDown {
+          from { transform: translateY(-100%); }
+          to { transform: translateY(0); }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; }
+          to { opacity: 0; }
+        }
         .animate-fade-in {
           animation: fadeIn 0.3s ease-out;
         }
         .animate-scale-in {
           animation: scaleIn 0.3s ease-out;
+        }
+        .animate-slideDown {
+          animation: slideDown 0.4s ease-out, fadeOut 0.5s ease-in 4.5s forwards;
         }
       `}</style>
     </div>

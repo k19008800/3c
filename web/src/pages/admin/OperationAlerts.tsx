@@ -26,13 +26,17 @@ interface AlertItem {
 
 interface AlertRule {
   id: number
-  ruleName: string
   ruleType: string
+  name: string
+  description: string | null
   enabled: boolean
-  threshold: number | null
-  cooldownMinutes: number
-  lastEvaluated: string | null
+  severity: string
+  params: Record<string, any>
+  notifyInApp: boolean
+  notifyEmail: boolean
+  emailRecipients: string[] | null
   createdAt: string
+  updatedAt: string
 }
 
 // ── Severity colors ──
@@ -117,9 +121,46 @@ export default function OperationAlerts() {
     }
   }
 
+  const [editRule, setEditRule] = useState<AlertRule | null>(null)
+  const [editForm, setEditForm] = useState<Record<string, any>>({})
+
   const toggleRule = async (id: number, enabled: boolean) => {
     try {
       await patch(`/api/v1/admin/operation-alerts/rules/${id}`, { enabled: !enabled })
+      loadRules()
+    } catch { /* ignore */ }
+  }
+
+  const openRuleEdit = (r: AlertRule) => {
+    setEditRule(r)
+    setEditForm({
+      params: JSON.stringify(r.params || {}, null, 2),
+      severity: r.severity,
+      notifyInApp: r.notifyInApp,
+      notifyEmail: r.notifyEmail,
+      emailRecipients: (r.emailRecipients || []).join(', '),
+    })
+  }
+
+  const saveRuleEdit = async () => {
+    if (!editRule) return
+    try {
+      let params: any
+      try { params = JSON.parse(editForm.params) } catch {
+        setMessage('参数 JSON 格式错误')
+        return
+      }
+      await patch(`/api/v1/admin/operation-alerts/rules/${editRule.id}`, {
+        severity: editForm.severity,
+        params,
+        notifyInApp: editForm.notifyInApp,
+        notifyEmail: editForm.notifyEmail,
+        emailRecipients: editForm.emailRecipients
+          ? editForm.emailRecipients.split(',').map((s: string) => s.trim()).filter(Boolean)
+          : [],
+      })
+      setMessage('规则已更新')
+      setEditRule(null)
       loadRules()
     } catch { /* ignore */ }
   }
@@ -209,31 +250,48 @@ export default function OperationAlerts() {
       {/* Rules Panel */}
       {showRules && (
         <div className="bg-white rounded-xl border border-amber-200 p-4 space-y-2">
-          <h3 className="text-sm font-medium text-slate-700">告警规则配置</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium text-slate-700">告警规则配置</h3>
+            <button onClick={loadRules} className="text-xs text-blue-600 hover:text-blue-800">刷新</button>
+          </div>
           {rules.length === 0 ? (
             <p className="text-xs text-slate-400">暂无规则</p>
           ) : (
             <div className="space-y-1">
               {rules.map((r) => (
                 <div key={r.id} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-slate-700">{r.ruleName}</span>
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className="text-sm font-medium text-slate-700">{r.name}</span>
                     <span className="text-[10px] text-slate-400">{r.ruleType}</span>
-                    {r.threshold && <span className="text-xs text-slate-500">阈值: {r.threshold}</span>}
-                    {r.lastEvaluated && (
-                      <span className="text-[10px] text-slate-400">
-                        上次评估: {new Date(r.lastEvaluated).toLocaleString('zh-CN')}
-                      </span>
+                    {r.params?.threshold && (
+                      <span className="text-xs text-slate-500">阈值: {r.params.threshold}</span>
                     )}
+                    {r.params?.timeWindowMinutes && (
+                      <span className="text-xs text-slate-500">窗口: {r.params.timeWindowMinutes}min</span>
+                    )}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                      r.severity === 'critical' ? 'bg-red-100 text-red-700' :
+                      r.severity === 'high' ? 'bg-orange-100 text-orange-700' :
+                      r.severity === 'warning' ? 'bg-amber-100 text-amber-700' :
+                      'bg-blue-100 text-blue-700'
+                    }`}>{r.severity}</span>
                   </div>
-                  <button
-                    onClick={() => toggleRule(r.id, r.enabled)}
-                    className={`px-2 py-1 rounded text-xs font-medium transition ${
-                      r.enabled ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
-                    }`}
-                  >
-                    {r.enabled ? '启用' : '停用'}
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => openRuleEdit(r)}
+                      className="px-2 py-1 text-xs text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                    >
+                      编辑
+                    </button>
+                    <button
+                      onClick={() => toggleRule(r.id, r.enabled)}
+                      className={`px-2 py-1 rounded text-xs font-medium transition ${
+                        r.enabled ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      {r.enabled ? '启用' : '停用'}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -413,6 +471,83 @@ export default function OperationAlerts() {
             <div className="flex justify-end">
               <button onClick={() => setSelected(null)} className="px-4 py-2 border rounded-lg text-sm hover:bg-slate-50">
                 关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rule Edit Dialog */}
+      {editRule && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setEditRule(null)}>
+          <div className="bg-white rounded-xl w-full max-w-lg p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">编辑告警规则</h3>
+              <button onClick={() => setEditRule(null)} className="p-1 hover:bg-slate-100 rounded"><X size={18} /></button>
+            </div>
+
+            <div className="text-sm">
+              <span className="font-medium">{editRule.name}</span>
+              <span className="text-slate-400 ml-2">{editRule.ruleType}</span>
+              {editRule.description && <p className="text-slate-500 mt-0.5">{editRule.description}</p>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">严重级别</label>
+                <select
+                  value={editForm.severity}
+                  onChange={(e) => setEditForm({ ...editForm, severity: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                >
+                  <option value="critical">严重</option>
+                  <option value="high">高危</option>
+                  <option value="warning">警告</option>
+                  <option value="info">信息</option>
+                </select>
+              </div>
+              <div className="flex items-end gap-2">
+                <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input type="checkbox" checked={editForm.notifyInApp} onChange={(e) => setEditForm({ ...editForm, notifyInApp: e.target.checked })} />
+                  站内通知
+                </label>
+                <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input type="checkbox" checked={editForm.notifyEmail} onChange={(e) => setEditForm({ ...editForm, notifyEmail: e.target.checked })} />
+                  邮件通知
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">规则参数 (JSON)</label>
+              <textarea
+                value={editForm.params}
+                onChange={(e) => setEditForm({ ...editForm, params: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg text-sm font-mono"
+                rows={5}
+              />
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                支持: threshold, timeWindowMinutes, cooldownMinutes 等
+              </p>
+            </div>
+
+            {editForm.notifyEmail && (
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">邮件接收人</label>
+                <input
+                  type="text"
+                  value={editForm.emailRecipients}
+                  onChange={(e) => setEditForm({ ...editForm, emailRecipients: e.target.value })}
+                  placeholder="多个邮箱用逗号分隔"
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                />
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setEditRule(null)} className="px-4 py-2 text-sm border rounded-lg">取消</button>
+              <button onClick={saveRuleEdit} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                保存
               </button>
             </div>
           </div>

@@ -7,7 +7,7 @@ import {
   Building2, GitBranch, Handshake, ScrollText, BarChart3, DollarSign,
   AlertTriangle, Lock, Bell, Settings2, Mail, ShieldAlert, PieChart, Megaphone,
   Zap, TrendingUp, Gift, Gauge, Newspaper, Activity, RotateCcw, Heart, Globe,
-  FlaskConical, Server,
+  FlaskConical, Server, User,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useImpersonate } from '@/hooks/use-impersonate'
@@ -90,6 +90,7 @@ const adminGroups: AdminGroup[] = [
       { to: '/console/admin/circuit-breakers', icon: Zap, label: '熔断看板', requiredPerms: [Perm.DASHBOARD_VIEW] },
       { to: '/console/admin/system-health', icon: Heart, label: '系统健康', requiredPerms: [Perm.DASHBOARD_VIEW, Perm.OPS_READ] },
       { to: '/console/admin/monitoring', icon: Activity, label: '实时监控', requiredPerms: [Perm.DASHBOARD_VIEW, Perm.OPS_READ] },
+      { to: '/console/admin/alert-rules', icon: Bell, label: '告警规则', requiredPerms: [Perm.OPS_READ] },
     ],
   },
   {
@@ -184,6 +185,7 @@ const agentItems: NavItem[] = [
   { to: '/console/agent/finance', icon: DollarSign, label: '财务管理' },
   { to: '/console/agent/redemption', icon: Gift, label: '兑换码管理' },
   { to: '/console/agent/reconciliation', icon: BarChart3, label: '财务对账' },
+  { to: '/console/agent/profile', icon: User, label: '代理信息' },
   { to: '/console/agent/notifications', icon: Bell, label: '消息通知' },
 ]
 

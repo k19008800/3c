@@ -87,6 +87,19 @@ export const payChannelEnum = pgEnum("pay_channel", [
 
 // ── 代理商 ──
 
+export const agentLevelEnum = pgEnum("agent_level", [
+  "preparatory",  // 预备代理
+  "primary",      // 一级代理
+  "advanced",     // 高级代理
+  "sub",          // 子代理
+]);
+
+export const agentAuditStatusEnum = pgEnum("agent_audit_status", [
+  "pending",      // 待审核
+  "approved",     // 审核通过
+  "rejected",     // 审核未通过
+]);
+
 export const withdrawStatusEnum = pgEnum("withdraw_status", [
   "pending_first_review",
   "pending_second_review",

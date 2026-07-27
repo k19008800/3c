@@ -456,13 +456,16 @@ export async function adminMonitoringRoutes(app: FastifyInstance) {
       const db = getDb();
       const body = request.body as {
         type: string;
+        name?: string;
         threshold: number;
         severity: "critical" | "warning" | "info";
         enabled?: boolean;
+        duration?: number;
+        silencePeriod?: number;
       };
 
       // 验证
-      const validTypes = ["api", "database", "redis", "disk", "memory", "error_rate"];
+      const validTypes = ["api", "database", "redis", "disk", "memory", "error_rate", "api_error_rate", "vendor_availability", "api_response_time", "platform_balance", "user_failure_rate", "cpu_usage"];
       if (!validTypes.includes(body.type)) {
         reply.status(400).send({
           code: 1,
@@ -482,13 +485,16 @@ export async function adminMonitoringRoutes(app: FastifyInstance) {
 
       // 插入或更新规则
       const result = await db.execute(sql`
-        INSERT INTO monitoring_rules (type, threshold, severity, enabled, created_at, updated_at)
-        VALUES (${body.type}, ${body.threshold}, ${body.severity}, ${body.enabled ?? true}, NOW(), NOW())
+        INSERT INTO monitoring_rules (type, name, threshold, severity, enabled, duration, silence_period, created_at, updated_at)
+        VALUES (${body.type}, ${body.name ?? body.type}, ${body.threshold}, ${body.severity}, ${body.enabled ?? true}, ${body.duration ?? 60}, ${body.silencePeriod ?? 300}, NOW(), NOW())
         ON CONFLICT (type) 
         DO UPDATE SET 
+          name = ${body.name ?? body.type},
           threshold = ${body.threshold},
           severity = ${body.severity},
           enabled = ${body.enabled ?? true},
+          duration = ${body.duration ?? 60},
+          silence_period = ${body.silencePeriod ?? 300},
           updated_at = NOW()
         RETURNING *
       `);
@@ -514,7 +520,7 @@ export async function adminMonitoringRoutes(app: FastifyInstance) {
     try {
       const db = getDb();
       const rules = await db.execute(sql`
-        SELECT id, type, threshold, severity, enabled, created_at, updated_at
+        SELECT id, type, name, description, threshold, severity, enabled, duration, silence_period, created_at, updated_at
         FROM monitoring_rules
         ORDER BY severity DESC, type ASC
       `);

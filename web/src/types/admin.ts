@@ -151,6 +151,8 @@ export interface TodoQueue {
     needSecondReview: { count: number; totalAmount: string }
   }
   unacknowledgedSecurityEvents: number
+  agentAuditPending: number
+  pendingAnnouncements: number
 }
 
 // ── 操作类型管理 ──
@@ -184,4 +186,76 @@ export interface OperationTypeStats {
     enabled: number
     disabled: number
   }>
+}
+
+// ── 运营 KPI ──
+
+export interface OperationalKpiData {
+  // 日活跃
+  dau: number
+  dauChange: number
+  dauAlert: boolean
+  // 日调用
+  dailyCalls: number
+  callChange: number
+  callGrowthAlert: boolean
+  // 月流水
+  mrr: number
+  mrrChange: number
+  mrrAlert: boolean
+  // 毛利率
+  grossMargin: number
+  marginAlert: boolean
+  // 留存率
+  retentionRate7: string
+  retentionRate30: string
+  // 代理活跃度
+  agentActiveRate: number
+  // Key 使用率
+  keyUsageRate: number
+  // 供应商健康度
+  vendorHealth: Array<{
+    vendorName: string
+    availability: number
+    status: "healthy" | "warning" | "critical"
+  }>
+  // 告警收敛率
+  convergenceRate: string
+  // 自助结算率
+  selfSettleRate: string
+  // ARPU
+  arpu: number
+  // 总用户
+  totalUsers: number
+  updatedAt: string
+}
+
+export interface UserTierInfo {
+  name: string
+  key: string
+  definition: string
+  count: number
+  percentage: number
+  totalSpend: number
+  avgSpend: number
+  strategy: string
+}
+
+export interface UserTierData {
+  tiers: UserTierInfo[]
+  totalUsers: number
+  updatedAt: string
+}
+
+export interface KpiTrendItem {
+  date: string
+  calls: number
+  dau: number
+  tokens: number
+  cost: number
+}
+
+export interface KpiTrendData {
+  series: KpiTrendItem[]
+  updatedAt: string
 }

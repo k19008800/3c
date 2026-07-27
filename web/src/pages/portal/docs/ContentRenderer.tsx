@@ -1,5 +1,5 @@
-import { memo } from 'react'
-import { Loader2, AlertCircle, Cpu } from 'lucide-react'
+import { memo, useState, useMemo } from 'react'
+import { Loader2, AlertCircle, Cpu, ChevronDown } from 'lucide-react'
 import CodeBlock from '@/components/portal/CodeBlock'
 import type { ModelItem } from './types'
 
@@ -11,6 +11,9 @@ interface ContentRendererProps {
   loading: boolean
   error: string
   baseUrl: string
+  errorCodes: any[]
+  errorCodesLoading: boolean
+  errorCodesError: string
 }
 
 /* ───── 模型列表区块 ───── */
@@ -318,6 +321,129 @@ console.log(response.choices[0].message.content)`}
   )
 })
 
+/* ───── 错误码参考区块 ───── */
+
+interface ErrorCodeItem {
+  code: string
+  message: string
+  description: string
+  severity: string
+  category: string
+  solution: string
+}
+
+interface ErrorCodesSectionProps {
+  errorCodes: ErrorCodeItem[]
+  loading: boolean
+  error: string
+}
+
+const ErrorCodesSection = memo(function ErrorCodesSection({ errorCodes, loading, error }: ErrorCodesSectionProps) {
+  const [filter, setFilter] = useState('')
+  const [levelFilter, setLevelFilter] = useState('')
+  const [expanded, setExpanded] = useState<string | null>(null)
+
+  const filtered = useMemo(() => {
+    return errorCodes.filter((ec) => {
+      if (filter && !ec.code.toLowerCase().includes(filter.toLowerCase()) && !ec.message.toLowerCase().includes(filter.toLowerCase())) return false
+      if (levelFilter && ec.severity !== levelFilter) return false
+      return true
+    })
+  }, [errorCodes, filter, levelFilter])
+
+  const levelColors: Record<string, string> = {
+    error: 'bg-red-100 text-red-700 border-red-200',
+    warning: 'bg-amber-100 text-amber-700 border-amber-200',
+    info: 'bg-blue-100 text-blue-700 border-blue-200',
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="animate-spin" size={32} />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center gap-2 text-red-600 bg-red-50 p-4 rounded-lg">
+        <AlertCircle size={18} />
+        {error}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold text-slate-900">错误码参考</h2>
+
+      {/* Filters */}
+      <div className="flex items-center gap-3">
+        <input
+          type="text"
+          placeholder="搜索错误码或描述..."
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="px-3 py-2 border rounded-lg text-sm w-64"
+        />
+        <select
+          value={levelFilter}
+          onChange={(e) => setLevelFilter(e.target.value)}
+          className="px-3 py-2 border rounded-lg text-sm"
+        >
+          <option value="">全部级别</option>
+          <option value="error">错误</option>
+          <option value="warning">警告</option>
+          <option value="info">提示</option>
+        </select>
+        <span className="text-xs text-slate-400">共 {filtered.length} 条</span>
+      </div>
+
+      {/* Error code list */}
+      {filtered.length === 0 ? (
+        <div className="text-center py-12 text-slate-400">
+          未找到匹配的错误码
+        </div>
+      ) : (
+        <div className="divide-y divide-slate-200 border border-slate-200 rounded-xl overflow-hidden bg-white">
+          {filtered.map((ec) => (
+            <div key={ec.code}>
+              <button
+                onClick={() => setExpanded(expanded === ec.code ? null : ec.code)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <code className="text-sm font-mono font-bold text-slate-800">{ec.code}</code>
+                  <span className="text-sm text-slate-600">{ec.message}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${levelColors[ec.severity] || 'bg-slate-100 text-slate-600'}`}>
+                    {ec.severity === 'error' ? '错误' : ec.severity === 'warning' ? '警告' : '提示'}
+                  </span>
+                  <ChevronDown size={14} className={`text-slate-400 transition ${expanded === ec.code ? 'rotate-180' : ''}`} />
+                </div>
+              </button>
+              {expanded === ec.code && (
+                <div className="px-4 pb-4 space-y-2">
+                  <p className="text-sm text-slate-600">{ec.description}</p>
+                  {ec.solution && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <p className="text-xs font-medium text-green-700 mb-1">解决方案</p>
+                      <p className="text-sm text-green-600">{ec.solution}</p>
+                    </div>
+                  )}
+                  <p className="text-[10px] text-slate-400">分类: {ec.category}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+})
+
 /* ───── 主渲染器 ───── */
 
 export default memo(function ContentRenderer({
@@ -326,6 +452,9 @@ export default memo(function ContentRenderer({
   loading,
   error,
   baseUrl,
+  errorCodes,
+  errorCodesLoading,
+  errorCodesError,
 }: ContentRendererProps) {
   switch (activeSection) {
     case 'models':
@@ -338,6 +467,8 @@ export default memo(function ContentRenderer({
       return <UsageSection />
     case 'codes':
       return <CodeSection baseUrl={baseUrl} />
+    case 'errors':
+      return <ErrorCodesSection errorCodes={errorCodes} loading={errorCodesLoading} error={errorCodesError} />
     default:
       return (
         <div className="flex justify-center py-12 text-slate-400">

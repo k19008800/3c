@@ -12,6 +12,18 @@ export interface Agent {
   availableBalance?: string
   parentAgentId?: number | null
   status: boolean
+  // 3.1 代理等级
+  level: 'preparatory' | 'primary' | 'advanced' | 'sub'
+  auditStatus: 'pending' | 'approved' | 'rejected'
+  auditRemark: string | null
+  auditedBy: number | null
+  auditedAt: string | null
+  // 提现限制
+  withdrawCooldownHours: number
+  withdrawFreezeDays: number
+  // 高级代理
+  accountManager: string | null
+  prioritySupport: boolean
   createdAt: string
   updatedAt?: string
 }
@@ -80,6 +92,7 @@ export interface AgentClientDetail {
 
 export interface AgentDashboard {
   totalClients: number
+  newClientsThisMonth: number       // 3.3 本月新增客户
   totalCommission: string
   settledCommission: string
   withdrawnTotal: string
@@ -88,6 +101,11 @@ export interface AgentDashboard {
   availableBalance: string
   status: boolean
   commissionRate: string
+  // 3.3 新增KPI
+  monthTotalConsumption: string      // 本月总消费
+  monthCommissionIncome: string      // 本月佣金收入
+  pendingSettlement: string          // 待结算金额
+  agentLevel: string                 // 代理等级
   recentCommissions: Array<{
     id: number
     callCost: string

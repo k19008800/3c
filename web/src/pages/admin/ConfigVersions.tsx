@@ -287,7 +287,9 @@ export default function ConfigVersions() {
                         <code className="text-xs bg-slate-100 px-2 py-1 rounded">
                           {typeof item.oldValue === 'object' 
                             ? JSON.stringify(item.oldValue).slice(0, 50) + '...'
-                            : String(item.oldValue || '-').slice(0,对这个组件进行简化，我先创建一个基础版本)
+                            : String(item.oldValue || '-').slice(0, 50) + '...'}
+                        </code>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="max-w-xs truncate">

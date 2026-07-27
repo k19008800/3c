@@ -7,6 +7,7 @@ import { useVendors } from './vendors/hooks'
 import { STATUS_OPTIONS } from './vendors/types'
 import type { Vendor } from '@/types'
 import RoutingRecommendations from './vendors/RoutingRecommendations'
+import VendorStatusSwitchDialog from './vendors/components/VendorStatusSwitchDialog'
 
 export default function AdminVendors() {
   const { vendors, total, loading, error, fetchVendors, createVendor, updateVendor, deleteVendor } = useVendors()
@@ -19,6 +20,7 @@ export default function AdminVendors() {
 
   const [editVendor, setEditVendor] = useState<Vendor | null>(null)
   const [deleteVendorConfirm, setDeleteVendorConfirm] = useState<Vendor | null>(null)
+  const [statusSwitch, setStatusSwitch] = useState<{ vendor: Vendor; newStatus: 'active' | 'maintenance' | 'offline' } | null>(null)
   const [form, setForm] = useState({ name: '', baseUrl: '', description: '', status: 'active' })
   const [showRecommendations, setShowRecommendations] = useState(false)
 
@@ -122,6 +124,7 @@ export default function AdminVendors() {
             onEdit={(v) => setEditVendor(v)}
             onDelete={(v) => setDeleteVendorConfirm(v)}
             onSync={(v) => console.log('Sync:', v.id)}
+            onStatusSwitch={(v, s) => setStatusSwitch({ vendor: v, newStatus: s })}
           />
         )}
 
@@ -197,6 +200,19 @@ export default function AdminVendors() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Status Switch Dialog */}
+      {statusSwitch && (
+        <VendorStatusSwitchDialog
+          vendor={statusSwitch.vendor}
+          newStatus={statusSwitch.newStatus}
+          onClose={() => setStatusSwitch(null)}
+          onConfirm={() => {
+            setStatusSwitch(null)
+            fetchVendors({ keyword, status, page, pageSize })
+          }}
+        />
       )}
 
       {/* Delete Confirm */}
