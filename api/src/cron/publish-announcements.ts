@@ -100,8 +100,9 @@ async function broadcastAnnouncement(title: string, content: string): Promise<nu
 /**
  * 调度定时任务（每分钟执行）
  */
+import cron from "node-cron";
+
 export function schedulePublishAnnouncements() {
-  const cron = require("node-cron");
 
   cron.schedule("* * * * *", async () => {
     try {

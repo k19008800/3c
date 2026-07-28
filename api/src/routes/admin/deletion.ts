@@ -15,7 +15,7 @@ import {
   users,
 } from "../../db/schema.js";
 import { authenticateJWT } from "../../middleware/auth.js";
-import { requireRole } from "../../middleware/rbac.js";
+import { requireRole } from "../../middleware/auth.js";
 
 export async function adminDeletionRoutes(app: FastifyInstance) {
   app.addHook("preHandler", authenticateJWT);
