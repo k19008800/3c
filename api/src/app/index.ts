@@ -342,6 +342,20 @@ async function registerCronJobs(app: Fastify.FastifyInstance) {
     }
   }, 60 * 1000);
   app.log.info("[Cron] Campaign auto-end check scheduled: every 1 minute, first run in 1min");
+
+  // ── 账号注销冷却到期自动执行（每小时）──
+  import("../cron/auto-deletion.js").then(({ scheduleDeletionAutoComplete }) => {
+    scheduleDeletionAutoComplete();
+  }).catch((err) => {
+    app.log.error({ err }, "[App] 加载注销自动执行定时任务失败");
+  });
+
+  // ── 结算自动确认（每日 03:00）──
+  import("../cron/auto-confirm-settlements.js").then(({ scheduleAutoConfirmSettlements }) => {
+    scheduleAutoConfirmSettlements();
+  }).catch((err) => {
+    app.log.error({ err }, "[App] 加载结算自动确认定时任务失败");
+  });
 }
 
 // ══════════════════════════════════════════════

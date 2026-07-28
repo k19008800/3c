@@ -10,6 +10,7 @@ export async function selectKeyFromGroup(
   groupId: number,
   redis: any,
   vendorModelId?: number,
+  skipStatsUpdate?: boolean,
 ): Promise<{ apiKeyPlain: string; item: any } | null> {
   try {
     const { eq, and, asc } = await import("drizzle-orm");
@@ -94,9 +95,11 @@ export async function selectKeyFromGroup(
       }
     }
 
-    await db.update(vkgi)
-      .set({ lastUsedAt: new Date(), totalCalls: selected.totalCalls + 1 })
-      .where(eq(vkgi.id, selected.id));
+    if (!skipStatsUpdate) {
+      await db.update(vkgi)
+        .set({ lastUsedAt: new Date(), totalCalls: selected.totalCalls + 1 })
+        .where(eq(vkgi.id, selected.id));
+    }
 
     return { apiKeyPlain, item: result };
   } catch (err) {

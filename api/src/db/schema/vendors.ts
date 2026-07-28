@@ -19,6 +19,7 @@ import { sql } from "drizzle-orm";
 
 import {
   modelTypeEnum,
+  modelVisibilityEnum,
   vendorStatusEnum,
   circuitStateEnum,
 } from "./enums.js";
@@ -66,13 +67,13 @@ export const models = pgTable(
     displayName: varchar("display_name", { length: 200 }),         // 前端展示名
     type: modelTypeEnum("type").notNull().default("chat"),
     description: text("description"),
-    status: boolean("status").notNull().default(true),             // true=上架, false=下架
+    visibility: modelVisibilityEnum("visibility").notNull().default("public"), // public=公开, internal=内部(路由可用), disabled=禁用
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({
     nameIdx: uniqueIndex("models_name_idx").on(table.name),
-    typeStatusIdx: index("models_type_status_idx").on(table.type, table.status),
+    typeVisibilityIdx: index("models_type_visibility_idx").on(table.type, table.visibility),
   })
 );
 

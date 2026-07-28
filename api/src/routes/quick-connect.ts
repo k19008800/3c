@@ -49,7 +49,7 @@ export async function quickConnectRoutes(app: FastifyInstance) {
     const [defaultModel] = await db
       .select({ name: models.name })
       .from(models)
-      .where(eq(models.status, true))
+      .where(eq(models.visibility, 'public'))
       .limit(1);
 
     return {

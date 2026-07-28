@@ -187,7 +187,7 @@ export async function agentClientRoutes(app: FastifyInstance) {
           .orderBy(desc(commissionLogs.createdAt));
 
         const COMMISSION_TYPE_LABEL: Record<string, string> = {
-          sale: "销售佣金", team: "团队佣金", activity: "活动奖励", renewal: "续费佣金",
+          sale: "销售佣金", team: "团队佣金", activity: "活动奖励", renewal: "续费佣金", referral: "推荐佣金",
         };
         const STATUS_LABEL: Record<string, string> = {
           pending: "待结算", settled: "已结算", cancelled: "已取消",

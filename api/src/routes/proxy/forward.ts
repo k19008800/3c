@@ -32,6 +32,8 @@ import { enrichCallGeo } from "../../services/geo-check.js";
 
 import { decryptApiKey } from "../../services/encryption.js";
 
+import { saveRequestRecord } from "../../services/request-records/writer.js";
+
 import {
 
   chatCompletionSchema,
@@ -72,7 +74,7 @@ async function resolveModel(name: string) {
 
     .from(models)
 
-    .where(and(eq(models.name, name), eq(models.status, true)))
+    .where(and(eq(models.name, name), eq(models.visibility, "public")))
 
     .limit(1);
 
@@ -701,7 +703,7 @@ async function handleNonStreaming(
 
   if (result.usage) {
 
-    await charge({
+    const billingResult = await charge({
 
       userId, apiKeyId, modelId: model.id,
 
@@ -733,6 +735,24 @@ async function handleNonStreaming(
     const { recordSchedulingStats } = await import("../../services/scheduling-stats.js");
 
     recordSchedulingStats(route.vendorName, model.name, result.usage.totalTokens, durationMs).catch((err) => { console.error("[Redis Cache Error]", err); });
+
+
+    // 异步写入请求记录（不阻塞）
+    if (billingResult) {
+      saveRequestRecord({
+        callLogId: billingResult.callLogId,
+        userId,
+        apiKeyId,
+        modelId: model.id,
+        modelName: model.name,
+        vendorName: route.vendorName,
+        requestBody: body,
+        requestHeaders: request.headers as Record<string, string>,
+        responseBody: result.body,
+        responseStatus: result.status,
+        isStreaming: false,
+      }).catch((err) => request.log.error({ err }, "请求记录写入失败"));
+    }
 
   }
 
@@ -896,7 +916,7 @@ async function handleNonTokenBilling(
 
 
 
-  await charge({
+  const billingResult = await charge({
 
     userId, apiKeyId, modelId: model.id,
 
@@ -921,6 +941,23 @@ async function handleNonTokenBilling(
 
   await recordTokensForLimit(userId, virtualTokens);
 
+
+  // 异步写入请求记录（不阻塞）
+  if (billingResult) {
+    saveRequestRecord({
+      callLogId: billingResult.callLogId,
+      userId,
+      apiKeyId,
+      modelId: model.id,
+      modelName: model.name,
+      vendorName: route.vendorName,
+      requestBody: body,
+      requestHeaders: request.headers as Record<string, string>,
+      responseBody: result.body,
+      responseStatus: result.status,
+      isStreaming: false,
+    }).catch((err) => request.log.error({ err }, "请求记录写入失败"));
+  }
 
 
   return result.body;
@@ -1105,7 +1142,7 @@ async function handleStreamingChat(
 
   if (usage && success) {
 
-    await charge({
+    const billingResult = await charge({
 
       userId, apiKeyId, modelId: model.id,
 
@@ -1135,6 +1172,23 @@ async function handleStreamingChat(
 
 
     await recordTokensForLimit(userId, usage.totalTokens);
+
+
+    // 异步写入请求记录（不阻塞）
+    if (billingResult) {
+      saveRequestRecord({
+        callLogId: billingResult.callLogId,
+        userId,
+        apiKeyId,
+        modelId: model.id,
+        modelName: model.name,
+        vendorName: route.vendorName,
+        requestBody: request.body,
+        requestHeaders: request.headers as Record<string, string>,
+        isStreaming: true,
+        streamContent: streamResult.collectedContent ?? undefined,
+      }).catch((err) => request.log.error({ err }, "请求记录写入失败"));
+    }
 
   } else if (disconnected) {
 

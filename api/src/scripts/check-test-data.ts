@@ -12,7 +12,7 @@ async function main() {
   const m = await db
     .select()
     .from(models)
-    .where(and(eq(models.name, "DeepSeek-V4-Pro"), eq(models.status, true)))
+    .where(and(eq(models.name, "DeepSeek-V4-Pro"), eq(models.visibility, "public")))
     .limit(1);
   console.log("Model:", JSON.stringify(m, null, 2));
 

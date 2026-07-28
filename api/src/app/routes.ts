@@ -50,6 +50,7 @@ import { meStatsOptimizationRoutes } from "../routes/me/stats/optimization.js";
 import { meStatsExportRoutes } from "../routes/me/stats/export.js";
 import { meStatsCompareRoutes } from "../routes/me/stats/compare.js";
 import { meSessionRoutes } from "../routes/me/sessions.js";
+import { meDeletionRoutes } from "../routes/me/deletion.js";
 import { statsUsageRoutes } from "../routes/stats-usage.js";
 import { agentStatsUsageRoutes } from "../routes/agent/stats-usage.js";
 import { redemptionRoutes } from "../routes/redemption/index.js";
@@ -115,6 +116,9 @@ import { adminHealthScoreRoutes } from "../routes/admin/health-score.js";
 import { adminCustomReportsRoutes } from "../routes/admin/custom-reports.js";
 import { adminReportRoutes } from "../routes/admin/reports.js";
 import { adminOperationalKpiRoutes } from "../routes/admin/operational-kpi.js";
+import { adminDeletionRoutes } from "../routes/admin/deletion.js";
+import { adminSettlementRoutes } from "../routes/admin/settlements.js";
+import { agentSettlementRoutes } from "../routes/agent/settlements.js";
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // ── Auth 路由 ──
@@ -313,6 +317,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // ── 用户端登录会话管理 ──
   await app.register(meSessionRoutes, { prefix: "" });
 
+  // ── 用户端账号注销 ──
+  await app.register(meDeletionRoutes, { prefix: "" });
+
   // ── 用户端用量聚合统计（V2.0 新增）──
   await app.register(statsUsageRoutes, { prefix: "" });
 
@@ -442,4 +449,17 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
   // ── 运营 KPI & 用户分层 ──
   await app.register(adminOperationalKpiRoutes, { prefix: "" });
+
+  // ── 管理员账号注销 ──
+  await app.register(adminDeletionRoutes, { prefix: "" });
+
+  // ── 结算周期管理（管理员）──
+  await app.register(adminSettlementRoutes, { prefix: "" });
+
+  // ── 代理结算对账（代理端）──
+  await app.register(agentSettlementRoutes, { prefix: "" });
+
+  // ── Admin 请求记录（风险分析）──
+  const { requestRecordsRoutes } = await import("../routes/admin/request-records/index.js");
+  await app.register(requestRecordsRoutes, { prefix: "" });
 }

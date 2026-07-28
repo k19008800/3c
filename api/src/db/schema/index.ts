@@ -61,3 +61,12 @@ export * from "./prompt-templates.js";
 
 // ── 异常操作告警 ──
 export * from "./operation-alert.js";
+
+// ── 账号注销 ──
+export * from "./account-deletion.js";
+
+// ── 代理结算对账 ──
+export * from "./agent-settlement.js";
+
+// ── 请求记录（风险分析）──
+export * from "./request-records.js";

@@ -44,7 +44,14 @@ export async function charge(input: BillingInput): Promise<BillingResult> {
 
     const balanceBefore = Number(user.balance);
     const balanceAfter = Math.max(0, balanceBefore - discountedCost);
+
+    // 读取系统配置：余额耗尽停止阈值（允许小额透支，防止用户正在使用中断服务）
+    // alert_stop_balance: 当余额低于此负值时停止服务（默认 -10 元）
+    // 例如设为 10 表示允许透支到 -10 元，设为 0 表示余额为 0 时立即停止
     const alertStopBalance = parseFloat((await tx.select({ value: systemConfigs.value }).from(systemConfigs).where(eq(systemConfigs.key, "alert_stop_balance")).limit(1))?.[0]?.value ?? "10");
+    // 余额 > 0 → 正常消费
+    // 余额 <= 0 且 > -stopBalance → 允许继续消费（小额透支）
+    // 余额 <= -stopBalance → 拒绝服务
     if (balanceBefore <= 0 && discountedCost > 0 && balanceBefore < -alertStopBalance) throw new AppError("BALANCE_EXHAUSTED", "余额已耗尽，请充值", 402);
 
     // 确定定价源

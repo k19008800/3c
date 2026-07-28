@@ -54,6 +54,9 @@ export const agents = pgTable(
     teamDepth: integer("team_depth").default(0),
     // 代理等级
     level: agentLevelEnum("level").notNull().default("preparatory"),
+    // 推荐码（持久化，用于代理商推广识别）
+    referralCode: varchar("referral_code", { length: 16 }),
+    // 推荐码启用状态
     // 审核状态 (预备→一级/高级 需审核)
     auditStatus: agentAuditStatusEnum("audit_status").notNull().default("approved"),
     auditRemark: text("audit_remark"),

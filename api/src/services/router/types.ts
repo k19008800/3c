@@ -2,7 +2,7 @@
 //  路由引擎 — 类型定义
 // ============================================================
 
-export type RoutingStrategy = "lowest_price" | "weighted_random" | "manual";
+export type RoutingStrategy = "lowest_price" | "weighted_random" | "manual" | "latency_optimized" | "adaptive";
 
 export interface RoutingOptions {
   modelName: string;           // 统一模型名（如 deepseek-v4-pro）
@@ -32,6 +32,9 @@ export interface VendorModelRoute {
   // Key 级别售价（覆盖 vendorModel 售价）
   keySellPriceInput: number | null;
   keySellPriceOutput: number | null;
+  // 路由选择时实际使用的结算价（考虑 Key 折扣后）
+  effectivePriceInput: number;
+  effectivePriceOutput: number;
 }
 
 export interface ForwardResult {
@@ -48,4 +51,6 @@ export interface StreamForwardResult {
   stream: ReadableStream<Uint8Array>;
   /** 流结束后 resolve 的 usage 信息 */
   usagePromise: Promise<{ promptTokens: number; completionTokens: number; totalTokens: number } | null>;
+  /** 流式响应中收集的内容文本（用于风险分析记录） */
+  collectedContent?: string;
 }

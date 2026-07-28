@@ -344,7 +344,7 @@ async function upsertModels(): Promise<Record<string, number>> {
   for (const m of MODELS) {
     const existing = await db.select({ id: models.id }).from(models).where(eq(models.name, m.name)).limit(1);
     if (existing[0]) { map[m.name] = existing[0].id; continue; }
-    const [r] = await db.insert(models).values({ name: m.name, displayName: m.display, type: m.type, status: true }).returning({ id: models.id });
+    const [r] = await db.insert(models).values({ name: m.name, displayName: m.display, type: m.type, visibility: "public" }).returning({ id: models.id });
     map[m.name] = r.id;
   }
   return map;

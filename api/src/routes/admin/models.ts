@@ -73,7 +73,7 @@ export async function adminModelRoutes(app: FastifyInstance) {
     const pageSize = Math.min(100, Math.max(1, parseInt(query.pageSize ?? "20", 10) || 20));
     const keyword = query.keyword?.trim();
     const typeFilter = query.type?.trim();
-    const statusFilter = query.status?.trim();
+    const visibilityFilter = query.visibility?.trim();
     const offset = (page - 1) * pageSize;
 
     // Build conditions
@@ -84,8 +84,8 @@ export async function adminModelRoutes(app: FastifyInstance) {
     if (typeFilter && MODEL_TYPES.includes(typeFilter as any)) {
       conditions.push(eq(models.type, typeFilter as any));
     }
-    if (statusFilter) {
-      conditions.push(eq(models.status, statusFilter === "true"));
+    if (visibilityFilter && ["public", "internal", "disabled"].includes(visibilityFilter)) {
+      conditions.push(eq(models.visibility, visibilityFilter as any));
     }
 
     const whereClause = conditions.length > 0 ? sql`${conditions.reduce((a, b) => sql`${a} AND ${b}`)}` : undefined;
@@ -143,7 +143,9 @@ export async function adminModelRoutes(app: FastifyInstance) {
     const updates: Record<string, any> = {};
     if (body.displayName !== undefined) updates.displayName = body.displayName;
     if (body.description !== undefined) updates.description = body.description || null;
-    if (body.status !== undefined) updates.status = body.status;
+    if (body.visibility !== undefined && ["public", "internal", "disabled"].includes(body.visibility)) {
+      updates.visibility = body.visibility;
+    }
     if (body.type && MODEL_TYPES.includes(body.type)) updates.type = body.type;
 
     if (Object.keys(updates).length === 0) {
@@ -155,7 +157,7 @@ export async function adminModelRoutes(app: FastifyInstance) {
 
     // 获取变更前快照
     const [before] = await db
-      .select({ name: models.name, status: models.status, type: models.type, displayName: models.displayName })
+      .select({ name: models.name, visibility: models.visibility, type: models.type, displayName: models.displayName })
       .from(models)
       .where(eq(models.id, id))
       .limit(1);
@@ -251,7 +253,7 @@ export async function adminModelRoutes(app: FastifyInstance) {
       return;
     }
 
-    const [model] = await db.select({ id: models.id, name: models.name, displayName: models.displayName, type: models.type, status: models.status })
+    const [model] = await db.select({ id: models.id, name: models.name, displayName: models.displayName, type: models.type, visibility: models.visibility })
       .from(models).where(eq(models.id, modelId)).limit(1);
 
     if (!model) {
@@ -334,7 +336,7 @@ export async function adminModelRoutes(app: FastifyInstance) {
     reply.status(200).send({
       code: 0,
       data: {
-        model: { id: model.id, name: model.name, displayName: model.displayName, type: model.type, status: model.status },
+        model: { id: model.id, name: model.name, displayName: model.displayName, type: model.type, visibility: model.visibility },
         today: { calls: today?.calls ?? 0, tokens: Number(today?.tokens ?? 0), cost: today?.cost ?? '0', successCount: today?.successCount ?? 0, failedCount: today?.failedCount ?? 0, avgDurationMs: today?.avgDurationMs ?? 0 },
         month: { calls: month?.calls ?? 0, tokens: Number(month?.tokens ?? 0), cost: month?.cost ?? '0' },
         allTime: { calls: allTime?.calls ?? 0, tokens: Number(allTime?.tokens ?? 0), cost: allTime?.cost ?? '0' },

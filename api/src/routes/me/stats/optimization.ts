@@ -194,7 +194,7 @@ export async function meStatsOptimizationRoutes(app: FastifyInstance) {
           modelName: models.name,
           modelDisplayName: models.displayName,
           modelType: models.type,
-          modelStatus: models.status,
+          modelStatus: models.visibility,
           vmId: vendorModels.id,
           vmStatus: vendorModels.status,
           sellPriceInput: vendorModels.sellPriceInput,
@@ -208,7 +208,7 @@ export async function meStatsOptimizationRoutes(app: FastifyInstance) {
             eq(vendorModels.status, true)
           )
         )
-        .where(eq(models.status, true));
+        .where(eq(models.visibility, 'public'));
 
       // 3. 构建模型价格映射（取最低价格）
       const modelPriceMap = new Map<string, {

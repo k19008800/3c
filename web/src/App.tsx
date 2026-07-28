@@ -108,6 +108,12 @@ const AdminABTesting = lazy(() => import('@/pages/admin/ABTesting'))
 const AdminCustomReports = lazy(() => import('@/pages/admin/CustomReports'))
 const AdminReports = lazy(() => import('@/pages/admin/Reports'))
 
+// ── 请求记录 ──
+const AdminRequestRecords = lazy(() => import('@/pages/admin/request-records/RequestRecordsList'))
+const AdminRequestRecordDetail = lazy(() => import('@/pages/admin/request-records/RequestRecordDetail'))
+const AdminRequestAnalysis = lazy(() => import('@/pages/admin/request-records/RequestAnalysisDashboard'))
+const AdminTokenRankings = lazy(() => import('@/pages/admin/request-records/TokenRankings'))
+
 // ── 用户端财务 ──
 const UserInvoices = lazy(() => import('@/pages/finance/Invoices'))
 const UserRefunds = lazy(() => import('@/pages/finance/Refunds'))
@@ -251,6 +257,10 @@ export default function App() {
               <Route path="admin/ab-testing" element={withSuspense(<AdminABTesting />)} />
               <Route path="admin/custom-reports" element={withSuspense(<AdminCustomReports />)} />
               <Route path="admin/reports" element={withSuspense(<AdminReports />)} />
+              <Route path="admin/request-records" element={withSuspense(<AdminRequestRecords />)} />
+              <Route path="admin/request-records/analysis" element={withSuspense(<AdminRequestAnalysis />)} />
+              <Route path="admin/request-records/token-rankings" element={withSuspense(<AdminTokenRankings />)} />
+              <Route path="admin/request-records/:id" element={withSuspense(<AdminRequestRecordDetail />)} />
             </Route>
 
             {/* User routes */}

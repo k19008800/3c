@@ -42,7 +42,19 @@ export async function processCommission(tx: any, userId: number, callLogId: numb
 
 async function processTeamCommission(tx: any, agentId: number, customerUserId: number, callLogId: number, callCost: string, saleCommission: string, reportDate: string) {
   let currentAgentId = agentId;
-  const maxDepth = 10;
+  // 从 system_configs 读取团队佣金追溯深度，默认 10 层
+  let maxDepth = 10;
+  try {
+    const { eq } = await import("drizzle-orm");
+    const { systemConfigs } = await import("../../db/schema.js");
+    const [cfg] = await tx.select({ value: systemConfigs.value }).from(systemConfigs).where(eq(systemConfigs.key, "commission_team_max_depth")).limit(1);
+    if (cfg?.value) {
+      const parsed = parseInt(cfg.value, 10);
+      if (parsed > 0 && parsed <= 50) maxDepth = parsed;
+    }
+  } catch (err) {
+    console.warn(`[Billing] 读取 commission_team_max_depth 失败，使用默认值 ${maxDepth}:`, err);
+  }
   let depth = 0;
   while (currentAgentId && depth < maxDepth) {
     depth++;
@@ -105,6 +117,51 @@ export async function processActivityCommission(tx: any, agentId: number, custom
     commissionType: "activity", ruleSnapshot: JSON.stringify(rule),
     calcDetail: JSON.stringify({ activityType, isFixed: !!rule.fixedAmount, rate: rule.rate, triggerAmount }), status: "pending",
   });
+  await refreshRollupForAgentDate(agentId, new Date().toISOString().slice(0, 10), tx);
+}
+
+/**
+ * 处理推荐注册佣金
+ * 当新用户通过推荐码注册时，推荐人（代理商）获得佣金
+ */
+export async function processReferralCommission(
+  tx: any,
+  agentId: number,
+  newUserId: number,
+  referralCode: string,
+): Promise<void> {
+  const db = tx ?? getDb();
+  const [rule] = await db
+    .select({ rate: commissionRules.rate, isEnabled: commissionRules.isEnabled, maxCap: commissionRules.maxCap, fixedAmount: commissionRules.fixedAmount })
+    .from(commissionRules)
+    .where(and(
+      eq(commissionRules.agentId, agentId),
+      eq(commissionRules.ruleType, 'referral'),
+      eq(commissionRules.isEnabled, true),
+      sql`(${commissionRules.validFrom} IS NULL OR ${commissionRules.validFrom} <= NOW())`,
+      sql`(${commissionRules.validUntil} IS NULL OR ${commissionRules.validUntil} > NOW())`,
+    ))
+    .limit(1);
+  if (!rule) return;
+
+  let amount = rule.fixedAmount ? Number(rule.fixedAmount) : 0;
+  if (rule.maxCap) amount = Math.min(amount, Number(rule.maxCap));
+  if (amount <= 0) return;
+
+  await db.insert(commissionLogs).values({
+    agentId,
+    clientCallLogId: null,
+    callCost: "0.000000",
+    commissionAmount: amount.toFixed(6),
+    sourceCustomerId: newUserId,
+    sourceOrderId: referralCode,
+    sourceOrderAmount: "0.000000",
+    commissionType: "referral",
+    ruleSnapshot: JSON.stringify(rule),
+    calcDetail: JSON.stringify({ referralCode, isFixed: !!rule.fixedAmount, rate: Number(rule.rate), amount }),
+    status: "pending",
+  });
+
   await refreshRollupForAgentDate(agentId, new Date().toISOString().slice(0, 10), tx);
 }
 

@@ -39,6 +39,8 @@ export const userRoleEnum = pgEnum("user_role", [
 
 // ── 模型 & 厂商 ──
 
+export const modelVisibilityEnum = pgEnum("model_visibility", ["public", "internal", "disabled"]);
+
 export const modelTypeEnum = pgEnum("model_type", [
   "chat",
   "embedding",

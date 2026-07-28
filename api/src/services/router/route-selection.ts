@@ -8,7 +8,7 @@ import { vendorModels, vendors } from "../../db/schema.js";
 import { decryptApiKey } from "../encryption.js";
 import { AppError } from "../auth-service/index.js";
 import type { RoutingOptions, VendorModelRoute, RoutingStrategy } from "./types.js";
-import { resolveModelId } from "./model-cache.js";
+import { resolveModelIdForInternal } from "./model-cache.js";
 
 // ── 查询可用路由候选 ──
 
@@ -45,26 +45,32 @@ async function queryAvailableRoutes(modelId: number): Promise<VendorModelRoute[]
     )
     .orderBy(asc(vendorModels.sellPriceInput));
 
-  return rows.map((r) => ({
-    vendorModelId: r.vendorModelId,
-    vendorId: r.vendorId,
-    vendorName: r.vendorName,
-    modelId: r.modelId,
-    upstreamModelName: r.upstreamModelName,
-    apiEndpoint: r.apiEndpoint,
-    apiKeyPlain: decryptApiKey(r.apiKeyEncrypted),
-    keyGroupId: r.keyGroupId,
-    keyGroupItemId: null,
-    keySellPriceInput: null,
-    keySellPriceOutput: null,
-    sellPriceInput: Number(r.sellPriceInput),
-    sellPriceOutput: Number(r.sellPriceOutput),
-    weight: r.weight,
-    rpmLimit: r.rpmLimit,
-    tpmLimit: r.tpmLimit,
-    healthScore: Number(r.healthScore ?? 1),
-    isDown: r.isDown,
-  }));
+  return rows.map((r) => {
+    const priceInput = Number(r.sellPriceInput);
+    const priceOutput = Number(r.sellPriceOutput);
+    return {
+      vendorModelId: r.vendorModelId,
+      vendorId: r.vendorId,
+      vendorName: r.vendorName,
+      modelId: r.modelId,
+      upstreamModelName: r.upstreamModelName,
+      apiEndpoint: r.apiEndpoint,
+      apiKeyPlain: decryptApiKey(r.apiKeyEncrypted),
+      keyGroupId: r.keyGroupId,
+      keyGroupItemId: null,
+      keySellPriceInput: null,
+      keySellPriceOutput: null,
+      sellPriceInput: priceInput,
+      sellPriceOutput: priceOutput,
+      weight: r.weight,
+      rpmLimit: r.rpmLimit,
+      tpmLimit: r.tpmLimit,
+      healthScore: Number(r.healthScore ?? 1),
+      isDown: r.isDown,
+      effectivePriceInput: priceInput,
+      effectivePriceOutput: priceOutput,
+    };
+  });
 }
 
 // ── 按策略选择 ──
@@ -80,7 +86,7 @@ function pickByStrategy(
 
   switch (strategy) {
     case "lowest_price":
-      // 已按 sellPriceInput ASC 排序，取第一个
+      // 已在 selectRoute 中按 effectivePriceInput ASC 排序，取第一个
       return candidates[0];
 
     case "weighted_random": {
@@ -121,11 +127,12 @@ function pickByStrategy(
 export async function resolveKeyGroup(
   route: VendorModelRoute,
   redis: any,
+  skipStatsUpdate?: boolean,
 ): Promise<VendorModelRoute> {
   if (!route.keyGroupId) return route;
   try {
     const { selectKeyFromGroup } = await import("./key-group.js");
-    const result = await selectKeyFromGroup(route.keyGroupId, redis, route.vendorModelId);
+    const result = await selectKeyFromGroup(route.keyGroupId, redis, route.vendorModelId, skipStatsUpdate);
     if (!result) {
       // Key 分组无可选 Key，沿用 vendorModel 本身的 Key
       return route;
@@ -175,6 +182,8 @@ export async function resolveKeyGroup(
       keyGroupItemId: item.id,
       keySellPriceInput,
       keySellPriceOutput,
+      effectivePriceInput: keySellPriceInput ?? route.sellPriceInput,
+      effectivePriceOutput: keySellPriceOutput ?? route.sellPriceOutput,
     };
   } catch (err) {
     console.warn("[Router] KeyGroup 解析异常，降级使用 vendorModel 默认 Key:", err);
@@ -182,10 +191,58 @@ export async function resolveKeyGroup(
   }
 }
 
-// ── 对外接口：选择最佳厂商-模型路由（含熔断 + Key 分组解析） ──
+// ── 负载感知分流 ──
+
+/**
+ * 对候选列表应用负载分流
+ * - 对每个候选厂商计算 offloadRatio
+ * - 如果 offloadRatio > 0，按比例降低该厂商的权重
+ * - 如果 offloadRatio > 0.5，直接移除该厂商（除非只剩它一个）
+ */
+async function applyLoadShedding(
+  candidates: VendorModelRoute[],
+  loadBalancer: import("./vendor-load-balancer.js").VendorLoadBalancer,
+): Promise<VendorModelRoute[]> {
+  if (candidates.length <= 1) return candidates;
+
+  // 非阻塞刷新统计（如果超过 30 秒未刷新）
+  const db = getDb();
+  const redis = (await import("../../redis.js")).getRedis();
+  if (Date.now() - loadBalancer.getLastRefreshTime() > 30000) {
+    loadBalancer.refreshStats(db, redis).catch((err) => {
+      console.warn("[Router] 负载统计刷新异常（非阻塞）:", err);
+    });
+  }
+
+  const remaining: VendorModelRoute[] = [];
+
+  for (const c of candidates) {
+    const offloadRatio = loadBalancer.getOffloadRatioByName(c.vendorName);
+
+    if (offloadRatio > 0.5) {
+      // 直接移除该厂商
+      continue;
+    }
+
+    if (offloadRatio > 0) {
+      // 按比例降低权重
+      remaining.push({
+        ...c,
+        weight: Math.max(1, Math.round(c.weight * (1 - offloadRatio))),
+      });
+    } else {
+      remaining.push(c);
+    }
+  }
+
+  // 如果全被移除，放宽限制，允许最低分厂商通过
+  return remaining.length > 0 ? remaining : candidates;
+}
+
+// ── 对外接口：选择最佳厂商-模型路由（含熔断 + 负载感知 + Key 分组解析） ──
 
 export async function selectRoute(options: RoutingOptions): Promise<VendorModelRoute> {
-  const modelId = await resolveModelId(options.modelName);
+  const modelId = await resolveModelIdForInternal(options.modelName);
   const strategy = options.strategy ?? "lowest_price";
 
   let candidates = await queryAvailableRoutes(modelId);
@@ -206,9 +263,28 @@ export async function selectRoute(options: RoutingOptions): Promise<VendorModelR
     console.warn("[Router] 熔断检查异常，跳过:", err);
   }
 
+  // 负载感知分流
+  if (strategy === "adaptive" || strategy === "lowest_price") {
+    try {
+      const { getLoadBalancer } = await import("./vendor-load-balancer.js");
+      const loadBalancer = getLoadBalancer();
+      candidates = await applyLoadShedding(candidates, loadBalancer);
+    } catch (err) {
+      console.warn("[Router] 负载感知分流异常，跳过:", err);
+    }
+  }
+
+  // ── 预先解析 Key 分组，计算实际结算价（不更新统计） ──
+  const redis = (await import("../../redis.js")).getRedis();
+  for (let i = 0; i < candidates.length; i++) {
+    candidates[i] = await resolveKeyGroup(candidates[i], redis, true);
+  }
+
+  // ── 按实际结算价排序 ──
+  candidates.sort((a, b) => a.effectivePriceInput - b.effectivePriceInput);
+
   const selected = pickByStrategy(candidates, strategy, options.preferredVendorId);
 
-  // 若该路由配置了 Key 分组，从分组中解析实际 Key 和价格
-  const redis = (await import("../../redis.js")).getRedis();
-  return resolveKeyGroup(selected, redis);
+  // ── 最终解析 Key 分组（实际使用，更新统计） ──
+  return resolveKeyGroup(selected, redis, false);
 }

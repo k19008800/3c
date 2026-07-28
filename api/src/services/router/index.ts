@@ -15,3 +15,4 @@ export { selectRoute } from "./route-selection.js";
 export { clearModelNameCache } from "./model-cache.js";
 export { selectKeyFromGroup } from "./key-group.js";
 export { forwardRequest, forwardStreamRequest } from "./forward.js";
+export { getLoadBalancer, type VendorLoadState } from "./vendor-load-balancer.js";
