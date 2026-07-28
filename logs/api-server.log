@@ -8948,3 +8948,142 @@ Node.js v24.18.0
 {"level":30,"time":1785131916192,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"鉁?commission_logs 琛ㄥ凡鍚敤鍒嗗尯"}
 {"level":30,"time":1785131916193,"pid":7948,"hostname":"DESKTOP-LC0FIIC","msg":"[Redemption Scheduler] 宸叉敞鍐岋紝姣?60 鍒嗛挓鎵ц涓€娆?}
 {"level":50,"time":1785131916270,"pid":7948,"hostname":"DESKTOP-LC0FIIC","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3000","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3000\n    at Server.setupListenHandle [as _listen2] (node:net:2009:16)\n    at listenInCluster (node:net:2066:12)\n    at node:net:2275:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","code":"EADDRINUSE","errno":-4091,"syscall":"listen","address":"0.0.0.0","port":3000},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3000"}
+18:46:10 [tsx] change in ./src\db\schema\index.ts Rerunning...
+c{"level":30,"time":1785149218213,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"[Middleware] Request ID tracking enabled"}
+[AutoSettle] Cron scheduled: 02:00 and 14:00 daily
+[DailyRecon] 瀹氭椂浠诲姟宸叉敞鍐? 姣忓ぉ 03:00
+[HourlyRecon] 瀹氭椂浠诲姟宸叉敞鍐? 姣忓皬鏃剁殑绗?鍒嗛挓
+{"level":30,"time":1785149219834,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"[QueryTimeout] Enhanced plugin loaded - Default timeout: 5000ms"}
+{"level":30,"time":1785149219834,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"[QueryTimeout] Long timeout routes configured:"}
+{"level":30,"time":1785149219834,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"  /api/v1/admin/dashboard/: 10000ms"}
+{"level":30,"time":1785149219834,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"  /api/v1/admin/stats/: 15000ms"}
+{"level":30,"time":1785149219834,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"  /api/v1/admin/reports/: 30000ms"}
+{"level":30,"time":1785149219834,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"  /api/v1/analytics/: 20000ms"}
+{"level":30,"time":1785149219834,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"  /api/v1/dashboard/: 15000ms"}
+{"level":30,"time":1785149220879,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"鉁?鍝嶅簲鍘嬬缉鎻掍欢宸插惎鐢?(gzip/deflate/br, threshold=1KB)"}
+{"level":30,"time":1785149221064,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"鉁?鍏ㄥ眬闄愭祦淇濇姢宸插惎鐢?(100 璇锋眰/鍒嗛挓)"}
+{"level":30,"time":1785149223244,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Commission auto-settlement scheduled: daily at 3:00"}
+{"level":30,"time":1785149223298,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Daily recon summary scheduled: daily at 4:00"}
+{"level":30,"time":1785149223298,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Daily security summary scheduled: daily at 9:00"}
+{"level":30,"time":1785149223299,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Commission daily rollup scheduled: daily at 00:30"}
+{"level":30,"time":1785149223299,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Audit log archival scheduled: daily at 02:00 (purge >90d)"}
+{"level":30,"time":1785149223299,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Partition cleanup scheduled: daily at 03:30"}
+{"level":30,"time":1785149223300,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"[operation-alert-scheduler] Started (interval: 300s)"}
+{"level":30,"time":1785149223300,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Code expiry check scheduled: every 1 hour, first run in 30s"}
+{"level":30,"time":1785149223300,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] API Key expiry check scheduled: every 1 hour, first run in 1min"}
+{"level":30,"time":1785149223558,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Monthly quota reset scheduled: 1st day of month at 00:05"}
+{"level":30,"time":1785149223559,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Orphan upload cleanup scheduled: every Sunday at 03:00"}
+{"level":30,"time":1785149223741,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Monitoring check scheduled: every 5 minutes"}
+{"level":30,"time":1785149223741,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"[Cron] Campaign auto-end check scheduled: every 1 minute, first run in 1min"}
+{"level":50,"time":1785149223745,"pid":10504,"hostname":"DESKTOP-LC0FIIC","err":{"type":"ReferenceError","message":"require is not defined","stack":"ReferenceError: require is not defined\n    at schedulePublishAnnouncements (C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\cron\\publish-announcements.ts:104:16)\n    at <anonymous> (C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\app\\index.ts:305:5)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)"},"msg":"[App] 鍔犺浇鍏憡瀹氭椂鍙戝竷浠诲姟澶辫触"}
+[Redis] Connected
+{"level":40,"time":1785149224237,"pid":10504,"hostname":"DESKTOP-LC0FIIC","title":"馃敶 纾佺洏绌洪棿涓ラ噸涓嶈冻","message":"**鏈嶅姟鍣?*: 鏈湴 (Windows 10)\n**鐩綍**: C:\\Users\\ZH\\.openclaw\\workspace\\3cloud\\api\\src\\public\\uploads\\site\n**鍓╀綑绌洪棿**: 0.0 MB (0.00 GB)\n**闃堝€?*: 灏忎簬 200MB\n**寤鸿**: 绔嬪嵆娓呯悊 uploads 鐩綍鎴栨墿灞曠鐩?,"level":"critical","msg":"[SystemAlert] 绯荤粺鍛婅"}
+{"level":30,"time":1785149225021,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"鉁?call_logs 琛ㄥ凡鍚敤鍒嗗尯"}
+{"level":30,"time":1785149225022,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"鉁?commission_logs 琛ㄥ凡鍚敤鍒嗗尯"}
+{"level":30,"time":1785149225023,"pid":10504,"hostname":"DESKTOP-LC0FIIC","msg":"[Redemption Scheduler] 宸叉敞鍐岋紝姣?60 鍒嗛挓鎵ц涓€娆?}
+{"level":50,"time":1785149225099,"pid":10504,"hostname":"DESKTOP-LC0FIIC","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3000","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3000\n    at Server.setupListenHandle [as _listen2] (node:net:2009:16)\n    at listenInCluster (node:net:2066:12)\n    at node:net:2275:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","code":"EADDRINUSE","errno":-4091,"syscall":"listen","address":"0.0.0.0","port":3000},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3000"}
+19:14:16 [tsx] change in ./src\app\routes.ts Rerunning...
+node:internal/modules/esm/resolve:271
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module 'C:\Users\ZH\.openclaw\workspace\3cloud\api\src\middleware\rbac.js' im
+ported from C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\admin\deletion.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:992:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:701:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:721:38)
+    at nextStep (node:internal/modules/customization_hooks:189:26)
+    at resolveBaseSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:
+2:8745)
+    at resolveDirectorySync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi
+.mjs:2:9958)
+    at resolveTsPathsSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.m
+js:2:11190)
+    at resolve2 (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:2:12977
+) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/src/middleware/rbac.js'
+}
+
+Node.js v24.18.0
+c19:49:28 [tsx] change in ./src\app\index.ts Rerunning...
+node:internal/modules/esm/resolve:271
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module 'C:\Users\ZH\.openclaw\workspace\3cloud\api\src\middleware\rbac.js' im
+ported from C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\admin\deletion.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:992:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:701:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:721:38)
+    at nextStep (node:internal/modules/customization_hooks:189:26)
+    at resolveBaseSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:
+2:8745)
+    at resolveDirectorySync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi
+.mjs:2:9958)
+    at resolveTsPathsSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.m
+js:2:11190)
+    at resolve2 (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:2:12977
+) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/src/middleware/rbac.js'
+}
+
+Node.js v24.18.0
+c19:53:01 [tsx] change in ./src\app\routes.ts Rerunning...
+c19:53:10 [tsx] change in ./src\app\routes.ts Restarting...
+node:internal/modules/esm/resolve:271
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module 'C:\Users\ZH\.openclaw\workspace\3cloud\api\src\middleware\rbac.js' im
+ported from C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\admin\deletion.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:992:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:701:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:721:38)
+    at nextStep (node:internal/modules/customization_hooks:189:26)
+    at resolveBaseSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:
+2:8745)
+    at resolveDirectorySync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi
+.mjs:2:9958)
+    at resolveTsPathsSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.m
+js:2:11190)
+    at resolve2 (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:2:12977
+) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/src/middleware/rbac.js'
+}
+
+Node.js v24.18.0
+c19:53:27 [tsx] change in ./src\app\index.ts Rerunning...
+node:internal/modules/esm/resolve:271
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module 'C:\Users\ZH\.openclaw\workspace\3cloud\api\src\middleware\rbac.js' im
+ported from C:\Users\ZH\.openclaw\workspace\3cloud\api\src\routes\admin\deletion.ts
+    at finalizeResolution (node:internal/modules/esm/resolve:271:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:992:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:701:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:721:38)
+    at nextStep (node:internal/modules/customization_hooks:189:26)
+    at resolveBaseSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:
+2:8745)
+    at resolveDirectorySync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi
+.mjs:2:9958)
+    at resolveTsPathsSync (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.m
+js:2:11190)
+    at resolve2 (file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/node_modules/tsx/dist/register-CqMfTiWi.mjs:2:12977
+) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///C:/Users/ZH/.openclaw/workspace/3cloud/api/src/middleware/rbac.js'
+}
+
+Node.js v24.18.0

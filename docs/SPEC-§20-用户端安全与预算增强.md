@@ -1455,6 +1455,57 @@ interface RiskEvent {
 
 ---
 
+
+
+---
+
+## 2FA 认证与二次确认分层定义
+
+### 分层规则
+
+| 层级 | 操作类型 | 认证要求 | 说明 |
+|------|---------|---------|------|
+| L1 | 登录认证 | 2FA 仅 | 用户名+密码+OTP（TOTP 或短信） |
+| L2 | 敏感读取操作 | 2FA 仅 | 查看 API Key 明文、查看财务详情 |
+| L3 | 写操作 | 2FA + 二次确认 | 提现、修改安全设置、删除 Key、大额充值操作 |
+| L4 | 高风险操作 | 2FA + 二次确认 + 冷却期 | 注销账号、变更手机号/邮箱 |
+
+### 开关机制（AND 逻辑）
+
+```
+系统级开关（require_2fa）:
+  [ON/OFF] -- site_configs 配置，决定系统是否开启 2FA 要求
+
+用户级开关（user_2fa_enabled）：
+  [ON/OFF] -- 用户在个人设置中开启自己的 2FA
+
+启用条件：系统开关 ON AND 用户开关 ON（AND 逻辑）
+效果：两个开关同时启用时才强制 2FA
+```
+
+### 二次确认（Double-Confirm）
+
+写操作时，在 2FA 认证通过后，额外弹窗要求用户再次确认操作详情和风险提示。适用于：
+
+- 提现操作：显示金额、收款账号、手续费 -> 用户确认
+- API Key 删除：显示 Key 别名和影响范围 -> 用户确认
+- 安全设置变更：显示变更前后对比 -> 用户确认
+
+### 数据库变更
+
+```typescript
+// site_configs 新增
+require2fa: boolean("require_2fa").default(false);  // 系统级 2FA 开关
+
+// users 表新增
+user2faEnabled: boolean("user_2fa_enabled").default(false);  // 用户级 2FA 开关
+
+// security_logs 新增字段
+confirmType: varchar("confirm_type", { length: 20 });  // '2fa_only' | '2fa_double'
+confirmedAt: timestamp("confirmed_at", { withTimezone: true });
+```
+
+
 ### [?] 页面帮助
 
 **页面名称**：功能说明书：§20 用户端安全与预算增强
@@ -1487,3 +1538,21 @@ A: 请检查当前账号的权限角色是否包含对应操作权限。
 | 筛选 | 按选中条件过滤列表 |
 | 导出 CSV | 将当前列表数据导出为 CSV 文件 |
 | 查看详情 | 查看选中记录的完整信息 |
+
+
+---
+
+### 预算检查与速率限制优先级
+
+**执行顺序：预算检查 -> 速率限制**
+
+1. **预算检查（budget_check）**：在请求处理管道中优先于费率限制执行。当用户余额/预算不足时，直接返回 `QUOTA_EXCEEDED` 错误码，不再继续执行费率限制检查。
+2. **速率限制（rate_limiting）**：在预算检查之后执行。仅当预算/余额充足时才进行速率检查。超限时返回 `RATE_LIMITED` 错误码。
+
+**熔断联动：** 当预算熔断激活（budget_meltdown 状态）后，跳过速率限制直接拒绝所有请求并返回 `QUOTA_EXCEEDED`。
+
+
+| 错误码 | 含义 | 触发条件 |
+|--------|------|---------|
+| `QUOTA_EXCEEDED` | 预算/配额不足 | 用户余额或预算熔断激活 |
+| `RATE_LIMITED` | 请求频率超限 | 速率限制器检测到超频 |

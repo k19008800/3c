@@ -613,6 +613,29 @@ GET  /api/v1/admin/finance/rates/history       — 汇率历史
 Q: 为什么某些操作不可用？
 A: 请检查当前账号的权限角色是否包含对应操作权限。
 
+
+### 提现二审角色配置
+
+通过 `site_configs.withdraw_second_review_role` 配置，决定提现二审由哪个角色执行：
+
+| 配置值 | 角色 | 说明 |
+|-------|------|------|
+| `agent_mgr` | 代理管理岗 | 默认值，由代理管理员二审 |
+| `operator` | 运营岗 | 由运营人员二审 |
+
+**配置项：** `site_configs.withdraw_second_review_role`
+
+```typescript
+// site_configs 表新增字段
+withdrawSecondReviewRole: varchar("withdraw_second_review_role", { length: 20 }).default("agent_mgr");
+// 可选值: 'agent_mgr' | 'operator'
+```
+
+**权限矩阵影响：** 当 `withdraw_second_review_role = 'operator'` 时，运营角色获得提现二审权限（`withdraw:second_review`）。
+
+**流程图对应：** 泳道图 2（代理提现双审流程）中的"复审审核员"角色根据此配置动态变化。
+
+
 ### [?] 按钮级帮助对照表
 
 | 按钮/操作 | 帮助说明 |
