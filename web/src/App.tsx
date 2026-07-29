@@ -109,6 +109,7 @@ const AdminTwoFactorPolicy = lazy(() => import('@/pages/admin/TwoFactorPolicy'))
 const AdminBudgetManagement = lazy(() => import('@/pages/admin/BudgetManagement'))
 const AdminExchangeRates = lazy(() => import('@/pages/admin/AdminExchangeRates'))
 const AdminDrills = lazy(() => import('@/pages/admin/AdminDrills'))
+const AdminWebhooks = lazy(() => import('@/pages/admin/AdminWebhooks'))
 const AdminCustomReports = lazy(() => import('@/pages/admin/CustomReports'))
 const AdminReports = lazy(() => import('@/pages/admin/Reports'))
 
@@ -263,6 +264,7 @@ export default function App() {
               <Route path="admin/budget" element={withSuspense(<AdminBudgetManagement />)} />
               <Route path="admin/finance/rates" element={withSuspense(<AdminExchangeRates />)} />
               <Route path="admin/drills" element={withSuspense(<AdminDrills />)} />
+              <Route path="admin/webhooks" element={withSuspense(<AdminWebhooks />)} />
               <Route path="admin/custom-reports" element={withSuspense(<AdminCustomReports />)} />
               <Route path="admin/reports" element={withSuspense(<AdminReports />)} />
               <Route path="admin/request-records" element={withSuspense(<AdminRequestRecords />)} />

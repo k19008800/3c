@@ -70,3 +70,6 @@ export * from "./agent-settlement.js";
 
 // ── 请求记录（风险分析）──
 export * from "./request-records.js";
+
+// ── Webhook（§32.1）──
+export * from "./webhooks.js";

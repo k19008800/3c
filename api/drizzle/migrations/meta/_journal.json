@@ -57,6 +57,13 @@
       "when": 1722240500000,
       "tag": "0007_add_vendor_settlement_currency",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1722240600000,
+      "tag": "0008_add_global_webhooks",
+      "breakpoints": true
     }
   ]
 }
