@@ -21,7 +21,7 @@ export default function AdminVendors() {
   const [editVendor, setEditVendor] = useState<Vendor | null>(null)
   const [deleteVendorConfirm, setDeleteVendorConfirm] = useState<Vendor | null>(null)
   const [statusSwitch, setStatusSwitch] = useState<{ vendor: Vendor; newStatus: 'active' | 'maintenance' | 'offline' } | null>(null)
-  const [form, setForm] = useState({ name: '', baseUrl: '', description: '', status: 'active' })
+  const [form, setForm] = useState({ name: '', baseUrl: '', description: '', status: 'active', settlementCurrency: 'CNY' })
   const [showRecommendations, setShowRecommendations] = useState(false)
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export default function AdminVendors() {
   const handleCreate = async () => {
     const v = await createVendor(form)
     if (v) {
-      setForm({ name: '', baseUrl: '', description: '', status: 'active' })
+      setForm({ name: '', baseUrl: '', description: '', status: 'active', settlementCurrency: 'CNY' })
       fetchVendors({ keyword, status, page, pageSize })
     }
   }
@@ -175,6 +175,27 @@ export default function AdminVendors() {
                   }
                   className="w-full px-3 py-2 border rounded-lg"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">结算币种 <span className="text-xs text-gray-400">（§29.7 多币种结算）</span></label>
+                <select
+                  value={(editVendor.settlementCurrency ?? 'CNY')
+                    ? (editVendor.id ? editVendor.settlementCurrency || 'CNY' : form.settlementCurrency || 'CNY')
+                    : 'CNY'}
+                  onChange={(e) => editVendor.id
+                    ? setEditVendor({ ...editVendor, settlementCurrency: e.target.value })
+                    : setForm({ ...form, settlementCurrency: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="CNY">CNY - 人民币</option>
+                  <option value="USD">USD - 美元</option>
+                  <option value="HKD">HKD - 港币</option>
+                  <option value="JPY">JPY - 日元</option>
+                  <option value="EUR">EUR - 欧元</option>
+                  <option value="GBP">GBP - 英镑</option>
+                  <option value="SGD">SGD - 新加坡元</option>
+                </select>
               </div>
               <div className="flex justify-end gap-2 pt-4">
                 <button

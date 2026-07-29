@@ -33,6 +33,7 @@ export interface Vendor {
   baseUrl: string
   status: string
   description?: string
+  settlementCurrency?: string  // 结算币种（SPEC-§29.7）
   modelCount?: number       // JOIN count: 已接入模型数
   companyName?: string
   contactName?: string

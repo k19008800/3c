@@ -25,6 +25,7 @@ export default function VendorTable({ vendors, onEdit, onDelete, onSync, onStatu
             <th className="px-4 py-3 text-left">ID</th>
             <th className="px-4 py-3 text-left">名称</th>
             <th className="px-4 py-3 text-left">Base URL</th>
+            <th className="px-4 py-3 text-left">结算币种</th>
             <th className="px-4 py-3 text-left">状态</th>
             <th className="px-4 py-3 text-left">操作</th>
           </tr>
@@ -42,6 +43,9 @@ export default function VendorTable({ vendors, onEdit, onDelete, onSync, onStatu
                   )}
                 </td>
                 <td className="px-4 py-3 text-slate-600 font-mono text-xs">{v.baseUrl || '—'}</td>
+                <td className="px-4 py-3">
+                  <span className="text-xs font-medium">{(v as any).settlementCurrency || 'CNY'}</span>
+                </td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-1 rounded text-xs ${badge.className}`}>
                     {badge.label}
