@@ -164,6 +164,7 @@ const adminGroups: AdminGroup[] = [
       { to: '/console/admin/finance/rates', icon: DollarSign, label: '汇率管理', requiredPerms: [Perm.FINANCE_VIEW] },
       { to: '/console/admin/drills', icon: Activity, label: '故障演练', requiredPerms: [Perm.OPS_READ] },
       { to: '/console/admin/webhooks', icon: Bell, label: 'Webhook', requiredPerms: [Perm.CONFIG_VIEW] },
+      { to: '/console/admin/settings/sso', icon: ShieldCheck, label: 'SSO 配置', requiredPerms: [Perm.CONFIG_VIEW] },
     ],
   },
   {

@@ -120,6 +120,7 @@ import { adminDeletionRoutes } from "../routes/admin/deletion.js";
 import { adminSettlementRoutes } from "../routes/admin/settlements.js";
 import { adminDrillRoutes } from "../routes/admin/drills.js";
 import { adminWebhookRoutes } from "../routes/admin/webhooks.js";
+import { adminSSORoutes } from "../routes/admin/sso.js";
 import { agentSettlementRoutes } from "../routes/agent/settlements.js";
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
@@ -466,6 +467,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
   // ── 全局 Webhook 出站（§32.1）──
   await app.register(adminWebhookRoutes, { prefix: "" });
+
+  // ── SSO 单点登录配置（§32.2）──
+  await app.register(adminSSORoutes, { prefix: "" });
 
   // ── Admin 请求记录（风险分析）──
   const { requestRecordsRoutes } = await import("../routes/admin/request-records/index.js");
