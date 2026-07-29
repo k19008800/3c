@@ -123,6 +123,7 @@ import { adminWebhookRoutes } from "../routes/admin/webhooks.js";
 import { adminSSORoutes } from "../routes/admin/sso.js";
 import { adminCorpLoginRoutes } from "../routes/admin/corp-login.js";
 import { adminSupportAssistRoutes } from "../routes/admin/support-assist.js";
+import { adminCostAnalysisRoutes } from "../routes/admin/cost-analysis.js";
 import { agentSettlementRoutes } from "../routes/agent/settlements.js";
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
@@ -478,6 +479,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
   // ── 客服AI辅助支持（§28）──
   await app.register(adminSupportAssistRoutes, { prefix: "" });
+
+  // ── 成本分析（§33）──
+  await app.register(adminCostAnalysisRoutes, { prefix: "" });
 
   // ── Admin 请求记录（风险分析）──
   const { requestRecordsRoutes } = await import("../routes/admin/request-records/index.js");

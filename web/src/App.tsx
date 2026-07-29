@@ -112,6 +112,7 @@ const AdminDrills = lazy(() => import('@/pages/admin/AdminDrills'))
 const AdminWebhooks = lazy(() => import('@/pages/admin/AdminWebhooks'))
 const AdminSSO = lazy(() => import('@/pages/admin/AdminSSO'))
 const CorpLogin = lazy(() => import('@/pages/admin/CorpLogin'))
+const CostAnalysis = lazy(() => import('@/pages/admin/CostAnalysis'))
 const AdminCustomReports = lazy(() => import('@/pages/admin/CustomReports'))
 const AdminReports = lazy(() => import('@/pages/admin/Reports'))
 
@@ -269,6 +270,7 @@ export default function App() {
               <Route path="admin/webhooks" element={withSuspense(<AdminWebhooks />)} />
               <Route path="admin/settings/sso" element={withSuspense(<AdminSSO />)} />
               <Route path="admin/settings/corp-login" element={withSuspense(<CorpLogin />)} />
+              <Route path="admin/finance/cost-analysis" element={withSuspense(<CostAnalysis />)} />
               <Route path="admin/custom-reports" element={withSuspense(<AdminCustomReports />)} />
               <Route path="admin/reports" element={withSuspense(<AdminReports />)} />
               <Route path="admin/request-records" element={withSuspense(<AdminRequestRecords />)} />
