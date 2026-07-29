@@ -118,6 +118,7 @@ import { adminReportRoutes } from "../routes/admin/reports.js";
 import { adminOperationalKpiRoutes } from "../routes/admin/operational-kpi.js";
 import { adminDeletionRoutes } from "../routes/admin/deletion.js";
 import { adminSettlementRoutes } from "../routes/admin/settlements.js";
+import { adminDrillRoutes } from "../routes/admin/drills.js";
 import { agentSettlementRoutes } from "../routes/agent/settlements.js";
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
@@ -458,6 +459,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
   // ── 代理结算对账（代理端）──
   await app.register(agentSettlementRoutes, { prefix: "" });
+
+  // ── 供应商故障演练（§31.1）──
+  await app.register(adminDrillRoutes, { prefix: "" });
 
   // ── Admin 请求记录（风险分析）──
   const { requestRecordsRoutes } = await import("../routes/admin/request-records/index.js");
