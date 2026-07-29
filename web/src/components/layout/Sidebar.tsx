@@ -146,6 +146,7 @@ const adminGroups: AdminGroup[] = [
       { to: '/console/admin/behavior-analysis', icon: Activity, label: '行为分析', requiredPerms: [Perm.SECURITY_VIEW] },
       { to: '/console/admin/threat-intel', icon: Globe, label: '威胁情报', requiredPerms: [Perm.SECURITY_VIEW] },
       { to: '/console/admin/ab-testing', icon: FlaskConical, label: 'A/B 测试', requiredPerms: [Perm.SECURITY_VIEW] },
+      { to: '/console/admin/security/2fa-policy', icon: ShieldCheck, label: '2FA 策略', requiredPerms: [Perm.SECURITY_ACTION] },
     ],
   },
   {
@@ -159,6 +160,7 @@ const adminGroups: AdminGroup[] = [
       { to: '/console/admin/environments', icon: Server, label: '多环境管理', requiredPerms: [Perm.OPS_READ] },
       { to: '/console/admin/health-score', icon: Heart, label: '健康评分', requiredPerms: [Perm.OPS_READ] },
       { to: '/console/admin/custom-reports', icon: BarChart3, label: '自定义报表', requiredPerms: [Perm.OPS_READ] },
+      { to: '/console/admin/budget', icon: DollarSign, label: '预算管理', requiredPerms: [Perm.FINANCE_VIEW] },
     ],
   },
   {

@@ -25,6 +25,41 @@ import { rechargeOrders } from "./billing.js";
 import { redemptionCodes } from "./redemption.js";
 
 // ══════════════════════════════════════════════════════════════
+//  平台总账（资金流水表）
+//  SPEC-§29.1: 记录每一笔资金的进出明细
+// ══════════════════════════════════════════════════════════════
+
+export const platformLedger = pgTable(
+  "platform_ledger",
+  {
+    id: serial("id").primaryKey(),
+    serialNo: varchar("serial_no", { length: 30 }).notNull().unique(),
+    type: varchar("type", { length: 50 }).notNull(),
+    direction: varchar("direction", { length: 10 }).notNull(),
+    amount: numeric("amount", { precision: 14, scale: 2 }).notNull(),
+    balanceAfter: numeric("balance_after", { precision: 14, scale: 2 }).notNull(),
+    userId: integer("user_id"),
+    agentId: integer("agent_id"),
+    vendorId: integer("vendor_id"),
+    relatedOrderNo: varchar("related_order_no", { length: 50 }),
+    externalRef: varchar("external_ref", { length: 100 }),
+    paymentChannel: varchar("payment_channel", { length: 30 }),
+    status: varchar("status", { length: 20 }).default("completed"),
+    remark: varchar("remark", { length: 500 }),
+    operatorId: integer("operator_id"),
+    reversedBySerial: varchar("reversed_by_serial", { length: 30 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    serialNoIdx: uniqueIndex("pl_serial_no_idx").on(table.serialNo),
+    typeIdx: index("pl_type_idx").on(table.type),
+    userIdIdx: index("pl_user_id_idx").on(table.userId),
+    vendorIdIdx: index("pl_vendor_id_idx").on(table.vendorId),
+    createdAtIdx: index("pl_created_at_idx").on(table.createdAt),
+  })
+);
+
+// ══════════════════════════════════════════════════════════════
 //  日对账汇总表（预计算 + 缓存）
 // ══════════════════════════════════════════════════════════════
 

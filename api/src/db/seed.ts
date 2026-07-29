@@ -67,6 +67,12 @@ const defaultConfigs: { key: string; value: string; description: string }[] = [
 
   // ── 佣金结算 ──
   { key: "commission_settle_mode", value: "manual", description: "佣金结算模式（auto=定时自动结算，manual=财务手动结算）" },
+
+  // ── 安全策略（V4.1） ──
+  { key: "require_2fa", value: "voluntary", description: "2FA 策略：disabled/voluntary/mandatory_admin/mandatory_all" },
+
+  // ── 提现二审角色（V4.1） ──
+  { key: "withdraw_second_review_role", value: "agent_mgr", description: "代理商提现二审审核角色：agent_mgr/operator" },
 ];
 
 const defaultSecurityConfigs: { key: string; value: any; description: string }[] = [

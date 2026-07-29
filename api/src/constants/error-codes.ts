@@ -218,6 +218,30 @@ export const ERROR_CODES: Record<string, ErrorCodeDefinition> = {
     solution: '每分钟请求数（RPM）已达上限。请稍后重试。',
     solutionEn: 'Requests per minute limit reached. Please retry later.',
   },
+  'E036': {
+    code: 'E036',
+    message: '预算已用尽',
+    messageEn: 'Budget quota exhausted',
+    category: 'quota',
+    categoryLabel: '配额',
+    severity: 'warning',
+    solution: '账户预算已用尽。如需继续使用，请充值或联系管理员调整预算限额。',
+    solutionEn: 'Budget quota exhausted. Please recharge or contact admin to adjust budget limit.',
+    relatedCodes: ['E035'],
+  },
+
+  'E037': {
+    code: 'E037',
+    message: '超出用户预算限额',
+    messageEn: 'QUOTA_EXCEEDED',
+    category: 'quota',
+    categoryLabel: '配额',
+    severity: 'error',
+    solution: 'API 调用消耗已超出预算熔断线。请在预算设置页面调整预算限额，或等待下一个账单周期重置。',
+    solutionEn: 'API consumption exceeded budget fuse limit. Adjust budget limit or wait for next billing cycle reset.',
+    relatedCodes: ['E036'],
+  },
+
   'E035': {
     code: 'E035',
     message: '日配额已用尽',

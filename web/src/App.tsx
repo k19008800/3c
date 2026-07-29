@@ -105,6 +105,8 @@ const AdminThreatIntel = lazy(() => import('@/pages/admin/ThreatIntel'))
 const AdminEnvironments = lazy(() => import('@/pages/admin/Environments'))
 const AdminHealthScore = lazy(() => import('@/pages/admin/HealthScore'))
 const AdminABTesting = lazy(() => import('@/pages/admin/ABTesting'))
+const AdminTwoFactorPolicy = lazy(() => import('@/pages/admin/TwoFactorPolicy'))
+const AdminBudgetManagement = lazy(() => import('@/pages/admin/BudgetManagement'))
 const AdminCustomReports = lazy(() => import('@/pages/admin/CustomReports'))
 const AdminReports = lazy(() => import('@/pages/admin/Reports'))
 
@@ -255,6 +257,8 @@ export default function App() {
               <Route path="admin/environments" element={withSuspense(<AdminEnvironments />)} />
               <Route path="admin/health-score" element={withSuspense(<AdminHealthScore />)} />
               <Route path="admin/ab-testing" element={withSuspense(<AdminABTesting />)} />
+              <Route path="admin/security/2fa-policy" element={withSuspense(<AdminTwoFactorPolicy />)} />
+              <Route path="admin/budget" element={withSuspense(<AdminBudgetManagement />)} />
               <Route path="admin/custom-reports" element={withSuspense(<AdminCustomReports />)} />
               <Route path="admin/reports" element={withSuspense(<AdminReports />)} />
               <Route path="admin/request-records" element={withSuspense(<AdminRequestRecords />)} />
