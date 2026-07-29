@@ -62,7 +62,7 @@ export default function TwoFactorPolicy() {
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <Shield className="text-blue-600" size={28} />
           双因素认证策略
-          <FeatureDescription pageId="admin-2fa-policy" />
+          <FeatureDescription page="admin-2fa-policy" />
         </h1>
         <p className="text-slate-500 mt-2">
           设置系统级双因素认证策略。该策略与用户级设置采用 AND 逻辑：只有系统允许且用户开启时，2FA 才生效。

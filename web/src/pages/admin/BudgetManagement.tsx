@@ -143,7 +143,7 @@ export default function AdminBudgetManagement() {
             <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
               <DollarSign className="text-blue-600" size={28} />
               预算管理
-              <FeatureDescription pageId="admin-budget" />
+              <FeatureDescription page="admin-budget" />
             </h1>
             <p className="text-slate-500 mt-1">管理用户和 API Key 的预算配额、熔断阈值和速率限制</p>
           </div>
