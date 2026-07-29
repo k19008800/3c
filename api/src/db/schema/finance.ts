@@ -325,3 +325,45 @@ export const reconciliationMismatches = pgTable(
     resolvedIdx: index("recon_mismatch_resolved_idx").on(table.resolved),
   })
 );
+
+// ============================================================
+//  汇率管理 (exchange_rates)
+//  SPEC-§29.7: 多币种结算汇率
+// ============================================================
+export const exchangeRates = pgTable(
+  "exchange_rates",
+  {
+    id: serial("id").primaryKey(),
+    currency: varchar("currency", { length: 10 }).notNull(), // USD, HKD, JPY...
+    rateToCny: numeric("rate_to_cny", { precision: 14, scale: 6 }).notNull(), // 1 本币 = X 人民币
+    source: varchar("source", { length: 20 }).notNull().default("manual"), // auto | manual
+    isActive: boolean("is_active").notNull().default(true),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    currencyIdx: uniqueIndex("er_currency_uk").on(table.currency),
+  })
+);
+
+// 汇率历史表
+export const exchangeRateHistory = pgTable(
+  "exchange_rate_history",
+  {
+    id: serial("id").primaryKey(),
+    currency: varchar("currency", { length: 10 }).notNull(),
+    rateToCny: numeric("rate_to_cny", { precision: 14, scale: 6 }).notNull(),
+    source: varchar("source", { length: 20 }).notNull().default("manual"),
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    currencyHistoryIdx: index("er_history_currency_idx").on(table.currency),
+    recordedIdx: index("er_history_recorded_idx").on(table.recordedAt),
+  })
+);
+
+
+// ============================================================
+//  exports end
+// ============================================================

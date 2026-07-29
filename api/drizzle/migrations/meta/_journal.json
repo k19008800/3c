@@ -15,6 +15,41 @@
       "when": 1782644400000,
       "tag": "0001_add_rate_limited_status",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1722240000000,
+      "tag": "0002_add_vendor_key_group_items_deleted_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1722240100000,
+      "tag": "0003_add_config_versions",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1722240200000,
+      "tag": "0004_add_agent_level_and_extensions",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1722240300000,
+      "tag": "0005_add_platform_ledger",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1722240400000,
+      "tag": "0006_add_exchange_rates",
+      "breakpoints": true
     }
   ]
 }
