@@ -161,6 +161,7 @@ const adminGroups: AdminGroup[] = [
       { to: '/console/admin/health-score', icon: Heart, label: '健康评分', requiredPerms: [Perm.OPS_READ] },
       { to: '/console/admin/custom-reports', icon: BarChart3, label: '自定义报表', requiredPerms: [Perm.OPS_READ] },
       { to: '/console/admin/budget', icon: DollarSign, label: '预算管理', requiredPerms: [Perm.FINANCE_VIEW] },
+      { to: '/console/admin/finance/rates', icon: DollarSign, label: '汇率管理', requiredPerms: [Perm.FINANCE_VIEW] },
     ],
   },
   {
