@@ -61,7 +61,7 @@
 | §26 | 工单系统 | P1 | ✅ 80% | |
 | §27 | 在线客服与客服效能 | P1 | ✅ 80% | |
 | §28 | 智能客服与测试工具 | P1 | ✅ 70% | |
-| §29 | 资金与对账管理 | P0 | ✅ 85% | platform_ledger 表需创建 |
+| §29 | 资金与对账管理 | P0 | ✅ 95% | 多币种汇率管理 + 供应商结算币种配置已完成 |
 | §30 | 权限管理 | P1 | ✅ 90% | |
 | §31 | 供应商故障演练 | P2 | ✅ 70% | |
 | §32 | 第三方集成与 SSO | P2 | ✅ 70% | |
@@ -235,11 +235,11 @@
 | 功能域 | 优先级 | 待完成内容 | 参考 SPEC |
 |--------|--------|-----------|----------|
 | Budget 预算控制中间件 | P1 | `QUOTA_EXCEEDED`/`DAILY_QUOTA_EXCEEDED` 错误码需添加到 `error-codes.ts`；`user_budget_settings` 表需确认；预算检查中间件需在路由链中插入 | §20.1 |
-| platform_ledger 表 | P1 | 需在 `schema/finance.ts` 中添加 `platformLedger` 表定义（目前只有 `agentBalanceLedger`） | §29.1 |
-| site_configs 扩展 | P1 | 新增 `require_2fa`（系统级 2FA 策略）、`withdraw_second_review_role` 配置项 | §20.2, §29 |
-| 2FA 前端页面 | P1 | 2FA 设置页 `/console/security/2fa`、管理员 2FA 策略配置页 | §20.2 |
-| Budget 前端页面 | P1 | 预算设置页 `/console/budget`、管理员预算管理页 `/admin/budget` | §20.1 |
-| 多币种结算 | P2 | §29.7 多币种支持，含汇率管理 | §29.7 |
+| platform_ledger 表 | P1 ✅ | 表 `platform_ledger` 已创建，迁移 0005 已执行 | §29.1 |
+| site_configs 扩展 | P1 ✅ | `require_2fa`/`withdraw_second_review_role` 已通过 seed.ts 集成 | §20.2, §29 |
+| 2FA 前端页面 | P1 ✅ | 管理员 2FA 策略页 (`TwoFactorPolicy.tsx`) + 路由 + 侧边栏 | §20.2 |
+| Budget 前端页面 | P1 ✅ | 管理员预算管理页 (`BudgetManagement.tsx`) + 路由 + 侧边栏 | §20.1 |
+| 多币种结算 | P2 ✅ | exchange_rates 表 + 迁移 0006 + API (GET/POST/历史) + 前端汇率管理页 + 供应商结算币种配置 (迁移 0007) | §29.7 |
 | 客服 AI 辅助 | P2 | §28 智能客服辅助（意图识别、知识推荐） | §28 |
 | SSO 集成 | P2 | §32 第三方 SSO 登录 | §32 |
 | SPEC [?] 补充 | P2 | 32 份 SPEC 文档缺少 [`?`] 帮助段落 | PRODUCT-DESIGN-PRINCIPLES.md |
