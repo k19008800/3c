@@ -165,6 +165,7 @@ const adminGroups: AdminGroup[] = [
       { to: '/console/admin/drills', icon: Activity, label: '故障演练', requiredPerms: [Perm.OPS_READ] },
       { to: '/console/admin/webhooks', icon: Bell, label: 'Webhook', requiredPerms: [Perm.CONFIG_VIEW] },
       { to: '/console/admin/settings/sso', icon: ShieldCheck, label: 'SSO 配置', requiredPerms: [Perm.CONFIG_VIEW] },
+      { to: '/console/admin/settings/corp-login', icon: Building2, label: '通讯录登录', requiredPerms: [Perm.CONFIG_VIEW] },
     ],
   },
   {
