@@ -121,6 +121,7 @@ import { adminSettlementRoutes } from "../routes/admin/settlements.js";
 import { adminDrillRoutes } from "../routes/admin/drills.js";
 import { adminWebhookRoutes } from "../routes/admin/webhooks.js";
 import { adminSSORoutes } from "../routes/admin/sso.js";
+import { adminCorpLoginRoutes } from "../routes/admin/corp-login.js";
 import { agentSettlementRoutes } from "../routes/agent/settlements.js";
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
@@ -470,6 +471,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
   // ── SSO 单点登录配置（§32.2）──
   await app.register(adminSSORoutes, { prefix: "" });
+
+  // ── 企业通讯录扫码登录配置（§32.3）──
+  await app.register(adminCorpLoginRoutes, { prefix: "" });
 
   // ── Admin 请求记录（风险分析）──
   const { requestRecordsRoutes } = await import("../routes/admin/request-records/index.js");
