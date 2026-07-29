@@ -48,6 +48,8 @@ export const vendors = pgTable(
     approvedAt: timestamp("approved_at", { withTimezone: true }),
     approvedBy: integer("approved_by").references(() => users.id, { onDelete: "set null" }),
     rejectReason: text("reject_reason"),
+    // 多币种结算（SPEC-§29.7）
+    settlementCurrency: varchar("settlement_currency", { length: 10 }).default("CNY"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

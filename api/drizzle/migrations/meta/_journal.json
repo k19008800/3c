@@ -50,6 +50,13 @@
       "when": 1722240400000,
       "tag": "0006_add_exchange_rates",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1722240500000,
+      "tag": "0007_add_vendor_settlement_currency",
+      "breakpoints": true
     }
   ]
 }
