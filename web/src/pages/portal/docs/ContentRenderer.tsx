@@ -2,6 +2,7 @@ import { memo, useState, useMemo } from 'react'
 import { Loader2, AlertCircle, Cpu, ChevronDown } from 'lucide-react'
 import CodeBlock from '@/components/portal/CodeBlock'
 import type { ModelItem } from './types'
+import { useI18n } from '@/hooks/useI18n'
 
 /* ───── Props ───── */
 
@@ -25,9 +26,10 @@ interface ModelsSectionProps {
 }
 
 const ModelsSection = memo(function ModelsSection({ models, loading, error }: ModelsSectionProps) {
+  const { t } = useI18n()
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-slate-900">支持的模型</h2>
+      <h2 className="text-xl font-bold text-slate-900">{t('docs_content.models_title')}</h2>
       <p className="text-slate-600">
         3Cloud 聚合了多家优质 API 厂商，提供统一的模型接入体验。以下为当前可用的模型列表。
       </p>
@@ -43,7 +45,7 @@ const ModelsSection = memo(function ModelsSection({ models, loading, error }: Mo
         </div>
       ) : models.length === 0 ? (
         <div className="flex justify-center py-12 text-slate-400">
-          暂无可用模型
+          {t('common.no_data')}
         </div>
       ) : (
         <div className="grid gap-3">
@@ -82,9 +84,10 @@ const ModelsSection = memo(function ModelsSection({ models, loading, error }: Mo
 /* ───── 接入方式区块 ───── */
 
 const AccessSection = memo(function AccessSection({ baseUrl }: { baseUrl: string }) {
+  const { t } = useI18n()
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-slate-900">接入方式</h2>
+      <h2 className="text-xl font-bold text-slate-900">{t('docs_content.access_title')}</h2>
 
       <div className="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
         <h3 className="font-semibold text-slate-800">API Base URL</h3>
@@ -132,9 +135,10 @@ interface PricingSectionProps {
 }
 
 const PricingSection = memo(function PricingSection({ models, loading, error }: PricingSectionProps) {
+  const { t } = useI18n()
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-slate-900">定价收费</h2>
+      <h2 className="text-xl font-bold text-slate-900">{t('docs_content.pricing_title')}</h2>
       <p className="text-slate-600">
         以下为各模型的售价，按 Token 计费。输入（Input）和输出（Output）价格分开计算。
       </p>
@@ -199,10 +203,7 @@ const PricingSection = memo(function PricingSection({ models, loading, error }: 
       )}
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-700">
-          <strong>计费说明：</strong> 按实际消耗的 Token 数量计费，精确到小数点后 6 位。
-          充值后自动到账，可随时查看调用日志中的费用明细。
-        </p>
+        <p className="text-sm text-blue-700" dangerouslySetInnerHTML={{ __html: t('pricing_page.billing_note') }} />
       </div>
     </div>
   )
@@ -234,9 +235,10 @@ const GUIDES = [
 ] as const
 
 const UsageSection = memo(function UsageSection() {
+  const { t } = useI18n()
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-slate-900">使用指南</h2>
+      <h2 className="text-xl font-bold text-slate-900">{t('docs_content.usage_title')}</h2>
 
       {GUIDES.map((item) => (
         <div
@@ -258,9 +260,10 @@ interface CodeSectionProps {
 }
 
 const CodeSection = memo(function CodeSection({ baseUrl }: CodeSectionProps) {
+  const { t } = useI18n()
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-slate-900">代码示例</h2>
+      <h2 className="text-xl font-bold text-slate-900">{t('docs_content.codes_title')}</h2>
 
       <div className="bg-white rounded-lg border border-slate-200 p-6 space-y-4">
         <h3 className="font-semibold text-slate-800">Python (使用 OpenAI SDK)</h3>
@@ -339,6 +342,7 @@ interface ErrorCodesSectionProps {
 }
 
 const ErrorCodesSection = memo(function ErrorCodesSection({ errorCodes, loading, error }: ErrorCodesSectionProps) {
+  const { t } = useI18n()
   const [filter, setFilter] = useState('')
   const [levelFilter, setLevelFilter] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -376,13 +380,13 @@ const ErrorCodesSection = memo(function ErrorCodesSection({ errorCodes, loading,
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-slate-900">错误码参考</h2>
+      <h2 className="text-xl font-bold text-slate-900">{t('docs_content.errors_title')}</h2>
 
       {/* Filters */}
       <div className="flex items-center gap-3">
         <input
           type="text"
-          placeholder="搜索错误码或描述..."
+          placeholder={t('docs_content.error_search_placeholder')}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           className="px-3 py-2 border rounded-lg text-sm w-64"
@@ -392,18 +396,18 @@ const ErrorCodesSection = memo(function ErrorCodesSection({ errorCodes, loading,
           onChange={(e) => setLevelFilter(e.target.value)}
           className="px-3 py-2 border rounded-lg text-sm"
         >
-          <option value="">全部级别</option>
-          <option value="error">错误</option>
-          <option value="warning">警告</option>
-          <option value="info">提示</option>
+          <option value="">{t('docs_content.all_levels')}</option>
+          <option value="error">{t('docs_content.severity_error')}</option>
+          <option value="warning">{t('docs_content.severity_warning')}</option>
+          <option value="info">{t('docs_content.severity_info')}</option>
         </select>
-        <span className="text-xs text-slate-400">共 {filtered.length} 条</span>
+        <span className="text-xs text-slate-400">{t('docs_content.total_count', { count: filtered.length })}</span>
       </div>
 
       {/* Error code list */}
       {filtered.length === 0 ? (
         <div className="text-center py-12 text-slate-400">
-          未找到匹配的错误码
+          {t('docs_content.no_error_codes')}
         </div>
       ) : (
         <div className="divide-y divide-slate-200 border border-slate-200 rounded-xl overflow-hidden bg-white">
@@ -419,7 +423,7 @@ const ErrorCodesSection = memo(function ErrorCodesSection({ errorCodes, loading,
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${levelColors[ec.severity] || 'bg-slate-100 text-slate-600'}`}>
-                    {ec.severity === 'error' ? '错误' : ec.severity === 'warning' ? '警告' : '提示'}
+                    {ec.severity === 'error' ? t('docs_content.severity_error') : ec.severity === 'warning' ? t('docs_content.severity_warning') : t('docs_content.severity_info')}
                   </span>
                   <ChevronDown size={14} className={`text-slate-400 transition ${expanded === ec.code ? 'rotate-180' : ''}`} />
                 </div>
@@ -429,11 +433,11 @@ const ErrorCodesSection = memo(function ErrorCodesSection({ errorCodes, loading,
                   <p className="text-sm text-slate-600">{ec.description}</p>
                   {ec.solution && (
                     <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                      <p className="text-xs font-medium text-green-700 mb-1">解决方案</p>
+                      <p className="text-xs font-medium text-green-700 mb-1">{t('docs_content.solution')}</p>
                       <p className="text-sm text-green-600">{ec.solution}</p>
                     </div>
                   )}
-                  <p className="text-[10px] text-slate-400">分类: {ec.category}</p>
+                  <p className="text-[10px] text-slate-400">{t('docs_content.category')}: {ec.category}</p>
                 </div>
               )}
             </div>
@@ -472,7 +476,7 @@ export default memo(function ContentRenderer({
     default:
       return (
         <div className="flex justify-center py-12 text-slate-400">
-          请从左侧目录选择一个文档章节
+          {t('docs_content.select_section')}
         </div>
       )
   }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import axios from 'axios'
 import { Loader2, AlertCircle } from 'lucide-react'
+import { useI18n } from '@/hooks/useI18n'
 
 interface VendorInfo {
   vendorId: number
@@ -18,6 +19,7 @@ interface ModelItem {
 }
 
 export default function PricingTable() {
+  const { t } = useI18n()
   const [models, setModels] = useState<ModelItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -65,7 +67,7 @@ export default function PricingTable() {
   if (flatRows.length === 0) {
     return (
       <div className="text-center py-16 text-slate-400">
-        暂无定价数据
+        {t('common.no_data')}
       </div>
     )
   }
@@ -76,14 +78,14 @@ export default function PricingTable() {
         <table className="w-full">
           <thead>
             <tr className="bg-slate-50 text-left">
-              <th className="px-6 py-4 text-sm font-medium text-slate-500">模型</th>
-              <th className="px-6 py-4 text-sm font-medium text-slate-500">供应商</th>
+              <th className="px-6 py-4 text-sm font-medium text-slate-500">{t('pricing_page.model')}</th>
+              <th className="px-6 py-4 text-sm font-medium text-slate-500">{t('models_page.vendor')}</th>
               <th className="px-6 py-4 text-sm font-medium text-slate-500 text-right">
-                输入价格
+                {t('pricing_page.input_price')}
                 <span className="block text-xs font-normal text-slate-400">/1K tokens</span>
               </th>
               <th className="px-6 py-4 text-sm font-medium text-slate-500 text-right">
-                输出价格
+                {t('pricing_page.output_price')}
                 <span className="block text-xs font-normal text-slate-400">/1K tokens</span>
               </th>
             </tr>

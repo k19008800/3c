@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Cpu, Store, Users, Database } from 'lucide-react'
+import { useI18n } from '@/hooks/useI18n'
 
 export default function StatsBanner() {
+  const { t } = useI18n()
   const [stats, setStats] = useState({
     models: 130,
     vendors: 40,
@@ -28,10 +30,10 @@ export default function StatsBanner() {
   }
 
   const items = [
-    { icon: Cpu, value: `${stats.models}+`, label: 'AI 模型' },
-    { icon: Store, value: `${stats.vendors}+`, label: '供应商' },
-    { icon: Users, value: `${stats.users}+`, label: '注册用户' },
-    { icon: Database, value: fmtTokens(stats.totalTokens), label: '累计 Token' },
+    { icon: Cpu, value: `${stats.models}+`, labelKey: 'stats.models' },
+    { icon: Store, value: `${stats.vendors}+`, labelKey: 'stats.vendors' },
+    { icon: Users, value: `${stats.users}+`, labelKey: 'stats.users' },
+    { icon: Database, value: fmtTokens(stats.totalTokens), labelKey: 'stats.tokens' },
   ]
 
   return (
@@ -39,10 +41,10 @@ export default function StatsBanner() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           {items.map((stat) => (
-            <div key={stat.label} className="text-white">
+            <div key={stat.labelKey} className="text-white">
               <stat.icon size={28} className="mx-auto mb-3 text-blue-200" />
               <div className="text-3xl sm:text-4xl font-extrabold">{stat.value}</div>
-              <div className="text-sm text-blue-200 mt-1">{stat.label}</div>
+              <div className="text-sm text-blue-200 mt-1">{t(stat.labelKey)}</div>
             </div>
           ))}
         </div>

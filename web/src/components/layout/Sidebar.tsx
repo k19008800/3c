@@ -8,6 +8,7 @@ import {
   AlertTriangle, Lock, Bell, Settings2, Mail, ShieldAlert, PieChart, Megaphone,
   Zap, TrendingUp, Gift, Gauge, Newspaper, Activity, RotateCcw, Heart, Globe,
   FlaskConical, Server, User, History, MessageSquare, BookOpen, Undo2, Calendar, Star, RefreshCw,
+  GitCompare, ArrowUpDown, Award,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useImpersonate } from '@/hooks/use-impersonate'
@@ -49,6 +50,8 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { to: '/console/logs', icon: FileText, label: '调用日志' },
       { to: '/console/operation-logs', icon: ScrollText, label: '操作日志' },
       { to: '/console/stats', icon: TrendingUp, label: '用量统计' },
+      { to: '/console/cost-forecast', icon: TrendingUp, label: '成本分析' },
+      { to: '/console/cost-compare', icon: GitCompare, label: '费用对比' },
     ],
   },
   {
@@ -115,6 +118,7 @@ const adminGroups: AdminGroup[] = [
     items: [
       { to: '/console/admin/models', icon: Cpu, label: '模型管理', requiredPerms: [Perm.MODEL_MANAGE] },
       { to: '/console/admin/vendors', icon: Building2, label: '供应商管理', requiredPerms: [Perm.MODEL_MANAGE] },
+      { to: '/console/admin/vendors/ranking', icon: Award, label: '供应商绩效排名', requiredPerms: [Perm.VENDOR_VIEW] },
       { to: '/console/admin/vendor-key-groups', icon: Key, label: 'Key 分组', requiredPerms: [Perm.MODEL_MANAGE] },
       { to: '/console/admin/vendor-models', icon: GitBranch, label: '模型映射', requiredPerms: [Perm.MODEL_MANAGE] },
       { to: '/console/admin/vendor-self', icon: Key, label: '供应商自助', requiredPerms: [Perm.MODEL_MANAGE] },
@@ -133,6 +137,7 @@ const adminGroups: AdminGroup[] = [
       { to: '/console/admin/finance/settlement', icon: DollarSign, label: '结算对账', requiredPerms: [Perm.FINANCE_VIEW] },
       { to: '/console/admin/finance/profit-analysis', icon: PieChart, label: '利润分析', requiredPerms: [Perm.FINANCE_VIEW] },
       { to: '/console/admin/finance/prices', icon: DollarSign, label: '价格管理', requiredPerms: [Perm.FINANCE_VIEW] },
+      { to: '/console/admin/prices/history', icon: ArrowUpDown, label: '价格变更历史', requiredPerms: [Perm.PRICE_MANAGE] },
       { to: '/console/admin/finance/invoices', icon: FileText, label: '发票审核', requiredPerms: [Perm.FINANCE_VIEW] },
       { to: '/console/admin/finance/refunds', icon: RotateCcw, label: '退款审核', requiredPerms: [Perm.FINANCE_VIEW] },
       { to: '/console/admin/withdraws', icon: Wallet, label: '提现管理', requiredPerms: [Perm.FINANCE_WITHDRAW] },

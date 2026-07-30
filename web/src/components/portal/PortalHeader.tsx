@@ -2,16 +2,20 @@ import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Menu, X, ChevronRight } from 'lucide-react'
 import { useSiteConfig } from '@/hooks/use-site-config'
+import { useI18n } from '@/hooks/useI18n'
+import LocaleSwitcher from '@/components/portal/LocaleSwitcher'
 
-const NAV_LINKS = [
-  { href: '/', label: '首页' },
-  { href: '/models', label: '模型' },
-  { href: '/pricing', label: '定价' },
-  { href: '/status', label: '状态' },
-  { href: '/docs', label: '文档' },
+const NAV_ITEMS = [
+  { href: '/', labelKey: 'nav.home' },
+  { href: '/models', labelKey: 'nav.models' },
+  { href: '/pricing', labelKey: 'nav.pricing' },
+  { href: '/status', labelKey: 'nav.status' },
+  { href: '/docs', labelKey: 'nav.docs' },
 ]
 
 export default function PortalHeader() {
+  const { t, isZh } = useI18n()
+  const NAV_LINKS = NAV_ITEMS.map(item => ({ href: item.href, label: t(item.labelKey) }))
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
@@ -95,17 +99,18 @@ export default function PortalHeader() {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-2">
+            <LocaleSwitcher />
             <Link
               to="/login"
               className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
             >
-              登录
+              {t('nav.login')}
             </Link>
             <Link
               to="/register"
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
             >
-              免费注册
+              {t('nav.register')}
             </Link>
           </div>
 
@@ -149,13 +154,13 @@ export default function PortalHeader() {
               to="/login"
               className="flex-1 text-center px-4 py-2 text-sm font-medium text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
             >
-              登录
+              {t('nav.login')}
             </Link>
             <Link
               to="/register"
               className="flex-1 text-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
             >
-              免费注册
+              {t('nav.register')}
             </Link>
           </div>
         </div>

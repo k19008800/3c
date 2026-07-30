@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { Loader2, AlertCircle, CheckCircle2, XCircle, RefreshCw, Bell, Server, Database, Activity } from 'lucide-react'
+import { useI18n } from '@/hooks/useI18n'
 
 interface ServiceItem {
   name: string
@@ -28,13 +29,14 @@ interface SystemStatusData {
   }
 }
 
-const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  operational: { label: '正常运行', color: 'text-green-600 bg-green-50 border-green-200', icon: CheckCircle2 },
+const statusConfig = (t: any): Record<string, { label: string; color: string; icon: any }> => ({
+  operational: { label: t('status_page.all_operational'), color: 'text-green-600 bg-green-50 border-green-200', icon: CheckCircle2 },
   degraded: { label: '部分异常', color: 'text-amber-600 bg-amber-50 border-amber-200', icon: AlertCircle },
   major_outage: { label: '服务中断', color: 'text-red-600 bg-red-50 border-red-200', icon: XCircle },
-}
+})
 
 export default function PortalStatus() {
+  const { t, isZh } = useI18n()
   const [data, setData] = useState<SystemStatusData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -79,8 +81,9 @@ export default function PortalStatus() {
     )
   }
 
+  const cfg = statusConfig(t)
   const overallStatus = data?.status || 'operational'
-  const overallCfg = statusConfig[overallStatus]
+  const overallCfg = cfg[overallStatus]
   const OverallIcon = overallCfg?.icon || CheckCircle2
 
   return (
@@ -88,9 +91,9 @@ export default function PortalStatus() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900">系统状态</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900">{t('status_page.title')}</h1>
           <p className="mt-4 text-lg text-slate-500">
-            实时查看 3Cloud 各服务运行状态
+            {t('status_page.vendor_status')}
           </p>
         </div>
 
@@ -102,7 +105,7 @@ export default function PortalStatus() {
               <div>
                 <h2 className="text-xl font-semibold">{overallCfg?.label || '正常'}</h2>
                 <p className="text-sm opacity-80">
-                  最后更新: {data?.updatedAt ? new Date(data.updatedAt).toLocaleString('zh-CN') : '—'}
+                  {isZh ? '最后更新' : 'Last updated'}: {data?.updatedAt ? new Date(data.updatedAt).toLocaleString(isZh ? 'zh-CN' : 'en-US') : '—'}
                 </p>
               </div>
             </div>
@@ -111,7 +114,7 @@ export default function PortalStatus() {
               className="flex items-center gap-1.5 px-3 py-2 border border-current rounded-lg text-sm hover:opacity-80"
             >
               <RefreshCw size={14} />
-              刷新
+              {t('common.retry')}
             </button>
           </div>
         </div>
@@ -122,17 +125,17 @@ export default function PortalStatus() {
             <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
               <Server size={20} className="mx-auto text-blue-500 mb-1" />
               <div className="text-2xl font-bold text-slate-800">{data.stats.totalModels}</div>
-              <div className="text-xs text-slate-400">已接入模型</div>
+              <div className="text-xs text-slate-400">{t('stats.models')}</div>
             </div>
             <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
               <Database size={20} className="mx-auto text-purple-500 mb-1" />
               <div className="text-2xl font-bold text-slate-800">{data.stats.totalVendors}</div>
-              <div className="text-xs text-slate-400">供应商</div>
+              <div className="text-xs text-slate-400">{t('stats.vendors')}</div>
             </div>
             <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
               <Activity size={20} className="mx-auto text-green-500 mb-1" />
               <div className="text-2xl font-bold text-slate-800">{data.stats.totalUsers}</div>
-              <div className="text-xs text-slate-400">注册用户</div>
+              <div className="text-xs text-slate-400">{t('stats.users')}</div>
             </div>
           </div>
         )}
@@ -141,24 +144,24 @@ export default function PortalStatus() {
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
             <h2 className="font-semibold text-slate-700 flex items-center gap-2">
-              <Server size={16} /> 服务状态
+              <Server size={16} /> {t('status_page.vendor_status')}
             </h2>
           </div>
           <div className="divide-y divide-slate-100">
             {(data?.services || []).map((svc, i) => {
-              const cfg = statusConfig[svc.status] || statusConfig.operational
-              const SvgIcon = cfg.icon
+              const sCfg = cfg[svc.status] || cfg.operational
+              const SvgIcon = sCfg.icon
               return (
                 <div key={i} className="px-4 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    {SvgIcon && <SvgIcon size={16} className={cfg.color.split(' ')[0]} />}
+                    {SvgIcon && <SvgIcon size={16} className={sCfg.color.split(' ')[0]} />}
                     <div>
                       <span className="text-sm font-medium text-slate-700">{svc.name}</span>
                       <span className="text-xs text-slate-400 ml-2">{svc.description}</span>
                     </div>
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full border ${cfg.color}`}>
-                    {cfg.label}
+                  <span className={`text-xs px-2 py-1 rounded-full border ${sCfg.color}`}>
+                    {sCfg.label}
                   </span>
                 </div>
               )
@@ -171,7 +174,7 @@ export default function PortalStatus() {
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
               <h2 className="font-semibold text-slate-700 flex items-center gap-2">
-                <Bell size={16} /> 最新公告
+                <Bell size={16} /> {isZh ? '最新公告' : 'Latest Announcements'}
               </h2>
             </div>
             <div className="divide-y divide-slate-100">
@@ -185,14 +188,18 @@ export default function PortalStatus() {
                           ? 'bg-red-100 text-red-700'
                           : 'bg-blue-100 text-blue-700'
                     }`}>
-                      {ann.type === 'maintenance' ? '维护' : ann.type === 'incident' ? '故障' : '公告'}
+                      {ann.type === 'maintenance'
+                        ? t('status_page.tag_maintenance')
+                        : ann.type === 'incident'
+                          ? t('status_page.tag_incident')
+                          : t('status_page.tag_notice')}
                     </span>
                     <span className="text-sm font-medium text-slate-800">{ann.title}</span>
                   </div>
                   {ann.content && (
                     <p className="text-sm text-slate-600 ml-1">{ann.content}</p>
                   )}
-                  <p className="text-[10px] text-slate-400 mt-1">{new Date(ann.createdAt).toLocaleString('zh-CN')}</p>
+                  <p className="text-[10px] text-slate-400 mt-1">{new Date(ann.createdAt).toLocaleString(isZh ? 'zh-CN' : 'en-US')}</p>
                 </div>
               ))}
             </div>

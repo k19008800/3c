@@ -1,17 +1,18 @@
 import { useEffect, useState, useMemo } from 'react'
 import axios from 'axios'
 import { Loader2, AlertCircle, Search, MessageSquare, Hash, Image, Headphones, ArrowLeftRight, Video, Shield, Clock } from 'lucide-react'
+import { useI18n } from '@/hooks/useI18n'
 
-const TYPE_OPTIONS = [
-  { value: '', label: '全部', icon: null },
-  { value: 'chat', label: '对话', icon: MessageSquare },
-  { value: 'embedding', label: '嵌入', icon: Hash },
-  { value: 'image', label: '图像', icon: Image },
-  { value: 'audio', label: '音频', icon: Headphones },
-  { value: 'rerank', label: '重排序', icon: ArrowLeftRight },
-  { value: 'video', label: '视频', icon: Video },
-  { value: 'moderation', label: '审核', icon: Shield },
-  { value: 'realtime', label: '实时', icon: Clock },
+const TYPE_OPTIONS = (t: any) => [
+  { value: '', label: t('common.all'), icon: null },
+  { value: 'chat', label: t('models_page.type_chat'), icon: MessageSquare },
+  { value: 'embedding', label: t('models_page.type_embedding'), icon: Hash },
+  { value: 'image', label: t('models_page.type_image'), icon: Image },
+  { value: 'audio', label: t('models_page.type_audio'), icon: Headphones },
+  { value: 'rerank', label: t('models_page.type_rerank'), icon: ArrowLeftRight },
+  { value: 'video', label: t('models_page.type_video'), icon: Video },
+  { value: 'moderation', label: t('models_page.type_moderation'), icon: Shield },
+  { value: 'realtime', label: t('models_page.type_realtime'), icon: Clock },
 ] as const
 
 interface VendorInfo {
@@ -31,11 +32,13 @@ interface ModelCatalogItem {
 }
 
 export default function ModelCatalog() {
+  const { t } = useI18n()
   const [models, setModels] = useState<ModelCatalogItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const typeOptions = TYPE_OPTIONS(t)
 
   useEffect(() => {
     axios
@@ -50,11 +53,11 @@ export default function ModelCatalog() {
 
   const typeCounts = useMemo(() => {
     const counts: Record<string, number> = { '': models.length }
-    for (const t of TYPE_OPTIONS) {
-      if (t.value) counts[t.value] = models.filter((m) => m.type === t.value).length
+    for (const opt of typeOptions) {
+      if (opt.value) counts[opt.value] = models.filter((m) => m.type === opt.value).length
     }
     return counts
-  }, [models])
+  }, [models, typeOptions])
 
   const filteredModels = useMemo(
     () =>
@@ -70,7 +73,7 @@ export default function ModelCatalog() {
   )
 
   const getTypeInfo = (type: string) =>
-    TYPE_OPTIONS.find((t) => t.value === type)
+    typeOptions.find((opt) => opt.value === type)
 
   if (loading) {
     return (
@@ -98,7 +101,7 @@ export default function ModelCatalog() {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="搜索模型名称..."
+          placeholder={t('models_page.search_placeholder')}
           className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         />
       </div>
@@ -106,14 +109,14 @@ export default function ModelCatalog() {
       {/* Type Tabs */}
       <div className="flex justify-center">
         <div className="inline-flex flex-wrap gap-1 bg-slate-100 rounded-xl p-1">
-          {TYPE_OPTIONS.map((t) => {
-            const Icon = t.icon
-            const isActive = activeTab === t.value
-            const count = typeCounts[t.value] || 0
+          {typeOptions.map((opt) => {
+            const Icon = opt.icon
+            const isActive = activeTab === opt.value
+            const count = typeCounts[opt.value] || 0
             return (
               <button
-                key={t.value}
-                onClick={() => setActiveTab(t.value)}
+                key={opt.value}
+                onClick={() => setActiveTab(opt.value)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${
                   isActive
                     ? 'bg-white text-blue-600 shadow-sm'
@@ -121,7 +124,7 @@ export default function ModelCatalog() {
                 }`}
               >
                 {Icon && <Icon size={14} />}
-                {t.label}
+                {opt.label}
                 <span className={`text-xs ${isActive ? 'text-blue-400' : 'text-slate-400'}`}>
                   {count}
                 </span>
@@ -174,7 +177,7 @@ export default function ModelCatalog() {
 
       {filteredModels.length === 0 && (
         <div className="text-center py-16 text-slate-400">
-          {searchQuery ? '未找到匹配的模型' : '暂无模型数据'}
+          {searchQuery ? t('models_page.no_results') : t('common.no_data')}
         </div>
       )}
     </div>

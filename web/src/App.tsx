@@ -62,6 +62,8 @@ const AdminAuditLogs = lazy(() => import('@/pages/admin/AuditLogs'))
 const AdminOperationLogs = lazy(() => import('@/pages/admin/OperationLogs'))
 const AdminAgentClients = lazy(() => import('@/pages/admin/AgentClients'))
 const AdminUndoLogs = lazy(() => import('@/pages/admin/AdminUndoLogs'))
+const AdminPriceChangeHistory = lazy(() => import('@/pages/admin/AdminPriceChangeHistory'))
+const AdminVendorRanking = lazy(() => import('@/pages/admin/AdminVendorRanking'))
 const AdminWebhookLogs = lazy(() => import('@/pages/admin/AdminWebhookLogs'))
 const AdminStaffSchedule = lazy(() => import('@/pages/admin/AdminStaffSchedule'))
 const AdminQualityChecks = lazy(() => import('@/pages/admin/AdminQualityChecks'))
@@ -73,6 +75,8 @@ const AdminAgentCostDetail = lazy(() => import('@/pages/admin/finance/AgentCostD
 const AdminAdminCostDetail = lazy(() => import('@/pages/admin/finance/AdminCostDetail'))
 const AdminAgentSettlement = lazy(() => import('@/pages/admin/finance/AgentSettlement'))
 const AdminWithdraws = lazy(() => import('@/pages/admin/Withdraws'))
+const CostForecastPage = lazy(() => import('@/pages/CostForecastPage'))
+const CostComparePage = lazy(() => import('@/pages/CostComparePage'))
 const AdminSecurityDashboard = lazy(() => import('@/pages/admin/SecurityDashboard'))
 const AdminSecurityConfig = lazy(() => import('@/pages/admin/SecurityConfig'))
 const AdminSecurityEvents = lazy(() => import('@/pages/admin/SecurityEvents'))
@@ -219,6 +223,8 @@ export default function App() {
             <Route path="real-name" element={withSuspense(<RealName />)} />
             <Route path="redemption" element={withSuspense(<Redemption />)} />
             <Route path="docs" element={withSuspense(<Docs />)} />
+            <Route path="cost-forecast" element={withSuspense(<CostForecastPage />)} />
+            <Route path="cost-compare" element={withSuspense(<CostComparePage />)} />
 
             {/* Admin routes — guarded by AdminRoute */}
             <Route element={<AdminRoute />}>
@@ -238,6 +244,8 @@ export default function App() {
               <Route path="admin/audit-logs" element={withSuspense(<AdminAuditLogs />)} />
               <Route path="admin/operation-logs" element={withSuspense(<AdminOperationLogs />)} />
               <Route path="admin/system-health" element={withSuspense(<AdminSystemHealthPanel />)} />
+              <Route path="admin/prices/history" element={withSuspense(<AdminPriceChangeHistory />)} />
+              <Route path="admin/vendors/ranking" element={withSuspense(<AdminVendorRanking />)} />
               <Route path="admin/system/undo-logs" element={withSuspense(<AdminUndoLogs />)} />
               <Route path="admin/agents/:agentId/clients" element={withSuspense(<AdminAgentClients />)} />
               <Route path="admin/finance/dashboard" element={withSuspense(<AdminFinanceDashboard />)} />

@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { Search, X } from 'lucide-react'
+import { useI18n } from '@/hooks/useI18n'
 
 interface SearchBarProps {
   value: string
@@ -7,6 +8,7 @@ interface SearchBarProps {
 }
 
 export default function SearchBar({ value, onChange }: SearchBarProps) {
+  const { t } = useI18n()
   const [focused, setFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -46,15 +48,15 @@ export default function SearchBar({ value, onChange }: SearchBarProps) {
         onKeyDown={handleKeyDown}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        placeholder="搜索文档..."
+        placeholder={t('docs_page.search_placeholder')}
         className="w-full pl-9 pr-8 py-2 text-sm bg-transparent text-slate-800 placeholder-slate-400 outline-none"
-        aria-label="搜索文档"
+        aria-label={t('docs_page.search_placeholder')}
       />
       {value && (
         <button
           onClick={handleClear}
           className="absolute right-2 text-slate-400 hover:text-slate-600 transition-colors p-0.5"
-          aria-label="清除搜索"
+          aria-label={t('common.close')}
         >
           <X size={14} />
         </button>

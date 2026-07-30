@@ -5,8 +5,10 @@ import { sections, type DocSection } from './docs/types'
 import Sidebar from './docs/Sidebar'
 import SearchBar from './docs/SearchBar'
 import ContentRenderer from './docs/ContentRenderer'
+import { useI18n } from '@/hooks/useI18n'
 
 export default function PortalDocs() {
+  const { t } = useI18n()
   const [models, setModels] = useState<ModelItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -79,9 +81,9 @@ export default function PortalDocs() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* 页面标题 */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900">API 文档</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900">{t('docs_page.title')}</h1>
           <p className="mt-4 text-lg text-slate-500 max-w-2xl mx-auto">
-            快速了解如何接入 3Cloud API，查看可用模型和代码示例
+            {t('docs_page.description')}
           </p>
         </div>
 

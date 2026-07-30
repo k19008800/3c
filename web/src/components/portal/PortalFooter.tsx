@@ -1,62 +1,34 @@
 import { Link } from 'react-router-dom'
 import { useSiteConfig } from '@/hooks/use-site-config'
+import { useI18n } from '@/hooks/useI18n'
 import { ExternalLink } from 'lucide-react'
-
-const FOOTER_LINKS = [
-  {
-    title: '产品',
-    links: [
-      { label: '模型目录', href: '/models' },
-      { label: '定价', href: '/pricing' },
-      { label: 'API 文档', href: '/docs' },
-    ],
-  },
-  {
-    title: '资源',
-    links: [
-      { label: 'API 文档', href: '/docs' },
-      { label: '使用指南', href: '/docs' },
-      { label: '代码示例', href: '/docs' },
-    ],
-  },
-  {
-    title: '公司',
-    links: [
-      { label: '关于我们', href: '#' },
-      { label: '联系我们', href: '#' },
-    ],
-  },
-  {
-    title: '支持',
-    links: [
-      { label: '常见问题', href: '/pricing' },
-      { label: '邮件支持', href: '#' },
-    ],
-  },
-]
 
 const YEAR = new Date().getFullYear()
 
-function buildCompanyLinks(config: Record<string, string> | null) {
+function buildCompanyLinks(config: Record<string, string> | null, t: any) {
   const email = config?.site_contact_email
   const phone = config?.site_contact_phone
-  const links = [...FOOTER_LINKS[2].links] // copy "公司" links
-  // "联系我们" 用邮箱
+  const links = [
+    { label: t('footer.about_us'), href: '#' },
+    { label: t('footer.contact_us'), href: '#' },
+  ]
   if (email) {
-    links[1] = { label: '联系我们', href: `mailto:${email}` }
+    links[1] = { label: t('footer.contact_us'), href: `mailto:${email}` }
   }
-  // 如果只有电话没有邮箱，展示电话
   if (!email && phone) {
-    links[1] = { label: '联系电话', href: `tel:${phone}` }
+    links[1] = { label: t('footer.contact_phone'), href: `tel:${phone}` }
   }
   return links
 }
 
-function buildSupportLinks(config: Record<string, string> | null) {
+function buildSupportLinks(config: Record<string, string> | null, t: any) {
   const email = config?.site_contact_email
-  const links = [...FOOTER_LINKS[3].links] // copy "支持" links
+  const links = [
+    { label: t('footer.faq'), href: '/pricing' },
+    { label: t('footer.email_support'), href: '#' },
+  ]
   if (email) {
-    links[1] = { label: '邮件支持', href: `mailto:${email}` }
+    links[1] = { label: t('footer.email_support'), href: `mailto:${email}` }
   }
   return links
 }
@@ -87,10 +59,45 @@ function buildCopyright(config: Record<string, string> | null): CopyrightParts {
 }
 
 export default function PortalFooter() {
+  const { t } = useI18n()
   const { config } = useSiteConfig()
   const copyright = buildCopyright(config)
-  const companyLinks = buildCompanyLinks(config)
-  const supportLinks = buildSupportLinks(config)
+
+  const FOOTER_LINKS = [
+    {
+      title: t('footer.products'),
+      links: [
+        { label: t('nav.models'), href: '/models' },
+        { label: t('nav.pricing'), href: '/pricing' },
+        { label: t('nav.docs'), href: '/docs' },
+      ],
+    },
+    {
+      title: t('footer.resources'),
+      links: [
+        { label: t('nav.docs'), href: '/docs' },
+        { label: t('footer.guide'), href: '/docs' },
+        { label: t('footer.code_samples'), href: '/docs' },
+      ],
+    },
+    {
+      title: t('footer.company'),
+      links: [
+        { label: t('footer.about_us'), href: '#' },
+        { label: t('footer.contact_us'), href: '#' },
+      ],
+    },
+    {
+      title: t('footer.support'),
+      links: [
+        { label: t('footer.faq'), href: '/pricing' },
+        { label: t('footer.email_support'), href: '#' },
+      ],
+    },
+  ]
+
+  const companyLinks = buildCompanyLinks(config, t)
+  const supportLinks = buildSupportLinks(config, t)
 
   const pageLinkGroups = [
     { ...FOOTER_LINKS[0] }, // 产品
@@ -135,7 +142,7 @@ export default function PortalFooter() {
         {config?.site_wechat_qr_url && (
           <div className="mt-8 flex justify-center">
             <div className="text-center">
-              <p className="text-xs text-slate-500 mb-2">关注公众号</p>
+              <p className="text-xs text-slate-500 mb-2">{t('footer.follow_wechat')}</p>
               <img
                 src={config.site_wechat_qr_url}
                 alt="公众号二维码"
@@ -153,7 +160,7 @@ export default function PortalFooter() {
               <span className="text-white font-bold text-[10px]">3C</span>
             </div>
             <span className="text-sm text-slate-400">
-              {config?.site_name || '3Cloud'} — AI Token 聚合平台
+              {config?.site_name || '3Cloud'} — {t('footer.brand_suffix')}
             </span>
           </div>
 

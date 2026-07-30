@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react'
 import { Copy, CheckCircle2 } from 'lucide-react'
+import { useI18n } from '@/hooks/useI18n'
 
 interface CodeBlockProps {
   code: string
@@ -11,6 +12,7 @@ interface CodeBlockProps {
 }
 
 function CodeBlock({ code, language, maskApiKey, label }: CodeBlockProps) {
+  const { t } = useI18n()
   const [copied, setCopied] = useState(false)
 
   const displayCode = maskApiKey
@@ -53,12 +55,12 @@ function CodeBlock({ code, language, maskApiKey, label }: CodeBlockProps) {
           {copied ? (
             <>
               <CheckCircle2 size={14} className="text-green-400" />
-              已复制
+              {t('common.copied')}
             </>
           ) : (
             <>
               <Copy size={14} />
-              复制
+              {t('common.copy')}
             </>
           )}
         </button>

@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { ChevronRight } from 'lucide-react'
 import type { DocSection } from './types'
+import { useI18n } from '@/hooks/useI18n'
 
 interface SidebarProps {
   sections: DocSection[]
@@ -12,6 +13,7 @@ interface SidebarProps {
 
 /** 桌面端侧边栏导航 */
 function DesktopSidebar({ sections, activeSection, onSectionChange }: SidebarProps) {
+  const { t } = useI18n()
   if (sections.length === 0) {
     return (
       <div className="hidden lg:block w-56 shrink-0">
@@ -19,7 +21,7 @@ function DesktopSidebar({ sections, activeSection, onSectionChange }: SidebarPro
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
             文档目录
           </h3>
-          <p className="text-xs text-slate-400 px-3 py-2">无匹配结果</p>
+          <p className="text-xs text-slate-400 px-3 py-2">{t('common.no_data')}</p>
         </div>
       </div>
     )
@@ -29,7 +31,7 @@ function DesktopSidebar({ sections, activeSection, onSectionChange }: SidebarPro
     <div className="hidden lg:block w-56 shrink-0">
       <div className="sticky top-24 space-y-1">
         <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-          文档目录
+          {t('common.nav')}
         </h3>
         {sections.map((sec) => {
           const Icon = sec.icon
