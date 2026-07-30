@@ -1,4 +1,4 @@
-﻿
+
 ### 4.1 鎬昏鐪嬫澘 `/admin`
 
 > 馃搸 **娣卞寲鍙傝€?*锛歔`docs/ref-4.1-admin-dashboard.md`](ref-4.1-admin-dashboard.md) 鈥?鍚湅鏉垮竷灞€瀹氫箟銆並PI 鍗＄墖缁勪欢 Props銆佸緟鍔為槦鍒楁暟鎹簮銆佸紓甯告寚鏍囬珮浜粍浠躲€佽繎 7 澶╄秼鍔?

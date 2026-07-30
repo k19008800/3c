@@ -10,6 +10,7 @@ import { agentCommissionRoutes } from "./commissions.js";
 import { agentWithdrawRoutes } from "./withdraw.js";
 import { agentQuotaRoutes } from "./quotas.js";
 import { agentSelfServiceRoutes } from "./self-service.js";
+import { agentReferralRoutes } from "./referral.js";
 
 export async function agentRoutes(app: FastifyInstance) {
   // 子路由注册：每个子模块负责自身路由前缀
@@ -19,4 +20,5 @@ export async function agentRoutes(app: FastifyInstance) {
   await app.register(agentWithdrawRoutes, { prefix: "" });
   await app.register(agentQuotaRoutes, { prefix: "" });
   await app.register(agentSelfServiceRoutes, { prefix: "" });
+  await app.register(agentReferralRoutes, { prefix: "" });
 }

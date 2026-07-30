@@ -12,6 +12,7 @@ interface AuthState {
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string, captcha?: string, captchaSession?: string) => Promise<void>
+  loginWithToken: (accessToken: string, refreshToken: string, expiresIn: number) => Promise<void>
   verify2FA: (userId: number, token: string) => Promise<void>
   register: (email: string, password: string, confirmPassword: string) => Promise<void>
   logout: () => void
@@ -103,6 +104,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     navigate('/console')
   }, [navigate])
 
+  // 直接使用 token 登录（第三方 OAuth 回调用）
+  const loginWithToken = useCallback(async (accessToken: string, refreshToken: string, expiresIn: number) => {
+    localStorage.setItem('accessToken', accessToken)
+    localStorage.setItem('refreshToken', refreshToken)
+    // 获取用户信息
+    try {
+      const res = await api.get('/api/v1/auth/me')
+      if (res.data) {
+        localStorage.setItem('user', JSON.stringify(res.data))
+        setState({ user: res.data, isAuthenticated: true, isLoading: false })
+      } else {
+        setState({ user: null, isAuthenticated: true, isLoading: false })
+      }
+    } catch {
+      setState({ user: null, isAuthenticated: true, isLoading: false })
+    }
+  }, [])
+
   // 2FA 验证
   const verify2FA = useCallback(async (userId: number, token: string) => {
     const res = await axios.post('/api/v1/auth/2fa/verify', { userId, token })
@@ -138,7 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ ...state, login, verify2FA, register, logout, getAccessToken }}>
+    <AuthContext.Provider value={{ ...state, login, loginWithToken, verify2FA, register, logout, getAccessToken }}>
       {children}
     </AuthContext.Provider>
   )

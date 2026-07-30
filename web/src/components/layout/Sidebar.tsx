@@ -4,10 +4,10 @@ import {
   LayoutDashboard, Cpu, Key, FileText, Wallet,
   Users, Settings, ClipboardList, ShieldCheck, FileSearch,
   ChevronLeft, ChevronRight, LogOut, Menu, X, ChevronDown,
-  Building2, GitBranch, Handshake, ScrollText, BarChart3, DollarSign,
+  Building2, GitBranch, Handshake, ScrollText, BarChart3, DollarSign, MessageCircle,
   AlertTriangle, Lock, Bell, Settings2, Mail, ShieldAlert, PieChart, Megaphone,
   Zap, TrendingUp, Gift, Gauge, Newspaper, Activity, RotateCcw, Heart, Globe,
-  FlaskConical, Server, User,
+  FlaskConical, Server, User, History, MessageSquare, BookOpen, Undo2, Calendar, Star, RefreshCw,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useImpersonate } from '@/hooks/use-impersonate'
@@ -74,6 +74,13 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     items: [
       { to: '/console/announcements', icon: Newspaper, label: '全站公告' },
       { to: '/console/notifications', icon: Bell, label: '通知中心' },
+    ],
+  },
+  {
+    label: '帮助',
+    items: [
+      { to: '/console/tickets', icon: ClipboardList, label: '工单' },
+      { to: '/console/knowledge', icon: BookOpen, label: '知识库' },
     ],
   },
 ]
@@ -165,8 +172,23 @@ const adminGroups: AdminGroup[] = [
       { to: '/console/admin/finance/cost-analysis', icon: TrendingUp, label: '成本分析', requiredPerms: [Perm.FINANCE_VIEW] },
       { to: '/console/admin/drills', icon: Activity, label: '故障演练', requiredPerms: [Perm.OPS_READ] },
       { to: '/console/admin/webhooks', icon: Bell, label: 'Webhook', requiredPerms: [Perm.CONFIG_VIEW] },
+      { to: '/console/admin/webhook-logs', icon: RefreshCw, label: 'Webhook 日志', requiredPerms: [Perm.CONFIG_VIEW] },
       { to: '/console/admin/settings/sso', icon: ShieldCheck, label: 'SSO 配置', requiredPerms: [Perm.CONFIG_VIEW] },
       { to: '/console/admin/settings/corp-login', icon: Building2, label: '通讯录登录', requiredPerms: [Perm.CONFIG_VIEW] },
+      { to: '/console/admin/settings/wechat-login', icon: MessageCircle, label: '微信登录', requiredPerms: [Perm.CONFIG_VIEW] },
+      { to: '/console/admin/system/undo-logs', icon: Undo2, label: '撤销操作', requiredPerms: [Perm.CONFIG_VIEW] },
+    ],
+  },
+  {
+    label: '🎧 客服支持',
+    items: [
+      { to: '/console/admin/chat', icon: MessageSquare, label: '客服工作台', requiredPerms: [Perm.SUPPORT_MANAGE] },
+      { to: '/console/admin/tickets', icon: ClipboardList, label: '工单管理', requiredPerms: [Perm.SUPPORT_MANAGE] },
+      { to: '/console/admin/chat/stats', icon: BarChart3, label: '绩效统计', requiredPerms: [Perm.SUPPORT_MANAGE] },
+      { to: '/console/admin/chat/audit', icon: History, label: '操作审计', requiredPerms: [Perm.SUPPORT_MANAGE] },
+      { to: '/console/admin/knowledge', icon: BookOpen, label: '知识库管理', requiredPerms: [Perm.SUPPORT_MANAGE] },
+      { to: '/console/admin/support/schedule', icon: Calendar, label: '排班管理', requiredPerms: [Perm.SUPPORT_MANAGE] },
+      { to: '/console/admin/support/quality', icon: Star, label: '质检管理', requiredPerms: [Perm.SUPPORT_MANAGE] },
     ],
   },
   {
@@ -193,6 +215,7 @@ const agentItems: NavItem[] = [
   { to: '/console/agent/withdraw', icon: Wallet, label: '提现' },
   { to: '/console/agent/finance', icon: DollarSign, label: '财务管理' },
   { to: '/console/agent/redemption', icon: Gift, label: '兑换码管理' },
+  { to: '/console/agent/referral', icon: Users, label: '邀请裂变' },
   { to: '/console/agent/reconciliation', icon: BarChart3, label: '财务对账' },
   { to: '/console/agent/profile', icon: User, label: '代理信息' },
   { to: '/console/agent/notifications', icon: Bell, label: '消息通知' },

@@ -122,9 +122,19 @@ import { adminDrillRoutes } from "../routes/admin/drills.js";
 import { adminWebhookRoutes } from "../routes/admin/webhooks.js";
 import { adminSSORoutes } from "../routes/admin/sso.js";
 import { adminCorpLoginRoutes } from "../routes/admin/corp-login.js";
+import { adminWechatLoginRoutes } from "../routes/admin/wechat-login.js";
 import { adminSupportAssistRoutes } from "../routes/admin/support-assist.js";
+import { adminSupportEnhanceRoutes } from "../routes/admin/support-enhance.js";
+import { adminQuickReplyRoutes } from "../routes/admin/templates/index.js";
 import { adminCostAnalysisRoutes } from "../routes/admin/cost-analysis.js";
 import { agentSettlementRoutes } from "../routes/agent/settlements.js";
+import { adminFinanceRatesRoutes } from "../routes/admin/finance/rates.js";
+import { ticketUserRoutes } from "../routes/tickets/index.js";
+import { adminTicketRoutes } from "../routes/admin/tickets/index.js";
+import { chatUserRoutes } from "../routes/chat/index.js";
+import { adminChatRoutes } from "../routes/admin/chat/index.js";
+import { adminKnowledgeRoutes } from "../routes/admin/knowledge/index.js";
+import { knowledgePublicRoutes } from "../routes/knowledge/index.js";
 
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // ── Auth 路由 ──
@@ -412,9 +422,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   await app.register(configImportExportRoutes, { prefix: "" });
   
   // ── 增强版配置版本控制 ──
-  // TODO: 修复 configSnapshots/configChangeRequests schema
+  // TODO: configSnapshots/configChangeRequests schema 未就绪
   // await app.register(configVersionsRoutes, { prefix: "" });
-  // await app.register(enhancedSystemRoutes, { prefix: "" });
+  await app.register(enhancedSystemRoutes, { prefix: "" });
 
   // ── 富文本图片上传 ──
   await app.register(uploadRoutes, { prefix: "" });
@@ -465,6 +475,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // ── 代理结算对账（代理端）──
   await app.register(agentSettlementRoutes, { prefix: "" });
 
+  // ── 多币种汇率管理 ──
+  await app.register(adminFinanceRatesRoutes, { prefix: "" });
+
   // ── 供应商故障演练（§31.1）──
   await app.register(adminDrillRoutes, { prefix: "" });
 
@@ -477,8 +490,27 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // ── 企业通讯录扫码登录配置（§32.3）──
   await app.register(adminCorpLoginRoutes, { prefix: "" });
 
+  // ── 微信扫码登录配置（新增）──
+  await app.register(adminWechatLoginRoutes, { prefix: "" });
+
   // ── 客服AI辅助支持（§28）──
   await app.register(adminSupportAssistRoutes, { prefix: "" });
+  await app.register(adminSupportEnhanceRoutes, { prefix: "" });
+  await app.register(adminQuickReplyRoutes, { prefix: "" });
+
+  // ── 用户端工单系统（§26）──
+  await app.register(ticketUserRoutes, { prefix: "" });
+
+  // ── 管理端工单系统（§26）──
+  await app.register(adminTicketRoutes, { prefix: "" });
+
+  // ── 用户端在线聊天（§27）──
+  await app.register(chatUserRoutes, { prefix: "" });
+
+  // ── 管理端在线聊天（§27）──
+  await app.register(adminChatRoutes, { prefix: "" });
+  await app.register(adminKnowledgeRoutes, { prefix: "" });
+  await app.register(knowledgePublicRoutes, { prefix: "" });
 
   // ── 成本分析（§33）──
   await app.register(adminCostAnalysisRoutes, { prefix: "" });

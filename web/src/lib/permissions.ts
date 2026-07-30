@@ -32,6 +32,7 @@ export const Perm = {
   LOG_VIEW:             1n << 24n,
   OPS_READ:             1n << 25n,
   RECONCILIATION_VIEW:  1n << 26n,
+  SUPPORT_MANAGE:       1n << 30n,
 } as const;
 
 /**

@@ -373,4 +373,409 @@ A: 双审通过后，1-3 个工作日到账。
 | flowcharts/03-real-name-review.md | 实名审核流程 |
 | flowcharts/06-agent-upgrade.md | 代理晋升流程 |
 | test-cases.md | 各功能测试场景 |
+
+---
+
+## 九、运营日报/周报/月报数据定义
+
+> **P1 补充**：2026-07-30 — 统一的数据定义和自动推送机制
+
+### 9.1 日报内容
+
+| 指标 | 计算公式 | 数据来源 |
+|------|---------|---------|
+| 日充值总额 | SUM(recharge_orders.amount WHERE status=success AND date=昨日) | recharge_orders |
+| 日消费总额 | SUM(billing_logs.actual_cost WHERE status=settled AND date=昨日) | billing_logs |
+| 日退款总额 | SUM(refund_orders.amount WHERE status=completed AND date=昨日) | refund_orders |
+| 日净收入 | 日消费总额 - 日佣金总额 - 日退款总额 | 计算值 |
+| 日毛利率 | (日消费总额 - 日供应商成本) / 日消费总额 × 100% | 计算值 |
+| 日新增用户 | COUNT(users WHERE created_at = 昨日) | users |
+| 日活跃用户 | COUNT(DISTINCT user_id FROM call_logs WHERE date=昨日) | call_logs |
+| 日活跃代理 | COUNT(DISTINCT agent_id FROM agent_commissions WHERE date=昨日) | agent_commissions |
+| 日 API 调用量 | COUNT(call_logs WHERE date=昨日) | call_logs |
+| 日 Token 消耗 | SUM(call_logs.tokens WHERE date=昨日) | call_logs |
+| 日限流命中数 | COUNT(rate_limit_hits WHERE date=昨日) | rate_limit_logs |
+| 日安全事件数 | COUNT(security_events WHERE date=昨日) | security_events |
+
+### 9.2 日报模板
+
+```
+3cloud 运营日报 — 2026-07-29
+
+📊 核心指标
+├── 充值总额：¥12,500（环比 +12.3%）
+├── 消费总额：¥8,920（环比 -2.1%）
+├── 净收入：¥7,520（环比 +8.5%）
+├── 毛利率：42.3%（目标 > 40%，✅）
+
+👥 用户
+├── 新增用户：45 人（环比 +15%）
+├── 活跃用户：1,234 人（环比 +3%）
+├── 活跃代理：23 个（环比 0%）
+
+🔧 系统
+├── API 调用：234,567 次（环比 +5%）
+├── Token 消耗：56,789,012（环比 +8%）
+├── 限流命中：1,234 次（0.5%，正常）
+├── 安全事件：3 件（L2: 0, L3: 2, L4: 1）
+
+⚠️ 异常
+├── 对账偏差：¥0.03（✅ 正常）
+├── 供应商异常：0 个
+├── 待处理工单：12 个（超 SLA: 1 个）
+
+📈 趋势（近 7 天）
+   充值: ▁▃▅▇▆▄▅
+   消费: ▅▆▇▇▆▅▆
+```
+
+### 9.3 周报/月报差异化内容
+
+| 内容 | 日报 | 周报 | 月报 |
+|------|------|------|------|
+| 核心指标 | ✅ | ✅ | ✅ |
+| 趋势对比（环比） | 昨日 | 上周 | 上月 |
+| 用户活跃度 | ✅ | ✅ | ✅ |
+| 代理分析 | ❌ | ✅ | ✅ |
+| 模型使用排行 | ❌ | ✅ | ✅ |
+| 供应商结算 | ❌ | ❌ | ✅ |
+| 财务对账 | ❌ | ❌ | ✅ |
+| 活动效果 | ❌ | ✅ | ✅ |
+| 安全事件汇总 | ❌ | ✅ | ✅ |
+
+### 9.4 推送配置
+
+```
+日报：每天 09:00 推送
+  - 渠道：飞书/企微/邮件
+  - 接收人：运营团队 + 财务 + super_admin
+
+周报：每周一 09:00 推送
+  - 渠道：邮件
+  - 接收人：运营团队 + 财务 + super_admin + 产品
+
+月报：次月 1 日 10:00 推送
+  - 渠道：邮件 + PDF 附件
+  - 接收人：运营团队 + 财务 + super_admin + 产品 + 投资人（如配置）
+```
+
+### 9.5 推送 API
+
+| 方法 | 路径 | 说明 | 权限 |
+|------|------|------|------|
+| POST | /api/v1/admin/reports/daily/generate | 生成日报 | ops_admin |
+| POST | /api/v1/admin/reports/weekly/generate | 生成周报 | ops_admin |
+| POST | /api/v1/admin/reports/monthly/generate | 生成月报 | ops_admin |
+| POST | /api/v1/admin/reports/schedule | 配置推送计划 | ops_admin |
+| GET | /api/v1/admin/reports/history | 历史报告列表 | ops_admin |
 | data-dictionary.md | 字段定义参考 |
+
+---
+
+## 十、跨模块数据一致性保障机制
+
+> **P1 补充**：2026-07-30 — 关键数据链路的完整性校验
+
+### 10.1 数据一致性检查点
+
+| 检查点 | 关联模块 | 校验方式 | 频率 | 告警 |
+|--------|---------|---------|------|------|
+| 充值→余额 | 充值 → 计费 | SUM(recharge.amount) = SUM(balance_logs.recharge) | 日 | ¥1 |
+| 消费→余额 | 计费 → 用户 | SUM(billing.actual_cost) = SUM(balance_logs.consumption) | 实时 | ¥0.01 |
+| 余额→总账 | 用户 → 财务 | SUM(users.balance) = 平台净余额 | 日 | ¥10 |
+| 佣金→总账 | 代理 → 财务 | SUM(commission_logs.amount) = ledger.commission | T+1 | ¥1 |
+| 提现→总账 | 代理 → 财务 | SUM(withdraw.paid) = ledger.withdraw | 实时 | ¥1 |
+| 活动→总账 | 营销 → 财务 | SUM(campaign_prices) = ledger.promotion | T+1 | ¥1 |
+| 退款→总账 | 退款 → 财务 | SUM(refund.amount) = ledger.refund | 实时 | ¥1 |
+
+### 10.2 自动修复机制
+
+| 偏差范围 | 自动修复 | 是否需要人工确认 |
+|---------|---------|----------------|
+| < ¥1 | 自动对平（调整平衡记录） | 否，写入日志 |
+| ¥1 ~ ¥10 | 自动标记为待核实，运营确认后修复 | 是 |
+| > ¥10 | 立即告警，人工介入 | 是，需 root cause |
+
+### 10.3 日常数据一致性检查清单
+
+```
+每日 00:30 自动执行：
+□ 充值→余额对账
+□ 消费→余额对账
+□ 佣金→总账对账
+□ 活动→总账对账
+□ 提现→总账对账
+
+每周一 09:00 运营手动检查：
+□ 用户余额总和 vs 平台总账
+□ 会计恒等式校验
+□ 各模块数据一致性报告
+
+每月 1日 10:00 财务检查：
+□ 上月完整会计恒等式
+□ 月结锁账前置检查
+□ 跨模块数据一致性审计报告
+```
+
+### 10.4 数据不一致处理 SOP
+
+```
+发现数据不一致时，运营按以下流程处理：
+
+i1. 确认偏差范围和影响
+2. 定位偏差来源模块
+3. 按对应模块的异常修复流程处理
+4. 修复后重新运行对账
+5. 确认一致后关闭工单
+6. 记录根因，更新文档
+
+示例：
+i问题：用户张三余额显示 ¥100，但累计充值减累计消费 = ¥99.50
+i偏差：¥0.50
+i处理：
+  1. 检查 balance_logs 是否有缺失
+  2. 发现一笔消费未记录 balance_logs（类型缺失）
+  3. 补录 balance_logs
+  4. 重新对账确认一致
+```
+
+---
+
+## 十一、跨模块数据流地图（Data Flow Map）
+
+> **Gap 报告建议**：2026-07-30 — 用图形展示充值→消费→结算→对账的完整链路及数据一致性校验点
+
+### 11.1 资金全链路数据流
+
+```mermaid
+flowchart LR
+    subgraph 充值链路
+        A1[用户扫码支付] --> A2[支付渠道回调]
+        A2 --> A3[recharge_orders]
+        A3 --> A4[users.balance +]
+        A4 --> A5[platform_ledger
+        type=user_recharge]
+    end
+
+    subgraph 消费链路
+        B1[用户 API 请求] --> B2[计费引擎计算价格]
+        B2 --> B3[users.balance -]
+        B3 --> B4[call_logs]
+        B4 --> B5[billing_logs]
+        B5 --> B6[platform_ledger
+        type=user_consumption]
+    end
+
+    subgraph 代理链路
+        C1[消费触发佣金] --> C2[commission_logs]
+        C2 --> C3[agent_settlements]
+        C3 --> C4[withdraw_orders]
+        C4 --> C5[platform_ledger
+        type=agent_commission]
+    end
+
+    subgraph 供应商链路
+        D1[供应商结算] --> D2[vendor_settlements]
+        D2 --> D3[platform_ledger
+        type=vendor_settlement]
+    end
+
+    subgraph 对账引擎
+        E1[充值对账] --> E2[消费对账]
+        E2 --> E3[佣金对账]
+        E3 --> E4[结算对账]
+        E4 --> E5[会计恒等式校验]
+    end
+
+    A3 -.-> E1
+    B5 -.-> E2
+    C2 -.-> E3
+    D2 -.-> E4
+    A5 -.-> E5
+    B6 -.-> E5
+    C5 -.-> E5
+    D3 -.-> E5
+```
+
+### 11.2 数据一致性校验点
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   充值 → 消费 → 结算 → 对账 全链路              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ ① 充值链路校验：                                                │
+│   支付渠道 → recharge_orders → users.balance → platform_ledger  │
+│   └── 校验点：三向一致（支付回调数 = 充值订单数 = 余额变动数）   │
+│                                                                 │
+│ ② 消费链路校验：                                                │
+│   call_logs → billing_logs → users.balance → platform_ledger   │
+│   └── 校验点：四向一致（请求数 = 计费数 = 余额扣减 = 总账记录） │
+│                                                                 │
+│ ③ 代理链路校验：                                                │
+│   call_logs → commission_logs → agent_settlements → withdraw   │
+│   └── 校验点：佣金计算 = 佣金记录 = 结算金额 = 提现金额         │
+│                                                                 │
+│ ④ 供应商链路校验：                                              │
+│   call_logs → vendor_settlements → platform_ledger              │
+│   └── 校验点：供应商成本 = 结算金额 = 总账支出                  │
+│                                                                 │
+│ ⑤ 会计恒等式：                                                  │
+│   期初余额 + 收入 - 支出 = 期末余额                             │
+│   收入：user_recharge + promotion                                │
+│   支出：user_consumption + refund + agent_commission + withdraw │
+│         + vendor_settlement + marketing_expense                 │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 11.3 各模块数据库表关系
+
+```
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  充值模块    │     │  计费模块    │     │  结算模块    │
+│──────────────│     │──────────────│     │──────────────│
+│ recharge_    │     │ call_logs    │     │ settlement_  │
+│ orders       │────▶│ billing_logs │────▶│ cycles       │
+│              │     │ balance_logs │     │ agent_settle │
+│              │     │              │     │ ments        │
+│              │     │              │     │ vendor_settle│
+│              │     │              │     │ ments        │
+└──────────────┘     └──────────────┘     └──────────────┘
+       │                    │                    │
+       ▼                    ▼                    ▼
+┌──────────────────────────────────────────────────────┐
+│                  platform_ledger                     │
+│  统一账本：所有模块的资金变动最终汇总到此表           │
+│  type: user_recharge | user_consumption |            │
+│        agent_commission | agent_withdraw |           │
+│        vendor_settlement | promotion | refund |      │
+│        marketing_expense | adjustment               │
+└──────────────────────────────────────────────────────┘
+```
+
+### 11.4 异常处理流程汇总
+
+| 异常阶段 | 检测方式 | 运营处理流程 | 参考文档 |
+|---------|---------|------------|---------|
+| 充值回调失败 | 超时检测 + 轮询 | 手动补单 | ref-2.2.6-recharge.md §7.1 |
+| 对公转账超时 | SLA 超时检测 | 升级通知 | ref-2.2.6-recharge.md §7.2 |
+| 充值渠道熔断 | 支付渠道健康检查 | 临时关闭渠道 | ref-2.2.6-recharge.md §7.3 |
+| 计费预扣回滚 | 事务回滚 | 检查 balance_logs | ref-5.2-billing.md §10 |
+| 计费精度异常 | 数值校验 | 人工核查修正 | ref-5.2-billing.md §8.2 |
+| 计费引擎降级 | 组件故障检测 | 自动降级 + 事后补计费 | ref-5.2-billing.md §8.1 |
+| 结算边界争议 | T+1 规则检查 | 按请求发起时间归属 | ref-5.2-billing.md §8.3 |
+| 供应商异常 | 健康检查 + 熔断器 | 自动切换 + 通知用户 | ref-4.3-vendor-model.md §7 |
+| 佣金计算异常 | 自动化校验 | 批量重算 | ref-3-agent-system.md §7 |
+| 提现失败 | 支付渠道返回结果 | 通知代理重新提交 | ref-3-agent-system.md §7.5 |
+| 对账差异 | 自动对账引擎 | 差异处理工作台 | SPEC-§29 §29.3 |
+| 财务锁账 | 月结前置检查 | 锁账确认 + 结转 | SPEC-§29 §29.4 |
+| 安全事件 | 规则引擎触发 | 分级响应 + 用户通知 | ref-4.6-security.md §12 |
+| 限流熔断 | 熔断器触发 | 运营通知面板 | ref-5.3-rate-limiter.md §10 |
+| 配置变更 | 审批流程 | 审核 + 灰度 + 回滚 | ref-4.8-system-config.md §五 |
+| 用户禁用 | 手动操作 | 一致性处理 | ref-4.2-user-management.md §11 |
+
+---
+
+## 十二、SOP 快速索引
+
+> **补充**：2026-07-30 — 按场景分类索引，运营可快速定位操作 SOP
+
+### 12.1 每日例行操作
+
+| 时间 | 操作 | 参考 |
+|------|------|------|
+| 09:00 | 检查运营待办队列 | 本手册 §1.1 |
+| 10:00 | 检查异常指标 | 本手册 §1.1 |
+| 14:00 | 检查财务对账 | 本手册 §1.1 |
+| 17:00 | 检查安全事件 | 本手册 §1.1 + ref-4.6-security.md §12 |
+| 按需 | 检查日报推送 | 本手册 §9.5 |
+
+### 12.2 充值相关操作
+
+| 场景 | 操作 | 参考 |
+|------|------|------|
+| 充值回调超时 | 核查支付渠道，手动补单 | ref-2.2.6-recharge.md §7.1 |
+| 对公转账超24h未确认 | 升级通知财务主管 | ref-2.2.6-recharge.md §7.2 |
+| 充值渠道不可用 | 临时关闭渠道，切换备用 | ref-2.2.6-recharge.md §7.3 |
+| 充值对账不平 | 运行对账，定位差异，修复 | SPEC-§29 §29.3 |
+
+### 12.3 计费相关操作
+
+| 场景 | 操作 | 参考 |
+|------|------|------|
+| 计费日志缺失 | 补录 billing_logs | ref-5.2-billing.md §10.5 |
+| 定价缓存未刷新 | 手动刷新 Redis 缓存 | ref-5.2-billing.md §10.5 |
+| 预扣未回滚 | 手动回滚预扣金额 | ref-5.2-billing.md §10.5 |
+| 计费精度偏差 | 人工核查修正 | ref-5.2-billing.md §8.2 |
+| 跨周期归属争议 | 按请求发起时间确认归属 | ref-5.2-billing.md §8.3 |
+
+### 12.4 供应商相关操作
+
+| 场景 | 操作 | 参考 |
+|------|------|------|
+| 供应商健康检查异常 | 确认检查结果，决定是否切换 | ref-4.3-vendor-model.md §7.3 |
+| 供应商批量异常 | 一键降级，通知受影响用户 | ref-4.3-vendor-model.md §7.4 |
+| Key 池耗尽 | 紧急补充 Key 或切换供应商 | ref-4.3-vendor-model.md §7.2 |
+| 供应商入驻审核超时 | 升级通知运营主管 | ref-4.3-vendor-model.md §8.1.2 |
+| 供应商价格变更审批 | 按变更级别走审批流程 | ref-4.3-vendor-model.md §8.2.1 |
+| 供应商状态切换 | 使用管理后台弹窗操作 | ref-4.3-vendor-model.md §5.4 |
+
+### 12.5 代理相关操作
+
+| 场景 | 操作 | 参考 |
+|------|------|------|
+| 代理晋升审核 | 逐个或批量审核 | ref-3-agent-system.md §8.1 |
+| 佣金计算异常 | 定位异常类型，批量重算 | ref-3-agent-system.md §7.3 |
+| 提现失败 | 核查失败原因，通知代理重新提交 | ref-3-agent-system.md §7.5 |
+| 代理降级 | 确认影响范围，通知用户 | ref-3-agent-system.md §7.6 |
+| 佣金封顶处理 | 确认溢出金额自动结转到下月 | ref-3-agent-system.md §8.3 |
+| 结算周期切换 | 确认自动结算正常，推送结算报告 | ref-3-agent-system.md §8.4.3 |
+| 提现审核超时 | 按 SLA 升级 | ref-3-agent-system.md §8.4.3 |
+
+### 12.6 营销相关操作
+
+| 场景 | 操作 | 参考 |
+|------|------|------|
+| 活动预算耗尽 | 确认预算保护机制自动触发 | ref-4.5-marketing.md §8.1.2 |
+| 活动效果评估 | 活动结束后导出评估报告 | ref-4.5-marketing.md §8.2 |
+| 兑换码监控 | 查看兑换率，运营推送提醒 | ref-4.5-marketing.md §8.3 |
+| 活动财务对账 | 确认活动发放与财务核算一致 | ref-4.5-marketing.md §8.4 |
+| 公告推送 | 检查待推送队列，确认后推送 | 本手册 §1.2 |
+
+### 12.7 安全相关操作
+
+| 场景 | 操作 | 参考 |
+|------|------|------|
+| 安全事件 L1/L2 响应 | 15/30 分钟内响应，按模板报告 | ref-4.6-security.md §12.2 |
+| 安全规则变更 | 确认回溯影响范围 | ref-4.6-security.md §12.5 |
+| 用户安全通知 | 按模板通知受影响用户 | ref-4.6-security.md §12.4 |
+
+### 12.8 客服相关操作
+
+| 场景 | 操作 | 参考 |
+|------|------|------|
+| 工单 SLA 超时 | 按超时阶段升级 | SPEC-§27 §27.4.2 |
+| 客服交接班 | 交接前 15 分钟提醒，系统自动重新分配 | SPEC-§27 §27.4.3 |
+| 客服效能检查 | 查看效能指标，低于目标值的改进 | SPEC-§27 §27.4.4 |
+| 技术问题升级 | 填写升级模板，按 SLA 通知技术团队 | ops-补充-客服升级与用户通知.md §2.3 |
+
+### 12.9 系统配置相关操作
+
+| 场景 | 操作 | 参考 |
+|------|------|------|
+| 配置变更（L1-L3） | 按级别走审批流程 | ref-4.8-system-config.md §5.1 |
+| 配置变更回滚 | 在回滚窗口期内操作 | ref-4.8-system-config.md §5.3 |
+| 限流配额调整 | 确认是否超过全局上限后调整 | ref-5.3-rate-limiter.md §10.6 |
+| 数据迁移/升级 | 按检查清单执行灰度发布 | ops-补充-数据迁移运营影响.md §3 |
+
+### 12.10 财务相关操作
+
+| 场景 | 操作 | 参考 |
+|------|------|------|
+| 财务锁账 | 跑前置检查清单，确认后锁账 | SPEC-§29 §29.4.1 |
+| 锁账后异常修改 | 临时解锁 + 双签审批 | SPEC-§29 §29.4.2 |
+| 跨月结转 | 确认期初余额无误后操作 | SPEC-§29 §29.4.3 |
+| 会计恒等式校验 | 确认等式平衡，不平衡时定位差异 | SPEC-§29 §29.3 |
+| 余额不足通知 | 按通知模板发送，频率控制 | ops-补充-客服升级与用户通知.md §3.3 |
+| Key 过期通知 | 提前 7 天/3 天/1 天推送 | ops-补充-客服升级与用户通知.md §3.2 |

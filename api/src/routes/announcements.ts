@@ -24,7 +24,7 @@ export async function announcementRoutes(app: FastifyInstance) {
     const page = Math.max(1, parseInt(query.page ?? "1", 10) || 1);
     const pageSize = Math.min(100, Math.max(1, parseInt(query.pageSize ?? "20", 10) || 20));
     const offset = (page - 1) * pageSize;
-    const userId = (request.user as any).id;
+    const userId = request.user!.userId;
 
     // 只返回 status = true 且 isPublished = true 的公告
     const countQuery = async () => {
@@ -98,7 +98,7 @@ export async function announcementRoutes(app: FastifyInstance) {
   // ── 标记单个公告为已读 ──
   app.post("/api/v1/announcements/:id/read", async (request, reply) => {
     const db = getDb();
-    const userId = (request.user as any).id;
+    const userId = request.user!.userId;
     const announcementId = parseInt((request.params as any).id, 10);
 
     if (isNaN(announcementId)) {
@@ -139,7 +139,7 @@ export async function announcementRoutes(app: FastifyInstance) {
   // ── 全部标记已读 ──
   app.post("/api/v1/announcements/read-all", async (request, reply) => {
     const db = getDb();
-    const userId = (request.user as any).id;
+    const userId = request.user!.userId;
 
     // 获取所有已发布的公告ID
     const allAnnouncements = await db
@@ -196,8 +196,9 @@ export async function announcementRoutes(app: FastifyInstance) {
 
   // ── 未读公告数量 ──
   app.get("/api/v1/announcements/unread-count", async (request, reply) => {
+    try {
     const db = getDb();
-    const userId = (request.user as any).id;
+    const userId = request.user!.userId;
 
     // 统计已发布公告总数
     const [totalResult] = await db
@@ -239,5 +240,12 @@ export async function announcementRoutes(app: FastifyInstance) {
       data: { unreadCount, total, readCount: total - unreadCount },
       message: "ok",
     });
+    } catch (err: any) {
+      reply.status(500).send({
+        code: 500,
+        data: null,
+        message: `获取未读公告数量失败: ${err.message}`,
+      });
+    }
   });
 }

@@ -4,6 +4,7 @@
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react'
+import { get } from '@/lib/api'
 
 export interface ModelOptimization {
   currentModel: string
@@ -43,21 +44,8 @@ export function useModelOptimization(): UseModelOptimizationReturn {
     setError(null)
 
     try {
-      const res = await fetch('/api/v1/me/stats/optimization', {
-        credentials: 'include',
-      })
-
-      if (!res.ok) {
-        throw new Error(`请求失败: ${res.status}`)
-      }
-
-      const json = await res.json()
-
-      if (json.code !== 0) {
-        throw new Error(json.message || '获取优化建议失败')
-      }
-
-      setData(json.data)
+      const json = await get<ModelOptimizationData>('/api/v1/me/stats/optimization')
+      setData(json)
     } catch (err: any) {
       setError(err.message || '获取优化建议失败')
     } finally {

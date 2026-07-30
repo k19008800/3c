@@ -475,6 +475,7 @@ export const Perm = {
   RECONCILIATION_MANAGE: 1n << 29n,
   SECURITY_EDIT:        1n << 27n,
   AUDIT_REVIEW:         1n << 28n,
+  SUPPORT_MANAGE:       1n << 30n,
 } as const;
 
 // Role -> Permission map
@@ -521,7 +522,8 @@ export const ROLE_PERMISSIONS: Record<string, bigint> = {
   support:
     Perm.USER_LIST | Perm.USER_VIEW | Perm.USER_RESET_PWD |
     Perm.REVIEW_LIST | Perm.REVIEW_ACTION |
-    Perm.LOG_VIEW,
+    Perm.LOG_VIEW |
+    Perm.SUPPORT_MANAGE,
 
   // auditor: 审计员 — 审计日志 + 对账 + 用户查看 + 日志 + 代理商查看
   auditor:

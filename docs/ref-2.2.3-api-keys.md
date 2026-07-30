@@ -422,3 +422,25 @@ sequenceDiagram
 | ref-5.3-rate-limiter.md | 限流引擎（Key 级别限流） |
 | frontend-routes.md | 路由结构 |
 | api-reference.md | 开发者 API 参考（认证方式） |
+
+---
+
+## 边界条件
+
+### Key 生命周期场景
+
+| # | 场景 | 触发条件 | 预期行为 |
+|---|------|---------|---------|
+| APIK-001 | Key 创建超配额 | 用户当前活跃 Key 数已超过系统配额限制（如最多 20 个活跃 Key） | CreateKeyModal 弹出提示「已到达 Key 数量上限（N 个），请先禁用或删除旧的 Key 后重试」，创建按钮置灰 |
+| APIK-002 | Key 删除后仍有活跃连接 | 已删除的 Key 被客户端缓存，仍有请求使用该 Key 认证 | API 网关查询数据库返回 404 (key_not_found)，客户端收到 401 需重新获取新 Key |
+| APIK-003 | Key 权限被撤销后请求处理 | 管理员将 Key 的权限范围从「全部模型」改为「仅 N 个模型」后，客户端仍请求不在白名单的模型 | API 网关校验权限范围，返回 403 Forbidden，响应体包含 `reason: "model_not_allowed"` |
+| APIK-004 | IP 白名单不匹配 | 请求来源 IP 不在 Key 的 IP 白名单列表中 | API 网关直接拒绝，返回 403 Forbidden，响应体包含 `allowed_ips: [...]` |
+| APIK-005 | 批量操作部分失败 | 批量禁用/删除 10 个 Key，其中 2 个已被删除或不存在 | affected_count 返回实际处理的个数（8），affected_keys 列出成功操作的 Key 别名，响应体中附加 failed_keys 信息 |
+
+### 异常流程
+
+| 场景 | 恢复策略 |
+|------|---------|
+| Key Hash 碰撞（极低概率） | 创建 Key 时校验 keyHash 唯一性，碰撞时重新生成新的随机 Key |
+| Redis 中 Key 状态与数据库不一致 | 网关优先信任 Redis，后台定时任务每 5 分钟校验同步一次 |
+| Key 过期提醒发送失败（邮件）| 降级为站内通知，下次轮询时重试邮件发送（最多 3 次）|

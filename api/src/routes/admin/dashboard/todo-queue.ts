@@ -107,13 +107,13 @@ export async function todoQueueRoutes(app: FastifyInstance) {
       .from(agents)
       .where(eq(agents.auditStatus, "pending"));
 
-    // 9. 待推送公告 (PRD 4.1: scheduled_at <= now)
+    // 9. 待推送公告 (PRD 4.1: scheduled_at <= now, 未发布)
     const [pendingAnnouncements] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(announcements)
       .where(
         and(
-          eq(announcements.status, "draft"),
+          eq(announcements.isPublished, false),
           sql`${announcements.scheduledAt} <= NOW()`
         )
       );

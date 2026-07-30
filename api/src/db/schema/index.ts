@@ -73,3 +73,27 @@ export * from "./request-records.js";
 
 // ── Webhook（§32.1）──
 export * from "./webhooks.js";
+
+// ── 工单系统（§26）──
+export * from "./tickets.js";
+
+// ── 在线聊天（§27）──
+export * from "./chat.js";
+
+// ── 知识库（§10.2）──
+export * from "./knowledge.js";
+
+// ── 代理邀请裂变（§24.1）──
+export * from "./agent-referral.js";
+
+// ── 撤销操作日志（Undo Logs）──
+export * from "./undo-logs.js";
+
+// ── Webhook 事件日志（§32.1）──
+export * from "./webhook-logs.js";
+
+// ── 客服排班与 SLA（§27.4）──
+export * from "./staff-schedule.js";
+
+// ── 快捷回复模板（§10.4）──
+export * from "./quick-reply.js";

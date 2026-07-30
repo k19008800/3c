@@ -25,7 +25,26 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// Response interceptor: unwrap data, handle 401
+// ── Token 刷新互斥锁 ──
+// 防止多个并发 401 请求同时触发 refresh
+let isRefreshing = false
+let refreshQueue: Array<{
+  resolve: (token: string) => void
+  reject: (err: any) => void
+}> = []
+
+function processQueue(token: string | null, err: any = null) {
+  refreshQueue.forEach((item) => {
+    if (err) {
+      item.reject(err)
+    } else {
+      item.resolve(token!)
+    }
+  })
+  refreshQueue = []
+}
+
+// Response interceptor: unwrap data, handle 401 with refresh
 api.interceptors.response.use(
   (response) => {
     const res = response.data as ApiResponse
@@ -43,33 +62,60 @@ api.interceptors.response.use(
     const skipAuthReset = originalRequest.url?.includes('/api/v1/auth/login') ||
       originalRequest.url?.includes('/api/v1/auth/register')
 
-    if (error.response?.status === 401 && !originalRequest._retry && !skipAuthReset) {
-      originalRequest._retry = true
-      const refreshToken = localStorage.getItem('refreshToken')
-
-      if (refreshToken) {
-        try {
-          const res = await axios.post('/api/v1/auth/refresh', {
-            refreshToken,
-          })
-          const data = res.data as ApiResponse<{ accessToken: string; expiresIn: number }>
-          if (data.code === 0 && data.data) {
-            localStorage.setItem('accessToken', data.data.accessToken)
-            if (originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`
-            }
-            return api(originalRequest)
+    if (error.response?.status === 401 && !skipAuthReset) {
+      // 已有 refresh 在进行中 → 进入等待队列
+      if (isRefreshing && !originalRequest._retry) {
+        return new Promise<string>((resolve, reject) => {
+          refreshQueue.push({ resolve, reject })
+        }).then((token) => {
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${token}`
           }
-        } catch {
-          // refresh failed, redirect to login
-        }
+          return api(originalRequest)
+        })
       }
 
+      if (!originalRequest._retry) {
+        originalRequest._retry = true
+        isRefreshing = true
+
+        const refreshToken = localStorage.getItem('refreshToken')
+        if (refreshToken) {
+          try {
+            const res = await axios.post('/api/v1/auth/refresh', {
+              refreshToken,
+            })
+            const data = res.data as ApiResponse<{ accessToken: string; expiresIn: number }>
+            if (data.code === 0 && data.data) {
+              const newToken = data.data.accessToken
+              localStorage.setItem('accessToken', newToken)
+              // 唤醒队列中的等待请求
+              processQueue(newToken)
+              isRefreshing = false
+
+              if (originalRequest.headers) {
+                originalRequest.headers.Authorization = `Bearer ${newToken}`
+              }
+              return api(originalRequest)
+            }
+          } catch {
+            // refresh 接口自身失败
+          }
+        }
+
+        // refresh 失败 → 拒绝队列 + 跳转登录
+        isRefreshing = false
+        processQueue(null, new Error('Refresh failed'))
+      }
+
+      // 清除凭证跳转登录（用 setTimeout 确保返回空 Promise 后再跳）
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
       localStorage.removeItem('user')
-      window.location.href = '/login'
-      return Promise.reject(error)
+      setTimeout(() => {
+        window.location.href = '/login'
+      }, 0)
+      return new Promise(() => {})
     }
 
     // 提取服务端错误 message

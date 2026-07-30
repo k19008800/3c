@@ -5,7 +5,7 @@
 // ============================================================
 
 import { FastifyInstance } from "fastify";
-import { eq, and, desc, asc, sql, inArray } from "drizzle-orm";
+import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { models, vendorModels, vendors } from "../db/schema.js";
 
@@ -85,7 +85,7 @@ export async function modelListRoutes(app: FastifyInstance) {
         ),
       )
       .innerJoin(vendors, eq(vendorModels.vendorId, vendors.id))
-      .where(eq(models.visibility, "public"))
+      .where(sql`"models"."status" = true`)
       .orderBy(asc(models.name), asc(vendorModels.weight));
 
     // 聚合为模型 → 厂商列表

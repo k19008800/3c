@@ -73,6 +73,9 @@ export const users = pgTable(
     maxConcurrentSessions: integer("max_concurrent_sessions"),  // NULL=使用系统默认
     forceLogoutAt: timestamp("force_logout_at", { withTimezone: true }),
 
+    // 代理邀请裂变（§24.1）
+    referredByAgent: integer("referred_by_agent").references((): AnyPgColumn => users.id),
+
     // 联系 & 头像
     phone: varchar("phone", { length: 20 }),
     avatarUrl: varchar("avatar_url", { length: 500 }),

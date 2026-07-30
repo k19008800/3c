@@ -10,6 +10,7 @@ import { authRegisterRoutes } from "./register.js";
 import { authOAuthRoutes } from "./oauth.js";
 import { authResetRoutes } from "./reset.js";
 import { authRealNameRoutes } from "./realname.js";
+import { authWechatLoginRoutes } from "./wechat-login.js";
 
 export async function authRoutes(app: FastifyInstance) {
   await authLoginRoutes(app);
@@ -17,4 +18,5 @@ export async function authRoutes(app: FastifyInstance) {
   await authOAuthRoutes(app);
   await authResetRoutes(app);
   await authRealNameRoutes(app);
+  await authWechatLoginRoutes(app);
 }

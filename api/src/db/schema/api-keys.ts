@@ -76,6 +76,9 @@ export const apiKeys = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    // ── 使用统计字段 ──
+    dailyUsage: numeric("daily_usage", { precision: 18, scale: 6 }).default("0").$type<number>(),
+    monthlyUsage: numeric("monthly_usage", { precision: 18, scale: 6 }).default("0").$type<number>(),
     // ── 权限控制字段 ──
     permissions: jsonb("permissions").$type<ApiKeyPermissions>(), // 权限配置
     templateId: integer("template_id"), // 关联的权限模板 ID

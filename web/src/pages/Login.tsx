@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { useSiteConfig } from '@/hooks/use-site-config'
-import { Loader2, AlertCircle, Shield } from 'lucide-react'
+import { Loader2, AlertCircle, Shield, MessageCircle } from 'lucide-react'
 import CaptchaDialog from '@/components/ui/CaptchaDialog'
+import { get } from '@/lib/api'
 
 export default function Login() {
   const { login, isAuthenticated, verify2FA } = useAuth()
@@ -18,6 +19,15 @@ export default function Login() {
   const [userId2FA, setUserId2FA] = useState<number | null>(null)
   const [twoFACode, setTwoFACode] = useState('')
   const [twoFALoading, setTwoFALoading] = useState(false)
+  const [wechatEnabled, setWechatEnabled] = useState(false)
+  const [wechatLoading, setWechatLoading] = useState(false)
+
+  useEffect(() => {
+    // 检查微信登录是否已启用
+    get('/api/v1/admin/settings/wechat-login').then(res => {
+      if (res.data?.enabled) setWechatEnabled(true)
+    }).catch(() => {})
+  }, [])
 
   if (isAuthenticated) {
     return <Navigate to="/console" replace />
@@ -71,6 +81,22 @@ export default function Login() {
       throw err
     } finally {
       setCaptchaLoading(false)
+    }
+  }
+
+  // 微信扫码登录
+  const handleWechatLogin = async () => {
+    setWechatLoading(true)
+    try {
+      const res = await get('/api/v1/auth/wechat/qrcode-url')
+      if (res.data?.url) {
+        // 打开微信二维码页面
+        window.open(res.data.url, '_blank', 'width=700,height=600')
+      }
+    } catch (e: any) {
+      setError(e?.message || '获取微信二维码失败')
+    } finally {
+      setWechatLoading(false)
     }
   }
 
@@ -190,6 +216,33 @@ export default function Login() {
               立即注册
             </Link>
           </p>
+
+          {/* 微信扫码登录分隔线 */}
+          {wechatEnabled && (
+            <>
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-400">其他登录方式</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleWechatLogin}
+                disabled={wechatLoading}
+                className="w-full py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition flex items-center justify-center gap-2"
+              >
+                {wechatLoading ? (
+                  <Loader2 className="animate-spin" size={18} />
+                ) : (
+                  <MessageCircle className="w-5 h-5 text-green-500" />
+                )}
+                微信扫码登录
+              </button>
+            </>
+          )}
         </form>
         )}
       </div>

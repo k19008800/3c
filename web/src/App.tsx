@@ -61,6 +61,10 @@ const AdminRealNameReview = lazy(() => import('@/pages/admin/RealNameReview'))
 const AdminAuditLogs = lazy(() => import('@/pages/admin/AuditLogs'))
 const AdminOperationLogs = lazy(() => import('@/pages/admin/OperationLogs'))
 const AdminAgentClients = lazy(() => import('@/pages/admin/AgentClients'))
+const AdminUndoLogs = lazy(() => import('@/pages/admin/AdminUndoLogs'))
+const AdminWebhookLogs = lazy(() => import('@/pages/admin/AdminWebhookLogs'))
+const AdminStaffSchedule = lazy(() => import('@/pages/admin/AdminStaffSchedule'))
+const AdminQualityChecks = lazy(() => import('@/pages/admin/AdminQualityChecks'))
 const AdminFinanceDashboard = lazy(() => import('@/pages/admin/FinanceDashboard'))
 const AdminFinanceCommissions = lazy(() => import('@/pages/admin/FinanceCommissions'))
 const AdminFinanceReconciliation = lazy(() => import('@/pages/admin/FinanceReconciliation'))
@@ -112,9 +116,22 @@ const AdminDrills = lazy(() => import('@/pages/admin/AdminDrills'))
 const AdminWebhooks = lazy(() => import('@/pages/admin/AdminWebhooks'))
 const AdminSSO = lazy(() => import('@/pages/admin/AdminSSO'))
 const CorpLogin = lazy(() => import('@/pages/admin/CorpLogin'))
+const WechatLogin = lazy(() => import('@/pages/admin/WechatLogin'))
 const CostAnalysis = lazy(() => import('@/pages/admin/CostAnalysis'))
 const AdminCustomReports = lazy(() => import('@/pages/admin/CustomReports'))
 const AdminReports = lazy(() => import('@/pages/admin/Reports'))
+
+// ── 工单系统 ──
+const UserTickets = lazy(() => import('@/pages/tickets/UserTickets'))
+const CreateTicket = lazy(() => import('@/pages/tickets/CreateTicket'))
+const TicketDetail = lazy(() => import('@/pages/tickets/TicketDetail'))
+const AdminTickets = lazy(() => import('@/pages/admin/tickets/AdminTickets'))
+const AdminTicketDetail = lazy(() => import('@/pages/admin/tickets/AdminTicketDetail'))
+const StaffWorkbench = lazy(() => import('@/pages/admin/chat/StaffWorkbench'))
+const StaffStats = lazy(() => import('@/pages/admin/chat/StaffStats'))
+const StaffAuditLogs = lazy(() => import('@/pages/admin/chat/StaffAuditLogs'))
+const AdminKnowledgeBase = lazy(() => import('@/pages/admin/knowledge/AdminKnowledgeBase'))
+const KnowledgeBase = lazy(() => import('@/pages/knowledge/KnowledgeBase'))
 
 // ── 请求记录 ──
 const AdminRequestRecords = lazy(() => import('@/pages/admin/request-records/RequestRecordsList'))
@@ -126,6 +143,9 @@ const AdminTokenRankings = lazy(() => import('@/pages/admin/request-records/Toke
 const UserInvoices = lazy(() => import('@/pages/finance/Invoices'))
 const UserRefunds = lazy(() => import('@/pages/finance/Refunds'))
 
+// ── 微信登录回调 ──
+const LoginSuccess = lazy(() => import('@/pages/LoginSuccess'))
+
 // ── Agent 页面 ──
 const AgentDashboard = lazy(() => import('@/pages/agent/Dashboard'))
 const AgentClients = lazy(() => import('@/pages/agent/Clients'))
@@ -135,6 +155,7 @@ const AgentRedemption = lazy(() => import('@/pages/agent/Redemption'))
 const AgentFinance = lazy(() => import('@/pages/agent/Finance'))
 const AgentReconciliation = lazy(() => import('@/pages/agent/Reconciliation'))
 const AgentProfile = lazy(() => import('@/pages/agent/Profile'))
+const AgentReferral = lazy(() => import('@/pages/agent/Referral'))
 
 // ── Vendor 页面 ──
 const VendorLogin = lazy(() => import('@/pages/vendor/VendorLogin'))
@@ -177,6 +198,7 @@ export default function App() {
 
           {/* ── 认证页面 (无布局) ── */}
           <Route path="/login" element={withSuspense(<Login />)} />
+          <Route path="/login-success" element={withSuspense(<LoginSuccess />)} />
           <Route path="/register" element={withSuspense(<Register />)} />
           <Route path="/forgot-password" element={withSuspense(<ForgotPassword />)} />
           <Route path="/reset-password" element={withSuspense(<ResetPassword />)} />
@@ -216,6 +238,7 @@ export default function App() {
               <Route path="admin/audit-logs" element={withSuspense(<AdminAuditLogs />)} />
               <Route path="admin/operation-logs" element={withSuspense(<AdminOperationLogs />)} />
               <Route path="admin/system-health" element={withSuspense(<AdminSystemHealthPanel />)} />
+              <Route path="admin/system/undo-logs" element={withSuspense(<AdminUndoLogs />)} />
               <Route path="admin/agents/:agentId/clients" element={withSuspense(<AdminAgentClients />)} />
               <Route path="admin/finance/dashboard" element={withSuspense(<AdminFinanceDashboard />)} />
               <Route path="admin/finance/commissions" element={withSuspense(<AdminFinanceCommissions />)} />
@@ -268,8 +291,10 @@ export default function App() {
               <Route path="admin/finance/rates" element={withSuspense(<AdminExchangeRates />)} />
               <Route path="admin/drills" element={withSuspense(<AdminDrills />)} />
               <Route path="admin/webhooks" element={withSuspense(<AdminWebhooks />)} />
+              <Route path="admin/webhook-logs" element={withSuspense(<AdminWebhookLogs />)} />
               <Route path="admin/settings/sso" element={withSuspense(<AdminSSO />)} />
               <Route path="admin/settings/corp-login" element={withSuspense(<CorpLogin />)} />
+              <Route path="admin/settings/wechat-login" element={withSuspense(<WechatLogin />)} />
               <Route path="admin/finance/cost-analysis" element={withSuspense(<CostAnalysis />)} />
               <Route path="admin/custom-reports" element={withSuspense(<AdminCustomReports />)} />
               <Route path="admin/reports" element={withSuspense(<AdminReports />)} />
@@ -277,6 +302,22 @@ export default function App() {
               <Route path="admin/request-records/analysis" element={withSuspense(<AdminRequestAnalysis />)} />
               <Route path="admin/request-records/token-rankings" element={withSuspense(<AdminTokenRankings />)} />
               <Route path="admin/request-records/:id" element={withSuspense(<AdminRequestRecordDetail />)} />
+              
+              {/* 工单系统 */}
+              <Route path="admin/tickets" element={withSuspense(<AdminTickets />)} />
+              <Route path="admin/tickets/:id" element={withSuspense(<AdminTicketDetail />)} />
+
+              {/* 在线客服 */}
+              <Route path="admin/chat" element={withSuspense(<StaffWorkbench />)} />
+              <Route path="admin/chat/stats" element={withSuspense(<StaffStats />)} />
+              <Route path="admin/chat/audit" element={withSuspense(<StaffAuditLogs />)} />
+
+              {/* 知识库管理 */}
+              <Route path="admin/knowledge" element={withSuspense(<AdminKnowledgeBase />)} />
+
+              {/* 排班、SLA、质检 */}
+              <Route path="admin/support/schedule" element={withSuspense(<AdminStaffSchedule />)} />
+              <Route path="admin/support/quality" element={withSuspense(<AdminQualityChecks />)} />
             </Route>
 
             {/* User routes */}
@@ -294,9 +335,18 @@ export default function App() {
             <Route path="agent/redemption" element={withSuspense(<AgentRedemption />)} />
             <Route path="agent/finance" element={withSuspense(<AgentFinance />)} />
             <Route path="agent/reconciliation" element={withSuspense(<AgentReconciliation />)} />
+            
+            {/* 用户端工单 */}
+            <Route path="tickets" element={withSuspense(<UserTickets />)} />
+            <Route path="tickets/new" element={withSuspense(<CreateTicket />)} />
+            <Route path="tickets/:id" element={withSuspense(<TicketDetail />)} />
+
+            {/* 知识库 */}
+            <Route path="knowledge" element={withSuspense(<KnowledgeBase />)} />
             <Route path="invoices" element={withSuspense(<UserInvoices />)} />
             <Route path="refunds" element={withSuspense(<UserRefunds />)} />
             <Route path="agent/notifications" element={withSuspense(<Notifications />)} />
+            <Route path="agent/referral" element={withSuspense(<AgentReferral />)} />
             <Route path="agent/profile" element={withSuspense(<AgentProfile />)} />
           </Route>
 
