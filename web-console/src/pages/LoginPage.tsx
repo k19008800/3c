@@ -35,6 +35,7 @@ export default function LoginPage() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            placeholder="邮箱"
             style={{ width: "100%", padding: 10, boxSizing: "border-box", borderRadius: 6, border: "1px solid #cbd5e1" }}
             required
           />
@@ -45,6 +46,7 @@ export default function LoginPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            placeholder="密码"
             style={{ width: "100%", padding: 10, boxSizing: "border-box", borderRadius: 6, border: "1px solid #cbd5e1" }}
             required
           />
