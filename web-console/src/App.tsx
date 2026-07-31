@@ -1,0 +1,43 @@
+import { useEffect } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useAuthStore } from "./store/auth";
+import LoginPage from "./pages/LoginPage";
+import ConsoleLayout from "./layouts/ConsoleLayout";
+import DashboardPage from "./pages/DashboardPage";
+import ApiKeysPage from "./pages/ApiKeysPage";
+import LogsPage from "./pages/LogsPage";
+
+/** 受保护路由：token 存在才允许访问 */
+function Protected({ children }: { children: React.ReactNode }) {
+  const token = useAuthStore((s) => s.token);
+  if (!token) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+export default function App() {
+  const token = useAuthStore((s) => s.token);
+  const fetchMe = useAuthStore((s) => s.fetchMe);
+
+  useEffect(() => {
+    if (token) fetchMe();
+  }, [token, fetchMe]);
+
+  return (
+    <Routes>
+      <Route path="/login" element={token ? <Navigate to="/" replace /> : <LoginPage />} />
+      <Route
+        path="/"
+        element={
+          <Protected>
+            <ConsoleLayout />
+          </Protected>
+        }
+      >
+        <Route index element={<DashboardPage />} />
+        <Route path="api-keys" element={<ApiKeysPage />} />
+        <Route path="logs" element={<LogsPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}

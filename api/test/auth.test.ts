@@ -10,6 +10,7 @@ import { pool } from "../src/db/index";
 let app: FastifyInstance;
 let token: string;
 let testUserId: number;
+let createdKeyId: number | undefined;
 
 beforeAll(async () => {
   app = buildApp();
@@ -80,5 +81,51 @@ describe("认证（auth）", () => {
 
   it("清理：删除测试注册用户", async () => {
     if (testUserId) await pool.query("DELETE FROM users WHERE id=$1", [testUserId]);
+  });
+
+  // ===== /me 系列（需登录 token）=====
+  it("GET /me/stats 返回仪表盘统计", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/v1/me/stats", headers: { authorization: `Bearer ${token}` } });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(typeof body.balance).toBe("number");
+    expect(typeof body.totalCalls).toBe("number");
+  });
+
+  it("GET /me/logs 返回调用日志", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/v1/me/logs", headers: { authorization: `Bearer ${token}` } });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(Array.isArray(body.list)).toBe(true);
+  });
+
+  it("创建 API Key 返回明文", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/me/api-keys",
+      headers: { authorization: `Bearer ${token}` },
+      payload: { name: "test-api-key" },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.key).toMatch(/^sk-/);
+    createdKeyId = body.id;
+  });
+
+  it("API Key 列表包含新创建的 key", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/v1/me/api-keys", headers: { authorization: `Bearer ${token}` } });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.list.some((k: any) => k.name === "test-api-key")).toBe(true);
+  });
+
+  it("删除 API Key", async () => {
+    const res = await app.inject({ method: "DELETE", url: `/api/v1/me/api-keys/${createdKeyId}`, headers: { authorization: `Bearer ${token}` } });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("未登录访问 /me/api-keys → 401", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/v1/me/api-keys" });
+    expect(res.statusCode).toBe(401);
   });
 });
