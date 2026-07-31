@@ -1,14 +1,16 @@
 import { defineConfig } from "@playwright/test";
 
+const isCI = process.env.CI === "true";
+
 /**
  * Playwright E2E 配置
  * 前置：本地 API (localhost:3000) + Console (localhost:5175) 已启动
- * 运行：pnpm --filter e2e test
+ * CI 用 chromium（自动下载浏览器），本地用 msedge（复用系统浏览器免下载）
  */
 export default defineConfig({
   testDir: "./tests",
-  timeout: 30000,
-  retries: 0,
+  timeout: isCI ? 60000 : 30000,
+  retries: isCI ? 1 : 0,
   use: {
     baseURL: "http://localhost:5175",
     headless: true,
@@ -17,8 +19,13 @@ export default defineConfig({
     locale: "zh-CN",
   },
   projects: [
-    // 使用系统 Edge，避免下载 Playwright chromium（复用已安装浏览器）
-    { name: "msedge", use: { browserName: "chromium", channel: "msedge" } },
+    {
+      name: isCI ? "chromium-ci" : "msedge",
+      use: {
+        browserName: "chromium",
+        ...(isCI ? {} : { channel: "msedge" }),
+      },
+    },
   ],
-  reporter: [["list"]],
+  reporter: [["list"], ...(isCI ? [["github"]] : [])],
 });

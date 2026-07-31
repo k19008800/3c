@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, extractError } from "../lib/api";
+import { extractError } from "../lib/api";
 import { useAuthStore } from "../store/auth";
 
 export default function LoginPage() {

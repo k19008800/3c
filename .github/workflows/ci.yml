@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "kb/**"
+      - "**.md"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "kb/**"
+      - "**.md"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DATABASE_URL: postgres://postgres:***@localhost:5432/threecloud_v2
+  REDIS_URL: redis://localhost:6379
+  JWT_SECRET: ***
+  NODE_ENV: test
+  API_BASE_URL: http://localhost:3000
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: ***
+          POSTGRES_DB: threecloud_v2
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Database migration
+        run: pnpm --filter api db:migrate
+
+      - name: TypeScript check (api + console)
+        run: pnpm --filter api typecheck && pnpm --filter web-console typecheck
+
+      - name: Lint (api + console + portal)
+        run: pnpm --filter api lint && pnpm --filter web-console lint && pnpm --filter web-portal lint
+
+      - name: Unit tests
+        run: pnpm --filter api test
+
+      - name: Build (api + console + portal)
+        run: pnpm --filter api build && pnpm --filter web-console build && pnpm --filter web-portal build
+
+      - name: Install Playwright browsers
+        run: |
+          cd e2e && pnpm install --no-frozen-lockfile
+          npx playwright install chromium
+
+      - name: Start backend & frontend for E2E
+        run: |
+          pnpm --filter api dev > /tmp/api.log 2>&1 &
+          pnpm --filter web-console dev > /tmp/console.log 2>&1 &
+          echo "Waiting for services..."
+          for i in $(seq 1 30); do
+            curl -s http://localhost:3000/api/v1/health > /dev/null 2>&1 && echo "API ready" && break || sleep 2
+          done
+          for i in $(seq 1 15); do
+            curl -s http://localhost:5175/login > /dev/null 2>&1 && echo "Console ready" && break || sleep 2
+          done
+
+      - name: End-to-end tests
+        run: |
+          cd e2e
+          npx playwright test
+        env:
+          CI: "true"
+
+      - name: Upload Playwright screenshots on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: e2e/test-results/
+          retention-days: 7
