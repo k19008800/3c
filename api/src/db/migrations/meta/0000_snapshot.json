@@ -1,5 +1,5 @@
 {
-  "id": "8274c524-17af-4f13-8725-357ee27541cd",
+  "id": "b14bc7a9-33d8-4482-a9d3-d1e2ac6ec02a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -648,6 +648,100 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.vendor_api_keys": {
+      "name": "vendor_api_keys",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "vendor_id": {
+          "name": "vendor_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "encrypted_key": {
+          "name": "encrypted_key",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key_prefix": {
+          "name": "key_prefix",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_enabled": {
+          "name": "is_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "last_used_at": {
+          "name": "last_used_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "failed_count": {
+          "name": "failed_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_vendor_api_keys_vendor": {
+          "name": "idx_vendor_api_keys_vendor",
+          "columns": [
+            {
+              "expression": "vendor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "vendor_api_keys_vendor_id_vendors_id_fk": {
+          "name": "vendor_api_keys_vendor_id_vendors_id_fk",
+          "tableFrom": "vendor_api_keys",
+          "tableTo": "vendors",
+          "columnsFrom": [
+            "vendor_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.call_logs": {
       "name": "call_logs",
       "schema": "",
@@ -655,8 +749,8 @@
         "id": {
           "name": "id",
           "type": "bigint",
-          "primaryKey": true,
-          "notNull": true
+          "primaryKey": false,
+          "notNull": false
         },
         "user_id": {
           "name": "user_id",
@@ -770,7 +864,15 @@
       },
       "indexes": {},
       "foreignKeys": {},
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "call_logs_id_created_at_pk": {
+          "name": "call_logs_id_created_at_pk",
+          "columns": [
+            "id",
+            "created_at"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -783,8 +885,8 @@
         "id": {
           "name": "id",
           "type": "bigint",
-          "primaryKey": true,
-          "notNull": true
+          "primaryKey": false,
+          "notNull": false
         },
         "user_id": {
           "name": "user_id",
@@ -868,6 +970,21 @@
         }
       },
       "indexes": {
+        "idx_billing_call_log": {
+          "name": "idx_billing_call_log",
+          "columns": [
+            {
+              "expression": "call_log_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "idx_billing_user_created": {
           "name": "idx_billing_user_created",
           "columns": [
@@ -903,22 +1020,17 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        },
-        "billing_logs_call_log_id_call_logs_id_fk": {
-          "name": "billing_logs_call_log_id_call_logs_id_fk",
-          "tableFrom": "billing_logs",
-          "tableTo": "call_logs",
-          "columnsFrom": [
-            "call_log_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "billing_logs_id_created_at_pk": {
+          "name": "billing_logs_id_created_at_pk",
+          "columns": [
+            "id",
+            "created_at"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

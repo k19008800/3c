@@ -8,6 +8,7 @@ export * from "./api-keys";
 export * from "./vendors";
 export * from "./models";
 export * from "./vendor-models";
+export * from "./vendor-api-keys";
 export * from "./call-logs";
 export * from "./billing";
 export * from "./rate-limits";

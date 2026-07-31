@@ -99,7 +99,8 @@ export async function reserveBalance(
  */
 export async function refundBalance(userId: number, amount: number): Promise<boolean> {
   if (amount <= 0) return true;
-  const amountCents = Math.floor(amount * 100);
+  // 与 reserveBalance 的 Math.ceil 保持一致，避免取整丢分
+  const amountCents = Math.ceil(amount * 100);
   try {
     await pool.query("UPDATE users SET balance = balance + $2, updated_at = now() WHERE id = $1", [
       userId,

@@ -92,14 +92,16 @@ function weightedRoundRobin(candidates: RouteCandidate[]): RouteCandidate | null
  * 主入口：为模型选择一个路由目标
  * @returns vendorModelId 或 null（无可用路由）
  */
-export async function selectRoute(modelId: number): Promise<{ vendorModelId: number; upstreamModel: string; viaOverride: boolean } | null> {
+export async function selectRoute(
+  modelId: number,
+): Promise<{ vendorModelId: number; vendorId: number; upstreamModel: string; viaOverride: boolean } | null> {
   // 1. 手动覆盖优先
   const overrideVmId = await getManualOverride(modelId);
   if (overrideVmId) {
     const vm = await db.select().from(vendorModels).where(eq(vendorModels.id, overrideVmId)).limit(1);
     const row = vm[0];
     if (row && row.isEnabled) {
-      return { vendorModelId: row.id, upstreamModel: row.upstreamModel, viaOverride: true };
+      return { vendorModelId: row.id, vendorId: row.vendorId, upstreamModel: row.upstreamModel, viaOverride: true };
     }
   }
 
@@ -113,6 +115,7 @@ export async function selectRoute(modelId: number): Promise<{ vendorModelId: num
 
   return {
     vendorModelId: chosen.vendorModelId,
+    vendorId: chosen.vendorId,
     upstreamModel: chosen.upstreamModel,
     viaOverride: false,
   };

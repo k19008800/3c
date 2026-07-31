@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { healthRoutes } from "./health";
 import { engineRoutes } from "./engine";
+import { proxyRoutes } from "./proxy";
 
 /**
  * 路由统一注册入口
@@ -10,6 +11,8 @@ export function registerRoutes(app: FastifyInstance) {
   void app.register(healthRoutes, { prefix: "/api/v1/health" });
   // §5 核心引擎
   void app.register(engineRoutes, { prefix: "/api/v1/engine" });
+  // §5 API 网关（OpenAI 兼容端点，根路径）
+  void app.register(proxyRoutes);
   // Phase 1 扩展：
   // void app.register(authRoutes, { prefix: "/api/v1/auth" });
   // void app.register(userRoutes, { prefix: "/api/v1/users" });

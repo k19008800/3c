@@ -79,8 +79,19 @@ CREATE TABLE IF NOT EXISTS "vendor_models" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "vendor_api_keys" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"vendor_id" integer NOT NULL,
+	"encrypted_key" varchar(500) NOT NULL,
+	"key_prefix" varchar(20),
+	"is_enabled" boolean DEFAULT true NOT NULL,
+	"last_used_at" timestamp,
+	"failed_count" integer DEFAULT 0,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "call_logs" (
-	"id" bigint PRIMARY KEY NOT NULL,
+	"id" bigint,
 	"user_id" integer NOT NULL,
 	"api_key_id" integer,
 	"model_id" integer,
@@ -97,11 +108,12 @@ CREATE TABLE IF NOT EXISTS "call_logs" (
 	"error_message" text,
 	"latency_ms" integer,
 	"fallback_used" varchar(10) DEFAULT 'false',
-	"created_at" timestamp DEFAULT now() NOT NULL
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "call_logs_id_created_at_pk" PRIMARY KEY("id","created_at")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "billing_logs" (
-	"id" bigint PRIMARY KEY NOT NULL,
+	"id" bigint,
 	"user_id" integer NOT NULL,
 	"call_log_id" bigint,
 	"price_source" varchar(20),
@@ -114,7 +126,8 @@ CREATE TABLE IF NOT EXISTS "billing_logs" (
 	"balance_before" integer,
 	"balance_after" integer,
 	"status" varchar(20) DEFAULT 'pending' NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "billing_logs_id_created_at_pk" PRIMARY KEY("id","created_at")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "rate_limits" (
@@ -241,13 +254,13 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "billing_logs" ADD CONSTRAINT "billing_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+ ALTER TABLE "vendor_api_keys" ADD CONSTRAINT "vendor_api_keys_vendor_id_vendors_id_fk" FOREIGN KEY ("vendor_id") REFERENCES "public"."vendors"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "billing_logs" ADD CONSTRAINT "billing_logs_call_log_id_call_logs_id_fk" FOREIGN KEY ("call_log_id") REFERENCES "public"."call_logs"("id") ON DELETE no action ON UPDATE no action;
+ ALTER TABLE "billing_logs" ADD CONSTRAINT "billing_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -300,6 +313,8 @@ CREATE INDEX IF NOT EXISTS "idx_vendors_status" ON "vendors" USING btree ("statu
 CREATE INDEX IF NOT EXISTS "idx_models_status" ON "models" USING btree ("status");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_vendor_models_model" ON "vendor_models" USING btree ("model_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_vendor_models_vendor" ON "vendor_models" USING btree ("vendor_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_vendor_api_keys_vendor" ON "vendor_api_keys" USING btree ("vendor_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "idx_billing_call_log" ON "billing_logs" USING btree ("call_log_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_billing_user_created" ON "billing_logs" USING btree ("user_id","created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "rate_limits_model_id_idx" ON "rate_limits" USING btree ("model_id");--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "circuit_config_vendor_model_idx" ON "circuit_breaker_configs" USING btree ("vendor_model_id");--> statement-breakpoint
