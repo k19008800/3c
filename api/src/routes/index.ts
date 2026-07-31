@@ -5,6 +5,7 @@ import { proxyRoutes } from "./proxy";
 import { monitoringRoutes } from "./admin-monitoring";
 import { rateLimitAdminRoutes } from "./admin-rate-limit";
 import { authRoutes } from "./auth";
+import { publicRoutes } from "./public";
 
 /**
  * 路由统一注册入口
@@ -21,5 +22,7 @@ export function registerRoutes(app: FastifyInstance) {
   void app.register(rateLimitAdminRoutes, { prefix: "/api/v1" });
   // §2 用户认证
   void app.register(authRoutes, { prefix: "/api/v1" });
+  // §6 Portal 公开数据
+  void app.register(publicRoutes, { prefix: "/api/v1" });
 }
 
