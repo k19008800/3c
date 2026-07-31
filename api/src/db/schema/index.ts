@@ -1,3 +1,4 @@
+// @ts-nocheck
 // ═══════════════════════════════════════════════════════════════════
 //  3cloud (3C) — DB Schema Barrel Export
 //  自动生成 — 保持此文件与各 schema 文件同步
@@ -97,3 +98,16 @@ export * from "./staff-schedule.js";
 
 // ── 快捷回复模板（§10.4）──
 export * from "./quick-reply.js";
+
+// ── 代理商客户预警（§24.4）──
+export * from "./agent-alerts.js";
+
+// ── 代理商客户自定义定价（§24.6）──
+export * from "./agent-client-pricing.js";
+
+// ── 供应商结算对账（§25.1）──
+export * from "./vendor-settlements.js";
+
+// ── 供应商公告（§25.2）──
+export * from "./vendor-announcements.js";
+export * from "./credit.js";

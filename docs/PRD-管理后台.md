@@ -1337,7 +1337,7 @@ diff:
 | 妯″瀷绠＄悊 | 宸叉帴鍏ユā鍨嬪垪琛?鏂板妯″瀷/浠锋牸淇敼 | `/vendor/models` |
 | 鏁版嵁缁熻 | 璋冪敤瓒嬪娍/鏀跺叆瓒嬪娍/鐢ㄦ埛鍒嗗竷(鑴辨晱) | `/vendor/stats` |
 | 缁撶畻 | 缁撶畻鍗曟煡鐪?瀵硅处 | `/vendor/settlement` |
-| 閫氱煡 | 骞冲彴閫氱煡鍒楄〃 | `/vendor/notifications` |
+| 閫氱煡 | 骞冲彴閫氱煡鍒楄〃 | `/vendor/announcements` |
 
 ---
 

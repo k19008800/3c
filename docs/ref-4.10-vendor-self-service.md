@@ -350,7 +350,7 @@ export const vendorSettlements = pgTable("vendor_settlements", {
 | `GET` | `/api/v1/vendor/settlements` | 结算列表 | 供应商 JWT |
 | `GET` | `/api/v1/vendor/settlements/:id` | 结算详情 | 供应商 JWT |
 | `POST` | `/api/v1/vendor/settlements/:id/dispute` | 发起争议 | 供应商 JWT |
-| `GET` | `/api/v1/vendor/notifications` | 通知列表 | 供应商 JWT |
+| `GET` | `/api/v1/vendor/announcements` | 通知列表 | 供应商 JWT |
 
 ### 5.3 平台管理端
 

@@ -19,6 +19,7 @@
 > 🛡 **部署运维手册**：[`docs/ops-guide.md`](ops-guide.md) — 服务器清单、部署流程、PM2/Nginx 配置、备份策略、故障排查、安全配置
 > 📵 **运营手册（SOP）**：[`docs/ops-manual.md`](ops-manual.md) — 日常检查清单、用户/代理/财务/安全操作 SOP、客服 FAQ
 > 🎨🔧 **系统架构概览**：[`docs/architecture.md`](architecture.md) — 系统架构图、部署架构、模块依赖、数据流、安全架构
+> 📦 **重写补充文档（P0）**：[`docs/supplement/`](supplement/) — 9 份补充文档覆盖计费状态机、对账规则、充值退款状态机、代理佣金、路由熔断、一致性契约、Schema 重设计、状态机总图、遗漏补丁
 
 ---
 
@@ -126,7 +127,19 @@
 ### 其他逻辑性问题
 
 1. ✅ **SPEC-§20 交叉引用** → 已修复：§20 对接关系表中 [`§18`](SPEC-§18-用户端体验增强.md) 和 [`§14`](SPEC-§14-错误码规范.md) 补充了文档链接
-2. **§33.3 用户数据导出** → GDPR 合规功能规格较简（约 1 页），建议扩展管理员审核流程细节和 ZIP 内容结构
+2. ✅ **§33.3 用户数据导出** → 已扩展：完整管理员审核流程（审核弹窗/拒绝原因模板/批量操作/GDPR 30 天期限自动管理）、ZIP 内容结构（扩展 22 个文件含 MANIFEST.json 清单/代理信息/团队关系/权限变更等）、分片任务表 `user_export_jobs`、通知模板、合规报告输出
 3. ✅ **浮动章节 A/B Testing** → 已创建 [SPEC-AB-testing.md](SPEC-AB-testing.md)（需求规格文档）
 4. ✅ **短信服务** 和 **OSS 文件上传** → 已创建 [ref-16.3-sms.md](ref-16.3-sms.md) 和 [ref-16.4-oss.md](ref-16.4-oss.md)
-5. **SPEC 模板化 `[]` 帮助** → 所有 SPEC 底部的 `[]` 内容均为通用占位符，未针对具体功能定制。建议在开发前替换为功能定制内容
+5. ✅ **SPEC 模板化 `[]` 帮助** → 已全部替换为功能定制内容：31 份 SPEC 底部的 `[]` 页面帮助 + 按钮级帮助对照表均按各自模块功能定制（子模块说明/注意事项/常见问题/按钮级对照表），含 SPEC-§33 专属定制与浮动章节 AB-testing 定制。2026-07-31 完成，全量校验零残留
+6. ✅ **代码 vs 文档 API 差距分析** → 已完成，详见 [`docs/gap/code-vs-doc-api-gap.md`](gap/code-vs-doc-api-gap.md)。代码 828 条路由 vs 文档 834 条 API 双向比对。核心发现：
+   - **真缺口 ~90 项**集中在 11 个模块：§21 Portal 增强（整体未实现）、§29 资金与对账（ledger/锁账/逾期/报表未实现）、§32 SSO 登录链路（只有配置无登录）、§22 用户端体验（Webhook/Onboarding/OAuth 未实现）、§28 智能客服工具、§31 多环境管理、§25 供应商结算管理端审核、§30 权限工具链、§24 代理排行/素材库、§4 管理后台（备份/数据生命周期/会话）、§23 全局搜索
+   - **代码有文档未定义 684 项**：多为文档未覆盖的 CRUD 辅助接口，按路由文件归纳（admin/finance、admin/users、me/**、agent/** 高密度）
+   - **路径差异 6 组**已全部统一（2026-07-31）：① §25 供应商结算 `vendor/settlement/*`→`vendor/settlements/*`（自助结算 `vendor/self-settlement/*`）；② §25 供应商通知 `vendor/notifications`→`vendor/announcements`（含 PRD-管理后台/ref-4.10 引用）；③ §29 对账差异 `reconciliation/differences/*`→`mismatches/:id/resolve`+`reports`+`run`+`export/:id`；④ §31 故障演练 `drills/vendor-failure/*`→`drills/*`；⑤ §31 多环境 `environments/compare`→`diff`+`sync`+`health-check`；⑥ §22 通知偏好 `me/preferences/notifications`→`me/notifications/preferences`。各 SPEC 已加 📌 路径说明，未实现接口已标注
+   - §33 合规法务（隐私政策/服务条款/数据导出/成本分析）**全部已实现** ✅
+7. ✅ **§29 资金与对账全部实现**（2026-07-31）→ 补齐 5 个 P0/P1 子模块：
+   - §29.1 平台资金流水：`GET /admin/finance/ledger`（列表/详情/汇总/导出CSV/手工调整），聚合 balance_logs+withdraw+recharge+platform_ledger 30 万条数据
+   - §29.2 资金账户：`GET /admin/finance/accounts` + `/trend`（总览/冻结明细/毛利/趋势）
+   - §29.4 财务锁账：`finance_close_records` 新表 + 前置检查/结账/临时解锁（1小时自动重锁）
+   - §29.5 资金报表：日报/周报/月报生成 + HTML 渲染 + 定时推送配置
+   - §29.6 逾期管理：`credit_accounts` + `overdue_records` 新表 + 罚息分级（0.05%→0.2%）/减免/暂停/催收/定时刷新
+   - 新增 5 个服务文件 + 4 个路由文件 + 2 个迁移 SQL，全部通过 tsc 编译 + 集成验证

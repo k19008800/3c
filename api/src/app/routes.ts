@@ -131,6 +131,11 @@ import { adminSupportEnhanceRoutes } from "../routes/admin/support-enhance.js";
 import { adminQuickReplyRoutes } from "../routes/admin/templates/index.js";
 import { adminCostAnalysisRoutes } from "../routes/admin/cost-analysis.js";
 import { agentSettlementRoutes } from "../routes/agent/settlements.js";
+import { agentAlertRoutes } from "../routes/agent/agent-alerts.js";
+import { agentClientPricingRoutes } from "../routes/agent/client-pricing.js";
+import { vendorSettlementRoutes } from "../routes/vendor/settlements.js";
+import { vendorAnnouncementRoutes } from "../routes/vendor/announcements.js";
+import { vendorSelfSettlementRoutes } from "../routes/vendor/self-settlement.js";
 import { adminFinanceRatesRoutes } from "../routes/admin/finance/rates.js";
 import { ticketUserRoutes } from "../routes/tickets/index.js";
 import { adminTicketRoutes } from "../routes/admin/tickets/index.js";
@@ -486,6 +491,26 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // ── 多币种汇率管理 ──
   await app.register(adminFinanceRatesRoutes, { prefix: "" });
 
+  // ── 平台资金流水（§29.1）──
+  const { adminFinanceLedgerRoutes } = await import("../routes/admin/finance-ledger.js");
+  await app.register(adminFinanceLedgerRoutes, { prefix: "" });
+
+  // ── 资金账户管理（§29.2）──
+  const { adminFinanceAccountsRoutes } = await import("../routes/admin/finance-accounts.js");
+  await app.register(adminFinanceAccountsRoutes, { prefix: "" });
+
+  // ── 财务锁账与结转（§29.4）──
+  const { adminFinanceCloseRoutes } = await import("../routes/admin/finance-close.js");
+  await app.register(adminFinanceCloseRoutes, { prefix: "" });
+
+  // ── 资金报表中心（§29.5）──
+  const { adminFinanceReportsRoutes } = await import("../routes/admin/finance-reports.js");
+  await app.register(adminFinanceReportsRoutes, { prefix: "" });
+
+  // ── 违约金与逾期管理（§29.6）──
+  const { adminFinanceOverdueRoutes } = await import("../routes/admin/finance-overdue.js");
+  await app.register(adminFinanceOverdueRoutes, { prefix: "" });
+
   // ── 供应商故障演练（§31.1）──
   await app.register(adminDrillRoutes, { prefix: "" });
 
@@ -549,4 +574,19 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // ── Admin 请求记录（风险分析）──
   const { requestRecordsRoutes } = await import("../routes/admin/request-records/index.js");
   await app.register(requestRecordsRoutes, { prefix: "" });
+
+  // ── §24.4 代理商客户预警 ──
+  await app.register(agentAlertRoutes, { prefix: "" });
+
+  // ── §24.6 代理商客户自定义定价 ──
+  await app.register(agentClientPricingRoutes, { prefix: "" });
+
+  // ── §25.1 供应商结算对账 ──
+  await app.register(vendorSettlementRoutes, { prefix: "" });
+
+  // ── §25.2 供应商公告 ──
+  await app.register(vendorAnnouncementRoutes, { prefix: "" });
+
+  // ── §25.4 供应商自助结算 ──
+  await app.register(vendorSelfSettlementRoutes, { prefix: "" });
 }

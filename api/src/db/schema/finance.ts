@@ -362,6 +362,46 @@ export const exchangeRateHistory = pgTable(
     recordedIdx: index("er_history_recorded_idx").on(table.recordedAt),
   })
 );
+// ══════════════════════════════════════════════════════════════
+//  财务结账记录（SPEC-§29.4 财务锁账与结转）
+//  每月结账锁定财务数据，生成结转凭证
+// ══════════════════════════════════════════════════════════════
+
+export const financeCloseRecords = pgTable(
+  "finance_close_records",
+  {
+    id: serial("id").primaryKey(),
+    period: varchar("period", { length: 7 }).notNull().unique(), // YYYY-MM
+    periodStart: varchar("period_start", { length: 10 }).notNull(),
+    periodEnd: varchar("period_end", { length: 10 }).notNull(),
+    status: varchar("status", { length: 20 }).notNull().default("closed"),
+    // closed | unlocked（临时解锁中）
+    // 汇总
+    incomeTotal: numeric("income_total", { precision: 18, scale: 6 }).notNull().default("0.000000"),
+    expenseTotal: numeric("expense_total", { precision: 18, scale: 6 }).notNull().default("0.000000"),
+    grossProfit: numeric("gross_profit", { precision: 18, scale: 6 }).notNull().default("0.000000"),
+    grossMargin: numeric("gross_margin", { precision: 10, scale: 2 }).notNull().default("0.00"),
+    // 前置检查结果
+    precheckResult: jsonb("precheck_result").notNull().default({}),
+    // 结转凭证
+    carryVoucherNo: varchar("carry_voucher_no", { length: 32 }),
+    // 操作人
+    closedBy: integer("closed_by").references(() => users.id),
+    closedAt: timestamp("closed_at", { withTimezone: true }).notNull().defaultNow(),
+    // 解锁
+    unlockedBy: integer("unlocked_by").references(() => users.id),
+    unlockedAt: timestamp("unlocked_at", { withTimezone: true }),
+    unlockExpiresAt: timestamp("unlock_expires_at", { withTimezone: true }), // 解锁 1 小时后自动重新锁定
+    lockedAgainAt: timestamp("locked_again_at", { withTimezone: true }),
+    // 备注
+    remark: text("remark"),
+  },
+  (table) => ({
+    periodIdx: uniqueIndex("fcr_period_idx").on(table.period),
+    statusIdx: index("fcr_status_idx").on(table.status),
+    closedIdx: index("fcr_closed_idx").on(table.closedAt.desc()),
+  })
+);
 
 
 // ============================================================
