@@ -911,6 +911,61 @@ const FEATURE_DESCRIPTIONS: Record<string, FeatureDesc> = {
     ],
     usage: "系统上线前逐项配置基本参数，日常维护时调整邮件和安全策略。",
   },
+
+  // ════════════════════════════════════════════
+  //  ⚖️ 法律文档
+  // ════════════════════════════════════════════
+
+  "admin/settings/privacy-policy": {
+    title: "隐私政策管理",
+    summary: "管理隐私政策版本，发布新版本并追踪用户同意情况，确保合规运营。",
+    details: [
+      "版本管理：支持多版本管理，可发布新版本或将当前版本编辑更新",
+      "状态卡片：显示当前版本号、发布日期、同意用户数和待同意用户数",
+      "版本发布：支持保存为草稿或直接发布，发布后用户需重新同意",
+      "版本历史：按时间线展示所有版本，支持查看完整内容",
+      "用户同意追踪：统计已同意和待同意的用户数及占比",
+      "【状态流转】草稿 → 已发布 → 归档（草稿可编辑，已发布仅可查看，归档不可恢复）",
+      "【权限要求】CONFIG_VIEW（bit 17）查看、CONFIG_EDIT（bit 18）编辑/发布",
+      "【数据校验】版本号必填且唯一，内容必填，标题和变更摘要可选",
+      "【关联影响】发布新版本后，所有用户将收到同意通知，待同意用户将无法使用部分功能",
+      "【API 端点】GET /admin/privacy-policy/stats, GET /admin/privacy-policy/versions, POST /admin/privacy-policy/versions, PATCH /admin/privacy-policy/versions/:id",
+    ],
+    usage: "在隐私政策更新后，填写新版本内容并发布，系统将自动推送给用户重新同意。",
+  },
+
+  "admin/settings/terms-of-service": {
+    title: "服务条款管理",
+    summary: "管理服务条款版本，发布新版本并追踪用户同意情况，确保合规运营。",
+    details: [
+      "版本管理：支持多版本管理，可发布新版本或将当前版本编辑更新",
+      "状态卡片：显示当前版本号、发布日期、同意用户数和待同意用户数",
+      "版本发布：支持保存为草稿或直接发布，发布后用户需重新同意",
+      "版本历史：按时间线展示所有版本，支持查看完整内容",
+      "用户同意追踪：统计已同意和待同意的用户数及占比",
+      "【状态流转】草稿 → 已发布 → 归档（草稿可编辑，已发布仅可查看，归档不可恢复）",
+      "【权限要求】CONFIG_VIEW（bit 17）查看、CONFIG_EDIT（bit 18）编辑/发布",
+      "【数据校验】版本号必填且唯一，内容必填，标题和变更摘要可选",
+      "【关联影响】发布新版本后，所有用户将收到同意通知，待同意用户将无法使用部分功能",
+      "【API 端点】GET /admin/terms-of-service/stats, GET /admin/terms-of-service/versions, POST /admin/terms-of-service/versions, PATCH /admin/terms-of-service/versions/:id",
+    ],
+    usage: "在服务条款更新后，填写新版本内容并发布，系统将自动推送给用户重新同意。",
+  },
+
+  "admin/settings/data-export": {
+    title: "数据导出管理",
+    summary: "管理用户的数据导出请求，支持处理、拒绝和追踪导出进度。",
+    details: [
+      "请求列表：展示所有用户的数据导出申请，按时间倒序排列",
+      "状态筛选：支持按待处理/生成中/已完成/失败/已拒绝筛选",
+      "处理操作：管理员可处理待导出请求，标记为完成后生成下载链接",
+      "拒绝操作：可拒绝导出请求并填写拒绝原因，展示给用户",
+      "重新处理：失败的导出请求可重新处理",
+      "【权限要求】USER_VIEW 查看列表、USER_MANAGE 处理/拒绝请求",
+      "【API 端点】GET /admin/data-export/requests, POST /admin/data-export/:id/process, POST /admin/data-export/:id/reject",
+    ],
+    usage: "管理用户提交的数据导出请求，审核后处理导出或拒绝并说明原因。",
+  },
 }
 
 // 自动注册到全局

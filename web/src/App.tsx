@@ -118,12 +118,18 @@ const AdminBudgetManagement = lazy(() => import('@/pages/admin/BudgetManagement'
 const AdminExchangeRates = lazy(() => import('@/pages/admin/AdminExchangeRates'))
 const AdminDrills = lazy(() => import('@/pages/admin/AdminDrills'))
 const AdminWebhooks = lazy(() => import('@/pages/admin/AdminWebhooks'))
+const AdminPrivacyPolicy = lazy(() => import('@/pages/admin/PrivacyPolicy'))
+const AdminTermsOfService = lazy(() => import('@/pages/admin/TermsOfService'))
 const AdminSSO = lazy(() => import('@/pages/admin/AdminSSO'))
 const CorpLogin = lazy(() => import('@/pages/admin/CorpLogin'))
 const WechatLogin = lazy(() => import('@/pages/admin/WechatLogin'))
 const CostAnalysis = lazy(() => import('@/pages/admin/CostAnalysis'))
 const AdminCustomReports = lazy(() => import('@/pages/admin/CustomReports'))
 const AdminReports = lazy(() => import('@/pages/admin/Reports'))
+const AdminDataExport = lazy(() => import('@/pages/admin/DataExportRequests'))
+
+// ── 用户端页面 ──
+const DataExport = lazy(() => import('@/pages/me/DataExport'))
 
 // ── 工单系统 ──
 const UserTickets = lazy(() => import('@/pages/tickets/UserTickets'))
@@ -301,6 +307,9 @@ export default function App() {
               <Route path="admin/webhooks" element={withSuspense(<AdminWebhooks />)} />
               <Route path="admin/webhook-logs" element={withSuspense(<AdminWebhookLogs />)} />
               <Route path="admin/settings/sso" element={withSuspense(<AdminSSO />)} />
+              <Route path="admin/settings/privacy-policy" element={withSuspense(<AdminPrivacyPolicy />)} />
+              <Route path="admin/settings/terms-of-service" element={withSuspense(<AdminTermsOfService />)} />
+              <Route path="admin/settings/data-export" element={withSuspense(<AdminDataExport />)} />
               <Route path="admin/settings/corp-login" element={withSuspense(<CorpLogin />)} />
               <Route path="admin/settings/wechat-login" element={withSuspense(<WechatLogin />)} />
               <Route path="admin/finance/cost-analysis" element={withSuspense(<CostAnalysis />)} />
@@ -331,6 +340,7 @@ export default function App() {
             {/* User routes */}
             <Route path="security" element={withSuspense(<Security />)} />
             <Route path="stats" element={withSuspense(<Stats />)} />
+            <Route path="data-export" element={withSuspense(<DataExport />)} />
             <Route path="announcements" element={withSuspense(<Announcements />)} />
             <Route path="notifications" element={withSuspense(<Notifications />)} />
             <Route path="settings" element={withSuspense(<Settings />)} />

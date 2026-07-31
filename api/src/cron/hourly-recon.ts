@@ -62,11 +62,13 @@ async function runHourlyQuickCheck(): Promise<void> {
       console.warn(`[HourlyRecon] 🔴 发现异常:\\n${anomalyMessage}`);
       
       // 发送告警
-      await sendAlert({
-        type: "reconciliation",
-        severity: "high",
-        title: "每小时对账发现异常",
+      await db.insert(monitoringAlerts).values({
+        type: "api_error_rate",
+        severity: "warning",
         message: anomalyMessage,
+        value: anomalies.length,
+        threshold: 0,
+        timestamp: new Date(),
         metadata: {
           timeRange: `${startTime} - ${endTime}`,
           anomalyCount: anomalies.length,
@@ -100,12 +102,13 @@ async function runHourlyQuickCheck(): Promise<void> {
     
     // 记录错误到告警日志
     await db.insert(monitoringAlerts).values({
-      type: "system_error",
+      type: "api_error_rate",
       severity: "critical",
-      title: "每小时对账任务执行失败",
       message: error instanceof Error ? error.message : "Unknown error",
+      value: 1,
+      threshold: 0,
+      timestamp: new Date(),
       metadata: { error: String(error) },
-      createdAt: new Date(),
     });
   }
 }

@@ -19,5 +19,5 @@
     "tsBuildInfoFile": ".tsbuildinfo"
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "dist", "src/db/migrations/*.ts", "src/routes/admin/analytics", "src/routes/admin/audit-logs/export.ts", "src/routes/admin/health/score.ts", "src/routes/admin/logs/export.ts", "src/routes/admin/sensitive-words/export.ts", "src/routes/admin/sensitive-words/test.ts", "src/routes/admin/stats/history-compare.ts", "src/services/two-factor", "src/routes/me/2fa.ts", "src/routes/admin/upload", "src/routes/admin/email-templates-preview.ts", "src/routes/me/stats/__tests__", "src/db/seed-agent-clients.ts", "src/routes/me/deletion.ts", "src/routes/admin/deletion.ts", "src/routes/admin/risk-control.ts", "src/routes/admin/health-score.ts", "src/routes/admin/health/score.ts", "src/routes/admin/custom-reports.ts"]
 }

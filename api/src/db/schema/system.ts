@@ -11,6 +11,7 @@ import {
   timestamp,
   boolean,
   jsonb,
+  bigint,
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
@@ -195,6 +196,82 @@ export const announcements = pgTable(
   })
 );
 
+// ── 隐私政策版本 ──
+
+export const privacyPolicyVersions = pgTable(
+  "privacy_policy_versions",
+  {
+    id: serial("id").primaryKey(),
+    version: varchar("version", { length: 20 }).notNull(),
+    title: varchar("title", { length: 200 }),
+    content: text("content").notNull(),
+    summary: text("summary"),
+    status: varchar("status", { length: 20 }).notNull().default("draft"), // draft / published
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    statusIdx: index("ppv_status_idx").on(table.status),
+  })
+);
+
+// ── 用户隐私政策同意记录 ──
+
+export const userPrivacyConsents = pgTable(
+  "user_privacy_consents",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    versionId: integer("version_id").notNull().references(() => privacyPolicyVersions.id, { onDelete: "cascade" }),
+    consentedAt: timestamp("consented_at", { withTimezone: true }).notNull().defaultNow(),
+    ip: varchar("ip", { length: 45 }),
+  },
+  (table) => ({
+    userVersionIdx: uniqueIndex("upc_user_version_idx").on(table.userId, table.versionId),
+    userIdx: index("upc_user_idx").on(table.userId),
+  })
+);
+
+// ── 服务条款版本 ──
+
+export const termsOfServiceVersions = pgTable(
+  "terms_of_service_versions",
+  {
+    id: serial("id").primaryKey(),
+    version: varchar("version", { length: 20 }).notNull(),
+    title: varchar("title", { length: 200 }),
+    content: text("content").notNull(),
+    summary: text("summary"),
+    status: varchar("status", { length: 20 }).notNull().default("draft"), // draft / published
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    statusIdx: index("tosv_status_idx").on(table.status),
+  })
+);
+
+// ── 用户服务条款同意记录 ──
+
+export const userTosConsents = pgTable(
+  "user_tos_consents",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    versionId: integer("version_id").notNull().references(() => termsOfServiceVersions.id, { onDelete: "cascade" }),
+    consentedAt: timestamp("consented_at", { withTimezone: true }).notNull().defaultNow(),
+    ip: varchar("ip", { length: 45 }),
+  },
+  (table) => ({
+    userVersionIdx: uniqueIndex("utc_user_version_idx").on(table.userId, table.versionId),
+    userIdx: index("utc_user_idx").on(table.userId),
+  })
+);
+
 // ── 公告阅读记录 ──
 
 export const announcementReads = pgTable(
@@ -240,3 +317,18 @@ export const operationTypes = pgTable(
     enabledIdx: index("operation_types_enabled_idx").on(table.enabled),
   })
 );
+
+// ── 数据导出请求（§33.3）──
+export const dataExportRequests = pgTable("data_export_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
+  processedBy: integer("processed_by").references(() => users.id),
+  processedAt: timestamp("processed_at", { withTimezone: true }),
+  fileUrl: text("file_url"),
+  fileExpiresAt: timestamp("file_expires_at", { withTimezone: true }),
+  fileSizeBytes: bigint("file_size_bytes", { mode: "number" }),
+  errorMessage: text("error_message"),
+  rejectReason: text("reject_reason"),
+});

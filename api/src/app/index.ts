@@ -328,17 +328,17 @@ async function registerCronJobs(app: Fastify.FastifyInstance) {
   // ── 活动自动结束检查（每分钟）──
   const endCampaignsTimeout = registerTimeout(async () => {
     const { checkExpiredCampaigns } = await import("../cron/end-campaigns.js");
-    const count = await checkExpiredCampaigns();
-    if (count > 0) {
-      app.log.info(`[Cron] Auto-ended ${count} campaigns on startup`);
+    const ended = await checkExpiredCampaigns();
+    if (ended.length > 0) {
+      app.log.info(`[Cron] Auto-ended ${ended.length} campaigns on startup`);
     }
   }, 60_000);
 
   const endCampaignsInterval = registerInterval(async () => {
     const { checkExpiredCampaigns } = await import("../cron/end-campaigns.js");
-    const count = await checkExpiredCampaigns();
-    if (count > 0) {
-      app.log.info(`[Cron] Auto-ended ${count} campaigns`);
+    const ended = await checkExpiredCampaigns();
+    if (ended.length > 0) {
+      app.log.info(`[Cron] Auto-ended ${ended.length} campaigns`);
     }
   }, 60 * 1000);
   app.log.info("[Cron] Campaign auto-end check scheduled: every 1 minute, first run in 1min");

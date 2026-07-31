@@ -9,6 +9,7 @@ import { apiKeyRoutes } from "../routes/api-keys.js";
 import { adminVendorRoutes } from "../routes/admin/vendors.js";
 import { adminModelRoutes } from "../routes/admin/models.js";
 import { adminVendorModelRoutes } from "../routes/admin/vendor-models.js";
+import { adminVendorRankingRoutes } from "../routes/admin/vendor-ranking.js";
 import { adminKeyGroupRoutes } from "../routes/admin/vendor-key-groups.js";
 import { adminKeyModelPricesRoutes } from "../routes/admin/key-model-prices.js";
 import { adminBatchRoutes } from "../routes/admin/batch.js";
@@ -46,6 +47,7 @@ import { adminStatsRoutes } from "../routes/admin/stats.js";
 import { adminStatsUsageRoutes } from "../routes/admin/stats-usage.js";
 import { meStatsRoutes } from "../routes/stats.js";
 import { meStatsForecastRoutes } from "../routes/me/stats/forecast.js";
+import { meStatsCostBreakdownRoutes } from "../routes/me/stats/cost-breakdown.js";
 import { meStatsOptimizationRoutes } from "../routes/me/stats/optimization.js";
 import { meStatsExportRoutes } from "../routes/me/stats/export.js";
 import { meStatsCompareRoutes } from "../routes/me/stats/compare.js";
@@ -78,6 +80,7 @@ import { adminInvoiceRoutes } from "../routes/admin/invoices.js";
 import { adminRefundRoutes } from "../routes/admin/refunds.js";
 import { profitRoutes } from "../routes/admin/profit.js";
 import { priceRoutes } from "../routes/admin/prices.js";
+import { adminPriceChangeRoutes } from "../routes/admin/price-change.js";
 import { adminRedemptionEnhancedRoutes } from "../routes/admin/redemption-enhanced/index.js";
 import { redemptionUserRoutes } from "../routes/redemption-user.js";
 import { agentRedemptionRoutes } from "../routes/agent/redemption.js";
@@ -145,6 +148,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
   // ── 厂商管理 ──
   await app.register(adminVendorRoutes, { prefix: "" });
+  await app.register(adminVendorRankingRoutes, { prefix: "" });
 
   // ── 模型管理 ──
   await app.register(adminModelRoutes, { prefix: "" });
@@ -247,6 +251,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
   // ── Admin 价格管理 ──
   await app.register(priceRoutes, { prefix: "" });
+  await app.register(adminPriceChangeRoutes, { prefix: "" });
 
   // ── Admin 发票管理 ──
   await app.register(adminInvoiceRoutes, { prefix: "" });
@@ -323,6 +328,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
   // ── 用户端统计对比 ──
   await app.register(meStatsCompareRoutes, { prefix: "" });
+
+  // ── 用户端成本分解 ──
+  await app.register(meStatsCostBreakdownRoutes, { prefix: "" });
 
   // ── 用户端模型优化建议 ──
   await app.register(meStatsOptimizationRoutes, { prefix: "" });
@@ -512,8 +520,31 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   await app.register(adminKnowledgeRoutes, { prefix: "" });
   await app.register(knowledgePublicRoutes, { prefix: "" });
 
-  // ── 成本分析（§33）──
+  // ── 成本分析（§33.4/§33.5）──
   await app.register(adminCostAnalysisRoutes, { prefix: "" });
+
+  // ── 隐私政策版本管理（§33.1）──
+  const { adminPrivacyPolicyRoutes } = await import("../routes/admin/privacy-policy.js");
+  await app.register(adminPrivacyPolicyRoutes, { prefix: "" });
+
+  // ── 服务条款版本管理（§33.2）──
+  const { adminTermsOfServiceRoutes } = await import("../routes/admin/terms-of-service.js");
+  await app.register(adminTermsOfServiceRoutes, { prefix: "" });
+
+  // ── 公开法律文档（免认证）──
+  const { publicLegalRoutes } = await import("../routes/public/legal.js");
+  await app.register(publicLegalRoutes, { prefix: "" });
+
+  // ── 用户端法律文档同意/状态──
+  const { meLegalRoutes } = await import("../routes/me/legal.js");
+  await app.register(meLegalRoutes, { prefix: "" });
+
+  // ── 用户数据导出（§33.3）──
+  const { meDataExportRoutes } = await import("../routes/me/data-export.js");
+  await app.register(meDataExportRoutes, { prefix: "" });
+
+  const { adminDataExportRoutes } = await import("../routes/admin/data-export.js");
+  await app.register(adminDataExportRoutes, { prefix: "" });
 
   // ── Admin 请求记录（风险分析）──
   const { requestRecordsRoutes } = await import("../routes/admin/request-records/index.js");

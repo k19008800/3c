@@ -8,7 +8,7 @@ import {
   AlertTriangle, Lock, Bell, Settings2, Mail, ShieldAlert, PieChart, Megaphone,
   Zap, TrendingUp, Gift, Gauge, Newspaper, Activity, RotateCcw, Heart, Globe,
   FlaskConical, Server, User, History, MessageSquare, BookOpen, Undo2, Calendar, Star, RefreshCw,
-  GitCompare, ArrowUpDown, Award,
+  GitCompare, ArrowUpDown, Award, Download,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useImpersonate } from '@/hooks/use-impersonate'
@@ -166,6 +166,8 @@ const adminGroups: AdminGroup[] = [
     items: [
       { to: '/console/admin/configs', icon: Settings, label: '系统配置', requiredPerms: [Perm.CONFIG_VIEW] },
       { to: '/console/admin/site-settings', icon: Globe, label: '站点设置', requiredPerms: [Perm.CONFIG_VIEW] },
+      { to: '/console/admin/settings/privacy-policy', icon: FileText, label: '隐私政策管理', requiredPerms: [Perm.CONFIG_VIEW] },
+      { to: '/console/admin/settings/terms-of-service', icon: FileText, label: '服务条款管理', requiredPerms: [Perm.CONFIG_VIEW] },
       { to: '/console/admin/rate-limits', icon: Activity, label: '限流管理', requiredPerms: [Perm.OPS_READ] },
       { to: '/console/admin/email-templates', icon: Mail, label: '邮件模板', requiredPerms: [Perm.CONFIG_VIEW] },
       { to: '/console/admin/page-contents', icon: FileText, label: '内容管理', requiredPerms: [Perm.CONFIG_VIEW] },
@@ -181,6 +183,7 @@ const adminGroups: AdminGroup[] = [
       { to: '/console/admin/settings/sso', icon: ShieldCheck, label: 'SSO 配置', requiredPerms: [Perm.CONFIG_VIEW] },
       { to: '/console/admin/settings/corp-login', icon: Building2, label: '通讯录登录', requiredPerms: [Perm.CONFIG_VIEW] },
       { to: '/console/admin/settings/wechat-login', icon: MessageCircle, label: '微信登录', requiredPerms: [Perm.CONFIG_VIEW] },
+      { to: '/console/admin/settings/data-export', icon: Download, label: '数据导出管理', requiredPerms: [Perm.USER_VIEW] },
       { to: '/console/admin/system/undo-logs', icon: Undo2, label: '撤销操作', requiredPerms: [Perm.CONFIG_VIEW] },
     ],
   },
