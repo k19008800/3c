@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.next/
+.env
+*.log
+.DS_Store
+coverage/
+playwright-report/
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+.vercel/
+.pnpm-store/
