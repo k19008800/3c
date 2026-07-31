@@ -1,4 +1,4 @@
-# 3cloud（3C）AI Token 聚合平台 — 十一、业务员支撑模块
+﻿# 3cloud（3C）AI Token 聚合平台 — 十一、业务员支撑模块
 
 > **适用对象**：销售/业务员/代理商 — 负责拓客、客户维系、签约成交的角色
 > **状态**：P0-P1 新增需求
@@ -326,10 +326,10 @@ export const salesTargets = pgTable("sales_targets", {
 | 方法 | 路径 | 说明 | 权限 |
 |------|------|------|------|
 | `GET` | `/api/v1/agent/performance/summary` | 本月业绩概览 | 业务员/代理 |
-| `GET` | `/api/v1/agent/performance/trends?months=6` | 业绩趋势 | 业务员/代理 |
+| `GET` | `/api/v1/agent/performance/trends months=6` | 业绩趋势 | 业务员/代理 |
 | `GET` | `/api/v1/agent/performance/customer-composition` | 客户构成分析 | 业务员/代理 |
 | `GET` | `/api/v1/agent/performance/commission-estimate` | 佣金预估 | 业务员/代理 |
-| `GET` | `/api/v1/agent/performance/ranking?type=newCustomers` | 排名看板 | 业务员/代理 |
+| `GET` | `/api/v1/agent/performance/ranking type=newCustomers` | 排名看板 | 业务员/代理 |
 | `POST` | `/api/v1/admin/sales-targets` | 设置销售目标 | 管理员 |
 | `GET` | `/api/v1/agent/performance/targets` | 我的目标及完成进度 | 业务员/代理 |
 
@@ -474,7 +474,7 @@ export const salesKnowledgeBase = pgTable("sales_knowledge_base", {
 | `GET` | `/api/v1/admin/sales-knowledge` | 文章列表 | 运营/业务员 |
 | `PATCH` | `/api/v1/admin/sales-knowledge/:id` | 更新文章 | 运营/管理员 |
 | `GET` | `/api/v1/agent/sales-knowledge` | 我的可查阅列表 | 业务员 |
-| `GET` | `/api/v1/agent/sales-knowledge/search?q=` | 搜索 | 业务员 |
+| `GET` | `/api/v1/agent/sales-knowledge/search q=` | 搜索 | 业务员 |
 
 #### 前端变更
 

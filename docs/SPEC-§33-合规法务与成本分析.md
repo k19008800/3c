@@ -1,4 +1,4 @@
-# 功能说明书：§33 合规法务与成本分析
+﻿# 功能说明书：§33 合规法务与成本分析
 
 > **对应文档**：[`PRD-非功能需求.md`](PRD-非功能需求.md)
 > **状态**：草案（仅需求文档）
@@ -18,9 +18,9 @@
 - 执行成本分析和优化建议
 - 管理 SLA 和供应商合同
 >
-> **注意事项**：本 SPEC 文档面向开发者和测试人员，包含字段级定义和校验规则。页面标题旁的 `[?]` 帮助气泡引用本文档内容，点击可查看当前页面功能说明。
+> **注意事项**：本 SPEC 文档面向开发者和测试人员，包含字段级定义和校验规则。页面标题旁的 `[]` 帮助气泡引用本文档内容，点击可查看当前页面功能说明。
 >
-> **关联组件**：页面标题右侧 `[?]` 帮助按钮，悬停/点击弹出帮助弹窗。
+> **关联组件**：页面标题右侧 `[]` 帮助按钮，悬停/点击弹出帮助弹窗。
 
 
 
@@ -360,7 +360,7 @@ export const dataExportRequests = pgTable("data_export_requests", {
 
 ```
 GET /api/v1/admin/finance/vendor-cost-analysis
-  ?period=month&date=2026-07
+  period=month&date=2026-07
   → { vendors: [{ name, callVolume, cost, revenue, margin, costEfficiency }], trends, costShare }
 ```
 
@@ -420,7 +420,7 @@ GET /api/v1/admin/campaigns/roi-summary — ROI 汇总
 
 ---
 
-### [?] 页面帮助
+### [] 页面帮助
 
 **页面名称**：功能说明书：§33 合规法务与成本分析
 
@@ -441,7 +441,7 @@ GET /api/v1/admin/campaigns/roi-summary — ROI 汇总
 Q: 为什么某些操作不可用？
 A: 请检查当前账号的权限角色是否包含对应操作权限。
 
-### [?] 按钮级帮助对照表
+### [] 按钮级帮助对照表
 
 | 按钮/操作 | 帮助说明 |
 |----------|---------|
