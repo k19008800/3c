@@ -13,6 +13,7 @@
     "lint": "eslint src --ext .ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
+    "db:partition": "tsx src/db/partition-init.ts",
     "worker": "tsx src/jobs/worker.ts"
   },
   "dependencies": {
