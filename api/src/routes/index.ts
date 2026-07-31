@@ -4,6 +4,7 @@ import { engineRoutes } from "./engine";
 import { proxyRoutes } from "./proxy";
 import { monitoringRoutes } from "./admin-monitoring";
 import { rateLimitAdminRoutes } from "./admin-rate-limit";
+import { authRoutes } from "./auth";
 
 /**
  * 路由统一注册入口
@@ -18,7 +19,7 @@ export function registerRoutes(app: FastifyInstance) {
   // §5.4/§5.3 告警与限流管理端（admin 前缀）
   void app.register(monitoringRoutes, { prefix: "/api/v1" });
   void app.register(rateLimitAdminRoutes, { prefix: "/api/v1" });
-  // Phase 1 扩展：
-  // void app.register(authRoutes, { prefix: "/api/v1/auth" });
-  // void app.register(userRoutes, { prefix: "/api/v1/users" });
+  // §2 用户认证
+  void app.register(authRoutes, { prefix: "/api/v1" });
 }
+

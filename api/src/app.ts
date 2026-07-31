@@ -30,6 +30,15 @@ export function buildApp() {
     secret: process.env.JWT_SECRET ?? "dev-secret-change-in-production",
   });
 
+  // authenticate 装饰器（JWT 验证，供受保护路由 onRequest 使用）
+  app.decorate("authenticate", async (req: any, reply: any) => {
+    try {
+      await req.jwtVerify();
+    } catch {
+      return reply.code(401).send({ error: "UNAUTHORIZED", message: "未认证或凭证已失效" });
+    }
+  });
+
   // 限流（默认：每 IP 100 req/min）
   void app.register(rateLimit, {
     max: 100,
