@@ -14,6 +14,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:partition": "tsx src/db/partition-init.ts",
+    "db:seed": "tsx src/db/seed.ts",
     "worker": "tsx src/jobs/worker.ts"
   },
   "dependencies": {

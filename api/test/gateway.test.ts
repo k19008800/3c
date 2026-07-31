@@ -21,10 +21,15 @@ beforeAll(async () => {
   app = buildApp();
   await app.ready();
 
-  // 清理上次可能遗留的测试数据（vendors.name/code 和 models.name 有唯一约束）
-  await pool.query("DELETE FROM vendor_models WHERE upstream_model='mock-upstream'").catch(() => {});
-  await pool.query("DELETE FROM vendor_api_keys WHERE key_prefix='mockkey'").catch(() => {});
-  await pool.query("DELETE FROM vendors WHERE name LIKE 'MockVendor%' OR code LIKE 'mock-%'").catch(() => {});
+  // 清理上次可能遗留的测试数据（按 FK 依赖先删子表再父表；vendors/models 有唯一约束）
+  // 找出遗留 MockVendor id
+  const staleVendors = await pool.query("SELECT id FROM vendors WHERE name LIKE 'MockVendor%' OR code LIKE 'mock%'").catch(() => ({ rows: [] }));
+  for (const row of staleVendors.rows) {
+    const vid = Number(row.id);
+    await pool.query("DELETE FROM vendor_models WHERE vendor_id=$1", [vid]).catch(() => {});
+    await pool.query("DELETE FROM vendor_api_keys WHERE vendor_id=$1", [vid]).catch(() => {});
+    await pool.query("DELETE FROM vendors WHERE id=$1", [vid]).catch(() => {});
+  }
   await pool.query("DELETE FROM models WHERE name='mock-model'").catch(() => {});
 
   // 建用户（余额足够）
@@ -67,8 +72,13 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app.close();
-  // 清理测试数据
+  // 清理测试数据（按 FK 依赖先删子表，且含测试调用产生的日志）
+  await pool.query("DELETE FROM call_logs WHERE vendor_id=(SELECT id FROM vendors WHERE name='MockVendor')").catch(() => {});
+  await pool.query("DELETE FROM billing_logs WHERE user_id=$1", [userId]).catch(() => {});
+  await pool.query("DELETE FROM vendor_api_keys WHERE key_prefix='mockkey'").catch(() => {});
   await pool.query("DELETE FROM vendor_models WHERE id=$1", [vendorModelId]).catch(() => {});
+  await pool.query("DELETE FROM vendors WHERE name='MockVendor'").catch(() => {});
+  await pool.query("DELETE FROM models WHERE id=$1", [modelId]).catch(() => {});
   await pool.query("DELETE FROM api_keys WHERE id=$1", [apiKeyId]).catch(() => {});
   await pool.query("DELETE FROM users WHERE id=$1", [userId]).catch(() => {});
   await pool.end();

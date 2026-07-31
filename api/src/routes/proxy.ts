@@ -1,11 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import { eq, and } from "drizzle-orm";
-import { db } from "../db/index";
+import { db, pool } from "../db/index";
 import { authenticateApiKey, extractBearerKey, isModelAllowed } from "../services/api-auth";
 import { checkRateLimit, rateLimitError } from "../services/rate-limiter";
 import { selectRoute } from "../services/router";
 import { recordResult } from "../services/circuit-breaker";
-import { getEffectivePrice, calcCost, reserveBalance, refundBalance } from "../services/billing";
+import { getEffectivePrice, calcCost, reserveBalance, refundBalance, recordBilling, recordCallLog } from "../services/billing";
 import { forwardChatCompletion } from "../services/upstream";
 import { models } from "../db/schema/models";
 import { vendors } from "../db/schema/vendors";
@@ -99,34 +99,69 @@ export function proxyRoutes(app: FastifyInstance) {
         return reply.status(402).send({ error: { code: reserved.error, message: "余额不足，无法预扣" } });
       }
 
-      // 7. 真实转发
+      // 8. 读取用户当前余额（分）用于计费流水（预扣后的余额作为计费交易起点）
+      const balanceRows = await pool.query("SELECT balance FROM users WHERE id=$1", [ctx.userId]);
+      const balanceBefore = Number(balanceRows.rows[0]?.balance ?? 0);
+
+      // 9. 真实转发 + 熔断器学习
       const result = await forwardChatCompletion({
         vendor,
         vendorApiKey: vendorKey.encryptedKey,
         upstreamModel: route.upstreamModel,
         body: { ...(body as any), stream: body.stream ?? false },
       });
+      await recordResult(route.vendorModelId, result.ok);
 
-      // 8. 计费实扣（多退少补）
+      // 10. 计费结算：精算实际费用，多退少补
       let actualCost = 0;
       if (result.usage) {
         actualCost = calcCost(result.usage.inputTokens, result.usage.outputTokens, price.inputPrice, price.outputPrice);
       }
-      // 记录路由结果（熔断器学习）
-      await recordResult(route.vendorModelId, result.ok);
-
-      // 9. 余额调整：退还未使用部分
       if (result.ok) {
+        // 成功：退还预扣中未使用的部分（精确到 0.0001 元）
         const refund = estimatedCost - actualCost;
         if (refund > 0.0001) {
           await refundBalance(ctx.userId, refund);
         }
       } else {
-        // 失败全额退还预扣
+        // 失败：全额退还预扣
         await refundBalance(ctx.userId, estimatedCost);
       }
+      const balanceRowsAfter = await pool.query("SELECT balance FROM users WHERE id=$1", [ctx.userId]);
+      const balanceAfter = Number(balanceRowsAfter.rows[0]?.balance ?? 0);
 
-      // 10. 返回
+      // 11. 落库：调用日志 + 计费日志（真实可用数据）
+      const callLogId = Number(Date.now());
+      await recordCallLog({
+        id: callLogId,
+        userId: ctx.userId,
+        apiKeyId: ctx.apiKeyId,
+        modelId: model.id,
+        vendorId: route.vendorId,
+        requestId: req.id as string | undefined,
+        provider: vendor.name,
+        upstreamModel: route.upstreamModel,
+        requestTokens: result.usage?.inputTokens,
+        responseTokens: result.usage?.outputTokens,
+        costCents: Math.round(actualCost * 100),
+        status: result.ok ? "success" : "failed",
+        errorCode: result.ok ? undefined : result.error?.code,
+        latencyMs: undefined,
+        fallbackUsed: result.ok ? false : true,
+      });
+      await recordBilling({
+        userId: ctx.userId,
+        callLogId,
+        priceSource: price.priceSource,
+        inputPrice: price.inputPrice,
+        outputPrice: price.outputPrice,
+        inputTokens: result.usage?.inputTokens ?? 0,
+        outputTokens: result.usage?.outputTokens ?? 0,
+        balanceBefore,
+        balanceAfter,
+      });
+
+      // 12. 返回
       if (!result.ok) {
         return reply.status(502).send({
           error: { code: result.error?.code, message: result.error?.message ?? "上游调用失败" },
