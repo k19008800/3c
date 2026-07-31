@@ -1,1 +1,0 @@
-export { useTrendData } from './useTrendData'

@@ -1,1 +1,0 @@
-export { useVendors } from './useVendors'

@@ -1,5 +1,0 @@
-export { default as BatchesTab } from './BatchesTab'
-export { default as LogsTab } from './LogsTab'
-export { default as FraudTab } from './FraudTab'
-export { default as AuditLogsTab } from './AuditLogsTab'
-export { default as ReportsTab } from './ReportsTab'
