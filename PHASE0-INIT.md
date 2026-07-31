@@ -3,8 +3,10 @@
 > **目标**：搭好干净、规范、可持续的工程底座
 > **决策依据**：`kb/decisions/2026-07-31-refactor-tech-roadmap.md`（BOSS 2026-07-31 确认 5 拍板点）
 > **状态**：待执行 | **预计工期**：~1 周
-> **⚠️ 本地环境**：Node v24.18.0 / npm 11.16.0 / **无 Docker**。本地用原生进程（PostgreSQL 17 + Memurai Redis 已本地运行），docker-compose 仅供生产/可选环境。
+> **⚠️ 本地环境**：Node v24.18.0 / pnpm 9.0.5 / **无 Docker**。本地用原生进程（PostgreSQL 17 + Memurai Redis 已本地运行）。
+> **数据库名**：`threecloud_v2`（新库，避免与旧库混淆）
 > **工作目录**：`C:\Users\ZH\.openclaw\workspace\3cloud`（当前仅 docs/ + PHASE0-INIT.md）
+> **部署**：等开发环境验收完整项目后再部署生产（Phase 0-2 先本地跑）
 
 ---
 
@@ -26,32 +28,25 @@ mkdir .github\workflows
 mkdir .husky
 ```
 
-**根 `package.json`**（workspaces）：
+**根 `package.json`**（pnpm workspaces）：
 
 ```json
 {
   "name": "3cloud",
   "private": true,
+  "packageManager": "pnpm@9.0.5",
   "workspaces": ["packages/shared", "api", "web-console", "web-portal"],
   "scripts": {
-    "dev": "npm-run-all --parallel dev:api dev:console dev:portal",
-    "dev:api": "npm run dev -w api",
-    "dev:console": "npm run dev -w web-console",
-    "dev:portal": "npm run dev -w web-portal",
-    "build": "npm-run-all build:api build:console build:portal",
-    "build:api": "npm run build -w api",
-    "build:console": "npm run build -w web-console",
-    "build:portal": "npm run build -w web-portal",
-    "test": "npm run test -w api",
-    "lint": "npm-run-all lint:*",
-    "lint:api": "eslint api/src --ext .ts",
-    "lint:web": "eslint web-console/src web-portal/src --ext .ts,.tsx",
-    "typecheck": "tsc --noEmit -p api/tsconfig.json && tsc --noEmit -p web-console/tsconfig.json && tsc --noEmit -p web-portal/tsconfig.json",
-    "db:generate": "npm run db:generate -w api",
-    "db:migrate": "npm run db:migrate -w api"
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -w api test",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "db:generate": "pnpm -w api db:generate",
+    "db:migrate": "pnpm -w api db:migrate",
+    "worker": "pnpm -w api worker"
   },
   "devDependencies": {
-    "npm-run-all": "^4.1.5",
     "typescript": "^5.6.0",
     "eslint": "^9.0.0",
     "typescript-eslint": "^8.0.0",
@@ -62,11 +57,11 @@ mkdir .husky
 ```
 
 ```bash
-# 安装（在 3cloud 根目录）
-npm install
+# 安装（在 3cloud 根目录，用 pnpm）
+pnpm install
 ```
 
-**验收**：`npm run typecheck` 空工程零错误（当前仅 shared 空目录）。
+**验收**：`pnpm -r typecheck` 空工程零错误。
 
 ---
 
@@ -150,8 +145,6 @@ export type ErrorCodes = (typeof ErrorCodes)[keyof typeof ErrorCodes];
     "@fastify/jwt": "^9.0.0",
     "@fastify/swagger": "^9.0.0",
     "@fastify/rate-limit": "^10.0.0",
-    "zod": "^3.23.0",
-    "zod-to-json-schema": "^3.23.0",
     "drizzle-orm": "^0.36.0",
     "pg": "^8.13.0",
     "bullmq": "^5.12.0",
@@ -170,13 +163,16 @@ export type ErrorCodes = (typeof ErrorCodes)[keyof typeof ErrorCodes];
 }
 ```
 
+> 注：API 校验用 **Fastify 原生 JSON Schema**（route `schema` 选项），不引入 zod-to-json-schema。Zod 仅用于 service 层内部换算校验（如价格计算、费率折算）。
+
 ```bash
 cd api
-npm install drizzle-orm drizzle-kit fastify @fastify/cors @fastify/jwt @fastify/swagger @fastify/rate-limit zod zod-to-json-schema pg bullmq ioredis pino dotenv
-npm install -D tsx typescript vitest @vitest/coverage-v8 @types/pg drizzle-kit
-# 别忘了根目录跑 install 链接 shared
+# 用 pnpm 安装（依赖会通过 workspace 链接到根）
+pnpm add drizzle-orm fastify @fastify/cors @fastify/jwt @fastify/swagger @fastify/rate-limit pg bullmq ioredis pino dotenv
+pnpm add -D drizzle-kit tsx typescript vitest @vitest/coverage-v8 @types/pg
+# 在根目录跑一次，链接 shared
 cd ..
-npm install
+pnpm install
 ```
 
 #### 3.2 `api/tsconfig.json`（strict）
@@ -214,7 +210,7 @@ export default defineConfig({
   out: "./src/db/migrations",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/threecloud",
+    url: process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/threecloud_v2",
   },
 });
 ```
@@ -222,7 +218,7 @@ export default defineConfig({
 #### 3.4 `api/.env`
 
 ```
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/threecloud
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/threecloud_v2
 REDIS_URL=redis://localhost:6379
 JWT_SECRET=change-me-in-prod
 PORT=3000
@@ -245,16 +241,15 @@ export * from "./recharge";
 **核心表（Phase 0 首批，P0）**：`users`、`api_keys`、`vendors`、`models`、`vendor_models`、`call_logs`（分区）、`billing_logs`（分区）、`balance_logs`（分区）、`recharge_orders`、`platform_ledger`、`agents`、`operation_logs`（分区）、`site_configs`。
 （完整字段对齐 `supplement/07-Schema重设计建议.md`，不在此展开。）
 
-**分区表写法（call_logs 示例）**：
+**分区表写法（call_logs 示例，配合 pg_partman）**：
 
 ```typescript
-import { pgTable, serial, bigint, varchar, timestamp, integer, index } from "drizzle-orm/pg-core";
+import { pgTable, bigint, integer, varchar, timestamp, index } from "drizzle-orm/pg-core";
 
-// Drizzle 支持使用 pg_partman 或原生 partition by；这里定义分区主表
+// Drizzle 定义分区主表结构（PARTITIONED TABLE）
 export const callLogs = pgTable(
   "call_logs",
   {
-    id: bigint("id", { mode: "number" }).primaryKey(),
     userId: integer("user_id").notNull(),
     apiKeyId: integer("api_key_id"),
     modelId: integer("model_id"),
@@ -267,9 +262,37 @@ export const callLogs = pgTable(
   },
   (table) => [index("idx_call_logs_user_created").on(table.userId, table.createdAt)],
 );
-// ⚠️ 分区在 migration SQL 里用原生 "PARTITION BY RANGE (created_at)" 建子表，
-// Drizzle 定义主表结构 + 编写 partition 管理 SQL（见 migrate.ts 说明）
+// ⚠️ 实际建表时，call_logs 是 PARENT（分区主表），在 migration 中手写：
+//   CREATE TABLE call_logs ... PARTITION BY RANGE (created_at);
+// 然后启用 pg_partman 自动管理子表（见下方 3.6 partition 初始化）
 ```
+
+**3.5.1 pg_partman 分区初始化（migration 中执行）**：
+
+```sql
+-- 启用扩展（需超级用户，Phase 0 首次安装）
+CREATE EXTENSION IF NOT EXISTS pg_partman;
+CREATE SCHEMA IF NOT EXISTS partman;
+-- 注意：pg_partman 子表主键/约束要求分区列必须包含在唯一约束中，
+-- 因此分区表不可用 serial 自增主键，改用 bigserial 分区列或业务唯一键（如 id + created_at 复合主键）
+
+-- 对 call_logs 配置按月分区（前 12 个月 + 未来 3 个月预建）
+SELECT partman.create_parent(
+  p_parent_table => 'public.call_logs',
+  p_control => 'created_at',
+  p_interval => '1 month',
+  p_premake => 3
+);
+
+-- 自动清理：保留 12 个月，每月 1 日 02:00 由 pg_partman 后台调度
+UPDATE partman.part_config
+SET retention = '12 months', retention_keep_table = false, infinite_time_partitions = true
+WHERE parent_table = 'public.call_logs';
+
+-- 其它分区表（billing_logs / balance_logs / operation_logs / audit_logs）同理各配置一份
+```
+
+> **pg_partman 调度**：用 `pg_catalog.pg_extension_config_dump` + 后台 worker 或 `partman.run_maintenance_proc()` 定时调用。生产可挂系统 cron/PG 内置 schedule 每 10 分钟跑一次 `CALL partman.run_maintenance()`,确保新分区自动建、旧分区自动删。
 
 #### 3.6 `api/src/db/migrate.ts`（migration 执行器）
 
@@ -297,11 +320,20 @@ main().catch((e) => {
 ```bash
 # 生成首个正式 migration（需先建好 schema 文件）
 cd api
-npm run db:generate   # 生成 0001_initial_schema.sql
-npm run db:migrate    # 执行（需本地 PG 已建 threecloud 库）
+pnpm db:generate   # 生成 0001_initial_schema.sql
+pnpm db:migrate    # 执行（需本地 PG 已建 threecloud_v2 库）
+
+# ⚠️ 首次需先建库 + 启用 pg_partman 扩展（migration 不含扩展安装时可手动执行）：
+psql -U postgres -h localhost -c "CREATE DATABASE threecloud_v2;"
+psql -U postgres -h localhost -d threecloud_v2 -c "CREATE EXTENSION IF NOT EXISTS pg_partman;"
 ```
 
-> **分区表处理**：drizzle-kit 对分区主表支持有限，`0001_initial_schema.sql` 生成后用脚本在 SQL 末尾**追加分区子表 CREATE TABLE ... PARTITION OF** + 分区清理函数（或启用 pg_partman）。Phase 0 提供一个 `scripts/create-partitions.sql` 手动补充分区。
+> **分区表处理（pg_partman 方案）**：
+> 1. 分区主表在 Drizzle schema 中定义，migration 生成时手写补上 `PARTITION BY RANGE (created_at)`（Drizzle 对分区 DDL 支持有限，需在生成的 migration SQL 末尾追加）。
+> 2. 启用 pg_partman：对 call_logs/billing_logs/balance_logs/operation_logs/audit_logs 各调 `partman.create_parent()` 按月分区。
+> 3. 配置 retention（保留 12 个月）+ infinite_time_partitions（未来预建）。
+> 4. 维护调度：`CALL partman.run_maintenance()` 定时跑。
+> 5. 分区表注意：分区列需包含在唯一约束/主键中，避免用 `serial` 自增主键（用复合主键 `(id, created_at)` 或业务唯一键）。
 
 #### 3.7 `api/src/app.ts`（Fastify 装配）
 
@@ -375,7 +407,7 @@ process.on("SIGINT", async () => await app.close());
 ```bash
 # 启动 + 验证
 cd api
-npm run dev
+pnpm dev
 curl http://localhost:3000/api/v1/health   # → {"status":"ok"}
 curl http://localhost:3000/docs            # → Swagger UI
 ```
@@ -428,7 +460,7 @@ console.log("worker 已启动");
 
 ```bash
 # 测试：推一个任务并消费
-npm run worker   # 单独终端启动 worker
+pnpm worker   # 单独终端启动 worker
 node -e "const Q=require('bullmq').Queue;const q=new Q('settlement',{connection:{host:'localhost',port:6379}});q.add('test',{a:1}).then(()=>{console.log('pushed');process.exit()})"
 ```
 
@@ -440,11 +472,10 @@ node -e "const Q=require('bullmq').Queue;const q=new Q('settlement',{connection:
 
 ```powershell
 cd 3cloud
-# 用 vite 脚手架生成（或手写）
-npm create vite@latest web-console -- --template react-ts
+pnpm create vite web-console --template react-ts
 cd web-console
-npm install @tanstack/react-query zustand react-router-dom axios
-npm install -D tailwindcss @tailwindcss/vite
+pnpm add @tanstack/react-query zustand react-router-dom axios
+pnpm add -D tailwindcss @tailwindcss/vite
 ```
 
 **`web-console/src/lib/api.ts`**（axios 封装，含 401 拦截器 + 错误码映射 + loading）：
@@ -478,33 +509,45 @@ api.interceptors.response.use(
 
 ---
 
-### STEP 5 — 前端 Portal SSR（vike）
+### STEP 5 — 前端 Portal SSR（Next.js App Router，BOSS 拍板）
 
 ```powershell
 cd 3cloud
-npm create vike@latest web-portal   # 或手写 vike 配置
+pnpm create next-app@latest web-portal \
+  --ts --app --tailwind --eslint --src-dir\
+  --import-alias "@/*" --use-pnpm
 cd web-portal
-npm install react react-dom @tanstack/react-query
+pnpm add @tanstack/react-query
 ```
 
-**vike 目录结构**（SSR 页面在 `pages/`，Page 组件 + +config）：
+**Next.js 项目结构**（App Router，SSR 默认服务端渲染，利于 SEO）：
 
 ```
 web-portal/src/
-├── pages/
-│   ├── index/+Page.tsx        # 首页
-│   ├── pricing/+Page.tsx      # 定价页(含价格计算器)
-│   ├── models/+Page.tsx
-│   ├── docs/+Page.tsx
-│   ├── status/+Page.tsx
-│   └── blog/[slug]/+Page.tsx
-├── renderer/
-│   ├── +config.h.ts
-│   └── +onRenderHtml.ts / +onRenderClient.ts
-└── server/ (可选独立 SSR 端口)
+├── app/
+│   ├── layout.tsx             # 根布局(Header/Footer + 元数据)
+│   ├── page.tsx               # 首页 (SSR, SEO metadata)
+│   ├── pricing/page.tsx       # 定价页(含价格计算器)
+│   ├── models/page.tsx        # 模型目录
+│   ├── docs/page.tsx          # 开发者文档
+│   ├── status/page.tsx        # 服务状态页
+│   ├── blog/
+│   │   ├── page.tsx           # 文章列表
+│   │   └── [slug]/page.tsx    # 文章详情
+│   ├── sitemap.ts             # 动态 sitemap.xml
+│   └── robots.ts              # robots.txt
+└── components/                # Portal 组件(对比表/价格计算器等)
 ```
 
-**Portal SSR 端口**：建议独立端口 `3100`，Nginx 反代。SEO 元数据用 `+Head`/`+data` 提供。
+**SEO 关键点**：
+- 每页 `export const metadata: Metadata = { title, description, openGraph }`（对齐 ref/SPEC §21.1 元数据表）
+- `app/sitemap.ts` 动态生成全部页面 URL；`app/robots.ts` 指向 sitemap
+- 首页/定价/模型/状态页为**服务端组件**（SSR 默认），其余页面可按需 client
+- JSON-LD 结构化数据用 `export const metadata` 的 `other` 字段或 `script` 标签注入
+
+**Portal 端口**：Next.js dev 默认 `3000`，与 API 冲突。启动时指定 `next dev -p 3100`，Nginx 反代。根 package.json 的 `dev:portal` 脚本写成 `next dev -p 3100`。
+
+> **React 19**：Next.js 15+ 支持 React 19，与 Console 保持一致（BOSS 拍板 A）。
 
 ---
 
@@ -531,16 +574,15 @@ export default defineConfig({
 
 ```bash
 cd api
-npm run test:coverage   # 验证 >= 80% 门槛
+pnpm test:coverage   # 验证 >= 80% 门槛
 ```
 
 **Playwright E2E**（根 `e2e/`）：
 
 ```bash
 cd 3cloud
-npm init -y -w e2e 2>$null
-npx playwright init e2e
-npx playwright install
+pnpm dlx playwright init e2e
+pnpm dlx playwright install
 ```
 
 **关键链路用例**（Phase 1 起逐步补）：注册→登录→创建 Key→调用→账单展示。
@@ -549,22 +591,22 @@ npx playwright install
 
 ### STEP 7 — Git 规范 + husky + CI
 
-**`.husky/pre-commit`**：
+**`.husky/pre-commit`**（精简版——只跑快速检查，typecheck 放 CI）：
 
 ```bash
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
-echo "[pre-commit] 运行类型检查 & lint & 测试 & PUA 检测..."
-npm run typecheck
-npm run lint
-npm run test
+echo "[pre-commit] lint + 单测 + PUA 检测..."
+pnpm -r lint
+pnpm -w api test
 python scripts/pre-commit-pua.py   # 复用旧 PUA 检测（防中文编码腐烂）
+# 注: typecheck 不放这里(全项目太慢), 由 CI 执行
 ```
 
 ```bash
-npm install -D husky
-npx husky init
+pnpm add -D husky
+pnpm dlx husky init
 # 把旧 pre-commit-pua.py 拷到 scripts/（旧项目已删除，从 3cloud-backup 或 git 历史取）
 ```
 
@@ -581,22 +623,24 @@ jobs:
         image: postgres:17
         env:
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: threecloud
+          POSTGRES_DB: threecloud_v2
         ports: ["5432:5432"]
       redis:
         image: redis:7
         ports: ["6379:6379"]
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: npm ci
-      - run: npm run db:migrate
-        env: { DATABASE_URL: "postgres://postgres:postgres@localhost:5432/threecloud" }
-      - run: npm run typecheck
-      - run: npm run lint
-      - run: npm run test
-      - run: npm run build
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -w api db:migrate
+        env: { DATABASE_URL: "postgres://postgres:postgres@localhost:5432/threecloud_v2" }
+      - run: pnpm -r typecheck
+      - run: pnpm -r lint
+      - run: pnpm -w api test
+      - run: pnpm -r build
 ```
 
 **`.gitignore`**（根）：
@@ -613,30 +657,34 @@ playwright-report/
 
 ---
 
-### STEP 8 — 部署（重写 deploy 脚本）
+### STEP 8 — 部署（⚠️ 延迟到开发验收完整项目后再执行）
 
-> docker-compose 供生产可选；BOSS 本地无 Docker，生产服若有 Docker 用 compose，否则用 PM2 原生部署。
+> **BOSS 拍板**：等 Phase 0-2 开发环境验收完整项目后，再部署到生产服。本 STEP 仅**预写脚本**，Phase 0 不执行部署。
+> 生产服 117.78.2.66（2C/1.7G/40G，内存小）需注意 api + worker + 前端进程可能 OOM，部署时 worker 与 api 分离或按需启停。
+> 本地无 Docker，生产服若有 Docker 用 compose，否则用 PM2 原生部署。
 
 **`deploy/deploy.sh`**（骨架，替代旧版）：
 
 ```bash
 #!/bin/bash
 set -e
+# ⚠️ 本脚本在开发验收后执行，Phase 0-2 阶段不要运行
 # 1. 拉代码
-git pull origin main
-# 2. 构建后端
-cd api && npm ci && npm run build
-# 3. 构建前端(console + portal)
-cd ../web-console && npm ci && npm run build
-cd ../web-portal && npm ci && npm run build
-# 4. 迁移
-cd ../api && npm run db:migrate
-# 5. PM2 部署 api + worker
+cd /root/3cloud && git pull origin main
+# 2. 安装依赖(pnpm)
+corepack enable && pnpm install --frozen-lockfile
+# 3. 构建后端
+pnpm -w api build
+# 4. 构建前端(console + portal)
+pnpm -w web-console build && pnpm -w web-portal build
+# 5. 迁移
+pnpm -w api db:migrate
+# 6. PM2 部署 api + worker(注意生产服内存小,worker可另行控制)
 pm2 reload ecosystem.config.js || pm2 start ecosystem.config.js
-pm2 reload worker || pm2 start ecosystem.config.js --only worker
-# 6. 同步前端 dist 到 Nginx 目录
+# 7. 同步前端 dist 到 Nginx 目录
+# rsync web-console/.next/... /var/www/console/ (Next.js build output)
 # rsync web-console/dist /var/www/console/
-# rsync web-portal/dist /var/www/portal/
+# rsync web-portal/.next /var/www/portal/
 ```
 
 **`api/ecosystem.config.js`**（PM2 cluster）：
@@ -656,11 +704,11 @@ module.exports = {
 
 | # | 检查项 | 命令/方法 | 判定 |
 |---|--------|----------|------|
-| 1 | monorepo 三工程可 dev | `npm run dev` | 通过 |
-| 2 | tsc 全项目零错误 | `npm run typecheck` | 通过 |
-| 3 | eslint/prettier 零告警 | `npm run lint` | 通过 |
-| 4 | 单测通过且覆盖率 ≥80% | `npm run test:coverage`（api service）| 通过 |
-| 5 | migration 0001 空库完整执行（含分区）| `npm run db:migrate` | 通过 |
+| 1 | monorepo 三工程可 dev(pre+console+portal) | `pnpm dev` | 通过 |
+| 2 | tsc 全项目零错误 | `pnpm -r typecheck` | 通过 |
+| 3 | eslint/prettier 零告警 | `pnpm -r lint` | 通过 |
+| 4 | 单测通过且覆盖率 ≥80% | `pnpm -w api test:coverage`（api service）| 通过 |
+| 5 | migration 0001 空库完整执行（含分区+pg_partman）| `pnpm -w api db:migrate` | 通过 |
 | 6 | Swagger /docs 可访问 | `curl localhost:3000/docs` | 通过 |
 | 7 | CI pipeline 跑通 | push 触发 Actions | 通过 |
 | 8 | BullMQ 推/消费闭环 | worker 测试命令 | 通过 |
