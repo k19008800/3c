@@ -8,6 +8,7 @@ import ApiKeysPage from "./pages/ApiKeysPage";
 import LogsPage from "./pages/LogsPage";
 import RechargePage from "./pages/RechargePage";
 import BillingPage from "./pages/BillingPage";
+import AgentSettingsPage from "./pages/AgentSettingsPage";
 
 /** 受保护路由：token 存在才允许访问 */
 function Protected({ children }: { children: React.ReactNode }) {
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="logs" element={<LogsPage />} />
         <Route path="recharge" element={<RechargePage />} />
         <Route path="billing" element={<BillingPage />} />
+        <Route path="agent/settings" element={<AgentSettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
