@@ -1,8 +1,9 @@
 # SPEC — 充值中心 /console/recharge
 
 > **对应**：PRD §2.2.6 + ref-2.2.6-recharge.md
-> **状态**：待开发
+> **状态**：✅ 已完成（后端+前端，含验证）
 > **发布日期**：2026-08-01
+> **完成记录**：后端8 API + 回调幂等 + 冒烟测试12项通过（commit 993790a）；前端 RechargePage 页 + 路由/侧边栏（commit ccf0e50）
 
 ---
 
