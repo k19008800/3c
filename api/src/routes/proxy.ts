@@ -113,13 +113,20 @@ export function proxyRoutes(app: FastifyInstance) {
       const balanceRows = await pool.query("SELECT balance FROM users WHERE id=$1", [ctx.userId]);
       const balanceBefore = Number(balanceRows.rows[0]?.balance ?? 0);
 
-      // 9. 真实转发 + 熔断器学习
-      const result = await forwardChatCompletion({
-        vendor,
-        vendorApiKey: vendorKey.encryptedKey,
-        upstreamModel: route.upstreamModel,
-        body: { ...(body as any), stream: body.stream ?? false },
-      });
+      // 9. 真实转发 + 熔断器学习（异常时保证预扣全额退还，§5.2 预扣失败回滚）
+      let result;
+      try {
+        result = await forwardChatCompletion({
+          vendor,
+          vendorApiKey: vendorKey.encryptedKey,
+          upstreamModel: route.upstreamModel,
+          body: { ...(body as any), stream: body.stream ?? false },
+        });
+      } catch (err: any) {
+        // 供应商调用异常：退还预扣，返回 502（不计费）
+        try { await refundBalance(ctx.userId, estimatedCost); } catch { /* 退款失败不阻塞错误响应 */ }
+        return reply.status(502).send({ error: { code: "UPSTREAM_ERROR", message: err?.message ?? "上游调用异常" } });
+      }
       await recordResult(route.vendorModelId, result.ok);
 
       // 10. 计费结算：精算实际费用，多退少补

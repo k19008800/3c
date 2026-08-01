@@ -3,6 +3,7 @@ import { db, pool } from "../db/index";
 import { billingLogs } from "../db/schema/billing";
 import { callLogs } from "../db/schema/call-logs";
 import { vendorModels } from "../db/schema/vendor-models";
+import { writeLedger } from "./finance-ledger";
 
 /**
  * 计费 service（§5.2）
@@ -147,6 +148,21 @@ export async function recordBilling(params: {
     balanceAfter,
     status: "settled",
   });
+
+  // §29 全链路一致性：平台总账写入用户消费（platform_ledger.type=user_consumption）
+  if (actualCost > 0) {
+    try {
+      await writeLedger({
+        type: "user_consumption",
+        direction: "in",
+        amount: String(actualCost),
+        userId,
+        relatedOrderNo: String(callLogId),
+        paymentChannel: "balance",
+        remark: `API 消费 ${callLogId}`,
+      });
+    } catch { /* 总账写入失败不阻塞计费主流程 */ }
+  }
 
   return { id, actualCost };
 }
