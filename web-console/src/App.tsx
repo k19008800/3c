@@ -33,6 +33,8 @@ import AdminTicketsPage from "./pages/AdminTicketsPage";
 import AdminSupportPage from "./pages/AdminSupportPage";
 import UserChatPage from "./pages/UserChatPage";
 import AdminChatPage from "./pages/AdminChatPage";
+import ConsentPage from "./pages/ConsentPage";
+import AdminConsentPage from "./pages/AdminConsentPage";
 import VendorLoginPage from "./pages/vendor/VendorLoginPage";
 import VendorRegisterPage from "./pages/vendor/VendorRegisterPage";
 import VendorLayout from "./layouts/VendorLayout";
@@ -107,6 +109,8 @@ export default function App() {
 <Route path="admin/support" element={<AdminSupportPage />} />
 <Route path="chat" element={<UserChatPage />} />
 <Route path="admin/chat" element={<AdminChatPage />} />
+<Route path="data-export" element={<ConsentPage />} />
+<Route path="admin/consent" element={<AdminConsentPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

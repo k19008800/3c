@@ -2,6 +2,7 @@ import { NavLink, Outlet, useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
+import ConsentBanner from "../components/ConsentBanner";
 
 /**
  * Console 主布局：侧边栏 + 顶栏 + 内容区
@@ -37,6 +38,7 @@ export default function ConsoleLayout() {
     { to: "/tickets", label: "我的工单" },
     { to: "/chat", label: "在线客服" },
     { to: "/security", label: "安全中心" },
+    { to: "/data-export", label: "数据导出" },
     { to: "/agent/settings", label: "代理设置" },
   ];
   // 管理入口（admin / super_admin 可见）
@@ -128,6 +130,18 @@ export default function ConsoleLayout() {
                 })}
               >
                 财务管理
+              </NavLink>
+              <NavLink
+                to="/admin/consent"
+                style={({ isActive }) => ({
+                  padding: "10px 20px",
+                  color: isActive ? "#38bdf8" : "#cbd5e1",
+                  textDecoration: "none",
+                  background: isActive ? "#0f172a" : "transparent",
+                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                })}
+              >
+                合规管理
               </NavLink>
               <NavLink
                 to="/admin/models"
@@ -296,6 +310,7 @@ export default function ConsoleLayout() {
           </button>
         </header>
         <main style={{ padding: 24, flex: 1, background: "#f8fafc" }}>
+          <ConsentBanner />
           <Outlet />
         </main>
       </div>
