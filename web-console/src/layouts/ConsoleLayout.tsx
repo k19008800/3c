@@ -76,6 +76,30 @@ export default function ConsoleLayout() {
               >
                 提现审核
               </NavLink>
+              <NavLink
+                to="/admin/vendors"
+                style={({ isActive }) => ({
+                  padding: "10px 20px",
+                  color: isActive ? "#38bdf8" : "#cbd5e1",
+                  textDecoration: "none",
+                  background: isActive ? "#0f172a" : "transparent",
+                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                })}
+              >
+                供应商管理
+              </NavLink>
+              <NavLink
+                to="/admin/models"
+                style={({ isActive }) => ({
+                  padding: "10px 20px",
+                  color: isActive ? "#38bdf8" : "#cbd5e1",
+                  textDecoration: "none",
+                  background: isActive ? "#0f172a" : "transparent",
+                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                })}
+              >
+                模型管理
+              </NavLink>
             </>
           )}
         </nav>

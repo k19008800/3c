@@ -11,6 +11,8 @@ import BillingPage from "./pages/BillingPage";
 import AgentSettingsPage from "./pages/AgentSettingsPage";
 import AdminAgentsPage from "./pages/AdminAgentsPage";
 import AdminWithdrawalsPage from "./pages/AdminWithdrawalsPage";
+import AdminVendorsPage from "./pages/AdminVendorsPage";
+import AdminModelsPage from "./pages/AdminModelsPage";
 
 /** 受保护路由：token 存在才允许访问 */
 function Protected({ children }: { children: React.ReactNode }) {
@@ -46,6 +48,8 @@ export default function App() {
         <Route path="agent/settings" element={<AgentSettingsPage />} />
         <Route path="admin/agents" element={<AdminAgentsPage />} />
         <Route path="admin/withdrawals" element={<AdminWithdrawalsPage />} />
+        <Route path="admin/vendors" element={<AdminVendorsPage />} />
+        <Route path="admin/models" element={<AdminModelsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

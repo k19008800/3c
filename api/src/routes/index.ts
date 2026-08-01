@@ -12,6 +12,7 @@ import { meAgentRoutes } from "./me-agent";
 import { adminAgentRoutes } from "./admin-agent";
 import { meAgentWithdrawRoutes } from "./me-agent-withdraw";
 import { adminAgentWithdrawRoutes } from "./admin-agent-withdraw";
+import { adminVendorModelRoutes } from "./admin-vendor-model";
 
 /**
  * 路由统一注册入口
@@ -42,5 +43,7 @@ export function registerRoutes(app: FastifyInstance) {
   void app.register(meAgentWithdrawRoutes, { prefix: "/api/v1" });
   // §3.4 代理提现审核端（管理后台双审）
   void app.register(adminAgentWithdrawRoutes, { prefix: "/api/v1" });
+  // §4.3 供应商与模型管理（管理后台）
+  void app.register(adminVendorModelRoutes, { prefix: "/api/v1" });
 }
 
