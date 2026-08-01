@@ -19,3 +19,4 @@ export * from "./agent-profiles";
 export * from "./agent-withdrawals";
 export * from "./invoices";
 export * from "./agent-commissions";
+export * from "./real-name-records";

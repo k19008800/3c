@@ -50,6 +50,13 @@
       "when": 1785551200000,
       "tag": "0006_agent_commissions",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785551800000,
+      "tag": "0007_real_name_records",
+      "breakpoints": true
     }
   ]
 }

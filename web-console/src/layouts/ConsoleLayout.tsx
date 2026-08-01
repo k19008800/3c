@@ -112,6 +112,18 @@ export default function ConsoleLayout() {
               >
                 税票管理
               </NavLink>
+              <NavLink
+                to="/admin/real-name"
+                style={({ isActive }) => ({
+                  padding: "10px 20px",
+                  color: isActive ? "#38bdf8" : "#cbd5e1",
+                  textDecoration: "none",
+                  background: isActive ? "#0f172a" : "transparent",
+                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                })}
+              >
+                实名审核
+              </NavLink>
             </>
           )}
         </nav>

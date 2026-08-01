@@ -14,6 +14,8 @@ import { meAgentWithdrawRoutes } from "./me-agent-withdraw";
 import { adminAgentWithdrawRoutes } from "./admin-agent-withdraw";
 import { adminVendorModelRoutes } from "./admin-vendor-model";
 import { invoiceRoutes } from "./invoice";
+import { realNameRoutes } from "./real-name";
+import { adminVendorKeyRoutes } from "./admin-vendor-key";
 
 /**
  * 路由统一注册入口
@@ -48,5 +50,9 @@ export function registerRoutes(app: FastifyInstance) {
   void app.register(adminVendorModelRoutes, { prefix: "/api/v1" });
   // §9.6 发票模块（用户端 + 管理端税票看板）
   void app.register(invoiceRoutes, { prefix: "/api/v1" });
+  // §4.6 实名认证（用户端 + 管理端审核）
+  void app.register(realNameRoutes, { prefix: "/api/v1" });
+  // §4.3 Key 资源池（供应商 Key 管理）
+  void app.register(adminVendorKeyRoutes, { prefix: "/api/v1" });
 }
 

@@ -49,6 +49,7 @@ export default function AdminVendorsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [vmForm, setVmForm] = useState<VendorModel | null>(null);
   const [showVmModal, setShowVmModal] = useState(false);
+  const [newKeyInput, setNewKeyInput] = useState("");
   const [notice, setNotice] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   const listQ = useQuery({
@@ -89,6 +90,28 @@ export default function AdminVendorsPage() {
   const vmDelMut = useMutation({
     mutationFn: async (id: number) => (await api.delete(`/admin/vendor-models/${id}`)).data,
     onSuccess: (d: { data?: { message?: string } }) => { setNotice({ type: "success", msg: d?.data?.message ?? "映射已下线" }); qc.invalidateQueries({ queryKey: ["admin-vendor-detail"] }); },
+    onError: (e) => setNotice({ type: "error", msg: extractError(e) }),
+  });
+
+  // ===== Key 资源池 =====
+  const vendorKeysQ = useQuery({
+    queryKey: ["admin-vendor-keys", detail?.id],
+    queryFn: async () => (await api.get<{ data: { list: any[] } }>(`/admin/vendors/${detail!.id}/keys`)).data.data,
+    enabled: !!detail?.id,
+  });
+  const addKeyMut = useMutation({
+    mutationFn: async ({ vendorId, api_key }: { vendorId: number; api_key: string }) => (await api.post(`/admin/vendors/${vendorId}/keys`, { api_key })).data,
+    onSuccess: (d: { data?: { message?: string } }) => { setNotice({ type: "success", msg: d?.data?.message ?? "Key 已添加" }); setNewKeyInput(""); qc.invalidateQueries({ queryKey: ["admin-vendor-keys"] }); },
+    onError: (e) => setNotice({ type: "error", msg: extractError(e) }),
+  });
+  const toggleKeyMut = useMutation({
+    mutationFn: async ({ id, is_enabled }: { id: number; is_enabled: boolean }) => (await api.post(`/admin/vendor-keys/${id}/toggle`, { is_enabled })).data,
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-vendor-keys"] }); },
+    onError: (e) => setNotice({ type: "error", msg: extractError(e) }),
+  });
+  const delKeyMut = useMutation({
+    mutationFn: async (id: number) => (await api.delete(`/admin/vendor-keys/${id}`)).data,
+    onSuccess: (d: { data?: { message?: string } }) => { setNotice({ type: "success", msg: d?.data?.message ?? "Key 已删除" }); qc.invalidateQueries({ queryKey: ["admin-vendor-keys"] }); },
     onError: (e) => setNotice({ type: "error", msg: extractError(e) }),
   });
 
@@ -220,6 +243,48 @@ export default function AdminVendorsPage() {
               </table>
             ) : (
               <div style={{ color: "#94a3b8", fontSize: 13 }}>尚未配置模型映射</div>
+            )}
+
+            {/* Key 资源池 */}
+            <h4 style={{ margin: "20px 0 12px" }}>Key 资源池</h4>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <input value={newKeyInput} onChange={(e) => setNewKeyInput(e.target.value)} placeholder="粘贴供应商 API Key" style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", flex: 1, fontFamily: "monospace", fontSize: 13 }} />
+              <button onClick={() => addKeyMut.mutate({ vendorId: detail.id, api_key: newKeyInput })} disabled={addKeyMut.isPending || !newKeyInput.trim()} style={{ ...btnBase, background: "#16a34a", color: "#fff", whiteSpace: "nowrap" }}>
+                {addKeyMut.isPending ? "添加中..." : "+ 添加 Key"}
+              </button>
+            </div>
+            {(vendorKeysQ.data?.list?.length ?? 0) > 0 ? (
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ color: "#64748b", textAlign: "left" }}>
+                    <th style={{ padding: "6px" }}>Key 前缀</th>
+                    <th style={{ padding: "6px" }}>状态</th>
+                    <th style={{ padding: "6px" }}>失败数</th>
+                    <th style={{ padding: "6px" }}>最近使用</th>
+                    <th style={{ padding: "6px" }}>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(vendorKeysQ.data?.list ?? []).map((k: any) => (
+                    <tr key={k.id} style={{ borderTop: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "6px", fontFamily: "monospace", fontSize: 12 }}>{k.key_prefix}</td>
+                      <td style={{ padding: "6px" }}>
+                        <span style={{ background: k.is_enabled ? "#dcfce7" : "#fee2e2", color: k.is_enabled ? "#166534" : "#991b1b", padding: "2px 10px", borderRadius: 6, fontSize: 12 }}>
+                          {k.is_enabled ? "启用" : "停用"}
+                        </span>
+                      </td>
+                      <td style={{ padding: "6px" }}>{k.failed_count ?? 0}</td>
+                      <td style={{ padding: "6px", color: "#64748b" }}>{k.last_used_at ? new Date(k.last_used_at).toLocaleString() : "-"}</td>
+                      <td style={{ padding: "6px" }}>
+                        <button onClick={() => toggleKeyMut.mutate({ id: k.id, is_enabled: !k.is_enabled })} style={{ ...btnBase, background: "#f1f5f9", color: "#334155", padding: "4px 10px" }}>{k.is_enabled ? "停用" : "启用"}</button>
+                        <button onClick={() => delKeyMut.mutate(k.id)} style={{ ...btnBase, background: "#fee2e2", color: "#991b1b", padding: "4px 10px", marginLeft: 6 }}>删除</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div style={{ color: "#94a3b8", fontSize: 13 }}>尚未配置供应商 Key</div>
             )}
 
             <div style={{ marginTop: 16, textAlign: "right" }}>
