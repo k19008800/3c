@@ -90,7 +90,8 @@ export default function AgentSettingsPage() {
     queryKey: ["me-agent-referral"],
     queryFn: async () => (await api.get<{ data: ReferralInfo }>("/me/agent/referral")).data.data,
   });
-  const prefsQ = useQuery({
+  // 加载通知偏好（副作用：setPrefs 填充默认值）
+  useQuery({
     queryKey: ["me-agent-prefs"],
     queryFn: async () => {
       const d = (await api.get<{ data: Record<string, boolean> }>("/me/agent/notif-prefs")).data.data;

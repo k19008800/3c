@@ -24,6 +24,7 @@ import { adminActivityRoutes } from "./admin-activity";
 import { notificationRoutes } from "./notification";
 import { adminVendorSettlementRoutes } from "./admin-vendor-settlement";
 import { vendorSelfRoutes } from "./vendor-self";
+import { adminFinanceRoutes } from "./admin-finance";
 
 /**
  * 路由统一注册入口
@@ -78,5 +79,7 @@ export function registerRoutes(app: FastifyInstance) {
   void app.register(adminVendorSettlementRoutes, { prefix: "/api/v1" });
   // §4.10 供应商自助（注册/登录/自助管理）
   void app.register(vendorSelfRoutes, { prefix: "/api/v1" });
+  // §29 资金与对账管理（财务）
+  void app.register(adminFinanceRoutes, { prefix: "/api/v1" });
 }
 

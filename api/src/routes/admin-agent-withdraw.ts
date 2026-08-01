@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { db, pool } from "../db/index";
+import { pool } from "../db/index";
 
 /**
  * 代理提现管理端（双审）

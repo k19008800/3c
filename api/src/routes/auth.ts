@@ -141,7 +141,7 @@ export function authRoutes(app: FastifyInstance) {
     ]);
     return {
       totalTokens: total.rows[0].tokens,
-      totalCost: Number(total.rows[0].cost) ?? 0,
+      totalCost: Number(total.rows[0].cost || 0),
       totalCalls: total.rows[0].calls,
       todayCalls: today.rows[0].calls,
       balance: Number(balanceRows.rows[0]?.balance ?? 0) / 100,

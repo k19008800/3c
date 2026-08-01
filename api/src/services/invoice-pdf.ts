@@ -1,6 +1,5 @@
 import PDFDocument from "pdfkit";
 import fs from "node:fs";
-import path from "node:path";
 
 /**
  * 发票 PDF 生成

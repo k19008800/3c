@@ -333,7 +333,6 @@ export default function AdminVendorsPage() {
 /* 映射表单子组件 */
 function VmModal({ form, onClose, onSave }: { form: any; onClose: () => void; onSave: (body: any) => void }) {
   const [f, setF] = useState({ ...form });
-  const d = { ...f };
   const set = (k: string, v: any) => setF({ ...f, [k]: v });
   const save = () => {
     if (!f.model_id) { alert("请选择模型 ID"); return; }

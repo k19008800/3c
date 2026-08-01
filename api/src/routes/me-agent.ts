@@ -2,7 +2,6 @@ import type { FastifyInstance } from "fastify";
 import { eq } from "drizzle-orm";
 import crypto from "node:crypto";
 import { db, pool } from "../db/index";
-import { users } from "../db/schema/users";
 import { agentProfiles } from "../db/schema/agent-profiles";
 
 /**

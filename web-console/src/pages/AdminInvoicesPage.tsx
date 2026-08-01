@@ -44,7 +44,6 @@ export default function AdminInvoicesPage() {
   const [issueNo, setIssueNo] = useState("");
   const [issueTarget, setIssueTarget] = useState<Invoice | null>(null);
 
-  const now = new Date();
   const downloadPdf = (id: number) => {
     window.open(`/api/v1/admin/invoices/${id}/download?token=${localStorage.getItem("token")}`, "_blank");
   };

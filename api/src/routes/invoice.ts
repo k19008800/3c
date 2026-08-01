@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { eq, desc } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db, pool } from "../db/index";
 import { invoices } from "../db/schema/invoices";
 import { generateInvoicePdf } from "../services/invoice-pdf";
@@ -234,7 +234,7 @@ export function invoiceRoutes(app: FastifyInstance) {
   });
 
   // 9. 未开票预估（已消费但未申请发票的用户）
-  app.get("/admin/invoice-stats/uninvoiced", { onRequest: [admin] }, async (req) => {
+  app.get("/admin/invoice-stats/uninvoiced", { onRequest: [admin] }, async (_req) => {
     const r = await pool.query(
       `SELECT
          (SELECT COALESCE(SUM(actual_cost),0)::float FROM billing_logs) AS total_consumed,
@@ -251,7 +251,7 @@ export function invoiceRoutes(app: FastifyInstance) {
   });
 
   // 10. 未开票客户列表
-  app.get("/admin/invoice-stats/uninvoiced/customers", { onRequest: [admin] }, async (req) => {
+  app.get("/admin/invoice-stats/uninvoiced/customers", { onRequest: [admin] }, async (_req) => {
     const r = await pool.query(
       `SELECT u.id, u.email, u.username,
               (SELECT COALESCE(SUM(bl.actual_cost),0)::float FROM billing_logs bl WHERE bl.user_id=u.id) AS consumed,

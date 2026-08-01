@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, extractError } from "../lib/api";
+import { api } from "../lib/api";
 
 interface Ann {
   id: number;

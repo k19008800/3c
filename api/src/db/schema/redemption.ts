@@ -6,7 +6,6 @@ import {
   varchar,
   text,
   timestamp,
-  boolean,
   index,
 } from "drizzle-orm/pg-core";
 import { users } from "./users";

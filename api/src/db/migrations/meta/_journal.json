@@ -99,6 +99,13 @@
       "when": 1785557000000,
       "tag": "0013_vendor_selfservice",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1785558000000,
+      "tag": "0014_finance_management",
+      "breakpoints": true
     }
   ]
 }

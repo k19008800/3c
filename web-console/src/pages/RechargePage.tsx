@@ -103,7 +103,7 @@ export default function RechargePage() {
   });
 
   // 确认到账（轮询/刷新）
-  const confirmPaid = async (orderId: string) => {
+  const confirmPaid = async (_orderId: string) => {
     setResult({ type: "success", msg: "充值成功！余额已更新" });
     setPaying(null);
     qc.invalidateQueries({ queryKey: ["me-balance"] });

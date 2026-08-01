@@ -1,9 +1,7 @@
 import type { FastifyInstance } from "fastify";
-import { eq, desc } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db, pool } from "../db/index";
-import { users } from "../db/schema/users";
 import { agentProfiles } from "../db/schema/agent-profiles";
-import { agentWithdrawals } from "../db/schema/agent-withdrawals";
 import { agentCommissionSummary, agentCommissionList } from "../services/commission";
 
 /**

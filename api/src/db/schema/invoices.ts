@@ -4,7 +4,6 @@ import {
   integer,
   numeric,
   varchar,
-  text,
   timestamp,
   index,
 } from "drizzle-orm/pg-core";

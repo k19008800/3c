@@ -159,7 +159,7 @@ export function adminAgentRoutes(app: FastifyInstance) {
   });
 
   // ===== 5. 待审核申请列表（升级申请 pending）=====
-  app.get("/admin/agents/pending", { onRequest: [admin] }, async (req) => {
+  app.get("/admin/agents/pending", { onRequest: [admin] }, async (_req) => {
     const rows = await pool.query(
       `SELECT ap.user_id, ap.level, ap.commission_rate::float AS commission_rate, ap.referral_code, ap.created_at,
               u.email, u.username, u.real_name_status

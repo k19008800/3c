@@ -250,7 +250,7 @@ export function vendorSelfRoutes(app: FastifyInstance) {
   });
 
   // ===== 12. 平台公告 =====
-  app.get("/vendor/announcements", { onRequest: [requireVendor] }, async (req) => {
+  app.get("/vendor/announcements", { onRequest: [requireVendor] }, async (_req) => {
     const rows = await pool.query(
       `SELECT id, title, content, category, created_at FROM announcements WHERE status='published' ORDER BY created_at DESC LIMIT 50`);
     return { code: 0, data: { list: rows.rows }, message: "ok" };

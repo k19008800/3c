@@ -5,9 +5,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { db, pool } from "../db/index";
-import { users } from "../db/schema/users";
 import { rechargeOrders } from "../db/schema/recharge-orders";
-import { balanceLogs } from "../db/schema/balance-logs";
 
 /**
  * 充值中心路由
@@ -473,7 +471,7 @@ export function meRechargeRoutes(app: FastifyInstance) {
   app.get(
     "/me/promotions",
     { onRequest: [auth] },
-    async (req, reply) => {
+    async () => {
       // 从 campaigns 表读取进行中的充值优惠活动
       let promotions: any[] = [];
       try {

@@ -26,6 +26,7 @@ import AdminCampaignsPage from "./pages/AdminCampaignsPage";
 import AdminActivityPage from "./pages/AdminActivityPage";
 import NotificationPage from "./pages/NotificationPage";
 import AdminVendorSettlementsPage from "./pages/AdminVendorSettlementsPage";
+import AdminFinancePage from "./pages/AdminFinancePage";
 import VendorLoginPage from "./pages/vendor/VendorLoginPage";
 import VendorRegisterPage from "./pages/vendor/VendorRegisterPage";
 import VendorLayout from "./layouts/VendorLayout";
@@ -93,6 +94,7 @@ export default function App() {
         <Route path="admin/activity" element={<AdminActivityPage />} />
         <Route path="notification" element={<NotificationPage />} />
         <Route path="admin/vendor-settlements" element={<AdminVendorSettlementsPage />} />
+<Route path="admin/finance" element={<AdminFinancePage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -1,8 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { eq } from "drizzle-orm";
 import { db, pool } from "../db/index";
-import { campaigns, campaignParticipants } from "../db/schema/campaigns";
-import { users } from "../db/schema/users";
+import { campaigns } from "../db/schema/campaigns";
 
 /**
  * 营销活动管理

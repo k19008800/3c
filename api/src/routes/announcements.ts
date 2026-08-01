@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { eq, desc } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db, pool } from "../db/index";
 import { announcements, announcementReads } from "../db/schema/announcements";
 

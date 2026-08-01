@@ -1,8 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { eq } from "drizzle-orm";
 import { db, pool } from "../db/index";
-import { redemptionBatches, redemptionCodes, redemptionLogs } from "../db/schema/redemption";
-import { users } from "../db/schema/users";
+import { redemptionBatches } from "../db/schema/redemption";
 import crypto from "node:crypto";
 
 /**
@@ -128,7 +127,7 @@ export function redemptionRoutes(app: FastifyInstance) {
   // ============================================================
 
   // 3. 批次列表
-  app.get("/admin/redemption/batches", { onRequest: [admin] }, async (req) => {
+  app.get("/admin/redemption/batches", { onRequest: [admin] }, async (_req) => {
     const rows = await pool.query("SELECT * FROM redemption_batches ORDER BY created_at DESC LIMIT 100");
     return { code: 0, data: { list: rows.rows.map(r => ({ ...r, amount: Number(r.amount), status_label: STATUS_LABEL[r.status] ?? r.status })) }, message: "ok" };
   });

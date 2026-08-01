@@ -115,6 +115,18 @@ export default function ConsoleLayout() {
                 供应商结算
               </NavLink>
               <NavLink
+                to="/admin/finance"
+                style={({ isActive }) => ({
+                  padding: "10px 20px",
+                  color: isActive ? "#38bdf8" : "#cbd5e1",
+                  textDecoration: "none",
+                  background: isActive ? "#0f172a" : "transparent",
+                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                })}
+              >
+                财务管理
+              </NavLink>
+              <NavLink
                 to="/admin/models"
                 style={({ isActive }) => ({
                   padding: "10px 20px",

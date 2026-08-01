@@ -5,7 +5,6 @@ import { api, extractError } from "../lib/api";
 interface Prefs { [type: string]: { site: boolean; email: boolean } }
 
 const card = { background: "#fff", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
-const btnBase: React.CSSProperties = { padding: "10px 18px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600 };
 
 export default function NotificationPage() {
   const qc = useQueryClient();
