@@ -30,6 +30,9 @@ import AdminFinancePage from "./pages/AdminFinancePage";
 import SecurityPage from "./pages/SecurityPage";
 import TicketsPage from "./pages/TicketsPage";
 import AdminTicketsPage from "./pages/AdminTicketsPage";
+import AdminRolesPage from "./pages/AdminRolesPage";
+import AdminUsersPermissionPage from "./pages/AdminUsersPermissionPage";
+import AdminPermissionAuditPage from "./pages/AdminPermissionAuditPage";
 import AdminSupportPage from "./pages/AdminSupportPage";
 import UserChatPage from "./pages/UserChatPage";
 import AdminChatPage from "./pages/AdminChatPage";
@@ -111,6 +114,9 @@ export default function App() {
 <Route path="admin/chat" element={<AdminChatPage />} />
 <Route path="data-export" element={<ConsentPage />} />
 <Route path="admin/consent" element={<AdminConsentPage />} />
+<Route path="admin/roles" element={<AdminRolesPage />} />
+<Route path="admin/users-permission" element={<AdminUsersPermissionPage />} />
+<Route path="admin/permission-audit" element={<AdminPermissionAuditPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
