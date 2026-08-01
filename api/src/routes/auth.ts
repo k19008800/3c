@@ -5,6 +5,7 @@ import crypto from "node:crypto";
 import { db, pool } from "../db/index";
 import { users } from "../db/schema/users";
 import { apiKeys } from "../db/schema/api-keys";
+import { sendEmail } from "../services/smtp";
 
 /**
  * 认证路由（§2 用户体系）
@@ -66,6 +67,24 @@ export function authRoutes(app: FastifyInstance) {
         .returning({ id: users.id, email: users.email, username: users.username, balance: users.balance });
       const u = created[0]!;
       const token = app.jwt.sign({ sub: String(u.id), role: "user" });
+      // 注册欢迎邮件（fire-and-forget，不阻塞注册；SMTP 未配置时静默跳过）
+      void sendEmail({
+        to: u.email,
+        subject: "欢迎注册 3Cloud —— 你的 AI Token 聚合平台账号已开通",
+        html: `<div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px;border:1px solid #e2e8f0;border-radius:10px">
+          <h2 style="color:#1e293b">👋 欢迎加入 3Cloud</h2>
+          <p>你好，<strong>${u.username}</strong>：</p>
+          <p>你的 3Cloud 账号已成功创建。现在可以：</p>
+          <ul>
+            <li>创建 API Key 并接入 OpenAI 兼容接口</li>
+            <li>在控制台管理余额、充值、查看调用账单</li>
+            <li>通过代理体系邀请伙伴，获取佣金</li>
+          </ul>
+          <p style="color:#64748b;font-size:13px">如需帮助，请联系平台客服。</p>
+        </div>`,
+        templateName: "welcome",
+        vars: { username: u.username ?? "" },
+      });
       return reply.code(201).send({ token, user: safeUser(u as any) });
     },
   );

@@ -85,6 +85,20 @@
       "when": 1785555000000,
       "tag": "0011_vendor_settlements",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1785556000000,
+      "tag": "0012_email_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1785557000000,
+      "tag": "0013_vendor_selfservice",
+      "breakpoints": true
     }
   ]
 }

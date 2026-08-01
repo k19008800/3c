@@ -26,3 +26,4 @@ export * from "./email-templates";
 export * from "./campaigns";
 export * from "./notification-subscriptions";
 export * from "./vendor-settlements";
+export * from "./email-logs";
