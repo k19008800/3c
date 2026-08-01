@@ -2,6 +2,10 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 
+interface ModelItem {
+  model: string; calls: number; success: number; failed: number; tokens: number; cost: number; revenue: number;
+}
+
 interface Settlement {
   id: number; vendor_id: number; vendor_name: string; period: string;
   total_calls: number; success_calls: number; failed_calls: number; total_tokens: number;
@@ -30,6 +34,7 @@ export default function AdminVendorSettlementsPage() {
   const [showGen, setShowGen] = useState(false);
   const [genForm, setGenForm] = useState({ vendor_id: "", period: "", commission_rate: "0.1" });
   const [dispute, setDispute] = useState<{ id: number; reason: string } | null>(null);
+  const [detail, setDetail] = useState<{ id: number; vendor_name: string; period: string; items: ModelItem[] } | null>(null);
   const [notice, setNotice] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   const listQ = useQuery({
@@ -46,6 +51,12 @@ export default function AdminVendorSettlementsPage() {
     mutationFn: async ({ id, op, body }: { id: number; op: string; body?: any }) => (await api.post(`/admin/vendor-settlements/${id}/${op}`, body ?? {})).data,
     onSuccess: (d: { data?: { message?: string } }) => { setNotice({ type: "success", msg: d?.data?.message ?? "操作成功" }); setDispute(null); qc.invalidateQueries({ queryKey: ["admin-vendor-settlements"] }); },
     onError: (e) => setNotice({ type: "error", msg: extractError(e) }),
+  });
+
+  const detailQ = useQuery({
+    queryKey: ["admin-vendor-settlements-detail", detail?.id],
+    queryFn: async () => (await api.get<{ data: { model_items?: ModelItem[]; vendor_name: string; period: string } }>(`/admin/vendor-settlements/${detail?.id}`)).data.data,
+    enabled: !!detail,
   });
 
   return (
@@ -74,10 +85,11 @@ export default function AdminVendorSettlementsPage() {
                   <td style={{ padding: "8px", fontWeight: 600, color: "#166534" }}>¥{s.settlement_amount.toLocaleString()}</td>
                   <td style={{ padding: "8px" }}><span style={{ ...(STATUS_STYLE[s.status] ?? STATUS_STYLE.pending), padding: "2px 10px", borderRadius: 6, fontSize: 12 }}>{s.status_label}</span></td>
                   <td style={{ padding: "8px" }}>
+                    <button onClick={() => setDetail({ id: s.id, vendor_name: s.vendor_name, period: s.period, items: [] })} style={{ ...btnBase, background: "#f1f5f9", color: "#334155", padding: "4px 10px", marginRight: 6 }}>明细</button>
                     {s.status === "generated" && (<><button onClick={() => opMut.mutate({ id: s.id, op: "confirm" })} style={{ ...btnBase, background: "#16a34a", color: "#fff", padding: "4px 10px" }}>确认</button><button onClick={() => setDispute({ id: s.id, reason: "" })} style={{ ...btnBase, background: "#fef3c7", color: "#92400e", padding: "4px 10px", marginLeft: 6 }}>争议</button></>)}
                     {s.status === "confirmed" && <button onClick={() => opMut.mutate({ id: s.id, op: "paid", body: { payment_reference: `TF${Date.now()}` } })} style={{ ...btnBase, background: "#064e3b", color: "#fff", padding: "4px 10px" }}>标记打款</button>}
                     {s.status === "disputed" && <button onClick={() => opMut.mutate({ id: s.id, op: "confirm" })} style={{ ...btnBase, background: "#16a34a", color: "#fff", padding: "4px 10px" }}>解决争议确认</button>}
-                    {(s.status === "paid" || s.status === "pending") && <span style={{ fontSize: 12, color: "#94a3b8" }}>-</span>}
+                    {s.status === "pending" && <span style={{ fontSize: 12, color: "#94a3b8" }}>-</span>}
                   </td>
                 </tr>
               ))}
@@ -97,6 +109,48 @@ export default function AdminVendorSettlementsPage() {
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setShowGen(false)} style={{ ...btnBase, background: "#f1f5f9", color: "#334155" }}>取消</button>
               <button onClick={() => genMut.mutate()} disabled={!genForm.vendor_id || !genForm.period} style={{ ...btnBase, background: "#2563eb", color: "#fff" }}>{genMut.isPending ? "生成中..." : "生成"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 模型明细弹窗 */}
+      {detail && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+          <div style={{ ...card, width: 720, maxHeight: "80vh", overflow: "auto" }}>
+            <h3 style={{ marginBottom: 4 }}>{detail.vendor_name} · {detail.period} 模型明细</h3>
+            {detailQ.isLoading ? (
+              <div style={{ color: "#94a3b8", padding: 30, textAlign: "center" }}>加载中...</div>
+            ) : (detailQ.data?.model_items?.length ?? 0) === 0 ? (
+              <div style={{ color: "#94a3b8", padding: 30, textAlign: "center" }}>该周期无模型调用记录</div>
+            ) : (
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginTop: 8 }}>
+                <thead>
+                  <tr style={{ color: "#64748b", textAlign: "left" }}>
+                    <th style={{ padding: "6px" }}>模型</th>
+                    <th style={{ padding: "6px" }}>调用</th>
+                    <th style={{ padding: "6px" }}>成功/失败</th>
+                    <th style={{ padding: "6px" }}>Tokens</th>
+                    <th style={{ padding: "6px" }}>成本</th>
+                    <th style={{ padding: "6px" }}>用户收入</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(detailQ.data?.model_items ?? []).map((it) => (
+                    <tr key={it.model} style={{ borderTop: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "6px", fontWeight: 600 }}>{it.model}</td>
+                      <td style={{ padding: "6px" }}>{it.calls}</td>
+                      <td style={{ padding: "6px", color: "#64748b" }}>{it.success} / {it.failed}</td>
+                      <td style={{ padding: "6px" }}>{it.tokens.toLocaleString()}</td>
+                      <td style={{ padding: "6px" }}>¥{it.cost.toFixed(4)}</td>
+                      <td style={{ padding: "6px" }}>¥{it.revenue.toFixed(4)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+              <button onClick={() => setDetail(null)} style={{ ...btnBase, background: "#f1f5f9", color: "#334155" }}>关闭</button>
             </div>
           </div>
         </div>

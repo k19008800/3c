@@ -29,6 +29,7 @@ export default function ConsoleLayout() {
     { to: "/logs", label: "调用日志" },
     { to: "/recharge", label: "充值中心" },
     { to: "/billing", label: "账单中心" },
+    { to: "/invoices", label: "发票开具" },
     { to: "/redemption", label: "兑换中心" },
     { to: "/announcements", label: "公告" },
     { to: "/real-name", label: "实名认证" },

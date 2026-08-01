@@ -125,7 +125,29 @@ export function adminVendorSettlementRoutes(app: FastifyInstance) {
     const rows = await pool.query(
       `SELECT vs.*, v.name AS vendor_name FROM vendor_settlements vs JOIN vendors v ON v.id=vs.vendor_id WHERE vs.id=$1`, [id]);
     if (!rows.rows[0]) return reply.code(404).send({ code: 404, error: "NOT_FOUND" });
-    return { code: 0, data: { ...rows.rows[0], status_label: SETTLEMENT_STATUS[rows.rows[0].status] ?? rows.rows[0].status, settlement_amount: Number(rows.rows[0].settlement_amount), total_cost: Number(rows.rows[0].total_cost), user_revenue: Number(rows.rows[0].user_revenue) }, message: "ok" };
+    const rec = rows.rows[0];
+    // 周期范围（start = period-01, end = 下月 1 日）
+    const [py, pm] = rec.period.split("-").map(Number) as [number, number];
+    const pEnd = new Date(py, pm, 1).toISOString();
+    const pStart = `${rec.period}-01 00:00:00`;
+    // 按模型聚合该周期调用/成本/收入
+    const modelItems = await pool.query(
+      `SELECT COALESCE(m.name, cl.upstream_model, 'unknown') AS model,
+              COUNT(*)::int AS calls,
+              COUNT(*) FILTER (WHERE cl.status='success')::int AS success,
+              COUNT(*) FILTER (WHERE cl.status='failed')::int AS failed,
+              COALESCE(SUM(cl.total_tokens),0)::bigint AS tokens,
+              COALESCE(SUM(cl.cost),0)::float AS cost,
+              COALESCE(SUM(bl.actual_cost),0)::float AS revenue
+       FROM call_logs cl
+       LEFT JOIN models m ON m.id = cl.model_id
+       LEFT JOIN billing_logs bl ON bl.call_log_id = cl.id
+       WHERE cl.vendor_id=$1 AND cl.created_at >= $2 AND cl.created_at < $3
+       GROUP BY COALESCE(m.name, cl.upstream_model, 'unknown')
+       ORDER BY cost DESC`,
+      [rec.vendor_id, pStart, pEnd],
+    );
+    return { code: 0, data: { ...rec, model_items: modelItems.rows, status_label: SETTLEMENT_STATUS[rec.status] ?? rec.status, settlement_amount: Number(rec.settlement_amount), total_cost: Number(rec.total_cost), user_revenue: Number(rec.user_revenue) }, message: "ok" };
   });
 
   // 4. 确认结算单
