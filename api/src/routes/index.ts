@@ -10,6 +10,8 @@ import { meRechargeRoutes } from "./me";
 import { meBillingRoutes } from "./me-billing";
 import { meAgentRoutes } from "./me-agent";
 import { adminAgentRoutes } from "./admin-agent";
+import { meAgentWithdrawRoutes } from "./me-agent-withdraw";
+import { adminAgentWithdrawRoutes } from "./admin-agent-withdraw";
 
 /**
  * 路由统一注册入口
@@ -36,5 +38,9 @@ export function registerRoutes(app: FastifyInstance) {
   void app.register(meAgentRoutes, { prefix: "/api/v1" });
   // §3.1 代理管理审核端（管理后台）
   void app.register(adminAgentRoutes, { prefix: "/api/v1" });
+  // §3.4 代理提现（代理端）
+  void app.register(meAgentWithdrawRoutes, { prefix: "/api/v1" });
+  // §3.4 代理提现审核端（管理后台双审）
+  void app.register(adminAgentWithdrawRoutes, { prefix: "/api/v1" });
 }
 

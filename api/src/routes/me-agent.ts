@@ -148,43 +148,7 @@ export function meAgentRoutes(app: FastifyInstance) {
     return { code: 0, data: { current_level: prof.level, rules }, message: "ok" };
   });
 
-  // ===== 6. 提现信息汇总（含可提现余额）=====
-  app.get("/me/agent/withdraw-summary", { onRequest: [auth] }, async (req) => {
-    const userId = Number((req as any).user.sub);
-    const prof = await getOrCreateProfile(userId);
-
-    // 下属客户数（users.agentId 指向该代理）
-    const customers = await pool.query(
-      "SELECT COUNT(*)::int AS c FROM users WHERE agent_id = $1",
-      [userId],
-    ).catch(() => ({ rows: [{ c: 0 }] }));
-
-    // 佣金（模拟：按等级比例，从下属消费估算。生产环境应查 commission 表）
-    const commissionRows = await pool.query(
-      `SELECT COALESCE(SUM(actual_cost), 0)::float AS sub_consumption
-       FROM billing_logs bl
-       WHERE bl.user_id IN (SELECT id FROM users WHERE agent_id = $1)`,
-      [userId],
-    ).catch(() => ({ rows: [{ sub_consumption: 0 }] }));
-    const subConsumption = toNum(commissionRows.rows[0]?.sub_consumption);
-    const commission = subConsumption * toNum(prof.commissionRate);
-
-    return {
-      code: 0,
-      data: {
-        customer_count: customers.rows[0]?.c ?? 0,
-        sub_consumption: subConsumption,
-        commission_rate: toNum(prof.commissionRate),
-        estimated_commission: commission,
-        withdrawable: prof.level === "prepare" ? 0 : commission, // 预备不可提现
-        min_withdraw: prof.level === "senior" ? 100 : 200,
-        account_set: !!prof.withdrawAccount,
-      },
-      message: "ok",
-    };
-  });
-
-  // ===== 7. 邀请裂变 =====
+  // ===== 6. 邀请裂变 =====
   app.get("/me/agent/referral", { onRequest: [auth] }, async (req) => {
     const userId = Number((req as any).user.sub);
     const prof = await getOrCreateProfile(userId);

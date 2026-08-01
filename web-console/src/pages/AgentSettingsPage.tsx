@@ -18,13 +18,27 @@ interface CommissionRules {
   rules: { level: string; label: string; rate: number; desc: string; current: boolean }[];
 }
 interface WithdrawSummary {
-  customer_count: number;
-  sub_consumption: number;
-  commission_rate: number;
-  estimated_commission: number;
+  balance: number;
+  pending: number;
   withdrawable: number;
+  active_withdraw: number;
+  active_amount: number;
   min_withdraw: number;
   account_set: boolean;
+  level: string;
+}
+interface Withdrawal {
+  id: number;
+  withdrawal_no: string;
+  amount: number;
+  status: string;
+  status_label: string;
+  reject_reason: string | null;
+  first_review_note: string | null;
+  second_review_note: string | null;
+  transfer_no: string | null;
+  created_at: string;
+  completed_at: string | null;
 }
 interface ReferralInfo {
   referral_code: string;
@@ -45,6 +59,7 @@ export default function AgentSettingsPage() {
   const [notice, setNotice] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [withdrawForm, setWithdrawForm] = useState({ account: "", bank: "", name: "" });
   const [prefs, setPrefs] = useState<Record<string, boolean>>({});
+  const [applyAmount, setApplyAmount] = useState<string>("");
 
   const profileQ = useQuery({
     queryKey: ["me-agent-profile"],
@@ -73,6 +88,10 @@ export default function AgentSettingsPage() {
       return merged;
     },
   });
+  const withdrawalsQ = useQuery({
+    queryKey: ["me-agent-withdrawals"],
+    queryFn: async () => (await api.get<{ data: { list: Withdrawal[]; pagination: { total: number } } }>("/me/agent/withdrawals?page_size=20")).data.data,
+  });
 
   const upgradeMut = useMutation({
     mutationFn: async () => (await api.post("/me/agent/upgrade-request", {})).data,
@@ -83,6 +102,15 @@ export default function AgentSettingsPage() {
   const withdrawMut = useMutation({
     mutationFn: async () => (await api.put("/me/agent/withdraw-settings", withdrawForm)).data,
     onSuccess: () => { setNotice({ type: "success", msg: "提现设置已保存" }); qc.invalidateQueries({ queryKey: ["me-agent-summary"] }); },
+    onError: (e) => setNotice({ type: "error", msg: extractError(e) }),
+  });
+
+  const applyWithdrawMut = useMutation({
+    mutationFn: async () => {
+      const amount = Number(applyAmount);
+      return (await api.post("/me/agent/withdraw", { amount })).data;
+    },
+    onSuccess: () => { setNotice({ type: "success", msg: "提现申请已提交，待审核" }); setApplyAmount(""); qc.invalidateQueries({ queryKey: ["me-agent-summary"] }); qc.invalidateQueries({ queryKey: ["me-agent-withdrawals"] }); },
     onError: (e) => setNotice({ type: "error", msg: extractError(e) }),
   });
 
@@ -150,8 +178,8 @@ export default function AgentSettingsPage() {
           <h3 style={{ marginBottom: 16 }}>提现汇总</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, fontSize: 13 }}>
             <div style={{ background: "#f8fafc", padding: 12, borderRadius: 8 }}>
-              <div style={{ color: "#64748b" }}>下属客户</div>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>{sum?.customer_count ?? "-"}</div>
+              <div style={{ color: "#64748b" }}>账户余额</div>
+              <div style={{ fontSize: 22, fontWeight: 700 }}>¥{(sum?.balance ?? 0).toFixed(2)}</div>
             </div>
             <div style={{ background: "#f8fafc", padding: 12, borderRadius: 8 }}>
               <div style={{ color: "#64748b" }}>可提现</div>
@@ -160,16 +188,16 @@ export default function AgentSettingsPage() {
               </div>
             </div>
             <div style={{ background: "#f8fafc", padding: 12, borderRadius: 8 }}>
-              <div style={{ color: "#64748b" }}>预估佣金</div>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>¥{(sum?.estimated_commission ?? 0).toFixed(2)}</div>
+              <div style={{ color: "#64748b" }}>冻结中</div>
+              <div style={{ fontSize: 22, fontWeight: 700 }}>¥{(sum?.pending ?? 0).toFixed(2)}</div>
             </div>
             <div style={{ background: "#f8fafc", padding: 12, borderRadius: 8 }}>
-              <div style={{ color: "#64748b" }}>最低提现</div>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>¥{sum?.min_withdraw ?? "-"}</div>
+              <div style={{ color: "#64748b" }}>进行中提现</div>
+              <div style={{ fontSize: 22, fontWeight: 700 }}>{sum?.active_withdraw ?? 0} 笔</div>
             </div>
           </div>
           <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 12 }}>
-            预备代理不可提现，升级后按佣金率结算
+            最低提现 ¥{sum?.min_withdraw ?? "-"}；提交后冻结，审核通过后到账
           </div>
         </div>
 
@@ -258,6 +286,25 @@ export default function AgentSettingsPage() {
             <button onClick={() => withdrawMut.mutate()} disabled={withdrawMut.isPending || !withdrawForm.account} style={{ ...btnBase, background: "#16a34a", color: "#fff", opacity: withdrawMut.isPending || !withdrawForm.account ? 0.6 : 1 }}>
               {withdrawMut.isPending ? "保存中..." : "保存提现设置"}
             </button>
+            <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 14, marginTop: 4 }}>
+              <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>提交提现申请（最低 ¥{sum?.min_withdraw ?? "-"}）</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  value={applyAmount}
+                  onChange={(e) => setApplyAmount(e.target.value)}
+                  placeholder="提现金额"
+                  type="number"
+                  style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", flex: 1, boxSizing: "border-box" }}
+                />
+                <button
+                  onClick={() => applyWithdrawMut.mutate()}
+                  disabled={applyWithdrawMut.isPending || !Number(applyAmount) || (sum?.withdrawable ?? 0) <= 0}
+                  style={{ ...btnBase, background: "#2563eb", color: "#fff", whiteSpace: "nowrap", opacity: applyWithdrawMut.isPending || !Number(applyAmount) || (sum?.withdrawable ?? 0) <= 0 ? 0.6 : 1 }}
+                >
+                  {applyWithdrawMut.isPending ? "提交中..." : "申请提现"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -281,6 +328,51 @@ export default function AgentSettingsPage() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* 提现记录 */}
+      <div style={{ ...card, marginTop: 24 }}>
+        <h3 style={{ marginBottom: 16 }}>提现记录</h3>
+        {withdrawalsQ.isLoading ? (
+          <div style={{ color: "#94a3b8", fontSize: 14 }}>加载中...</div>
+        ) : (withdrawalsQ.data?.list?.length ?? 0) === 0 ? (
+          <div style={{ color: "#94a3b8", fontSize: 14 }}>暂无提现记录</div>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+            <thead>
+              <tr style={{ color: "#64748b", textAlign: "left" }}>
+                <th style={{ padding: "8px" }}>提现单号</th>
+                <th style={{ padding: "8px" }}>金额</th>
+                <th style={{ padding: "8px" }}>状态</th>
+                <th style={{ padding: "8px" }}>提交时间</th>
+                <th style={{ padding: "8px" }}>备注</th>
+              </tr>
+            </thead>
+            <tbody>
+              {withdrawalsQ.data?.list.map((w) => (
+                <tr key={w.id} style={{ borderTop: "1px solid #f1f5f9" }}>
+                  <td style={{ padding: "8px", fontFamily: "monospace", fontSize: 12 }}>{w.withdrawal_no}</td>
+                  <td style={{ padding: "8px", fontWeight: 600 }}>¥{w.amount.toFixed(2)}</td>
+                  <td style={{ padding: "8px" }}>
+                    <span
+                      style={{
+                        padding: "2px 10px",
+                        borderRadius: 6,
+                        fontSize: 12,
+                        background: w.status === "completed" ? "#dcfce7" : w.status === "rejected" ? "#fee2e2" : w.status === "processing" ? "#dbeafe" : "#fef3c7",
+                        color: w.status === "completed" ? "#166534" : w.status === "rejected" ? "#991b1b" : w.status === "processing" ? "#1e40af" : "#92400e",
+                      }}
+                    >
+                      {w.status_label}
+                    </span>
+                  </td>
+                  <td style={{ padding: "8px", color: "#64748b", fontSize: 13 }}>{new Date(w.created_at).toLocaleString()}</td>
+                  <td style={{ padding: "8px", color: "#64748b", fontSize: 13 }}>{w.reject_reason ?? w.first_review_note ?? w.transfer_no ?? "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {notice && (

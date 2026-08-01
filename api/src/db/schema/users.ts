@@ -21,6 +21,8 @@ export const users = pgTable("users", {
   role: varchar("role", { length: 20 }).notNull().default("user"),
   // 余额（单位：分，避免浮点误差）
   balance: integer("balance").notNull().default(0),
+  // 鎻愮幇鍐荤粨浣欓锛堝垎锛?4浣嶅皬鏁帮級
+  pendingBalance: integer("pending_balance").notNull().default(0),
   // 实名认证状态
   realNameStatus: varchar("real_name_status", { length: 20 }).default("unverified"),
   // 代理关系（自引用，须用函数形式避免 TS7022 递归类型）

@@ -10,6 +10,7 @@ import RechargePage from "./pages/RechargePage";
 import BillingPage from "./pages/BillingPage";
 import AgentSettingsPage from "./pages/AgentSettingsPage";
 import AdminAgentsPage from "./pages/AdminAgentsPage";
+import AdminWithdrawalsPage from "./pages/AdminWithdrawalsPage";
 
 /** 受保护路由：token 存在才允许访问 */
 function Protected({ children }: { children: React.ReactNode }) {
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="billing" element={<BillingPage />} />
         <Route path="agent/settings" element={<AgentSettingsPage />} />
         <Route path="admin/agents" element={<AdminAgentsPage />} />
+        <Route path="admin/withdrawals" element={<AdminWithdrawalsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
