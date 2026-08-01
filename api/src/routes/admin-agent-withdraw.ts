@@ -118,12 +118,10 @@ export function adminAgentWithdrawRoutes(app: FastifyInstance) {
         return reply.code(400).send({ code: 400, error: "BAD_STATE", message: `当前状态 ${w.status} 不可复审` });
       }
 
-      const amountCents = Math.round(Number(w.amount) * 100);
       const now = new Date().toISOString();
 
       if (action === "reject") {
-        // 拒绝：解冻（pending_balance - amount, balance + amount）
-        await client.query("UPDATE users SET pending_balance = GREATEST(pending_balance - $2, 0), balance = balance + $2, updated_at = now() WHERE id = $1", [w.user_id, amountCents]);
+        // 驳回（佣金账户由状态聚合自动释放，无须操作用户余额）
         const upd = stage === "first"
           ? `SET status='rejected', first_reviewer_id=$2, first_review_at=$3, first_review_note=$4, reject_reason=$4, updated_at=$3`
           : `SET status='rejected', second_reviewer_id=$2, second_review_at=$3, second_review_note=$4, reject_reason=$4, updated_at=$3`;
@@ -171,12 +169,10 @@ export function adminAgentWithdrawRoutes(app: FastifyInstance) {
       if (!w) { await client.query("ROLLBACK"); return reply.code(404).send({ code: 404, error: "NOT_FOUND" }); }
       if (w.status !== "processing") { await client.query("ROLLBACK"); return reply.code(400).send({ code: 400, error: "BAD_STATE", message: `当前状态 ${w.status} 不可标记打款结果` }); }
 
-      const amountCents = Math.round(Number(w.amount) * 100);
       const now = new Date().toISOString();
 
       if (result === "success") {
-        // 真实扣减 pending_balance（balance 已在提交时扣减，此处不再加回）
-        await client.query("UPDATE users SET pending_balance = GREATEST(pending_balance - $2, 0), updated_at = now() WHERE id = $1", [w.user_id, amountCents]);
+        // 打款成功 → completed（佣金 withdrawn 由状态聚合自动计入，无须操作余额）
         await client.query(
           `UPDATE agent_withdrawals SET status='completed', transfer_no=$2, transfer_at=$3, completed_at=$3, updated_at=$3 WHERE id=$1`,
           [id, transfer_no ?? `TF${Date.now()}`, now],
@@ -184,14 +180,13 @@ export function adminAgentWithdrawRoutes(app: FastifyInstance) {
         await client.query("COMMIT");
         return { code: 0, data: { id, status: "completed", message: "打款成功，提现完成" }, message: "ok" };
       } else {
-        // 打款失败：解冻
-        await client.query("UPDATE users SET pending_balance = GREATEST(pending_balance - $2, 0), balance = balance + $2, updated_at = now() WHERE id = $1", [w.user_id, amountCents]);
+        // 打款失败 → rejected（佣金 pending 自动释放）
         await client.query(
           `UPDATE agent_withdrawals SET status='rejected', reject_reason='打款失败，已退回', updated_at=$2 WHERE id=$1`,
           [id, now],
         );
         await client.query("COMMIT");
-        return { code: 0, data: { id, status: "rejected", message: "打款失败，已解冻退回" }, message: "ok" };
+        return { code: 0, data: { id, status: "rejected", message: "打款失败，已退回" }, message: "ok" };
       }
     } catch (e: any) {
       await client.query("ROLLBACK").catch(() => {});

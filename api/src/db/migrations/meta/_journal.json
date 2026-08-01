@@ -43,6 +43,13 @@
       "when": 1785550600000,
       "tag": "0005_invoices",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785551200000,
+      "tag": "0006_agent_commissions",
+      "breakpoints": true
     }
   ]
 }

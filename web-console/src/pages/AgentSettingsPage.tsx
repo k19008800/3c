@@ -18,14 +18,27 @@ interface CommissionRules {
   rules: { level: string; label: string; rate: number; desc: string; current: boolean }[];
 }
 interface WithdrawSummary {
-  balance: number;
-  pending: number;
-  withdrawable: number;
+  balance: number;            // 佣金账户可提（settled-已提现）
+  commission_total: number;   // 累计佣金
+  withdrawn: number;          // 已提现
+  pending: number;            // 进行中提现
+  withdrawable: number;       // 可提现
   active_withdraw: number;
   active_amount: number;
   min_withdraw: number;
   account_set: boolean;
   level: string;
+}
+interface Commission {
+  id: number;
+  user_id: number;
+  user_email: string;
+  consumption_amount: number;
+  rate: number;
+  commission_amount: number;
+  level: string;
+  status: string;
+  created_at: string;
 }
 interface Withdrawal {
   id: number;
@@ -91,6 +104,10 @@ export default function AgentSettingsPage() {
   const withdrawalsQ = useQuery({
     queryKey: ["me-agent-withdrawals"],
     queryFn: async () => (await api.get<{ data: { list: Withdrawal[]; pagination: { total: number } } }>("/me/agent/withdrawals?page_size=20")).data.data,
+  });
+  const commissionsQ = useQuery({
+    queryKey: ["me-agent-commissions"],
+    queryFn: async () => (await api.get<{ data: { list: Commission[]; total: number } }>("/me/agent/commissions?page_size=20")).data.data,
   });
 
   const upgradeMut = useMutation({
@@ -173,13 +190,13 @@ export default function AgentSettingsPage() {
           )}
         </div>
 
-        {/* 提现汇总卡 */}
+        {/* 提现汇总卡（佣金账户）*/}
         <div style={card}>
-          <h3 style={{ marginBottom: 16 }}>提现汇总</h3>
+          <h3 style={{ marginBottom: 16 }}>佣金汇总</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, fontSize: 13 }}>
             <div style={{ background: "#f8fafc", padding: 12, borderRadius: 8 }}>
-              <div style={{ color: "#64748b" }}>账户余额</div>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>¥{(sum?.balance ?? 0).toFixed(2)}</div>
+              <div style={{ color: "#64748b" }}>累计佣金</div>
+              <div style={{ fontSize: 22, fontWeight: 700 }}>¥{(sum?.commission_total ?? 0).toFixed(2)}</div>
             </div>
             <div style={{ background: "#f8fafc", padding: 12, borderRadius: 8 }}>
               <div style={{ color: "#64748b" }}>可提现</div>
@@ -188,16 +205,16 @@ export default function AgentSettingsPage() {
               </div>
             </div>
             <div style={{ background: "#f8fafc", padding: 12, borderRadius: 8 }}>
-              <div style={{ color: "#64748b" }}>冻结中</div>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>¥{(sum?.pending ?? 0).toFixed(2)}</div>
+              <div style={{ color: "#64748b" }}>已提现</div>
+              <div style={{ fontSize: 22, fontWeight: 700 }}>¥{(sum?.withdrawn ?? 0).toFixed(2)}</div>
             </div>
             <div style={{ background: "#f8fafc", padding: 12, borderRadius: 8 }}>
               <div style={{ color: "#64748b" }}>进行中提现</div>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>{sum?.active_withdraw ?? 0} 笔</div>
+              <div style={{ fontSize: 22, fontWeight: 700 }}>¥{(sum?.pending ?? 0).toFixed(2)}</div>
             </div>
           </div>
           <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 12 }}>
-            最低提现 ¥{sum?.min_withdraw ?? "-"}；提交后冻结，审核通过后到账
+            下属客户消费按 {((prof?.commission_rate ?? 0) * 100).toFixed(0)}% 计佣；最低提现 ¥{sum?.min_withdraw ?? "-"}
           </div>
         </div>
 
@@ -368,6 +385,39 @@ export default function AgentSettingsPage() {
                   </td>
                   <td style={{ padding: "8px", color: "#64748b", fontSize: 13 }}>{new Date(w.created_at).toLocaleString()}</td>
                   <td style={{ padding: "8px", color: "#64748b", fontSize: 13 }}>{w.reject_reason ?? w.first_review_note ?? w.transfer_no ?? "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* 佣金明细 */}
+      <div style={{ ...card, marginTop: 24 }}>
+        <h3 style={{ marginBottom: 16 }}>佣金明细</h3>
+        {commissionsQ.isLoading ? (
+          <div style={{ color: "#94a3b8", fontSize: 14 }}>加载中...</div>
+        ) : (commissionsQ.data?.list?.length ?? 0) === 0 ? (
+          <div style={{ color: "#94a3b8", fontSize: 14 }}>暂无佣金记录（邀请客户消费后产生）</div>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+            <thead>
+              <tr style={{ color: "#64748b", textAlign: "left" }}>
+                <th style={{ padding: "8px" }}>客户</th>
+                <th style={{ padding: "8px" }}>消费额</th>
+                <th style={{ padding: "8px" }}>佣金率</th>
+                <th style={{ padding: "8px" }}>佣金</th>
+                <th style={{ padding: "8px" }}>时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              {commissionsQ.data?.list.map((c) => (
+                <tr key={c.id} style={{ borderTop: "1px solid #f1f5f9" }}>
+                  <td style={{ padding: "8px", fontSize: 13 }}>{c.user_email}</td>
+                  <td style={{ padding: "8px" }}>¥{c.consumption_amount.toFixed(2)}</td>
+                  <td style={{ padding: "8px" }}>{(c.rate * 100).toFixed(0)}%</td>
+                  <td style={{ padding: "8px", fontWeight: 600, color: "#16a34a" }}>¥{c.commission_amount.toFixed(2)}</td>
+                  <td style={{ padding: "8px", color: "#64748b", fontSize: 13 }}>{new Date(c.created_at).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>

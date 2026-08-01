@@ -6,6 +6,7 @@ import { checkRateLimit, rateLimitError } from "../services/rate-limiter";
 import { selectRoute } from "../services/router";
 import { recordResult } from "../services/circuit-breaker";
 import { getEffectivePrice, calcCost, round4, reserveBalance, refundBalance, recordBilling, recordCallLog } from "../services/billing";
+import { recordCommissionForUser } from "../services/commission";
 import { forwardChatCompletion } from "../services/upstream";
 import { models } from "../db/schema/models";
 import { vendors } from "../db/schema/vendors";
@@ -160,6 +161,16 @@ export function proxyRoutes(app: FastifyInstance) {
         balanceBefore,
         balanceAfter,
       });
+
+      // 11.5 代理佣金：为归属代理按消费记佣金（成功消费才记）
+      if (result.ok) {
+        let billId = callLogId;
+        try {
+          const b = await pool.query("SELECT id FROM billing_logs WHERE call_log_id = $1 LIMIT 1", [callLogId]);
+          if (b.rows[0]) billId = Number(b.rows[0].id);
+        } catch { /* billing id 兼容 */ }
+        void recordCommissionForUser(ctx.userId, billId, round4(actualCost));
+      }
 
       // 12. 返回
       if (!result.ok) {
