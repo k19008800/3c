@@ -4,6 +4,7 @@ import jwt from "@fastify/jwt";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import rateLimit from "@fastify/rate-limit";
+import websocket from "@fastify/websocket";
 import { registerRoutes } from "./routes/index";
 import { errorHandler } from "./lib/error-handler";
 import "dotenv/config";
@@ -35,6 +36,9 @@ export function buildApp() {
     max: 100,
     timeWindow: "1 minute",
   });
+
+  // WebSocket（§27 在线客服实时聊天）
+  void app.register(websocket, { options: { maxPayload: 1024 * 1024 } });
 
   // Swagger（由 route JSON Schema 自动生成）
   void app.register(swagger, {

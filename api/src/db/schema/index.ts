@@ -38,3 +38,4 @@ export * from "./tickets";
 export * from "./ticket-support";
 export * from "./chat";
 export * from "./staff-test-keys";
+export * from "./chat-ops";

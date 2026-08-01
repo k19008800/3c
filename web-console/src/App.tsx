@@ -31,6 +31,8 @@ import SecurityPage from "./pages/SecurityPage";
 import TicketsPage from "./pages/TicketsPage";
 import AdminTicketsPage from "./pages/AdminTicketsPage";
 import AdminSupportPage from "./pages/AdminSupportPage";
+import UserChatPage from "./pages/UserChatPage";
+import AdminChatPage from "./pages/AdminChatPage";
 import VendorLoginPage from "./pages/vendor/VendorLoginPage";
 import VendorRegisterPage from "./pages/vendor/VendorRegisterPage";
 import VendorLayout from "./layouts/VendorLayout";
@@ -103,6 +105,8 @@ export default function App() {
 <Route path="tickets" element={<TicketsPage />} />
 <Route path="admin/tickets" element={<AdminTicketsPage />} />
 <Route path="admin/support" element={<AdminSupportPage />} />
+<Route path="chat" element={<UserChatPage />} />
+<Route path="admin/chat" element={<AdminChatPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

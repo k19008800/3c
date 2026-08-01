@@ -30,6 +30,9 @@ import { adminSecurityRoutes } from "./admin-security";
 import { meTicketsRoutes } from "./me-tickets";
 import { adminTicketsRoutes } from "./admin-tickets";
 import { adminSupportRoutes } from "./admin-support";
+import { meChatRoutes } from "./me-chat";
+import { adminChatRoutes } from "./admin-chat";
+import { wsChatRoutes } from "./ws-chat";
 
 /**
  * 路由统一注册入口
@@ -95,5 +98,9 @@ export function registerRoutes(app: FastifyInstance) {
   void app.register(adminTicketsRoutes, { prefix: "/api/v1" });
   // §28 智能客服辅助 + §27.2 绩效/§27.3 审计
   void app.register(adminSupportRoutes, { prefix: "/api/v1" });
+  // §27 在线客服（REST + WS）
+  void app.register(meChatRoutes, { prefix: "/api/v1" });
+  void app.register(adminChatRoutes, { prefix: "/api/v1" });
+  void app.register(wsChatRoutes, { prefix: "/api/v1" });
 }
 
