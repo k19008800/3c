@@ -2,24 +2,26 @@ import { eq } from "drizzle-orm";
 import { db, pool } from "../db/index";
 import { agentCommissions } from "../db/schema/agent-commissions";
 import { agentProfiles } from "../db/schema/agent-profiles";
+import { resolveAgentByCustomerAt } from "./agent-binding";
 
 /**
  * 代理佣金服务
- * 对齐 supplement/04-代理佣金与结算.md
- * 当用户消费（billing_logs settled）后，为归属代理按其佣金率记一笔佣金
+ * 对齐 supplement/04-代理佣金与结算.md + PRD-代理商体系-后台主导版.md
+ * 当用户消费（billing_logs settled）后，按其消费时刻归属代理的佣金率记一笔佣金
+ * 归属来源 = agent_customer_bindings（报备划拨，唯一来源）
  */
 
 /**
  * 为用户的一笔消费记录归属代理佣金
  * @returns 记入的佣金笔数（0=无归属代理或已记过）
  */
-export async function recordCommissionForUser(userId: number, billingLogId: number, consumptionAmount: number): Promise<number> {
+export async function recordCommissionForUser(userId: number, billingLogId: number, consumptionAmount: number, consumedAt?: Date): Promise<number> {
   if (!billingLogId || consumptionAmount <= 0) return 0;
 
-  // 查用户的归属代理（users.agent_id）
-  const user = await pool.query("SELECT agent_id FROM users WHERE id = $1", [userId]);
-  const agentId = user.rows[0]?.agent_id;
-  if (!agentId) return 0; // 用户无归属代理
+  // 查用户消费时刻的归属代理（报备划拨制）
+  const at = consumedAt ?? new Date();
+  const agentId = await resolveAgentByCustomerAt(userId, at);
+  if (!agentId) return 0; // 消费时刻无归属代理
 
   // 查代理档案（等级 + 佣金率）
   const prof = await db.select().from(agentProfiles).where(eq(agentProfiles.userId, agentId)).limit(1);

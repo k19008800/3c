@@ -4,11 +4,12 @@ import { api, extractError } from "../lib/api";
 
 /* ============ 类型 ============ */
 interface AgentProfile {
-  level: string;
-  level_label: string;
+  is_agent: boolean;
+  level: string | null;
+  level_label: string | null;
   commission_rate: number;
   verify_status: string;
-  referral_code: string;
+  referral_code: string | null;
   withdraw_account: string | null;
   withdraw_bank: string | null;
   withdraw_name: string | null;
@@ -53,10 +54,18 @@ interface Withdrawal {
   created_at: string;
   completed_at: string | null;
 }
-interface ReferralInfo {
-  referral_code: string;
-  invite_url: string;
-  invited_count: number;
+interface ReportInfo {
+  id: number;
+  target_phone: string | null;
+  target_email: string | null;
+  target_user_id: number | null;
+  note: string | null;
+  status: string;
+  reject_reason: string | null;
+  created_at: string;
+  audit_at: string | null;
+  target_email_resolved: string | null;
+  target_username: string | null;
 }
 
 const card = { background: "#fff", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
@@ -73,6 +82,7 @@ export default function AgentSettingsPage() {
   const [withdrawForm, setWithdrawForm] = useState({ account: "", bank: "", name: "" });
   const [prefs, setPrefs] = useState<Record<string, boolean>>({});
   const [applyAmount, setApplyAmount] = useState<string>("");
+  const [reportForm, setReportForm] = useState({ target: "", note: "" });
 
   const profileQ = useQuery({
     queryKey: ["me-agent-profile"],
@@ -86,9 +96,10 @@ export default function AgentSettingsPage() {
     queryKey: ["me-agent-summary"],
     queryFn: async () => (await api.get<{ data: WithdrawSummary }>("/me/agent/withdraw-summary")).data.data,
   });
-  const referralQ = useQuery({
-    queryKey: ["me-agent-referral"],
-    queryFn: async () => (await api.get<{ data: ReferralInfo }>("/me/agent/referral")).data.data,
+  const reportsQ = useQuery({
+    queryKey: ["me-agent-reports"],
+    queryFn: async () => (await api.get<{ data: { list: ReportInfo[] } }>("/agent/reports")).data.data,
+    enabled: !!profileQ.data?.is_agent,
   });
   // 加载通知偏好（副作用：setPrefs 填充默认值）
   useQuery({
@@ -111,9 +122,18 @@ export default function AgentSettingsPage() {
     queryFn: async () => (await api.get<{ data: { list: Commission[]; total: number } }>("/me/agent/commissions?page_size=20")).data.data,
   });
 
-  const upgradeMut = useMutation({
-    mutationFn: async () => (await api.post("/me/agent/upgrade-request", {})).data,
-    onSuccess: () => { setNotice({ type: "success", msg: "升级申请已提交，等待审核" }); qc.invalidateQueries({ queryKey: ["me-agent-profile"] }); },
+  const reportMut = useMutation({
+    mutationFn: async () => {
+      const target = reportForm.target.trim();
+      const isId = /^\d+$/.test(target);
+      const body = isId
+        ? { target_user_id: Number(target), note: reportForm.note || undefined }
+        : target.includes("@")
+        ? { target_email: target, note: reportForm.note || undefined }
+        : { target_phone: target, note: reportForm.note || undefined };
+      return (await api.post("/agent/reports", body)).data;
+    },
+    onSuccess: () => { setNotice({ type: "success", msg: "报备已提交，等待后台审核" }); setReportForm({ target: "", note: "" }); qc.invalidateQueries({ queryKey: ["me-agent-reports"] }); },
     onError: (e) => setNotice({ type: "error", msg: extractError(e) }),
   });
 
@@ -140,20 +160,16 @@ export default function AgentSettingsPage() {
 
   const prof = profileQ.data;
   const sum = summaryQ.data;
-  const ref = referralQ.data;
-
-  const copyInvite = async () => {
-    try {
-      await navigator.clipboard.writeText(ref?.invite_url ?? "");
-      setNotice({ type: "success", msg: "邀请链接已复制" });
-    } catch {
-      setNotice({ type: "error", msg: "复制失败" });
-    }
-  };
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <h2 style={{ marginBottom: 20 }}>代理设置</h2>
+
+      {prof && !prof.is_agent && (
+        <div style={{ ...card, marginBottom: 24, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+          <p style={{ margin: 0, color: "#475569" }}>您不是代理商，无代理设置权限。代理商由平台后台授权开通。</p>
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginBottom: 24 }}>
         {/* 代理信息卡 */}
@@ -178,17 +194,7 @@ export default function AgentSettingsPage() {
           <div style={{ fontSize: 13, color: "#64748b", lineHeight: 2 }}>
             <div>佣金率: <strong>{(prof?.commission_rate ?? 0) * 100}%</strong></div>
             <div>实名状态: <strong>{prof?.verify_status === "verified" ? "已认证" : prof?.verify_status === "pending" ? "审核中" : "未认证"}</strong></div>
-            <div>邀请码: <strong style={{ fontFamily: "monospace" }}>{prof?.referral_code}</strong></div>
           </div>
-          {prof?.level === "prepare" && (
-            <button
-              onClick={() => upgradeMut.mutate()}
-              disabled={upgradeMut.isPending || prof.verify_status === "pending"}
-              style={{ ...btnBase, background: "#2563eb", color: "#fff", marginTop: 16, opacity: upgradeMut.isPending || prof.verify_status === "pending" ? 0.6 : 1 }}
-            >
-              {upgradeMut.isPending ? "提交中..." : prof.verify_status === "pending" ? "升级申请审核中" : "申请升级一级代理"}
-            </button>
-          )}
         </div>
 
         {/* 提现汇总卡（佣金账户）*/}
@@ -219,27 +225,65 @@ export default function AgentSettingsPage() {
           </div>
         </div>
 
-        {/* 邀请裂变卡 */}
+        {/* 报备目标客户卡（后台主导·报备划拨）*/}
         <div style={card}>
-          <h3 style={{ marginBottom: 16 }}>邀请裂变</h3>
-          <div style={{ background: "#f8fafc", padding: 12, borderRadius: 8, marginBottom: 12 }}>
-            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>邀请链接</div>
-            <div style={{ fontFamily: "monospace", fontSize: 12, wordBreak: "break-all", color: "#2563eb" }}>{ref?.invite_url}</div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ fontSize: 13, color: "#64748b" }}>
-              已邀请客户: <strong>{ref?.invited_count ?? 0}</strong>
-            </div>
-            <button onClick={copyInvite} style={{ ...btnBase, background: "#2563eb", color: "#fff" }}>
-              复制链接
+          <h3 style={{ marginBottom: 8 }}>报备目标客户 <span style={{ fontSize: 12, color: "#94a3b8", cursor: "help" }} title="代理商向后台报备目标客户，后台审核通过后自动划拨到您名下，其消费计入您佣金。">[?]</span></h3>
+          <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 12 }}>个人/企业客户统一流程；客户需已注册。归属唯一来源为后台划拨。</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <input
+              value={reportForm.target}
+              onChange={(e) => setReportForm({ ...reportForm, target: e.target.value })}
+              placeholder="客户手机号 / 邮箱 / 用户ID"
+              style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", width: "100%", boxSizing: "border-box" }}
+            />
+            <input
+              value={reportForm.note}
+              onChange={(e) => setReportForm({ ...reportForm, note: e.target.value })}
+              placeholder="备注（可选，如企业名/合作意向）"
+              style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", width: "100%", boxSizing: "border-box" }}
+            />
+            <button
+              onClick={() => reportMut.mutate()}
+              disabled={reportMut.isPending || !reportForm.target.trim()}
+              style={{ ...btnBase, background: "#2563eb", color: "#fff", opacity: reportMut.isPending || !reportForm.target.trim() ? 0.6 : 1 }}
+            >
+              {reportMut.isPending ? "提交中..." : "提交报备"}
             </button>
+          </div>
+          <div style={{ marginTop: 16, maxHeight: 200, overflowY: "auto" }}>
+            {reportsQ.isLoading ? (
+              <div style={{ fontSize: 12, color: "#94a3b8" }}>加载中...</div>
+            ) : (reportsQ.data?.list?.length ?? 0) === 0 ? (
+              <div style={{ fontSize: 12, color: "#94a3b8" }}>暂无报备记录</div>
+            ) : (
+              reportsQ.data!.list.map((r) => (
+                <div key={r.id} style={{ padding: "8px 0", borderTop: "1px solid #f1f5f9", fontSize: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontWeight: 600 }}>{r.target_email_resolved || r.target_username || r.target_phone || r.target_email || `#${r.target_user_id}`}</span>
+                    <span
+                      style={{
+                        padding: "2px 8px",
+                        borderRadius: 6,
+                        fontSize: 11,
+                        background: r.status === "passed" ? "#dcfce7" : r.status === "rejected" ? "#fee2e2" : "#fef3c7",
+                        color: r.status === "passed" ? "#166534" : r.status === "rejected" ? "#991b1b" : "#92400e",
+                      }}
+                    >
+                      {r.status === "passed" ? "已通过" : r.status === "rejected" ? "已驳回" : "待审核"}
+                    </span>
+                  </div>
+                  {r.reject_reason && <div style={{ color: "#dc2626" }}>驳回原因: {r.reject_reason}</div>}
+                  <div style={{ color: "#94a3b8" }}>{new Date(r.created_at).toLocaleString()}</div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
 
       {/* 佣金规则 */}
       <div style={{ ...card, marginBottom: 24 }}>
-        <h3 style={{ marginBottom: 16 }}>佣金规则（三级）</h3>
+        <h3 style={{ marginBottom: 16 }}>佣金规则</h3>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
           <thead>
             <tr style={{ color: "#64748b", textAlign: "left" }}>
@@ -399,7 +443,7 @@ export default function AgentSettingsPage() {
         {commissionsQ.isLoading ? (
           <div style={{ color: "#94a3b8", fontSize: 14 }}>加载中...</div>
         ) : (commissionsQ.data?.list?.length ?? 0) === 0 ? (
-          <div style={{ color: "#94a3b8", fontSize: 14 }}>暂无佣金记录（邀请客户消费后产生）</div>
+          <div style={{ color: "#94a3b8", fontSize: 14 }}>暂无佣金记录（归属客户消费后产生）</div>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead>

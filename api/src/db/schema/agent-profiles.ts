@@ -44,8 +44,8 @@ export const agentProfiles = pgTable(
     // 邀请码
     referralCode: varchar("referral_code", { length: 32 }).unique(),
 
-    // 上级代理（自引用 users）
-    parentUserId: integer("parent_user_id"),
+    // 后台创建操作人（后台主导模型）
+    createdByAdminId: integer("created_by_admin_id"),
 
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
