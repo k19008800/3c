@@ -9,11 +9,12 @@ import { transferCustomer, unbindCustomer } from "../services/agent-binding";
 
 /**
  * 代理管理审核端（管理后台）
- * 对齐 PRD-代理商体系 §3.1 三级审核制
+ * 对齐 PRD-代理商体系-后台主导版.md + SPEC-代理商后台主导版.md（D1-D8）
  * - 代理列表/详情
- * - 升级申请审核（approve/reject）
+ * - 设为代理商（后台授权创建，无用户自助入口）
  * - 等级调整
- * - 下属客户查看
+ * - 报备审核队列 + 审核通过自动划拨
+ * - 客户归属管理（列表/日志/解绑/手动转移）
  * 权限：需要 admin / super_admin 角色
  */
 
@@ -124,32 +125,6 @@ export function adminAgentRoutes(app: FastifyInstance) {
   });
 
   // ===== 3. 升级审核 =====
-  app.post("/admin/agents/:userId/audit", { onRequest: [admin] }, async (req, reply) => {
-    const userId = Number((req.params as any).userId);
-    const { action, note } = req.body as { action: "approve" | "reject"; note?: string };
-    if (!["approve", "reject"].includes(action)) {
-      return reply.code(400).send({ code: 400, error: "BAD_ACTION", message: "action 只能为 approve/reject" });
-    }
-
-    const prof = await db.select().from(agentProfiles).where(eq(agentProfiles.userId, userId)).limit(1);
-    if (!prof[0]) return reply.code(404).send({ code: 404, error: "NOT_FOUND" });
-
-    if (action === "approve") {
-      // 升级为一级代理，佣金率 10%
-      await db
-        .update(agentProfiles)
-        .set({ level: "level1", commissionRate: "0.10", verifyStatus: "verified", updatedAt: new Date() })
-        .where(eq(agentProfiles.userId, userId));
-      return { code: 0, data: { ok: true, level: "level1", message: "已升级为一级代理" }, message: "ok" };
-    } else {
-      await db
-        .update(agentProfiles)
-        .set({ verifyStatus: "rejected", updatedAt: new Date() })
-        .where(eq(agentProfiles.userId, userId));
-      return { code: 0, data: { ok: true, level: prof[0].level, message: note ?? "已驳回升级申请" }, message: "ok" };
-    }
-  });
-
   // ===== 4. 等级调整（手动设置）=====
   app.put("/admin/agents/:userId/level", { onRequest: [admin] }, async (req, reply) => {
     const userId = Number((req.params as any).userId);
@@ -162,18 +137,6 @@ export function adminAgentRoutes(app: FastifyInstance) {
     const r = await db.update(agentProfiles).set({ level, commissionRate: rate[level!], updatedAt: new Date() }).where(eq(agentProfiles.userId, userId));
     if ((r.rowCount ?? 0) === 0) return reply.code(404).send({ code: 404, error: "NOT_FOUND" });
     return { code: 0, data: { ok: true, level, commission_rate: Number(rate[level!]) }, message: "ok" };
-  });
-
-  // ===== 5. 待审核申请列表（升级申请 pending）=====
-  app.get("/admin/agents/pending", { onRequest: [admin] }, async (_req) => {
-    const rows = await pool.query(
-      `SELECT ap.user_id, ap.level, ap.commission_rate::float AS commission_rate, ap.referral_code, ap.created_at,
-              u.email, u.username, u.real_name_status
-       FROM agent_profiles ap JOIN users u ON u.id = ap.user_id
-       WHERE ap.verify_status = 'pending'
-       ORDER BY ap.created_at ASC`,
-    );
-    return { code: 0, data: { list: rows.rows }, message: "ok" };
   });
 
   // ===================== 后台主导版（报备划拨制）新增 =====================
