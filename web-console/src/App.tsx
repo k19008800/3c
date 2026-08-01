@@ -28,6 +28,8 @@ import NotificationPage from "./pages/NotificationPage";
 import AdminVendorSettlementsPage from "./pages/AdminVendorSettlementsPage";
 import AdminFinancePage from "./pages/AdminFinancePage";
 import SecurityPage from "./pages/SecurityPage";
+import TicketsPage from "./pages/TicketsPage";
+import AdminTicketsPage from "./pages/AdminTicketsPage";
 import VendorLoginPage from "./pages/vendor/VendorLoginPage";
 import VendorRegisterPage from "./pages/vendor/VendorRegisterPage";
 import VendorLayout from "./layouts/VendorLayout";
@@ -97,6 +99,8 @@ export default function App() {
         <Route path="admin/vendor-settlements" element={<AdminVendorSettlementsPage />} />
 <Route path="admin/finance" element={<AdminFinancePage />} />
 <Route path="security" element={<SecurityPage />} />
+<Route path="tickets" element={<TicketsPage />} />
+<Route path="admin/tickets" element={<AdminTicketsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

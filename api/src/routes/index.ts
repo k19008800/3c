@@ -27,6 +27,8 @@ import { vendorSelfRoutes } from "./vendor-self";
 import { adminFinanceRoutes } from "./admin-finance";
 import { meSecurityRoutes } from "./me-security";
 import { adminSecurityRoutes } from "./admin-security";
+import { meTicketsRoutes } from "./me-tickets";
+import { adminTicketsRoutes } from "./admin-tickets";
 
 /**
  * 路由统一注册入口
@@ -87,5 +89,8 @@ export function registerRoutes(app: FastifyInstance) {
   void app.register(meSecurityRoutes, { prefix: "/api/v1" });
   // §20 管理端安全与预算
   void app.register(adminSecurityRoutes, { prefix: "/api/v1" });
+  // §26 工单系统（用户端 + 客服端）
+  void app.register(meTicketsRoutes, { prefix: "/api/v1" });
+  void app.register(adminTicketsRoutes, { prefix: "/api/v1" });
 }
 

@@ -34,6 +34,7 @@ export default function ConsoleLayout() {
     { to: "/announcements", label: "公告" },
     { to: "/real-name", label: "实名认证" },
     { to: "/notification", label: "通知设置" },
+    { to: "/tickets", label: "我的工单" },
     { to: "/security", label: "安全中心" },
     { to: "/agent/settings", label: "代理设置" },
   ];
@@ -222,6 +223,18 @@ export default function ConsoleLayout() {
                 })}
               >
                 实时活动流
+              </NavLink>
+              <NavLink
+                to="/admin/tickets"
+                style={({ isActive }) => ({
+                  padding: "10px 20px",
+                  color: isActive ? "#38bdf8" : "#cbd5e1",
+                  textDecoration: "none",
+                  background: isActive ? "#0f172a" : "transparent",
+                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                })}
+              >
+                工单管理
               </NavLink>
             </>
           )}
