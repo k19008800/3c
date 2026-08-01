@@ -20,6 +20,9 @@ import AnnouncementsPage from "./pages/AnnouncementsPage";
 import AdminRedemptionPage from "./pages/AdminRedemptionPage";
 import AdminAnnouncementsPage from "./pages/AdminAnnouncementsPage";
 import RealNamePage from "./pages/RealNamePage";
+import AdminEmailTemplatesPage from "./pages/AdminEmailTemplatesPage";
+import AdminCampaignsPage from "./pages/AdminCampaignsPage";
+import AdminActivityPage from "./pages/AdminActivityPage";
 
 /** 受保护路由：token 存在才允许访问 */
 function Protected({ children }: { children: React.ReactNode }) {
@@ -64,6 +67,9 @@ export default function App() {
         <Route path="real-name" element={<RealNamePage />} />
         <Route path="admin/redemption" element={<AdminRedemptionPage />} />
         <Route path="admin/announcements" element={<AdminAnnouncementsPage />} />
+        <Route path="admin/email-templates" element={<AdminEmailTemplatesPage />} />
+        <Route path="admin/campaigns" element={<AdminCampaignsPage />} />
+        <Route path="admin/activity" element={<AdminActivityPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

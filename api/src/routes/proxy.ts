@@ -7,6 +7,7 @@ import { selectRoute } from "../services/router";
 import { recordResult } from "../services/circuit-breaker";
 import { getEffectivePrice, calcCost, round4, reserveBalance, refundBalance, recordBilling, recordCallLog } from "../services/billing";
 import { recordCommissionForUser } from "../services/commission";
+import { publishActivity, pushActivityHistory } from "../services/activity-push";
 import { forwardChatCompletion } from "../services/upstream";
 import { models } from "../db/schema/models";
 import { vendors } from "../db/schema/vendors";
@@ -171,6 +172,20 @@ export function proxyRoutes(app: FastifyInstance) {
         } catch { /* billing id 兼容 */ }
         void recordCommissionForUser(ctx.userId, billId, round4(actualCost));
       }
+
+      // 11.6 实时活动流：计费完成推送事件（成功+失败）
+      const activity = {
+        model: body.model ?? "unknown",
+        status: (result.ok ? "success" : "error") as "success" | "error",
+        inputTokens: result.usage?.inputTokens ?? 0,
+        outputTokens: result.usage?.outputTokens ?? 0,
+        cost: round4(actualCost),
+        provider: vendor.name,
+        userId: ctx.userId,
+      };
+      const ev = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, timestamp: Date.now(), ...activity };
+      publishActivity(activity);
+      pushActivityHistory(ev);
 
       // 12. 返回
       if (!result.ok) {

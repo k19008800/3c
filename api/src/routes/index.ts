@@ -18,6 +18,9 @@ import { realNameRoutes } from "./real-name";
 import { adminVendorKeyRoutes } from "./admin-vendor-key";
 import { redemptionRoutes } from "./redemption";
 import { announcementRoutes } from "./announcements";
+import { emailTemplateRoutes } from "./email-templates";
+import { campaignRoutes } from "./campaigns";
+import { adminActivityRoutes } from "./admin-activity";
 
 /**
  * 路由统一注册入口
@@ -60,5 +63,11 @@ export function registerRoutes(app: FastifyInstance) {
   void app.register(redemptionRoutes, { prefix: "/api/v1" });
   // §4.5 公告系统（用户端 + 管理端）
   void app.register(announcementRoutes, { prefix: "/api/v1" });
+  // §4.5 邮件模板（管理后台）
+  void app.register(emailTemplateRoutes, { prefix: "/api/v1" });
+  // §4.5 营销活动（管理后台）
+  void app.register(campaignRoutes, { prefix: "/api/v1" });
+  // §4.5 实时活动流（管理后台 SSE）
+  void app.register(adminActivityRoutes, { prefix: "/api/v1" });
 }
 

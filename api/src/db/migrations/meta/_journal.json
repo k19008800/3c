@@ -64,6 +64,13 @@
       "when": 1785552400000,
       "tag": "0008_redemption_announcements",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785553000000,
+      "tag": "0009_email_campaigns",
+      "breakpoints": true
     }
   ]
 }

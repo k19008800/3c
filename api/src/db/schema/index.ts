@@ -22,3 +22,5 @@ export * from "./agent-commissions";
 export * from "./real-name-records";
 export * from "./redemption";
 export * from "./announcements";
+export * from "./email-templates";
+export * from "./campaigns";
