@@ -24,6 +24,7 @@ import AdminEmailTemplatesPage from "./pages/AdminEmailTemplatesPage";
 import AdminCampaignsPage from "./pages/AdminCampaignsPage";
 import AdminActivityPage from "./pages/AdminActivityPage";
 import NotificationPage from "./pages/NotificationPage";
+import AdminVendorSettlementsPage from "./pages/AdminVendorSettlementsPage";
 
 /** 受保护路由：token 存在才允许访问 */
 function Protected({ children }: { children: React.ReactNode }) {
@@ -72,6 +73,7 @@ export default function App() {
         <Route path="admin/campaigns" element={<AdminCampaignsPage />} />
         <Route path="admin/activity" element={<AdminActivityPage />} />
         <Route path="notification" element={<NotificationPage />} />
+        <Route path="admin/vendor-settlements" element={<AdminVendorSettlementsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

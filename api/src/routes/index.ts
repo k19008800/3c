@@ -22,6 +22,7 @@ import { emailTemplateRoutes } from "./email-templates";
 import { campaignRoutes } from "./campaigns";
 import { adminActivityRoutes } from "./admin-activity";
 import { notificationRoutes } from "./notification";
+import { adminVendorSettlementRoutes } from "./admin-vendor-settlement";
 
 /**
  * 路由统一注册入口
@@ -72,5 +73,7 @@ export function registerRoutes(app: FastifyInstance) {
   void app.register(adminActivityRoutes, { prefix: "/api/v1" });
   // §4.5 通知订阅偏好（用户端）
   void app.register(notificationRoutes, { prefix: "/api/v1" });
+  // §4.15 供应商结算管理（管理后台）
+  void app.register(adminVendorSettlementRoutes, { prefix: "/api/v1" });
 }
 

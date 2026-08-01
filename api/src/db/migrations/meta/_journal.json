@@ -78,6 +78,13 @@
       "when": 1785554000000,
       "tag": "0010_notification_subscriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1785555000000,
+      "tag": "0011_vendor_settlements",
+      "breakpoints": true
     }
   ]
 }
