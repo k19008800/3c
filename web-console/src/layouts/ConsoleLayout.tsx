@@ -41,8 +41,14 @@ export default function ConsoleLayout() {
     { to: "/data-export", label: "数据导出" },
     { to: "/agent/settings", label: "代理设置" },
   ];
+  const navSales = [
+    { to: "/sales/customers", label: "客户管理", end: false },
+    { to: "/sales/reminders", label: "跟进提醒", end: false },
+    { to: "/sales/performance", label: "业绩看板", end: false },
+  ];
   // 管理入口（admin / super_admin 可见）
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+  const isSales = user?.role === "sales" || isAdmin;
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", fontFamily: "system-ui, sans-serif" }}>
@@ -66,11 +72,46 @@ export default function ConsoleLayout() {
               {item.label}
             </NavLink>
           ))}
+          {isSales && (
+            <> 
+              <div style={{ padding: "16px 20px 6px", fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>
+                业务员工作台
+              </div>
+              {navSales.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  style={({ isActive }) => ({
+                    padding: "10px 20px",
+                    color: isActive ? "#38bdf8" : "#cbd5e1",
+                    textDecoration: "none",
+                    background: isActive ? "#0f172a" : "transparent",
+                    borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                  })}
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+            </>
+          )}
           {isAdmin && (
             <>
               <div style={{ padding: "16px 20px 6px", fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>
                 管理后台
               </div>
+              <NavLink
+                to="/admin/customers"
+                style={({ isActive }) => ({
+                  padding: "10px 20px",
+                  color: isActive ? "#38bdf8" : "#cbd5e1",
+                  textDecoration: "none",
+                  background: isActive ? "#0f172a" : "transparent",
+                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                })}
+              >
+                客户管理
+              </NavLink>
               <NavLink
                 to="/admin/agents"
                 style={({ isActive }) => ({
@@ -181,6 +222,57 @@ export default function ConsoleLayout() {
                 })}
               >
                 权限审计
+              </NavLink>
+              <div style={{ padding: "16px 20px 6px", fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>
+                系统管理
+              </div>
+              <NavLink
+                to="/admin/sys/db"
+                style={({ isActive }) => ({
+                  padding: "10px 20px",
+                  color: isActive ? "#38bdf8" : "#cbd5e1",
+                  textDecoration: "none",
+                  background: isActive ? "#0f172a" : "transparent",
+                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                })}
+              >
+                数据库管理
+              </NavLink>
+              <NavLink
+                to="/admin/sys/cache"
+                style={({ isActive }) => ({
+                  padding: "10px 20px",
+                  color: isActive ? "#38bdf8" : "#cbd5e1",
+                  textDecoration: "none",
+                  background: isActive ? "#0f172a" : "transparent",
+                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                })}
+              >
+                缓存管理
+              </NavLink>
+              <NavLink
+                to="/admin/sys/logs"
+                style={({ isActive }) => ({
+                  padding: "10px 20px",
+                  color: isActive ? "#38bdf8" : "#cbd5e1",
+                  textDecoration: "none",
+                  background: isActive ? "#0f172a" : "transparent",
+                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                })}
+              >
+                日志查看器
+              </NavLink>
+              <NavLink
+                to="/admin/sys/version"
+                style={({ isActive }) => ({
+                  padding: "10px 20px",
+                  color: isActive ? "#38bdf8" : "#cbd5e1",
+                  textDecoration: "none",
+                  background: isActive ? "#0f172a" : "transparent",
+                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                })}
+              >
+                版本与变更
               </NavLink>
               <NavLink
                 to="/admin/models"

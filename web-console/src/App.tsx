@@ -38,6 +38,15 @@ import UserChatPage from "./pages/UserChatPage";
 import AdminChatPage from "./pages/AdminChatPage";
 import ConsentPage from "./pages/ConsentPage";
 import AdminConsentPage from "./pages/AdminConsentPage";
+import SalesCustomersPage from "./pages/SalesCustomersPage";
+import SalesCustomerDetailPage from "./pages/SalesCustomerDetailPage";
+import SalesRemindersPage from "./pages/SalesRemindersPage";
+import SalesPerformancePage from "./pages/SalesPerformancePage";
+import AdminCustomersPage from "./pages/AdminCustomersPage";
+import AdminSysDbPage from "./pages/AdminSysDbPage";
+import AdminSysCachePage from "./pages/AdminSysCachePage";
+import AdminSysLogsPage from "./pages/AdminSysLogsPage";
+import AdminSysVersionPage from "./pages/AdminSysVersionPage";
 import VendorLoginPage from "./pages/vendor/VendorLoginPage";
 import VendorRegisterPage from "./pages/vendor/VendorRegisterPage";
 import VendorLayout from "./layouts/VendorLayout";
@@ -117,6 +126,15 @@ export default function App() {
 <Route path="admin/roles" element={<AdminRolesPage />} />
 <Route path="admin/users-permission" element={<AdminUsersPermissionPage />} />
 <Route path="admin/permission-audit" element={<AdminPermissionAuditPage />} />
+<Route path="sales/customers" element={<SalesCustomersPage />} />
+<Route path="sales/customers/:userId" element={<SalesCustomerDetailPage />} />
+<Route path="sales/reminders" element={<SalesRemindersPage />} />
+<Route path="sales/performance" element={<SalesPerformancePage />} />
+<Route path="admin/customers" element={<AdminCustomersPage />} />
+<Route path="admin/sys/db" element={<AdminSysDbPage />} />
+<Route path="admin/sys/cache" element={<AdminSysCachePage />} />
+<Route path="admin/sys/logs" element={<AdminSysLogsPage />} />
+<Route path="admin/sys/version" element={<AdminSysVersionPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
