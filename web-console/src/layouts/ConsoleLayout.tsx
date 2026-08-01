@@ -1,5 +1,7 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../lib/api";
 
 /**
  * Console 主布局：侧边栏 + 顶栏 + 内容区
@@ -8,6 +10,13 @@ export default function ConsoleLayout() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
+
+  // 公告未读数
+  const unreadQ = useQuery({
+    queryKey: ["me-announcements-unread"],
+    queryFn: async () => (await api.get<{ data: { unread: number } }>("/me/announcements/unread-count")).data.data,
+    refetchInterval: 60000,
+  });
 
   const handleLogout = () => {
     logout();
@@ -20,6 +29,9 @@ export default function ConsoleLayout() {
     { to: "/logs", label: "调用日志" },
     { to: "/recharge", label: "充值中心" },
     { to: "/billing", label: "账单中心" },
+    { to: "/redemption", label: "兑换中心" },
+    { to: "/announcements", label: "公告" },
+    { to: "/real-name", label: "实名认证" },
     { to: "/agent/settings", label: "代理设置" },
   ];
   // 管理入口（admin / super_admin 可见）
@@ -124,6 +136,30 @@ export default function ConsoleLayout() {
               >
                 实名审核
               </NavLink>
+              <NavLink
+                to="/admin/redemption"
+                style={({ isActive }) => ({
+                  padding: "10px 20px",
+                  color: isActive ? "#38bdf8" : "#cbd5e1",
+                  textDecoration: "none",
+                  background: isActive ? "#0f172a" : "transparent",
+                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                })}
+              >
+                兑换码
+              </NavLink>
+              <NavLink
+                to="/admin/announcements"
+                style={({ isActive }) => ({
+                  padding: "10px 20px",
+                  color: isActive ? "#38bdf8" : "#cbd5e1",
+                  textDecoration: "none",
+                  background: isActive ? "#0f172a" : "transparent",
+                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                })}
+              >
+                公告管理
+              </NavLink>
             </>
           )}
         </nav>
@@ -146,6 +182,14 @@ export default function ConsoleLayout() {
             余额: <strong>¥{((user?.balance ?? 0) / 100).toFixed(2)}</strong>
           </span>
           <span>{user?.username ?? user?.email}</span>
+          <Link to="/announcements" style={{ position: "relative", textDecoration: "none", fontSize: 20, cursor: "pointer" }} title="公告">
+            📢
+            {unreadQ.data?.unread ? (
+              <span style={{ position: "absolute", top: -6, right: -12, background: "#dc2626", color: "#fff", borderRadius: 10, padding: "0 6px", fontSize: 11, minWidth: 18, textAlign: "center" }}>
+                {unreadQ.data.unread > 99 ? "99+" : unreadQ.data.unread}
+              </span>
+            ) : null}
+          </Link>
           <button onClick={handleLogout} style={{ cursor: "pointer", padding: "6px 12px" }}>
             退出
           </button>

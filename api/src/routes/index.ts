@@ -16,6 +16,8 @@ import { adminVendorModelRoutes } from "./admin-vendor-model";
 import { invoiceRoutes } from "./invoice";
 import { realNameRoutes } from "./real-name";
 import { adminVendorKeyRoutes } from "./admin-vendor-key";
+import { redemptionRoutes } from "./redemption";
+import { announcementRoutes } from "./announcements";
 
 /**
  * 路由统一注册入口
@@ -54,5 +56,9 @@ export function registerRoutes(app: FastifyInstance) {
   void app.register(realNameRoutes, { prefix: "/api/v1" });
   // §4.3 Key 资源池（供应商 Key 管理）
   void app.register(adminVendorKeyRoutes, { prefix: "/api/v1" });
+  // §4.5 兑换码系统（用户端 + 管理端）
+  void app.register(redemptionRoutes, { prefix: "/api/v1" });
+  // §4.5 公告系统（用户端 + 管理端）
+  void app.register(announcementRoutes, { prefix: "/api/v1" });
 }
 
