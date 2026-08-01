@@ -75,7 +75,7 @@ export default function AgentSettingsPage() {
   });
 
   const upgradeMut = useMutation({
-    mutationFn: async () => (await api.post("/me/agent/upgrade-request")).data,
+    mutationFn: async () => (await api.post("/me/agent/upgrade-request", {})).data,
     onSuccess: () => { setNotice({ type: "success", msg: "升级申请已提交，等待审核" }); qc.invalidateQueries({ queryKey: ["me-agent-profile"] }); },
     onError: (e) => setNotice({ type: "error", msg: extractError(e) }),
   });

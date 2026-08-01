@@ -9,6 +9,7 @@ import { publicRoutes } from "./public";
 import { meRechargeRoutes } from "./me";
 import { meBillingRoutes } from "./me-billing";
 import { meAgentRoutes } from "./me-agent";
+import { adminAgentRoutes } from "./admin-agent";
 
 /**
  * 路由统一注册入口
@@ -33,5 +34,7 @@ export function registerRoutes(app: FastifyInstance) {
   void app.register(meBillingRoutes, { prefix: "/api/v1" });
   // §3 代理设置（Console 胶层）
   void app.register(meAgentRoutes, { prefix: "/api/v1" });
+  // §3.1 代理管理审核端（管理后台）
+  void app.register(adminAgentRoutes, { prefix: "/api/v1" });
 }
 

@@ -115,15 +115,23 @@ export function meAgentRoutes(app: FastifyInstance) {
   });
 
   // ===== 4. 申请升级 =====
-  app.post("/me/agent/upgrade-request", { onRequest: [auth] }, async (req, reply) => {
-    const userId = Number((req as any).user.sub);
-    const prof = await getOrCreateProfile(userId);
-    if (prof.verifyStatus === "pending" || prof.verifyStatus === "verified") {
-      return reply.code(400).send({ code: 400, error: "ALREADY", message: "已有升级申请或已通过" });
-    }
-    await db
-      .update(agentProfiles)
-      .set({ verifyStatus: "pending", updatedAt: new Date() })
+  app.post(
+    "/me/agent/upgrade-request",
+    {
+      onRequest: [auth],
+      schema: {
+        body: { type: "object", additionalProperties: true },
+      },
+    },
+    async (req, reply) => {
+      const userId = Number((req as any).user.sub);
+      const prof = await getOrCreateProfile(userId);
+      if (prof.verifyStatus === "pending" || prof.verifyStatus === "verified") {
+        return reply.code(400).send({ code: 400, error: "ALREADY", message: "已有升级申请或已通过" });
+      }
+      await db
+        .update(agentProfiles)
+        .set({ verifyStatus: "pending", updatedAt: new Date() })
       .where(eq(agentProfiles.userId, userId));
     return { code: 0, data: { ok: true }, message: "升级申请已提交，等待审核" };
   });
