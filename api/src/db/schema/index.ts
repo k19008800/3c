@@ -45,3 +45,4 @@ export * from "./chat-ops";
 export * from "./privacy-policy";
 export * from "./terms-of-service";
 export * from "./data-export";
+export * from "./admin-roles";
