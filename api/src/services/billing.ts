@@ -167,7 +167,7 @@ export async function recordCallLog(params: {
   upstreamModel?: string;
   requestTokens?: number;
   responseTokens?: number;
-  costCents?: number;
+  cost?: string;
   status?: string;
   errorCode?: string;
   latencyMs?: number;
@@ -186,7 +186,7 @@ export async function recordCallLog(params: {
     requestTokens: params.requestTokens ?? 0,
     responseTokens: params.responseTokens ?? 0,
     totalTokens: (params.requestTokens ?? 0) + (params.responseTokens ?? 0),
-    costCents: params.costCents ?? 0,
+    cost: params.cost ?? "0",
     status: params.status ?? "success",
     errorCode: params.errorCode,
     latencyMs: params.latencyMs,

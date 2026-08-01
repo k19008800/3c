@@ -28,7 +28,7 @@ CREATE TABLE call_logs (
   request_tokens  integer DEFAULT 0,
   response_tokens integer DEFAULT 0,
   total_tokens    integer DEFAULT 0,
-  cost_cents      integer DEFAULT 0,
+  cost            numeric(18,4) DEFAULT 0,
   status          varchar(20) NOT NULL DEFAULT 'success',
   error_code      varchar(50),
   error_message   text,

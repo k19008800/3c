@@ -2,6 +2,7 @@ import {
   pgTable,
   bigint,
   integer,
+  numeric,
   varchar,
   timestamp,
   text,
@@ -32,8 +33,8 @@ export const callLogs = pgTable(
     requestTokens: integer("request_tokens").default(0),
     responseTokens: integer("response_tokens").default(0),
     totalTokens: integer("total_tokens").default(0),
-    // 计费（分）
-    costCents: integer("cost_cents").default(0),
+    // 计费（元，保留 4 位小数，对齐 DeepSeek 计费精度 0.0001 元）
+    cost: numeric("cost", { precision: 18, scale: 4 }).default("0"),
     // 状态
     status: varchar("status", { length: 20 }).notNull().default("success"),
     errorCode: varchar("error_code", { length: 50 }),

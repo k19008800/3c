@@ -116,13 +116,13 @@ export function authRoutes(app: FastifyInstance) {
   app.get("/me/stats", { schema: { tags: ["auth"] }, onRequest: [requireAuth] }, async (req) => {
     const userId = Number((req as any).user.sub);
     const [total, today, balanceRows] = await Promise.all([
-      pool.query("SELECT COALESCE(SUM(total_tokens),0)::int AS tokens, COALESCE(SUM(cost_cents),0)::int AS cost_cents, COUNT(*)::int AS calls FROM call_logs WHERE user_id=$1", [userId]),
+      pool.query("SELECT COALESCE(SUM(total_tokens),0)::int AS tokens, COALESCE(SUM(cost),0)::numeric AS cost, COUNT(*)::int AS calls FROM call_logs WHERE user_id=$1", [userId]),
       pool.query("SELECT COUNT(*)::int AS calls FROM call_logs WHERE user_id=$1 AND created_at >= now() - interval '24 hours'", [userId]),
       pool.query("SELECT balance FROM users WHERE id=$1", [userId]),
     ]);
     return {
       totalTokens: total.rows[0].tokens,
-      totalCost: Number(total.rows[0].cost_cents) / 100,
+      totalCost: Number(total.rows[0].cost) ?? 0,
       totalCalls: total.rows[0].calls,
       todayCalls: today.rows[0].calls,
       balance: Number(balanceRows.rows[0]?.balance ?? 0) / 100,
@@ -135,7 +135,7 @@ export function authRoutes(app: FastifyInstance) {
     const q = req.query as { limit?: number };
     const limit = Math.min(q.limit ?? 20, 100);
     const rows = await pool.query(
-      "SELECT id, provider, upstream_model, request_tokens, response_tokens, total_tokens, cost_cents, status, error_code, latency_ms, created_at FROM call_logs WHERE user_id=$1 ORDER BY created_at DESC LIMIT $2",
+      "SELECT id, provider, upstream_model, request_tokens, response_tokens, total_tokens, cost, status, error_code, latency_ms, created_at FROM call_logs WHERE user_id=$1 ORDER BY created_at DESC LIMIT $2",
       [userId, limit],
     );
     return { list: rows.rows };

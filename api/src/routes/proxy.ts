@@ -5,7 +5,7 @@ import { authenticateApiKey, extractBearerKey, isModelAllowed } from "../service
 import { checkRateLimit, rateLimitError } from "../services/rate-limiter";
 import { selectRoute } from "../services/router";
 import { recordResult } from "../services/circuit-breaker";
-import { getEffectivePrice, calcCost, reserveBalance, refundBalance, recordBilling, recordCallLog } from "../services/billing";
+import { getEffectivePrice, calcCost, round4, reserveBalance, refundBalance, recordBilling, recordCallLog } from "../services/billing";
 import { forwardChatCompletion } from "../services/upstream";
 import { models } from "../db/schema/models";
 import { vendors } from "../db/schema/vendors";
@@ -143,7 +143,7 @@ export function proxyRoutes(app: FastifyInstance) {
         upstreamModel: route.upstreamModel,
         requestTokens: result.usage?.inputTokens,
         responseTokens: result.usage?.outputTokens,
-        costCents: Math.round(actualCost * 100),
+        cost: String(round4(actualCost)),
         status: result.ok ? "success" : "failed",
         errorCode: result.ok ? undefined : result.error?.code,
         latencyMs: undefined,

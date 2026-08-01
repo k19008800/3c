@@ -8,7 +8,7 @@ interface CallLog {
   request_tokens: number;
   response_tokens: number;
   total_tokens: number;
-  cost_cents: number;
+  cost: string | number;
   status: string;
   error_code: string | null;
   latency_ms: number | null;
@@ -50,7 +50,7 @@ export default function LogsPage() {
                   <td style={{ padding: 12 }}>{log.provider ?? "-"}</td>
                   <td style={{ padding: 12, fontFamily: "monospace", fontSize: 13 }}>{log.upstream_model ?? "-"}</td>
                   <td style={{ padding: 12 }}>{log.total_tokens}</td>
-                  <td style={{ padding: 12 }}>¥{(log.cost_cents / 100).toFixed(4)}</td>
+                  <td style={{ padding: 12 }}>¥{Number(log.cost ?? 0).toFixed(4)}</td>
                   <td style={{ padding: 12 }}>{log.latency_ms != null ? `${log.latency_ms}ms` : "-"}</td>
                   <td style={{ padding: 12 }}>
                     <span
