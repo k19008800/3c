@@ -8,6 +8,7 @@ import ApiKeysPage from "./pages/ApiKeysPage";
 import LogsPage from "./pages/LogsPage";
 import RechargePage from "./pages/RechargePage";
 import BillingPage from "./pages/BillingPage";
+import InvoicesPage from "./pages/InvoicesPage";
 import AgentSettingsPage from "./pages/AgentSettingsPage";
 import AdminAgentsPage from "./pages/AdminAgentsPage";
 import AdminWithdrawalsPage from "./pages/AdminWithdrawalsPage";
@@ -25,6 +26,13 @@ import AdminCampaignsPage from "./pages/AdminCampaignsPage";
 import AdminActivityPage from "./pages/AdminActivityPage";
 import NotificationPage from "./pages/NotificationPage";
 import AdminVendorSettlementsPage from "./pages/AdminVendorSettlementsPage";
+import VendorLoginPage from "./pages/vendor/VendorLoginPage";
+import VendorRegisterPage from "./pages/vendor/VendorRegisterPage";
+import VendorLayout from "./layouts/VendorLayout";
+import VendorDashboardPage from "./pages/vendor/VendorDashboardPage";
+import VendorModelsPage from "./pages/vendor/VendorModelsPage";
+import VendorStatsPage from "./pages/vendor/VendorStatsPage";
+import VendorSettlementsPage from "./pages/vendor/VendorSettlementsPage";
 
 /** 受保护路由：token 存在才允许访问 */
 function Protected({ children }: { children: React.ReactNode }) {
@@ -43,6 +51,16 @@ export default function App() {
 
   return (
     <Routes>
+      {/* 供应商自助端（独立于 Console） */}
+      <Route path="/vendor/login" element={<VendorLoginPage />} />
+      <Route path="/vendor/register" element={<VendorRegisterPage />} />
+      <Route path="/vendor" element={<VendorLayout />}>
+        <Route index element={<VendorDashboardPage />} />
+        <Route path="models" element={<VendorModelsPage />} />
+        <Route path="stats" element={<VendorStatsPage />} />
+        <Route path="settlements" element={<VendorSettlementsPage />} />
+      </Route>
+
       <Route path="/login" element={token ? <Navigate to="/" replace /> : <LoginPage />} />
       <Route
         path="/"
@@ -57,6 +75,7 @@ export default function App() {
         <Route path="logs" element={<LogsPage />} />
         <Route path="recharge" element={<RechargePage />} />
         <Route path="billing" element={<BillingPage />} />
+        <Route path="invoices" element={<InvoicesPage />} />
         <Route path="agent/settings" element={<AgentSettingsPage />} />
         <Route path="admin/agents" element={<AdminAgentsPage />} />
         <Route path="admin/withdrawals" element={<AdminWithdrawalsPage />} />

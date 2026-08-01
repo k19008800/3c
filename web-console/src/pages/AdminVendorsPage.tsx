@@ -36,6 +36,8 @@ const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
   active: { bg: "#dcfce7", color: "#166534" },
   maintenance: { bg: "#fef3c7", color: "#92400e" },
   offline: { bg: "#fee2e2", color: "#991b1b" },
+  pending: { bg: "#dbeafe", color: "#1e40af" },
+  rejected: { bg: "#f1f5f9", color: "#64748b" },
 };
 const inputStyle: React.CSSProperties = { padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", width: "100%", boxSizing: "border-box", marginBottom: 10 };
 
@@ -74,6 +76,13 @@ export default function AdminVendorsPage() {
   const toggleMut = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => (await api.post(`/admin/vendors/${id}/toggle-status`, { status })).data,
     onSuccess: (d: { data?: { message?: string } }) => { setNotice({ type: "success", msg: d?.data?.message ?? "状态已切换" }); qc.invalidateQueries({ queryKey: ["admin-vendors"] }); qc.invalidateQueries({ queryKey: ["admin-vendor-detail"] }); },
+    onError: (e) => setNotice({ type: "error", msg: extractError(e) }),
+  });
+
+  // 入驻审核（pending → active / rejected）
+  const auditMut = useMutation({
+    mutationFn: async ({ id, op, reason }: { id: number; op: "approve" | "reject"; reason?: string }) => (await api.post(`/admin/vendors/${id}/${op}`, op === "reject" ? { reason } : {})).data,
+    onSuccess: (d: { data?: { message?: string } }) => { setNotice({ type: "success", msg: d?.data?.message ?? "审核完成" }); setDetail(null); qc.invalidateQueries({ queryKey: ["admin-vendors"] }); qc.invalidateQueries({ queryKey: ["admin-vendor-detail"] }); },
     onError: (e) => setNotice({ type: "error", msg: extractError(e) }),
   });
 
@@ -165,6 +174,10 @@ export default function AdminVendorsPage() {
                   <td style={{ padding: "8px", color: "#64748b", fontSize: 13 }}>{new Date(v.created_at).toLocaleString()}</td>
                   <td style={{ padding: "8px" }}>
                     <button onClick={() => setDetail(v)} style={{ ...btnBase, background: "#f1f5f9", color: "#334155" }}>管理</button>
+                    {v.status === "pending" && (<>
+                      <button onClick={() => auditMut.mutate({ id: v.id, op: "approve" })} style={{ ...btnBase, background: "#16a34a", color: "#fff", padding: "4px 10px", marginLeft: 6 }}>通过</button>
+                      <button onClick={() => auditMut.mutate({ id: v.id, op: "reject", reason: "资料不完整" })} style={{ ...btnBase, background: "#fee2e2", color: "#991b1b", padding: "4px 10px", marginLeft: 6 }}>拒绝</button>
+                    </>)}
                   </td>
                 </tr>
               ))}
@@ -204,6 +217,10 @@ export default function AdminVendorsPage() {
 
             {/* 状态切换 */}
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              {detail.status === "pending" && (<>
+                <button onClick={() => auditMut.mutate({ id: detail.id, op: "approve" })} style={{ ...btnBase, background: "#16a34a", color: "#fff" }}>通过审核</button>
+                <button onClick={() => auditMut.mutate({ id: detail.id, op: "reject", reason: "资料不完整" })} style={{ ...btnBase, background: "#fee2e2", color: "#991b1b" }}>拒绝</button>
+              </>)}
               {["active", "maintenance", "offline"].filter(s => s !== detail.status).map((s) => (
                 <button key={s} onClick={() => toggleMut.mutate({ id: detail.id, status: s })} disabled={toggleMut.isPending} style={{ ...btnBase, background: s === "offline" ? "#dc2626" : s === "maintenance" ? "#d97706" : "#16a34a", color: "#fff" }}>
                   {s === "active" ? "恢复运行" : s === "maintenance" ? "设为维护" : "下线"}

@@ -4,6 +4,7 @@ import { db, pool } from "../db/index";
 import { vendors } from "../db/schema/vendors";
 import { models } from "../db/schema/models";
 import { vendorModels } from "../db/schema/vendor-models";
+import { sendEmail } from "../services/smtp";
 
 /**
  * 供应商与模型管理（管理后台）
@@ -31,7 +32,7 @@ function requireAdmin(app: FastifyInstance) {
   };
 }
 
-const VENDOR_STATUS: Record<string, string> = { active: "运行中", maintenance: "维护中", offline: "已下线" };
+const VENDOR_STATUS: Record<string, string> = { active: "运行中", maintenance: "维护中", offline: "已下线", pending: "待审核", rejected: "已拒绝" };
 
 export function adminVendorModelRoutes(app: FastifyInstance) {
   const admin = requireAdmin(app);
@@ -150,8 +151,44 @@ export function adminVendorModelRoutes(app: FastifyInstance) {
     return { code: 0, data: { status: targetStatus, status_label: VENDOR_STATUS[targetStatus] ?? targetStatus }, message: `已切换为${VENDOR_STATUS[targetStatus] ?? targetStatus}` };
   });
 
-  // ============================================================
-  // 二、模型管理
+  // 1.4 入驻审核通过（pending → active）
+  app.post("/admin/vendors/:id/approve", { onRequest: [admin] }, async (req, reply) => {
+    const id = Number((req.params as any).id);
+    const reviewerId = Number((req as any).user.sub);
+    const v = await db.select().from(vendors).where(eq(vendors.id, id)).limit(1);
+    if (!v[0]) return reply.code(404).send({ code: 404, error: "NOT_FOUND" });
+    if (v[0].status !== "pending") return reply.code(400).send({ code: 400, error: "BAD_STATE", message: "仅待审核状态可通过" });
+    await db.update(vendors).set({ status: "active", isActive: true, reviewedBy: reviewerId, reviewedAt: new Date(), rejectReason: null, updatedAt: new Date() }).where(eq(vendors.id, id));
+    // 通知供应商（fire-and-forget）
+    if (v[0].contactEmail) {
+      void sendEmail({
+        to: v[0].contactEmail, subject: "3Cloud —— 供应商入驻审核通过",
+        html: `<div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px;border:1px solid #e2e8f0;border-radius:10px"><p>你好，<strong>${v[0].name}</strong>：</p><p style="color:#16a34a;font-weight:600">✅ 你的供应商入驻申请已通过审核！</p><p>现在可使用联系邮箱登录供应商自助管理后台，查看仪表盘、模型、结算与对账。</p></div>`,
+        templateName: "vendor_approved", vars: { username: v[0].name ?? "" },
+      });
+    }
+    return { code: 0, data: { status: "active", status_label: "运行中" }, message: "已通过审核，供应商可登录" };
+  });
+
+  // 1.5 入驻审核拒绝（pending → rejected）
+  app.post("/admin/vendors/:id/reject", { onRequest: [admin] }, async (req, reply) => {
+    const id = Number((req.params as any).id);
+    const reviewerId = Number((req as any).user.sub);
+    const { reason } = (req.body ?? {}) as { reason?: string };
+    const v = await db.select().from(vendors).where(eq(vendors.id, id)).limit(1);
+    if (!v[0]) return reply.code(404).send({ code: 404, error: "NOT_FOUND" });
+    if (v[0].status !== "pending") return reply.code(400).send({ code: 400, error: "BAD_STATE", message: "仅待审核状态可拒绝" });
+    await db.update(vendors).set({ status: "rejected", isActive: false, reviewedBy: reviewerId, reviewedAt: new Date(), rejectReason: reason ?? "资料不完整", updatedAt: new Date() }).where(eq(vendors.id, id));
+    if (v[0].contactEmail) {
+      void sendEmail({
+        to: v[0].contactEmail, subject: "3Cloud —— 供应商入驻申请未通过",
+        html: `<div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px;border:1px solid #e2e8f0;border-radius:10px"><p>你好，<strong>${v[0].name}</strong>：</p><p style="color:#dc2626;font-weight:600">很遗憾，你的入驻申请未通过审核。</p><p>原因：${reason ?? "资料不完整"}</p><p style="color:#64748b;font-size:13px">可联系平台客服修改后重新提交。</p></div>`,
+        templateName: "vendor_rejected", vars: { username: v[0].name ?? "", reason: reason ?? "资料不完整" },
+      });
+    }
+    return { code: 0, data: { status: "rejected", status_label: "已拒绝" }, message: "已拒绝" };
+  });
+
   // ============================================================
 
   // 2.1 模型列表
