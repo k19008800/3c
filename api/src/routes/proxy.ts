@@ -6,6 +6,7 @@ import { checkRateLimit, rateLimitError } from "../services/rate-limiter";
 import { selectRoute } from "../services/router";
 import { recordResult } from "../services/circuit-breaker";
 import { getEffectivePrice, calcCost, round4, reserveBalance, refundBalance, recordBilling, recordCallLog } from "../services/billing";
+import { checkBudget, recordSpend } from "../services/budget-engine";
 import { recordCommissionForUser } from "../services/commission";
 import { publishActivity, pushActivityHistory } from "../services/activity-push";
 import { forwardChatCompletion } from "../services/upstream";
@@ -69,6 +70,13 @@ export function proxyRoutes(app: FastifyInstance) {
       // 模型白名单
       if (!isModelAllowed(ctx, body.model)) {
         return reply.status(403).send({ error: { code: "MODEL_NOT_ALLOWED", message: "该 API Key 无权使用此模型" } });
+      }
+
+      // 2.5 预算检查（预算检查 → 限流，SPEC-§20.1）
+      const budgetErr = await checkBudget(ctx.userId, model.id, (body.max_tokens ?? 100) || 100, ctx.apiKeyId);
+      if (budgetErr) {
+        const msg = budgetErr === "DAILY_QUOTA_EXCEEDED" ? "单日消费预算已用尽" : "月度消费预算已用尽";
+        return reply.status(403).send({ error: { code: budgetErr, message: msg } });
       }
 
       // 3. 限流
@@ -162,6 +170,11 @@ export function proxyRoutes(app: FastifyInstance) {
         balanceBefore,
         balanceAfter,
       });
+
+      // 11.4 消费预算回写（用户月度/日度消费累计）
+      if (result.ok) {
+        await recordSpend(ctx.userId, actualCost);
+      }
 
       // 11.5 代理佣金：为归属代理按消费记佣金（成功消费才记）
       if (result.ok) {

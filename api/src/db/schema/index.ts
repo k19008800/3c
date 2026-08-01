@@ -30,3 +30,7 @@ export * from "./email-logs";
 export * from "./platform-ledger";
 export * from "./reconciliation-differences";
 export * from "./accounting-periods";
+export * from "./user-budget";
+export * from "./two-factor";
+export * from "./user-devices";
+export * from "./key-permission-changes";

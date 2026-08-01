@@ -34,6 +34,7 @@ export default function ConsoleLayout() {
     { to: "/announcements", label: "公告" },
     { to: "/real-name", label: "实名认证" },
     { to: "/notification", label: "通知设置" },
+    { to: "/security", label: "安全中心" },
     { to: "/agent/settings", label: "代理设置" },
   ];
   // 管理入口（admin / super_admin 可见）

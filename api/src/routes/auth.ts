@@ -6,6 +6,7 @@ import { db, pool } from "../db/index";
 import { users } from "../db/schema/users";
 import { apiKeys } from "../db/schema/api-keys";
 import { sendEmail } from "../services/smtp";
+import { verifyTotp, verifyRecoveryCode, isDeviceTrusted, trustDevice, isLocked, recordFailedAttempt } from "../services/two-factor";
 
 /**
  * 认证路由（§2 用户体系）
@@ -114,7 +115,82 @@ export function authRoutes(app: FastifyInstance) {
       if (!valid) return reply.code(401).send({ error: "INVALID_CREDENTIALS", message: "邮箱或密码错误" });
       if (u.status !== "active") return reply.code(403).send({ error: "USER_DISABLED", message: "账号已被禁用" });
 
+      // 记录登录历史（供 §20.5 展示/风控）
+      const fp = (req.headers["x-device-fingerprint"] as string) ?? "";
+      const deviceInfo = (req.headers["user-agent"] as string) ?? "";
+      try {
+        await pool.query(
+          `INSERT INTO login_history (user_id, ip, device_info, user_agent, login_at, success, risk_level)
+           VALUES ($1,$2,$3,$4,NOW(),true,'normal')`,
+          [u.id, req.ip, deviceInfo, deviceInfo],
+        );
+      } catch { /* login_history 缺失时不阻塞登录 */ }
+
+      // §20.2 2FA：若用户启用 2FA 且设备非信任 → 返回临时 token 触发二次验证
+      if (u.twoFactorEnabled) {
+        const trusted = fp ? await isDeviceTrusted(u.id, fp) : false;
+        if (!trusted) {
+          const tempToken = app.jwt.sign(
+            { sub: String(u.id), role: u.role, twofa: true },
+            { expiresIn: "5m" },
+          );
+          return { needTwoFactor: true, tempToken, user: safeUser(u) };
+        }
+      }
+
       const token = app.jwt.sign({ sub: String(u.id), role: u.role });
+      return { token, user: safeUser(u) };
+    },
+  );
+
+  // ===== §20.2 2FA 登录验证 =====
+  app.post(
+    "/auth/2fa/login",
+    {
+      schema: { tags: ["auth"], body: { type: "object", required: ["tempToken"], properties: { tempToken: { type: "string" }, code: { type: "string" }, recoveryCode: { type: "string" }, trustDevice: { type: "boolean" } } } },
+    },
+    async (req, reply) => {
+      const { tempToken, code, recoveryCode } = req.body as any;
+      let decoded: any;
+      try {
+        decoded = app.jwt.verify(tempToken as string);
+      } catch {
+        return reply.code(401).send({ error: "TEMP_TOKEN_EXPIRED", message: "临时凭证已过期，请重新登录" });
+      }
+      const userId = Number(decoded.sub);
+      const u = (await db.select().from(users).where(eq(users.id, userId)).limit(1))[0];
+      if (!u) return reply.code(404).send({ error: "NOT_FOUND", message: "用户不存在" });
+
+      // 锁定检查
+      const locked = await isLocked(userId);
+      if (locked) {
+        return reply.code(429).send({ error: "TWO_FACTOR_LOCKED", message: "尝试次数过多，请稍后再试", lockedUntil: locked });
+      }
+
+      // 校验：TOTP 或恢复码
+      let ok = false;
+      if (code && u.twoFactorSecret) ok = verifyTotp(u.twoFactorSecret, code);
+      else if (recoveryCode) ok = await verifyRecoveryCode(userId, recoveryCode);
+
+      if (!ok) {
+        const r = await recordFailedAttempt(userId);
+        if (r.lockedUntil) {
+          // 发送安全告警
+          try { await pool.query(`INSERT INTO security_events (user_id, type, detail, ip, created_at) VALUES ($1,'2fa_locked','连续失败锁定', $2, NOW())`, [userId, req.ip]); } catch { /* security_events 可选 */ }
+          return reply.code(429).send({ error: "TWO_FACTOR_LOCKED", message: "连续 5 次验证失败，账户已锁定 15 分钟", lockedUntil: r.lockedUntil });
+        }
+        return reply.code(400).send({ error: "TWO_FACTOR_INVALID", message: "验证码无效" });
+      }
+
+      // 登录成功：重置失败计数 + 可选信任设备
+      await pool.query(`UPDATE users SET two_factor_failed_attempts=0 WHERE id=$1`, [userId]);
+      const trust = (code ? (req.body as any).trustDevice !== false : false);
+      const fp = (req.headers["x-device-fingerprint"] as string) ?? "";
+      if (trust && fp) {
+        const hash = crypto.createHash("sha256").update(String(fp)).digest("hex");
+        try { await trustDevice(userId, hash); } catch { /* 信任设备失败不影响登录 */ }
+      }
+      const token = app.jwt.sign({ sub: String(userId), role: u.role });
       return { token, user: safeUser(u) };
     },
   );

@@ -25,6 +25,8 @@ import { notificationRoutes } from "./notification";
 import { adminVendorSettlementRoutes } from "./admin-vendor-settlement";
 import { vendorSelfRoutes } from "./vendor-self";
 import { adminFinanceRoutes } from "./admin-finance";
+import { meSecurityRoutes } from "./me-security";
+import { adminSecurityRoutes } from "./admin-security";
 
 /**
  * 路由统一注册入口
@@ -81,5 +83,9 @@ export function registerRoutes(app: FastifyInstance) {
   void app.register(vendorSelfRoutes, { prefix: "/api/v1" });
   // §29 资金与对账管理（财务）
   void app.register(adminFinanceRoutes, { prefix: "/api/v1" });
+  // §20 用户端安全与预算（预算/2FA/设备/Key权限/登录异常）
+  void app.register(meSecurityRoutes, { prefix: "/api/v1" });
+  // §20 管理端安全与预算
+  void app.register(adminSecurityRoutes, { prefix: "/api/v1" });
 }
 
