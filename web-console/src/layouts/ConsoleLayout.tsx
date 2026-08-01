@@ -22,6 +22,8 @@ export default function ConsoleLayout() {
     { to: "/billing", label: "账单中心" },
     { to: "/agent/settings", label: "代理设置" },
   ];
+  // 管理入口（admin / super_admin 可见）
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", fontFamily: "system-ui, sans-serif" }}>
@@ -45,6 +47,25 @@ export default function ConsoleLayout() {
               {item.label}
             </NavLink>
           ))}
+          {isAdmin && (
+            <>
+              <div style={{ padding: "16px 20px 6px", fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>
+                管理后台
+              </div>
+              <NavLink
+                to="/admin/agents"
+                style={({ isActive }) => ({
+                  padding: "10px 20px",
+                  color: isActive ? "#38bdf8" : "#cbd5e1",
+                  textDecoration: "none",
+                  background: isActive ? "#0f172a" : "transparent",
+                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                })}
+              >
+                代理管理
+              </NavLink>
+            </>
+          )}
         </nav>
       </aside>
 
