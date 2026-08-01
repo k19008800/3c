@@ -24,3 +24,4 @@ export * from "./redemption";
 export * from "./announcements";
 export * from "./email-templates";
 export * from "./campaigns";
+export * from "./notification-subscriptions";

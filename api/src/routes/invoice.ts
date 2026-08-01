@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { eq, desc } from "drizzle-orm";
 import { db, pool } from "../db/index";
 import { invoices } from "../db/schema/invoices";
+import { generateInvoicePdf } from "../services/invoice-pdf";
 
 /**
  * 发票模块
@@ -264,6 +265,41 @@ export function invoiceRoutes(app: FastifyInstance) {
       data: { list: r.rows.map((x: any) => ({ ...x, uninvoiced: Math.max(0, Math.round((Number(x.consumed) - Number(x.invoiced)) * 100) / 100) })) },
       message: "ok",
     };
+  });
+
+  // ===== 下载发票 PDF（用户端 + 管理端）=====
+  app.get("/me/invoices/:id/download", { onRequest: [auth] }, async (req, reply) => {
+    const id = Number((req.params as any).id);
+    const rows = await pool.query("SELECT * FROM invoices WHERE id=$1 AND user_id=$2", [id, (req as any).user.sub]);
+    const inv = rows.rows[0];
+    if (!inv) return reply.code(404).send({ code: 404, error: "NOT_FOUND" });
+    const u = await pool.query("SELECT email, username FROM users WHERE id=$1", [(req as any).user.sub]);
+    const pdf = await generateInvoicePdf({
+      invoiceNo: inv.invoice_no ?? `INV${inv.id}`, title: inv.title, taxNo: inv.tax_no, type: inv.type,
+      amount: Number(inv.amount).toFixed(2), taxRate: Number(inv.tax_rate ?? 13).toFixed(2),
+      taxAmount: inv.tax_amount ? Number(inv.tax_amount).toFixed(2) : "", totalAmount: Number(inv.total_amount ?? inv.amount).toFixed(2),
+      email: inv.email, createdAt: new Date(inv.created_at).toLocaleString(), userName: u.rows[0]?.username ?? "",
+    });
+    reply.header("Content-Type", "application/pdf");
+    reply.header("Content-Disposition", `attachment; filename="invoice-${inv.id}.pdf"`);
+    return reply.send(pdf);
+  });
+
+  app.get("/admin/invoices/:id/download", { onRequest: [admin] }, async (req, reply) => {
+    const id = Number((req.params as any).id);
+    const rows = await pool.query("SELECT * FROM invoices WHERE id=$1", [id]);
+    const inv = rows.rows[0];
+    if (!inv) return reply.code(404).send({ code: 404, error: "NOT_FOUND" });
+    const u = await pool.query("SELECT email, username FROM users WHERE id=$1", [inv.user_id]);
+    const pdf = await generateInvoicePdf({
+      invoiceNo: inv.invoice_no ?? `INV${inv.id}`, title: inv.title, taxNo: inv.tax_no, type: inv.type,
+      amount: Number(inv.amount).toFixed(2), taxRate: Number(inv.tax_rate ?? 13).toFixed(2),
+      taxAmount: inv.tax_amount ? Number(inv.tax_amount).toFixed(2) : "", totalAmount: Number(inv.total_amount ?? inv.amount).toFixed(2),
+      email: inv.email, createdAt: new Date(inv.created_at).toLocaleString(), userName: u.rows[0]?.username ?? "",
+    });
+    reply.header("Content-Type", "application/pdf");
+    reply.header("Content-Disposition", `attachment; filename="invoice-${inv.id}.pdf"`);
+    return reply.send(pdf);
   });
 }
 

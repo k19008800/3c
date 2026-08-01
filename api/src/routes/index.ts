@@ -21,6 +21,7 @@ import { announcementRoutes } from "./announcements";
 import { emailTemplateRoutes } from "./email-templates";
 import { campaignRoutes } from "./campaigns";
 import { adminActivityRoutes } from "./admin-activity";
+import { notificationRoutes } from "./notification";
 
 /**
  * 路由统一注册入口
@@ -69,5 +70,7 @@ export function registerRoutes(app: FastifyInstance) {
   void app.register(campaignRoutes, { prefix: "/api/v1" });
   // §4.5 实时活动流（管理后台 SSE）
   void app.register(adminActivityRoutes, { prefix: "/api/v1" });
+  // §4.5 通知订阅偏好（用户端）
+  void app.register(notificationRoutes, { prefix: "/api/v1" });
 }
 

@@ -71,6 +71,13 @@
       "when": 1785553000000,
       "tag": "0009_email_campaigns",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785554000000,
+      "tag": "0010_notification_subscriptions",
+      "breakpoints": true
     }
   ]
 }

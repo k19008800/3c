@@ -15,6 +15,7 @@ interface ApiKey {
 export default function ApiKeysPage() {
   const queryClient = useQueryClient();
   const [newKeyName, setNewKeyName] = useState("");
+  const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [createdSecret, setCreatedSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,11 +24,18 @@ export default function ApiKeysPage() {
     queryFn: async () => (await api.get("/me/api-keys")).data,
   });
 
+  // 全部模型（用于白名单选择）
+  const allModels = useQuery<{ list: { id: string; displayName?: string }[] }>({
+    queryKey: ["all-models"],
+    queryFn: async () => (await api.get("/public/models")).data,
+  });
+
   const createMutation = useMutation({
-    mutationFn: async (name: string) => (await api.post("/me/api-keys", { name })).data,
+    mutationFn: async (name: string) => (await api.post("/me/api-keys", { name, model_whitelist: selectedModels.length ? selectedModels : undefined })).data,
     onSuccess: (data) => {
       setCreatedSecret(data.key);
       setNewKeyName("");
+      setSelectedModels([]);
       queryClient.invalidateQueries({ queryKey: ["api-keys"] });
     },
     onError: (e: any) => setError(extractError(e)),
@@ -60,6 +68,30 @@ export default function ApiKeysPage() {
       </div>
 
       {error && <div style={{ color: "#dc2626", marginBottom: 12 }}>{error}</div>}
+
+      {/* 模型白名单选择（可选） */}
+      <div style={{ marginBottom: 16, background: "#f8fafc", padding: 12, borderRadius: 8 }}>
+        <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>
+          模型白名单（{selectedModels.length ? `已选 ${selectedModels.length}` : "不限制所有模型"}）
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {(allModels.data?.list ?? []).map((m) => {
+            const name = typeof m === "string" ? m : (m?.id ?? m?.displayName ?? "");
+            const on = selectedModels.includes(name);
+            return (
+              <button
+                key={name}
+                onClick={() => {
+                  setSelectedModels(on ? selectedModels.filter((x) => x !== name) : [...selectedModels, name]);
+                }}
+                style={{ padding: "5px 12px", borderRadius: 6, fontSize: 12, cursor: "pointer", border: "1px solid #cbd5e1", background: on ? "#2563eb" : "#fff", color: on ? "#fff" : "#475569" }}
+              >
+                {name}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {createdSecret && (
         <div style={{ background: "#f0fdf4", border: "1px solid #86efac", padding: 16, borderRadius: 8, marginBottom: 20 }}>

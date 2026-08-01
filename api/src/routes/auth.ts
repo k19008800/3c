@@ -129,14 +129,22 @@ export function authRoutes(app: FastifyInstance) {
     };
   });
 
-  // 调用日志
+  // 调用日志（支持 model/status/provider 筛选）
   app.get("/me/logs", { schema: { tags: ["auth"] }, onRequest: [requireAuth] }, async (req) => {
     const userId = Number((req as any).user.sub);
-    const q = req.query as { limit?: number };
+    const q = req.query as { limit?: number; model?: string; status?: string; provider?: string };
     const limit = Math.min(q.limit ?? 20, 100);
+    let where = "WHERE user_id=$1";
+    const params: any[] = [userId];
+    const pp = (v: any) => { params.push(v); return `$${params.length}`; };
+    if (q.model) { where += ` AND upstream_model ILIKE ${pp(`%${q.model}%`)}`; }
+    if (q.status) { where += ` AND status = ${pp(q.status)}`; }
+    if (q.provider) { where += ` AND provider ILIKE ${pp(`%${q.provider}%`)}`; }
+    params.push(limit);
     const rows = await pool.query(
-      "SELECT id, provider, upstream_model, request_tokens, response_tokens, total_tokens, cost, status, error_code, latency_ms, created_at FROM call_logs WHERE user_id=$1 ORDER BY created_at DESC LIMIT $2",
-      [userId, limit],
+      `SELECT id, provider, upstream_model, request_tokens, response_tokens, total_tokens, cost, status, error_code, latency_ms, created_at
+       FROM call_logs ${where} ORDER BY created_at DESC LIMIT $${params.length}`,
+      params,
     );
     return { list: rows.rows };
   });
@@ -155,14 +163,15 @@ export function authRoutes(app: FastifyInstance) {
   // 创建 Key（返回一次明文）
   app.post("/me/api-keys", { schema: { tags: ["auth"] }, onRequest: [requireAuth] }, async (req) => {
     const userId = Number((req as any).user.sub);
-    const { name, expiresInDays } = req.body as { name: string; expiresInDays?: number };
+    const { name, expiresInDays, model_whitelist } = req.body as { name: string; expiresInDays?: number; model_whitelist?: string[] };
     const secret = "sk-" + crypto.randomBytes(24).toString("hex");
     const keyHash = crypto.createHash("sha256").update(secret).digest("hex");
     const expiresAt = expiresInDays ? new Date(Date.now() + expiresInDays * 24 * 3600 * 1000) : null;
+    const modelWhitelist = Array.isArray(model_whitelist) && model_whitelist.length ? model_whitelist.join(",") : null;
     const created = await db
       .insert(apiKeys)
-      .values({ userId, name, keyPrefix: secret.slice(0, 12), keyHash, status: "active", expiresAt })
-      .returning({ id: apiKeys.id, name: apiKeys.name });
+      .values({ userId, name, keyPrefix: secret.slice(0, 12), keyHash, status: "active", expiresAt, modelWhitelist })
+      .returning({ id: apiKeys.id, name: apiKeys.name, modelWhitelist: apiKeys.modelWhitelist });
     return { key: secret, ...created[0] };
   });
 

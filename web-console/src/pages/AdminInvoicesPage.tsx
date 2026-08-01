@@ -45,6 +45,9 @@ export default function AdminInvoicesPage() {
   const [issueTarget, setIssueTarget] = useState<Invoice | null>(null);
 
   const now = new Date();
+  const downloadPdf = (id: number) => {
+    window.open(`/api/v1/admin/invoices/${id}/download?token=${localStorage.getItem("token")}`, "_blank");
+  };
   const summaryQ = useQuery({
     queryKey: ["inv-summary"],
     queryFn: async () => (await api.get<{ data: any }>("/admin/invoice-stats/summary")).data.data,
@@ -152,7 +155,10 @@ export default function AdminInvoicesPage() {
                         <button onClick={() => rejectMut.mutate(inv.id)} style={{ ...btnBase, background: "#fee2e2", color: "#991b1b", padding: "4px 10px", marginLeft: 6 }}>驳回</button>
                       </>
                     )}
-                    {inv.status !== "pending" && <span style={{ fontSize: 12, color: "#94a3b8" }}>-</span>}
+                    {inv.status === "issued" && (
+                      <button onClick={() => downloadPdf(inv.id)} style={{ ...btnBase, background: "#dbeafe", color: "#1e40af", padding: "4px 10px" }}>下载PDF</button>
+                    )}
+                    {(inv.status === "rejected" || inv.status === "voided") && <span style={{ fontSize: 12, color: "#94a3b8" }}>-</span>}
                   </td>
                 </tr>
               ))}
