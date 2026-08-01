@@ -19,6 +19,7 @@ export default function ConsoleLayout() {
     { to: "/api-keys", label: "API Keys" },
     { to: "/logs", label: "调用日志" },
     { to: "/recharge", label: "充值中心" },
+    { to: "/billing", label: "账单中心" },
   ];
 
   return (
