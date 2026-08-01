@@ -42,3 +42,6 @@ export * from "./ticket-support";
 export * from "./chat";
 export * from "./staff-test-keys";
 export * from "./chat-ops";
+export * from "./privacy-policy";
+export * from "./terms-of-service";
+export * from "./data-export";

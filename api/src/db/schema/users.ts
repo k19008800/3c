@@ -35,6 +35,8 @@ export const users = pgTable("users", {
   twoFactorEnabledAt: timestamp("two_factor_enabled_at", { withTimezone: true }),
   twoFactorLockedUntil: timestamp("two_factor_locked_until", { withTimezone: true }),
   twoFactorFailedAttempts: integer("two_factor_failed_attempts").notNull().default(0),
+  // ===== §33 协议确认状态（none/privacy_pending/tos_pending/both_pending）=====
+  consentStatus: varchar("consent_status", { length: 20 }).notNull().default("none"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

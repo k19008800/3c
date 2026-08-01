@@ -33,6 +33,8 @@ import { adminSupportRoutes } from "./admin-support";
 import { meChatRoutes } from "./me-chat";
 import { adminChatRoutes } from "./admin-chat";
 import { wsChatRoutes } from "./ws-chat";
+import { meConsentRoutes } from "./me-consent";
+import { adminConsentRoutes } from "./admin-consent";
 
 /**
  * 路由统一注册入口
@@ -102,5 +104,8 @@ export function registerRoutes(app: FastifyInstance) {
   void app.register(meChatRoutes, { prefix: "/api/v1" });
   void app.register(adminChatRoutes, { prefix: "/api/v1" });
   void app.register(wsChatRoutes, { prefix: "/api/v1" });
+  // §33 合规法务（隐私政策/服务条款/数据导出）
+  void app.register(meConsentRoutes, { prefix: "/api/v1" });
+  void app.register(adminConsentRoutes, { prefix: "/api/v1" });
 }
 
