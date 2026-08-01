@@ -20,6 +20,7 @@ interface MonthDetail {
   month: string;
   summary: { total_cost: number; total_refund: number; total_calls: number };
   items: { price_source: string; cost: number; calls: number; refund: number }[];
+  model_items: { model: string; calls: number; cost: number }[];
 }
 interface DailyCost {
   day: string;
@@ -209,6 +210,33 @@ function MonthRow({
                     )}
                   </tbody>
                 </table>
+
+                {/* 按模型汇总 */}
+                <div style={{ marginTop: 16 }}>
+                  <div style={{ fontSize: 13, color: "#475569", fontWeight: 600, marginBottom: 8 }}>按模型汇总</div>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ color: "#64748b", textAlign: "left" }}>
+                        <th style={{ padding: "6px" }}>模型</th>
+                        <th style={{ padding: "6px" }}>调用次数</th>
+                        <th style={{ padding: "6px" }}>消费金额</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detail.model_items?.length === 0 || !detail.model_items ? (
+                        <tr><td colSpan={3} style={{ color: "#94a3b8", padding: "8px" }}>暂无模型明细</td></tr>
+                      ) : (
+                        detail.model_items.map((mi) => (
+                          <tr key={mi.model} style={{ borderTop: "1px solid #e2e8f0" }}>
+                            <td style={{ padding: "6px" }}>{mi.model}</td>
+                            <td style={{ padding: "6px" }}>{mi.calls}</td>
+                            <td style={{ padding: "6px" }}>¥{mi.cost.toFixed(4)}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </td>

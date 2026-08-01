@@ -105,6 +105,19 @@ export function meBillingRoutes(app: FastifyInstance) {
       [userId, month],
     );
 
+    // 按模型聚合
+    const modelAgg = await pool.query(
+      `SELECT COALESCE(cl.upstream_model, 'unknown') AS model,
+              COUNT(*)::int AS calls,
+              COALESCE(SUM(bl.actual_cost), 0)::float AS cost
+       FROM billing_logs bl
+       LEFT JOIN call_logs cl ON cl.id = bl.call_log_id
+       WHERE bl.user_id = $1 AND to_char(date_trunc('month', bl.created_at), 'YYYY-MM') = $2
+       GROUP BY cl.upstream_model
+       ORDER BY cost DESC`,
+      [userId, month],
+    );
+
     const summary = await pool.query(
       `SELECT
          COALESCE(SUM(actual_cost), 0)::float AS total_cost,
@@ -126,12 +139,13 @@ export function meBillingRoutes(app: FastifyInstance) {
           total_calls: s?.total_calls ?? 0,
         },
         items: detail.rows,
+        model_items: modelAgg.rows,
       },
       message: "ok",
     };
   });
 
-  // ===== 下载月份账单 CSV =====
+  // ===== 下载月份账单 CSV（明细 + 按模型汇总）=====
   app.get("/me/billing/history/:month/download", { onRequest: [auth] }, async (req, reply) => {
     const userId = Number((req as any).user.sub);
     const { month } = req.params as { month: string };
@@ -139,20 +153,44 @@ export function meBillingRoutes(app: FastifyInstance) {
       return reply.code(400).send({ code: 400, error: "BAD_MONTH" });
     }
 
+    // 明细（含模型名，join call_logs）
     const rows = await pool.query(
-      `SELECT id, price_source, actual_cost, refund_amount, status, created_at
-       FROM billing_logs
-       WHERE user_id = $1 AND to_char(date_trunc('month', created_at), 'YYYY-MM') = $2
-       ORDER BY created_at ASC`,
+      `SELECT bl.id, bl.price_source, bl.actual_cost, bl.refund_amount, bl.status, bl.created_at,
+              cl.upstream_model AS model, cl.total_tokens AS tokens
+       FROM billing_logs bl
+       LEFT JOIN call_logs cl ON cl.id = bl.call_log_id
+       WHERE bl.user_id = $1 AND to_char(date_trunc('month', bl.created_at), 'YYYY-MM') = $2
+       ORDER BY bl.created_at ASC`,
       [userId, month],
     );
 
-    // 组装 CSV
-    const header = ["id", "price_source", "actual_cost", "refund_amount", "status", "created_at"];
-    const lines = [header.join(",")];
+    // 按模型聚合
+    const modelAgg = await pool.query(
+      `SELECT COALESCE(cl.upstream_model, 'unknown') AS model,
+              COUNT(*)::int AS calls,
+              COALESCE(SUM(bl.actual_cost), 0)::float AS cost,
+              COALESCE(SUM(bl.refund_amount), 0)::float AS refund
+       FROM billing_logs bl
+       LEFT JOIN call_logs cl ON cl.id = bl.call_log_id
+       WHERE bl.user_id = $1 AND to_char(date_trunc('month', bl.created_at), 'YYYY-MM') = $2
+       GROUP BY cl.upstream_model
+       ORDER BY cost DESC`,
+      [userId, month],
+    );
+
+    // 第一部分：月度明细
+    const detailHeader = ["id", "model", "price_source", "actual_cost", "refund_amount", "tokens", "status", "created_at"];
+    const lines = ["=== 月度明细 ===", detailHeader.join(",")];
     for (const r of rows.rows) {
-      lines.push([r.id, r.price_source, r.actual_cost, r.refund_amount, r.status, r.created_at].join(","));
+      lines.push([r.id, `"${r.model ?? "unknown"}"`, r.price_source, r.actual_cost, r.refund_amount, r.tokens ?? 0, r.status, r.created_at].join(","));
     }
+
+    // 第二部分：按模型汇总
+    lines.push("", "=== 按模型汇总 ===", "model,calls,cost,refund");
+    for (const m of modelAgg.rows) {
+      lines.push([`"${m.model ?? "unknown"}"`, m.calls, m.cost, m.refund].join(","));
+    }
+
     const csv = "\uFEFF" + lines.join("\n"); // BOM for Excel
 
     reply.header("Content-Type", "text/csv; charset=utf-8");
