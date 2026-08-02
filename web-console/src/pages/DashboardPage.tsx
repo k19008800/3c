@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { Link } from "react-router-dom";
+import OnboardingWizard from "../components/OnboardingWizard";
 
 interface Stats {
   totalTokens: number;
@@ -29,6 +30,7 @@ export default function DashboardPage() {
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
+      <OnboardingWizard />
       <h2 style={{ marginBottom: 20 }}>仪表盘</h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 24 }}>
         {cards.map((c) => (
