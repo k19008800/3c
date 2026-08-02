@@ -49,6 +49,7 @@ import AdminWebhooksPage from "./pages/AdminWebhooksPage";
 import HelpCenterPage from "./pages/HelpCenterPage";
 import DeletionPage from "./pages/DeletionPage";
 import NotificationSettingsPage from "./pages/NotificationSettingsPage";
+import PlaygroundPage from "./pages/PlaygroundPage";
 import AdminDeletionPage from "./pages/AdminDeletionPage";
 import AdminSysDbPage from "./pages/AdminSysDbPage";
 import AdminSysCachePage from "./pages/AdminSysCachePage";
@@ -124,6 +125,7 @@ export default function App() {
         <Route path="admin/activity" element={<AdminActivityPage />} />
         <Route path="notification" element={<NotificationPage />} />
         <Route path="settings/notifications" element={<NotificationSettingsPage />} />
+        <Route path="playground" element={<PlaygroundPage />} />
         <Route path="admin/vendor-settlements" element={<AdminVendorSettlementsPage />} />
 <Route path="admin/finance" element={<AdminFinancePage />} />
 <Route path="security" element={<SecurityPage />} />
