@@ -46,6 +46,7 @@ import { webhookRoutes } from "./admin-webhooks";
 import { ssoRoutes } from "./admin-sso";
 import { meOnboardingRoutes } from "./me-onboarding";
 import { meNotificationPreferencesRoutes } from "./me-notification-preferences";
+import { meStatsRoutes } from "./me-stats";
 import { wsChatRoutes } from "./ws-chat";
 
 /**
@@ -153,6 +154,8 @@ export function registerRoutes(app: FastifyInstance) {
 
   // §22.1 Onboarding 新用户引导
   void app.register(meOnboardingRoutes, { prefix });
+  // §22.2 Dashboard 统计
+  void app.register(meStatsRoutes, { prefix });
   // §22.6 通知偏好增强
   void app.register(meNotificationPreferencesRoutes, { prefix });
 
