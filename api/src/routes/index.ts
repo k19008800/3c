@@ -44,6 +44,8 @@ import { agentSettlementRoutes } from "./agent-settlement";
 import { knowledgeBaseRoutes } from "./knowledge-base";
 import { webhookRoutes } from "./admin-webhooks";
 import { ssoRoutes } from "./admin-sso";
+import { meOnboardingRoutes } from "./me-onboarding";
+import { meNotificationPreferencesRoutes } from "./me-notification-preferences";
 import { wsChatRoutes } from "./ws-chat";
 
 /**
@@ -148,6 +150,11 @@ export function registerRoutes(app: FastifyInstance) {
 
   // §32.1 全局 Webhook
   void app.register(webhookRoutes, { prefix });
+
+  // §22.1 Onboarding 新用户引导
+  void app.register(meOnboardingRoutes, { prefix });
+  // §22.6 通知偏好增强
+  void app.register(meNotificationPreferencesRoutes, { prefix });
 
   // §32.2/§32.3 SSO + 企业通讯录
   void app.register(ssoRoutes, { prefix });

@@ -51,4 +51,5 @@ export * from "./settlement";
 export * from "./knowledge-base";
 export * from "./webhooks";
 export * from "./sso";
+export * from "./notification-preferences";
 export * from "./account-deletion";

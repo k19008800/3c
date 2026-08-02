@@ -35,6 +35,10 @@ export const users = pgTable("users", {
   twoFactorLockedUntil: timestamp("two_factor_locked_until"),
   // 合规：同意状态
   consentStatus: varchar("consent_status", { length: 20 }).default("pending"),
+  // §22.1 Onboarding 新用户引导
+  onboardingStatus: varchar("onboarding_status", { length: 20 }).default("not_started"),
+  onboardingStep: integer("onboarding_step").default(1),
+  onboardingCompletedAt: timestamp("onboarding_completed_at", { withTimezone: true }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
