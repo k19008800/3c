@@ -40,6 +40,8 @@ export default function ConsoleLayout() {
     { to: "/security", label: "安全中心" },
     { to: "/data-export", label: "数据导出" },
     { to: "/agent/settings", label: "代理设置" },
+    { to: "/agent/settlements", label: "结算对账" },
+    { to: "/account-deletion", label: "账号注销" },
   ];
   const navSales = [
     { to: "/sales/customers", label: "客户管理", end: false },
@@ -405,6 +407,18 @@ export default function ConsoleLayout() {
                 })}
               >
                 在线客服
+              </NavLink>
+              <NavLink
+                to="/admin/deletion"
+                style={({ isActive }) => ({
+                  padding: "10px 20px",
+                  color: isActive ? "#38bdf8" : "#cbd5e1",
+                  textDecoration: "none",
+                  background: isActive ? "#0f172a" : "transparent",
+                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                })}
+              >
+                注销审核
               </NavLink>
             </>
           )}

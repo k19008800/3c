@@ -47,3 +47,5 @@ export * from "./terms-of-service";
 export * from "./data-export";
 export * from "./admin-roles";
 export * from "./sales-crm";
+export * from "./settlement";
+export * from "./account-deletion";

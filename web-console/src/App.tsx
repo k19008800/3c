@@ -10,6 +10,7 @@ import RechargePage from "./pages/RechargePage";
 import BillingPage from "./pages/BillingPage";
 import InvoicesPage from "./pages/InvoicesPage";
 import AgentSettingsPage from "./pages/AgentSettingsPage";
+import AgentSettlementPage from "./pages/AgentSettlementPage";
 import AdminAgentsPage from "./pages/AdminAgentsPage";
 import AdminWithdrawalsPage from "./pages/AdminWithdrawalsPage";
 import AdminVendorsPage from "./pages/AdminVendorsPage";
@@ -43,6 +44,8 @@ import SalesCustomerDetailPage from "./pages/SalesCustomerDetailPage";
 import SalesRemindersPage from "./pages/SalesRemindersPage";
 import SalesPerformancePage from "./pages/SalesPerformancePage";
 import AdminCustomersPage from "./pages/AdminCustomersPage";
+import DeletionPage from "./pages/DeletionPage";
+import AdminDeletionPage from "./pages/AdminDeletionPage";
 import AdminSysDbPage from "./pages/AdminSysDbPage";
 import AdminSysCachePage from "./pages/AdminSysCachePage";
 import AdminSysLogsPage from "./pages/AdminSysLogsPage";
@@ -98,6 +101,7 @@ export default function App() {
         <Route path="billing" element={<BillingPage />} />
         <Route path="invoices" element={<InvoicesPage />} />
         <Route path="agent/settings" element={<AgentSettingsPage />} />
+        <Route path="agent/settlements" element={<AgentSettlementPage />} />
         <Route path="admin/agents" element={<AdminAgentsPage />} />
         <Route path="admin/withdrawals" element={<AdminWithdrawalsPage />} />
         <Route path="admin/vendors" element={<AdminVendorsPage />} />
@@ -105,6 +109,7 @@ export default function App() {
         <Route path="admin/invoices" element={<AdminInvoicesPage />} />
         <Route path="admin/real-name" element={<AdminRealNamePage />} />
         <Route path="redemption" element={<RedemptionPage />} />
+        <Route path="account-deletion" element={<DeletionPage />} />
         <Route path="announcements" element={<AnnouncementsPage />} />
         <Route path="real-name" element={<RealNamePage />} />
         <Route path="admin/redemption" element={<AdminRedemptionPage />} />
@@ -131,6 +136,7 @@ export default function App() {
 <Route path="sales/reminders" element={<SalesRemindersPage />} />
 <Route path="sales/performance" element={<SalesPerformancePage />} />
 <Route path="admin/customers" element={<AdminCustomersPage />} />
+<Route path="admin/deletion" element={<AdminDeletionPage />} />
 <Route path="admin/sys/db" element={<AdminSysDbPage />} />
 <Route path="admin/sys/cache" element={<AdminSysCachePage />} />
 <Route path="admin/sys/logs" element={<AdminSysLogsPage />} />
