@@ -5,8 +5,6 @@ import crypto from "node:crypto";
 import { db, pool } from "../db/index";
 import { users } from "../db/schema/users";
 import { apiKeys } from "../db/schema/api-keys";
-import { sendEmail } from "../services/smtp";
-import { verifyTotp, verifyRecoveryCode, isDeviceTrusted, trustDevice, isLocked, recordFailedAttempt } from "../services/two-factor";
 
 /**
  * 认证路由（§2 用户体系）
@@ -68,24 +66,6 @@ export function authRoutes(app: FastifyInstance) {
         .returning({ id: users.id, email: users.email, username: users.username, balance: users.balance });
       const u = created[0]!;
       const token = app.jwt.sign({ sub: String(u.id), role: "user" });
-      // 注册欢迎邮件（fire-and-forget，不阻塞注册；SMTP 未配置时静默跳过）
-      void sendEmail({
-        to: u.email,
-        subject: "欢迎注册 3Cloud —— 你的 AI Token 聚合平台账号已开通",
-        html: `<div style="font-family:sans-serif;max-width:520px;margin:auto;padding:24px;border:1px solid #e2e8f0;border-radius:10px">
-          <h2 style="color:#1e293b">👋 欢迎加入 3Cloud</h2>
-          <p>你好，<strong>${u.username}</strong>：</p>
-          <p>你的 3Cloud 账号已成功创建。现在可以：</p>
-          <ul>
-            <li>创建 API Key 并接入 OpenAI 兼容接口</li>
-            <li>在控制台管理余额、充值、查看调用账单</li>
-            <li>通过代理体系邀请伙伴，获取佣金</li>
-          </ul>
-          <p style="color:#64748b;font-size:13px">如需帮助，请联系平台客服。</p>
-        </div>`,
-        templateName: "welcome",
-        vars: { username: u.username ?? "" },
-      });
       return reply.code(201).send({ token, user: safeUser(u as any) });
     },
   );
@@ -115,82 +95,7 @@ export function authRoutes(app: FastifyInstance) {
       if (!valid) return reply.code(401).send({ error: "INVALID_CREDENTIALS", message: "邮箱或密码错误" });
       if (u.status !== "active") return reply.code(403).send({ error: "USER_DISABLED", message: "账号已被禁用" });
 
-      // 记录登录历史（供 §20.5 展示/风控）
-      const fp = (req.headers["x-device-fingerprint"] as string) ?? "";
-      const deviceInfo = (req.headers["user-agent"] as string) ?? "";
-      try {
-        await pool.query(
-          `INSERT INTO login_history (user_id, ip, device_info, user_agent, login_at, success, risk_level)
-           VALUES ($1,$2,$3,$4,NOW(),true,'normal')`,
-          [u.id, req.ip, deviceInfo, deviceInfo],
-        );
-      } catch { /* login_history 缺失时不阻塞登录 */ }
-
-      // §20.2 2FA：若用户启用 2FA 且设备非信任 → 返回临时 token 触发二次验证
-      if (u.twoFactorEnabled) {
-        const trusted = fp ? await isDeviceTrusted(u.id, fp) : false;
-        if (!trusted) {
-          const tempToken = app.jwt.sign(
-            { sub: String(u.id), role: u.role, twofa: true },
-            { expiresIn: "5m" },
-          );
-          return { needTwoFactor: true, tempToken, user: safeUser(u) };
-        }
-      }
-
       const token = app.jwt.sign({ sub: String(u.id), role: u.role });
-      return { token, user: safeUser(u) };
-    },
-  );
-
-  // ===== §20.2 2FA 登录验证 =====
-  app.post(
-    "/auth/2fa/login",
-    {
-      schema: { tags: ["auth"], body: { type: "object", required: ["tempToken"], properties: { tempToken: { type: "string" }, code: { type: "string" }, recoveryCode: { type: "string" }, trustDevice: { type: "boolean" } } } },
-    },
-    async (req, reply) => {
-      const { tempToken, code, recoveryCode } = req.body as any;
-      let decoded: any;
-      try {
-        decoded = app.jwt.verify(tempToken as string);
-      } catch {
-        return reply.code(401).send({ error: "TEMP_TOKEN_EXPIRED", message: "临时凭证已过期，请重新登录" });
-      }
-      const userId = Number(decoded.sub);
-      const u = (await db.select().from(users).where(eq(users.id, userId)).limit(1))[0];
-      if (!u) return reply.code(404).send({ error: "NOT_FOUND", message: "用户不存在" });
-
-      // 锁定检查
-      const locked = await isLocked(userId);
-      if (locked) {
-        return reply.code(429).send({ error: "TWO_FACTOR_LOCKED", message: "尝试次数过多，请稍后再试", lockedUntil: locked });
-      }
-
-      // 校验：TOTP 或恢复码
-      let ok = false;
-      if (code && u.twoFactorSecret) ok = verifyTotp(u.twoFactorSecret, code);
-      else if (recoveryCode) ok = await verifyRecoveryCode(userId, recoveryCode);
-
-      if (!ok) {
-        const r = await recordFailedAttempt(userId);
-        if (r.lockedUntil) {
-          // 发送安全告警
-          try { await pool.query(`INSERT INTO security_events (user_id, type, detail, ip, created_at) VALUES ($1,'2fa_locked','连续失败锁定', $2, NOW())`, [userId, req.ip]); } catch { /* security_events 可选 */ }
-          return reply.code(429).send({ error: "TWO_FACTOR_LOCKED", message: "连续 5 次验证失败，账户已锁定 15 分钟", lockedUntil: r.lockedUntil });
-        }
-        return reply.code(400).send({ error: "TWO_FACTOR_INVALID", message: "验证码无效" });
-      }
-
-      // 登录成功：重置失败计数 + 可选信任设备
-      await pool.query(`UPDATE users SET two_factor_failed_attempts=0 WHERE id=$1`, [userId]);
-      const trust = (code ? (req.body as any).trustDevice !== false : false);
-      const fp = (req.headers["x-device-fingerprint"] as string) ?? "";
-      if (trust && fp) {
-        const hash = crypto.createHash("sha256").update(String(fp)).digest("hex");
-        try { await trustDevice(userId, hash); } catch { /* 信任设备失败不影响登录 */ }
-      }
-      const token = app.jwt.sign({ sub: String(userId), role: u.role });
       return { token, user: safeUser(u) };
     },
   );
@@ -211,35 +116,27 @@ export function authRoutes(app: FastifyInstance) {
   app.get("/me/stats", { schema: { tags: ["auth"] }, onRequest: [requireAuth] }, async (req) => {
     const userId = Number((req as any).user.sub);
     const [total, today, balanceRows] = await Promise.all([
-      pool.query("SELECT COALESCE(SUM(total_tokens),0)::int AS tokens, COALESCE(SUM(cost),0)::numeric AS cost, COUNT(*)::int AS calls FROM call_logs WHERE user_id=$1", [userId]),
+      pool.query("SELECT COALESCE(SUM(total_tokens),0)::int AS tokens, COALESCE(SUM(cost_cents),0)::int AS cost_cents, COUNT(*)::int AS calls FROM call_logs WHERE user_id=$1", [userId]),
       pool.query("SELECT COUNT(*)::int AS calls FROM call_logs WHERE user_id=$1 AND created_at >= now() - interval '24 hours'", [userId]),
       pool.query("SELECT balance FROM users WHERE id=$1", [userId]),
     ]);
     return {
       totalTokens: total.rows[0].tokens,
-      totalCost: Number(total.rows[0].cost || 0),
+      totalCost: Number(total.rows[0].cost_cents) / 100,
       totalCalls: total.rows[0].calls,
       todayCalls: today.rows[0].calls,
       balance: Number(balanceRows.rows[0]?.balance ?? 0) / 100,
     };
   });
 
-  // 调用日志（支持 model/status/provider 筛选）
+  // 调用日志
   app.get("/me/logs", { schema: { tags: ["auth"] }, onRequest: [requireAuth] }, async (req) => {
     const userId = Number((req as any).user.sub);
-    const q = req.query as { limit?: number; model?: string; status?: string; provider?: string };
+    const q = req.query as { limit?: number };
     const limit = Math.min(q.limit ?? 20, 100);
-    let where = "WHERE user_id=$1";
-    const params: any[] = [userId];
-    const pp = (v: any) => { params.push(v); return `$${params.length}`; };
-    if (q.model) { where += ` AND upstream_model ILIKE ${pp(`%${q.model}%`)}`; }
-    if (q.status) { where += ` AND status = ${pp(q.status)}`; }
-    if (q.provider) { where += ` AND provider ILIKE ${pp(`%${q.provider}%`)}`; }
-    params.push(limit);
     const rows = await pool.query(
-      `SELECT id, provider, upstream_model, request_tokens, response_tokens, total_tokens, cost, status, error_code, latency_ms, created_at
-       FROM call_logs ${where} ORDER BY created_at DESC LIMIT $${params.length}`,
-      params,
+      "SELECT id, provider, upstream_model, request_tokens, response_tokens, total_tokens, cost_cents, status, error_code, latency_ms, created_at FROM call_logs WHERE user_id=$1 ORDER BY created_at DESC LIMIT $2",
+      [userId, limit],
     );
     return { list: rows.rows };
   });
@@ -258,15 +155,14 @@ export function authRoutes(app: FastifyInstance) {
   // 创建 Key（返回一次明文）
   app.post("/me/api-keys", { schema: { tags: ["auth"] }, onRequest: [requireAuth] }, async (req) => {
     const userId = Number((req as any).user.sub);
-    const { name, expiresInDays, model_whitelist } = req.body as { name: string; expiresInDays?: number; model_whitelist?: string[] };
+    const { name, expiresInDays } = req.body as { name: string; expiresInDays?: number };
     const secret = "sk-" + crypto.randomBytes(24).toString("hex");
     const keyHash = crypto.createHash("sha256").update(secret).digest("hex");
     const expiresAt = expiresInDays ? new Date(Date.now() + expiresInDays * 24 * 3600 * 1000) : null;
-    const modelWhitelist = Array.isArray(model_whitelist) && model_whitelist.length ? model_whitelist.join(",") : null;
     const created = await db
       .insert(apiKeys)
-      .values({ userId, name, keyPrefix: secret.slice(0, 12), keyHash, status: "active", expiresAt, modelWhitelist })
-      .returning({ id: apiKeys.id, name: apiKeys.name, modelWhitelist: apiKeys.modelWhitelist });
+      .values({ userId, name, keyPrefix: secret.slice(0, 12), keyHash, status: "active", expiresAt })
+      .returning({ id: apiKeys.id, name: apiKeys.name });
     return { key: secret, ...created[0] };
   });
 

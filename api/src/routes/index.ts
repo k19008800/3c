@@ -41,6 +41,8 @@ import { meDeletionRoutes } from "./me-deletion";
 import { adminDeletionRoutes } from "./admin-deletion";
 import { adminSettlementRoutes } from "./admin-settlement";
 import { agentSettlementRoutes } from "./agent-settlement";
+import { knowledgeBaseRoutes } from "./knowledge-base";
+import { webhookRoutes } from "./admin-webhooks";
 import { wsChatRoutes } from "./ws-chat";
 
 /**
@@ -139,6 +141,12 @@ export function registerRoutes(app: FastifyInstance) {
   // 代理结算对账（Sprint 1）
   void app.register(adminSettlementRoutes, { prefix });
   void app.register(agentSettlementRoutes, { prefix });
+
+  // §10 客服支撑：知识库 + 快捷回复
+  void app.register(knowledgeBaseRoutes, { prefix });
+
+  // §32.1 全局 Webhook
+  void app.register(webhookRoutes, { prefix });
 
   // 邮件模板
   void app.register(emailTemplateRoutes, { prefix });

@@ -37,8 +37,8 @@ export function buildApp() {
     timeWindow: "1 minute",
   });
 
-  // WebSocket（§27 在线客服实时聊天）
-  void app.register(websocket, { options: { maxPayload: 1024 * 1024 } });
+  // WebSocket 支持（在线客服）
+  void app.register(websocket);
 
   // Swagger（由 route JSON Schema 自动生成）
   void app.register(swagger, {

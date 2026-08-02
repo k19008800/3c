@@ -3,7 +3,6 @@ import { db, pool } from "../db/index";
 import { billingLogs } from "../db/schema/billing";
 import { callLogs } from "../db/schema/call-logs";
 import { vendorModels } from "../db/schema/vendor-models";
-import { writeLedger } from "./finance-ledger";
 
 /**
  * 计费 service（§5.2）
@@ -149,21 +148,6 @@ export async function recordBilling(params: {
     status: "settled",
   });
 
-  // §29 全链路一致性：平台总账写入用户消费（platform_ledger.type=user_consumption）
-  if (actualCost > 0) {
-    try {
-      await writeLedger({
-        type: "user_consumption",
-        direction: "in",
-        amount: String(actualCost),
-        userId,
-        relatedOrderNo: String(callLogId),
-        paymentChannel: "balance",
-        remark: `API 消费 ${callLogId}`,
-      });
-    } catch { /* 总账写入失败不阻塞计费主流程 */ }
-  }
-
   return { id, actualCost };
 }
 
@@ -183,7 +167,7 @@ export async function recordCallLog(params: {
   upstreamModel?: string;
   requestTokens?: number;
   responseTokens?: number;
-  cost?: string;
+  costCents?: number;
   status?: string;
   errorCode?: string;
   latencyMs?: number;
@@ -202,7 +186,7 @@ export async function recordCallLog(params: {
     requestTokens: params.requestTokens ?? 0,
     responseTokens: params.responseTokens ?? 0,
     totalTokens: (params.requestTokens ?? 0) + (params.responseTokens ?? 0),
-    cost: params.cost ?? "0",
+    costCents: params.costCents ?? 0,
     status: params.status ?? "success",
     errorCode: params.errorCode,
     latencyMs: params.latencyMs,

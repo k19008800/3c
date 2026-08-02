@@ -129,4 +129,22 @@ export function adminSysRoutes(app: FastifyInstance) {
     const migrationCount = (await pool.query("SELECT count(*)::int c FROM drizzle_migrations").catch(() => ({ rows: [{ c: 0 }] }))).rows[0].c;
     return { code: 0, data: { version: pkg.version, node: process.version, platform: process.platform, migrationCount, uptime: process.uptime() }, message: "ok" };
   });
+
+  // ===== 站点配置维护（ICP/版权/维护模式等） =====
+  app.get("/admin/site-config", { onRequest: [admin] }, async () => {
+    const rows = await pool.query("SELECT key, value FROM site_configs ORDER BY key");
+    return { code: 0, data: rows.rows, message: "ok" };
+  });
+
+  app.put("/admin/site-config", { onRequest: [admin], schema: { body: { type: "object", additionalProperties: true } } }, async (req) => {
+    const b = req.body as Record<string, string>;
+    const entries = Object.entries(b).filter(([k]) => k.startsWith("site_"));
+    for (const [key, value] of entries) {
+      await pool.query(
+        "INSERT INTO site_configs (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()",
+        [key, value],
+      );
+    }
+    return { code: 0, data: { updated: entries.length }, message: "ok" };
+  });
 }

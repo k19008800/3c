@@ -116,16 +116,12 @@
 ### API 接口
 
 ```
-// 供应商故障演练（§31.1，对应代码 admin/drills）
-GET  /api/v1/admin/drills/scenarios     — 演练场景列表（full_outage/timeout/error_500/empty_response）
-POST /api/v1/admin/drills/start         — 开始演练（vendorId + scenarioId + durationMinutes 1~30）
-POST /api/v1/admin/drills/stop          — 结束演练并生成报告
-GET  /api/v1/admin/drills/status        — 当前演练状态（含受影响供应商熔断器状态）
-GET  /api/v1/admin/drills/history       — 历史演练记录（最近 50 条）
-GET  /api/v1/admin/drills/report/:id    — 指定演练报告
+POST /api/v1/admin/drills/vendor-failure/start    — 开始演练
+POST /api/v1/admin/drills/vendor-failure/stop     — 结束演练
+GET  /api/v1/admin/drills/vendor-failure/status   — 演练状态
+GET  /api/v1/admin/drills/vendor-failure/report/:id — 演练报告
+GET  /api/v1/admin/drills/vendor-failure/history  — 历史演练记录
 ```
-
-> 📌 **路径说明**：文档此前写为 `drills/vendor-failure/*`，代码实际为 `drills/*`（直接挂载在 drills 下），已于 2026-07-31 统一。
 
 ### 前端组件
 
@@ -256,15 +252,12 @@ interface DrillReport {
 ### API 接口
 
 ```
-// 多环境配置管理（§31.2，对应代码 admin/environments）
-GET  /api/v1/admin/environments                — 环境列表（dev/test/staging/production）
-PUT  /api/v1/admin/environments                — 保存环境配置（全量）
-GET  /api/v1/admin/environments/diff           — 配置差异对比（?source=&target=）
-POST /api/v1/admin/environments/sync           — 配置同步（sourceEnv→targetEnv，mode: upsert/overwrite/skip）
-POST /api/v1/admin/environments/:id/health-check — 环境健康检测
+GET  /api/v1/admin/environments                   — 环境列表
+GET  /api/v1/admin/environments/:name/config      — 某环境的当前配置快照
+POST /api/v1/admin/environments/compare           — 对比两个环境的配置差异
+POST /api/v1/admin/environments/export            — 导出配置
+POST /api/v1/admin/environments/import            — 导入配置
 ```
-
-> 📌 **路径说明**：文档此前写为 `environments/compare` + `:name/config` + `import`/`export`，代码实际为 `diff`（GET，query 传 source/target）+ `sync`（POST）+ 全量 `PUT` + `health-check`，已于 2026-07-31 统一。配置导入/导出、沙箱预览（§31.3）代码未实现（差距分析待办）。
 
 ### 验收标准
 
@@ -356,57 +349,33 @@ POST /api/v1/admin/environments/sandbox/preview
 
 ### [?] 页面帮助
 
-**页面名称**：供应商故障演练与多环境管理
+**页面名称**：功能说明书：§31 供应商故障演练与多环境管理
 
-**适用角色**：管理员（运维/技术）
+**适用角色**：视具体功能而定（参见总览中的优先级和适用角色说明）
 
-**功能定位**：提供供应商故障前的熔断验证机制、多环境配置同步与差异对比、配置变更前的沙箱预览，降低变更风险。
+**功能定位**：该页面提供 功能说明书：§31 供应商故障演练与多环境管理 相关的配置、查询和管理能力。
 
-**子模块说明**：
-- §31.1 供应商故障演练：手动模拟供应商宕机（网络断开/超时/错误码），验证熔断器和自动切换是否正常工作
-- §31.2 多环境配置管理与同步：对比测试/生产环境配置差异，支持一键同步导入
-- §31.3 配置沙箱预览：配置变更前在沙箱中模拟执行，预览对收入/调用量/用户的影响
+**核心操作**：
+1. 查看列表 / 详情
+2. 创建 / 编辑 / 删除条目
+3. 筛选 / 搜索 / 导出
 
 **注意事项**：
-- 故障演练会实际影响线上流量路由，建议在低峰期执行
-- 演练前系统自动备份当前路由配置，演练结束后可选择回滚
-- 多环境配置同步会覆盖目标环境配置，同步前建议备份
-- 沙箱预览基于真实历史数据计算，仅展示预估影响，不实际变更配置
+- 部分操作涉及敏感数据，需二次确认或 2FA 身份验证
+- 操作记录会写入操作日志
 
 **常见问题**：
-Q: 演练会影响线上用户吗？
-A: 影响范围取决于演练的供应商覆盖度，演练前系统会提示预计受影响用户比例。
-
-Q: 配置同步后能回滚吗？
-A: 可以。每次同步操作自动生成快照，支持一键回滚。
-
-Q: 沙箱预览的预估数据准确吗？
-A: 基于真实历史数据计算，准确度取决于历史数据量。预览数据标注置信度。
+Q: 为什么某些操作不可用？
+A: 请检查当前账号的权限角色是否包含对应操作权限。
 
 ### [?] 按钮级帮助对照表
 
-**§31.1 供应商故障演练**
-
 | 按钮/操作 | 帮助说明 |
 |----------|---------|
-| 新建演练 | 选择目标供应商和故障类型（网络断开/超时/错误码），设置演练范围和持续时间 |
-| 开始演练 | 执行故障模拟，实时展示熔断器状态变化和流量切换过程 |
-| 查看报告 | 查看已完成演练的详细报告（熔断器触发时间/恢复时间/影响范围） |
-| 停止演练 | 手动终止正在进行的演练，恢复供应商正常路由 |
-| 删除演练 | 删除历史演练记录 |
-
-**§31.2 多环境配置管理**
-
-| 按钮/操作 | 帮助说明 |
-|----------|---------|
-| 对比环境 | 选择两个环境（如测试 vs 生产），高亮显示配置差异 |
-| 同步到目标 | 将当前环境配置一键同步到目标环境 |
-| 查看快照 | 查看环境配置的历史快照，支持回滚 |
-| 回滚 | 恢复到指定历史版本的配置 |
-
-**§31.3 配置沙箱预览**
-
-| 按钮/操作 | 帮助说明 |
-|----------|---------|
-| 沙箱预览 | 输入配置变更内容，模拟执行并展示预估影响（收入/调用量/用户数） |
-| 导出预览报告 | 将沙箱预览结果导出为报告 |
+| 创建/新增 | 添加一条新记录 |
+| 编辑 | 修改已有记录的字段内容 |
+| 删除 | 删除选中的记录（不可恢复，需确认） |
+| 搜索 | 按关键词搜索匹配的记录 |
+| 筛选 | 按选中条件过滤列表 |
+| 导出 CSV | 将当前列表数据导出为 CSV 文件 |
+| 查看详情 | 查看选中记录的完整信息 |

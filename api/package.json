@@ -33,18 +33,16 @@
     "fastify": "^5.0.0",
     "ioredis": "^5.4.0",
     "nodemailer": "^9.0.3",
-    "otplib": "^13.4.1",
     "pdfkit": "^0.19.1",
     "pg": "^8.13.0",
     "pino": "^9.5.0",
-    "qrcode": "^1.5.4"
+    "ws": "^8.21.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
     "@types/nodemailer": "^8.0.1",
     "@types/pdfkit": "^0.17.6",
     "@types/pg": "^8.11.0",
-    "@types/qrcode": "^1.5.6",
     "@types/ws": "^8.18.1",
     "@vitest/coverage-v8": "^2.1.0",
     "drizzle-kit": "^0.27.0",

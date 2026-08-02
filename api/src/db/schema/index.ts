@@ -48,4 +48,6 @@ export * from "./data-export";
 export * from "./admin-roles";
 export * from "./sales-crm";
 export * from "./settlement";
+export * from "./knowledge-base";
+export * from "./webhooks";
 export * from "./account-deletion";

@@ -83,14 +83,11 @@
 ### API 接口
 
 ```
-// 结算对账（§25.1，对应代码 vendor/settlements）
-GET  /api/v1/vendor/settlements            — 结算周期列表（当前/历史，支持 status 筛选）
-GET  /api/v1/vendor/settlements/:id        — 结算详情/明细
-POST /api/v1/vendor/settlements/:id/confirm — 确认对账
-POST /api/v1/vendor/settlements/:id/dispute — 发起争议（disputeNote 必填）
+GET  /api/v1/vendor/settlement/current        — 当前结算信息
+GET  /api/v1/vendor/settlement/history        — 历史结算列表
+GET  /api/v1/vendor/settlement/:id/detail     — 结算明细
+GET  /api/v1/vendor/settlement/:id/export     — 导出对账单 CSV
 ```
-
-> 📌 **路径说明**：文档此前写为 `vendor/settlement`（单数），代码实际为 `vendor/settlements`（复数），已于 2026-07-31 统一为复数路径。对账单 CSV 导出暂未提供独立接口，可通过结算详情获取数据。
 
 ### 验收标准
 
@@ -121,16 +118,13 @@ POST /api/v1/vendor/settlements/:id/dispute — 发起争议（disputeNote 必�
 ### API 接口
 
 ```
-// 供应商公告（§25.2，对应代码 vendor/announcements）
-GET  /api/v1/vendor/announcements          — 公告列表（含已读标记）
-GET  /api/v1/vendor/announcements/:id      — 公告详情
-POST /api/v1/vendor/announcements/:id/read — 标记已读（幂等）
+GET  /api/v1/vendor/notifications          — 通知列表
+GET  /api/v1/vendor/notifications/:id      — 通知详情
+PUT  /api/v1/vendor/notifications/:id/read — 标记已读
 
-// 管理后台发送（未实现，待开发）
+// 管理后台发送
 POST /api/v1/admin/vendor/notifications    — 向供应商群发通知
 ```
-
-> 📌 **路径说明**：文档此前写为 `vendor/notifications`，代码实际为 `vendor/announcements`（公告系统，数据表 `vendor_announcements`），已于 2026-07-31 统一。已读接口方法为 `POST`（非 `PUT`）。管理端群发接口 `admin/vendor/notifications` 代码未实现。
 
 ### 验收标准
 
@@ -184,7 +178,7 @@ POST /api/v1/admin/vendor/notifications    — 向供应商群发通知
 ### 流程
 
 ```
-供应商发起结算申请 → POST /api/v1/vendor/self-settlement/apply
+供应商发起结算申请 → POST /api/v1/vendor/settlement/request
   └── 校验条件:
        ├── 当前周期内未申请过
        └── 待结算金额 ≥ ¥500（最小结算额）
@@ -199,18 +193,15 @@ POST /api/v1/admin/vendor/notifications    — 向供应商群发通知
 ### API 接口
 
 ```
-// 供应商自助结算（§25.4，对应代码 vendor/self-settlement）
-POST /api/v1/vendor/self-settlement/apply      — 发起结算申请
-GET  /api/v1/vendor/self-settlement/eligibility — 结算资格/可结算金额检查
-GET  /api/v1/vendor/self-settlement/history     — 结算申请记录
+// 供应商端
+POST /api/v1/vendor/settlement/request      — 发起结算申请
+GET  /api/v1/vendor/settlement/requests     — 结算申请记录
 
-// 管理后台审核（未实现，待开发）
+// 管理后台
 GET  /api/v1/admin/vendor/settlement/requests       — 待审核结算申请
 POST /api/v1/admin/vendor/settlement/:id/approve    — 审核通过
 POST /api/v1/admin/vendor/settlement/:id/reject     — 驳回（需填写原因）
 ```
-
-> 📌 **路径说明**：文档此前写为 `vendor/settlement/request`，代码实际为 `vendor/self-settlement/apply`（自助结算模块），已于 2026-07-31 统一。管理后台审核接口 `admin/vendor/settlement/*` 代码未实现（差距分析 P0 项）。
 
 ### 验收标准
 
@@ -224,69 +215,36 @@ POST /api/v1/admin/vendor/settlement/:id/reject     — 驳回（需填写原因
 
 ### [?] 页面帮助
 
-**页面名称**：供应商增强
+**页面名称**：功能说明书：§25 供应商增强
 
-**适用角色**：供应商、管理员（平台运营）
+**适用角色**：视具体功能而定（参见总览中的优先级和适用角色说明）
 
-**功能定位**：在供应商自助页面基础上补充结算对账、公告通知、性能排行榜、自助结算能力，让供应商更自主地管理合作事务。
+**功能定位**：该页面提供 功能说明书：§25 供应商增强 相关的配置、查询和管理能力。
 
-**子模块说明**：
-- §25.1 供应商结算对账：供应商查看结算周期、应收金额、对账明细，支持跨月结算周期
-- §25.2 供应商公告/通知：平台推送 API 变更、结算通知、新模型上线要求
-- §25.3 供应商性能排行榜：各供应商健康评分/响应速度/错误率对比（新接入 <7 天显示"新接入"标签）
-- §25.4 供应商自助结算：供应商发起结算申请（最低 ¥500），平台审核后打款
+**核心操作**：
+1. 查看列表 / 详情
+2. 创建 / 编辑 / 删除条目
+3. 筛选 / 搜索 / 导出
 
 **注意事项**：
-- 结算对账按结算周期独立聚合，不受自然月切割影响
-- 待结算金额不足 ¥500 时无法发起结算申请
-- 打款失败后结算状态回退为"打款失败"并通知财务手动处理
-- 结算账户信息在结算日前 3 天锁定并提醒确认
-- 供应商资质过期自动冻结新增业务发布权限
+- 部分操作涉及敏感数据，需二次确认或 2FA 身份验证
+- 操作记录会写入操作日志
 
 **常见问题**：
-Q: 为什么无法发起结算？
-A: 待结算金额低于最低结算额 ¥500，或当前有进行中的结算申请、账户信息未确认。
-
-Q: 结算周期跨月怎么算？
-A: 按结算周期独立聚合，不受自然月切割影响，明细按实际日期区间展示。
-
-Q: 打款失败了怎么办？
-A: 状态自动回退为"打款失败"并通知财务，处理完成后状态更新为已打款。
+Q: 为什么某些操作不可用？
+A: 请检查当前账号的权限角色是否包含对应操作权限。
 
 ### [?] 按钮级帮助对照表
 
-**§25.1 供应商结算对账**
-
 | 按钮/操作 | 帮助说明 |
 |----------|---------|
-| 查看对账明细 | 查看当前结算周期的订单/费用明细 |
-| 导出对账单 | 导出对账明细（CSV/Excel） |
-| 确认对账 | 确认对账无误，进入结算流程 |
-| 提出异议 | 对结算金额有疑问时提交争议（冻结争议款项，生成工单） |
-
-**§25.2 供应商公告/通知**
-
-| 按钮/操作 | 帮助说明 |
-|----------|---------|
-| 查看公告 | 查看平台推送的 API 变更/结算/新模型通知 |
-| 标记已读 | 将公告标记为已读 |
-| 通知设置 | 选择接收通知的渠道（站内/邮件） |
-
-**§25.3 供应商性能排行榜**
-
-| 按钮/操作 | 帮助说明 |
-|----------|---------|
-| 查看排行榜 | 按健康评分/响应速度/错误率对比各供应商 |
-| 查看详情 | 查看单个供应商的详细性能指标 |
-| 导出榜单 | 导出排行榜数据（CSV） |
-
-**§25.4 供应商自助结算**
-
-| 按钮/操作 | 帮助说明 |
-|----------|---------|
-| 发起结算申请 | 待结算金额 ≥ ¥500 时提交结算申请 |
-| 查看结算记录 | 查看历史结算申请及状态 |
-| 修改收款账户 | 更新结算收款账户（结算日前 3 天锁定） |
+| 创建/新增 | 添加一条新记录 |
+| 编辑 | 修改已有记录的字段内容 |
+| 删除 | 删除选中的记录（不可恢复，需确认） |
+| 搜索 | 按关键词搜索匹配的记录 |
+| 筛选 | 按选中条件过滤列表 |
+| 导出 CSV | 将当前列表数据导出为 CSV 文件 |
+| 查看详情 | 查看选中记录的完整信息 |
 
 ---
 

@@ -66,8 +66,6 @@ export function vendorSelfRoutes(app: FastifyInstance) {
         status: "pending",
         contactEmail: email,
         passwordHash,
-        contactName: contact_name?.trim() ?? null,
-        contactPhone: contact_phone?.trim() ?? null,
         baseUrl: base_url?.trim() ?? null,
         apiAuthType: b.api_auth_type === "api_key" ? "api_key" : "bearer_token",
         commissionRate: b.commission_rate != null ? String(b.commission_rate) : "0.1000",

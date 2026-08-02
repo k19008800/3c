@@ -36,6 +36,7 @@ export default function ConsoleLayout() {
     { to: "/real-name", label: "实名认证" },
     { to: "/notification", label: "通知设置" },
     { to: "/tickets", label: "我的工单" },
+    { to: "/help", label: "帮助中心" },
     { to: "/chat", label: "在线客服" },
     { to: "/security", label: "安全中心" },
     { to: "/data-export", label: "数据导出" },
@@ -186,6 +187,18 @@ export default function ConsoleLayout() {
               >
                 合规管理
               </NavLink>
+              <NavLink
+                to="/admin/knowledge-base"
+                style={({ isActive }) => ({
+                  padding: "10px 20px",
+                  color: isActive ? "#38bdf8" : "#cbd5e1",
+                  textDecoration: "none",
+                  background: isActive ? "#0f172a" : "transparent",
+                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                })}
+              >
+                客服支撑
+              </NavLink>
               <div style={{ padding: "16px 20px 6px", fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>
                 权限管理
               </div>
@@ -263,6 +276,18 @@ export default function ConsoleLayout() {
                 })}
               >
                 日志查看器
+              </NavLink>
+              <NavLink
+                to="/admin/webhooks"
+                style={({ isActive }) => ({
+                  padding: "10px 20px",
+                  color: isActive ? "#38bdf8" : "#cbd5e1",
+                  textDecoration: "none",
+                  background: isActive ? "#0f172a" : "transparent",
+                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                })}
+              >
+                Webhook 配置
               </NavLink>
               <NavLink
                 to="/admin/sys/version"

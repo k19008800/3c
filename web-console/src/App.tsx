@@ -44,6 +44,9 @@ import SalesCustomerDetailPage from "./pages/SalesCustomerDetailPage";
 import SalesRemindersPage from "./pages/SalesRemindersPage";
 import SalesPerformancePage from "./pages/SalesPerformancePage";
 import AdminCustomersPage from "./pages/AdminCustomersPage";
+import AdminKnowledgeBasePage from "./pages/AdminKnowledgeBasePage";
+import AdminWebhooksPage from "./pages/AdminWebhooksPage";
+import HelpCenterPage from "./pages/HelpCenterPage";
 import DeletionPage from "./pages/DeletionPage";
 import AdminDeletionPage from "./pages/AdminDeletionPage";
 import AdminSysDbPage from "./pages/AdminSysDbPage";
@@ -109,6 +112,7 @@ export default function App() {
         <Route path="admin/invoices" element={<AdminInvoicesPage />} />
         <Route path="admin/real-name" element={<AdminRealNamePage />} />
         <Route path="redemption" element={<RedemptionPage />} />
+        <Route path="help" element={<HelpCenterPage />} />
         <Route path="account-deletion" element={<DeletionPage />} />
         <Route path="announcements" element={<AnnouncementsPage />} />
         <Route path="real-name" element={<RealNamePage />} />
@@ -137,6 +141,8 @@ export default function App() {
 <Route path="sales/performance" element={<SalesPerformancePage />} />
 <Route path="admin/customers" element={<AdminCustomersPage />} />
 <Route path="admin/deletion" element={<AdminDeletionPage />} />
+<Route path="admin/knowledge-base" element={<AdminKnowledgeBasePage />} />
+<Route path="admin/webhooks" element={<AdminWebhooksPage />} />
 <Route path="admin/sys/db" element={<AdminSysDbPage />} />
 <Route path="admin/sys/cache" element={<AdminSysCachePage />} />
 <Route path="admin/sys/logs" element={<AdminSysLogsPage />} />

@@ -5,10 +5,7 @@ import { authenticateApiKey, extractBearerKey, isModelAllowed } from "../service
 import { checkRateLimit, rateLimitError } from "../services/rate-limiter";
 import { selectRoute } from "../services/router";
 import { recordResult } from "../services/circuit-breaker";
-import { getEffectivePrice, calcCost, round4, reserveBalance, refundBalance, recordBilling, recordCallLog } from "../services/billing";
-import { checkBudget, recordSpend } from "../services/budget-engine";
-import { recordCommissionForUser } from "../services/commission";
-import { publishActivity, pushActivityHistory } from "../services/activity-push";
+import { getEffectivePrice, calcCost, reserveBalance, refundBalance, recordBilling, recordCallLog } from "../services/billing";
 import { forwardChatCompletion } from "../services/upstream";
 import { models } from "../db/schema/models";
 import { vendors } from "../db/schema/vendors";
@@ -72,13 +69,6 @@ export function proxyRoutes(app: FastifyInstance) {
         return reply.status(403).send({ error: { code: "MODEL_NOT_ALLOWED", message: "该 API Key 无权使用此模型" } });
       }
 
-      // 2.5 预算检查（预算检查 → 限流，SPEC-§20.1）
-      const budgetErr = await checkBudget(ctx.userId, model.id, (body.max_tokens ?? 100) || 100, ctx.apiKeyId);
-      if (budgetErr) {
-        const msg = budgetErr === "DAILY_QUOTA_EXCEEDED" ? "单日消费预算已用尽" : "月度消费预算已用尽";
-        return reply.status(403).send({ error: { code: budgetErr, message: msg } });
-      }
-
       // 3. 限流
       const rl = await checkRateLimit({ userId: ctx.userId, apiKeyId: ctx.apiKeyId, modelId: model.id });
       if (rl.limited) {
@@ -113,20 +103,13 @@ export function proxyRoutes(app: FastifyInstance) {
       const balanceRows = await pool.query("SELECT balance FROM users WHERE id=$1", [ctx.userId]);
       const balanceBefore = Number(balanceRows.rows[0]?.balance ?? 0);
 
-      // 9. 真实转发 + 熔断器学习（异常时保证预扣全额退还，§5.2 预扣失败回滚）
-      let result;
-      try {
-        result = await forwardChatCompletion({
-          vendor,
-          vendorApiKey: vendorKey.encryptedKey,
-          upstreamModel: route.upstreamModel,
-          body: { ...(body as any), stream: body.stream ?? false },
-        });
-      } catch (err: any) {
-        // 供应商调用异常：退还预扣，返回 502（不计费）
-        try { await refundBalance(ctx.userId, estimatedCost); } catch { /* 退款失败不阻塞错误响应 */ }
-        return reply.status(502).send({ error: { code: "UPSTREAM_ERROR", message: err?.message ?? "上游调用异常" } });
-      }
+      // 9. 真实转发 + 熔断器学习
+      const result = await forwardChatCompletion({
+        vendor,
+        vendorApiKey: vendorKey.encryptedKey,
+        upstreamModel: route.upstreamModel,
+        body: { ...(body as any), stream: body.stream ?? false },
+      });
       await recordResult(route.vendorModelId, result.ok);
 
       // 10. 计费结算：精算实际费用，多退少补
@@ -160,7 +143,7 @@ export function proxyRoutes(app: FastifyInstance) {
         upstreamModel: route.upstreamModel,
         requestTokens: result.usage?.inputTokens,
         responseTokens: result.usage?.outputTokens,
-        cost: String(round4(actualCost)),
+        costCents: Math.round(actualCost * 100),
         status: result.ok ? "success" : "failed",
         errorCode: result.ok ? undefined : result.error?.code,
         latencyMs: undefined,
@@ -177,35 +160,6 @@ export function proxyRoutes(app: FastifyInstance) {
         balanceBefore,
         balanceAfter,
       });
-
-      // 11.4 消费预算回写（用户月度/日度消费累计）
-      if (result.ok) {
-        await recordSpend(ctx.userId, actualCost);
-      }
-
-      // 11.5 代理佣金：为归属代理按消费记佣金（成功消费才记）
-      if (result.ok) {
-        let billId = callLogId;
-        try {
-          const b = await pool.query("SELECT id FROM billing_logs WHERE call_log_id = $1 LIMIT 1", [callLogId]);
-          if (b.rows[0]) billId = Number(b.rows[0].id);
-        } catch { /* billing id 兼容 */ }
-        void recordCommissionForUser(ctx.userId, billId, round4(actualCost));
-      }
-
-      // 11.6 实时活动流：计费完成推送事件（成功+失败）
-      const activity = {
-        model: body.model ?? "unknown",
-        status: (result.ok ? "success" : "error") as "success" | "error",
-        inputTokens: result.usage?.inputTokens ?? 0,
-        outputTokens: result.usage?.outputTokens ?? 0,
-        cost: round4(actualCost),
-        provider: vendor.name,
-        userId: ctx.userId,
-      };
-      const ev = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, timestamp: Date.now(), ...activity };
-      publishActivity(activity);
-      pushActivityHistory(ev);
 
       // 12. 返回
       if (!result.ok) {

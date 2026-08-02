@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "0.1.0",
+  "name": "泥鳅知识库 - 通用文章剪藏",
+  "behavior": "create",
+  "noteContentFormat": "> **来源**：[{{title}}]({{url}})  ·  {{#if author}}作者：{{author}}{{/if}}  ·  {{#if published}}发布日期：{{published|date:\"YYYY-MM-DD\"}}{{/if}}\n\n---\n\n{{content}}\n\n---\n\n*本笔记由 Obsidian Web Clipper 于 {{time|date:\"YYYY-MM-DD HH:mm\"}} 自动剪藏，待泥鳅整理归档。*",
+  "properties": [
+    {
+      "name": "title",
+      "value": "{{title}}",
+      "type": "text"
+    },
+    {
+      "name": "date",
+      "value": "{{time|date:\"YYYY-MM-DD\"}}",
+      "type": "date"
+    },
+    {
+      "name": "tags",
+      "value": "{{#array}}clipped{{#if domain}}, {{domain}}{{/if}}{{/array}}",
+      "type": "multitext"
+    },
+    {
+      "name": "source",
+      "value": "{{url}}",
+      "type": "text"
+    },
+    {
+      "name": "author",
+      "value": "{{author|default:\"\"}}",
+      "type": "text"
+    },
+    {
+      "name": "status",
+      "value": "inbox",
+      "type": "text"
+    }
+  ],
+  "triggers": ["https://*/*", "http://*/*"],
+  "noteNameFormat": "{{time|date:\"YYYY-MM-DD\"}} {{title|safe_name|truncate:60}}",
+  "path": "inbox"
+}
