@@ -50,4 +50,5 @@ export * from "./sales-crm";
 export * from "./settlement";
 export * from "./knowledge-base";
 export * from "./webhooks";
+export * from "./sso";
 export * from "./account-deletion";

@@ -43,6 +43,7 @@ import { adminSettlementRoutes } from "./admin-settlement";
 import { agentSettlementRoutes } from "./agent-settlement";
 import { knowledgeBaseRoutes } from "./knowledge-base";
 import { webhookRoutes } from "./admin-webhooks";
+import { ssoRoutes } from "./admin-sso";
 import { wsChatRoutes } from "./ws-chat";
 
 /**
@@ -147,6 +148,9 @@ export function registerRoutes(app: FastifyInstance) {
 
   // §32.1 全局 Webhook
   void app.register(webhookRoutes, { prefix });
+
+  // §32.2/§32.3 SSO + 企业通讯录
+  void app.register(ssoRoutes, { prefix });
 
   // 邮件模板
   void app.register(emailTemplateRoutes, { prefix });
