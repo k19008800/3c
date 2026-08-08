@@ -115,8 +115,8 @@ export default function ConsoleLayout() {
         </div>
 
         <nav style={{ flex: 1, overflowY: "auto", marginTop: 4 }}>
-          {/* Portal 导航 */}
-          {portalNav.map((item) => (
+          {/* Portal 导航 — 仅普通用户看到 */}
+          {!isAdmin && portalNav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
