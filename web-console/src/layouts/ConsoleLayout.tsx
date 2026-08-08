@@ -48,7 +48,7 @@ export default function ConsoleLayout() {
   ];
 
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
-  const isSales = user?.role === "sales" || isAdmin;
+  const isSales = user?.role === "sales";
 
   // 管理后台子菜单（折叠组，对齐原型 nav-sub 结构）
   const adminNav: { group: string; icon: string; items: NavDef[] }[] = [
