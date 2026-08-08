@@ -11,8 +11,10 @@ interface ModelPrice {
   name: string;
   display_name: string | null;
   vendor: string;
-  cost_input_price: string;
-  cost_output_price: string;
+  input_price: number;
+  output_price: number;
+  cost_input_price?: string;
+  cost_output_price?: string;
 }
 
 export default function PriceCalculator({ models }: { models: ModelPrice[] }) {
@@ -21,8 +23,8 @@ export default function PriceCalculator({ models }: { models: ModelPrice[] }) {
   const [outputTokens, setOutputTokens] = useState(500);
 
   const model = models.find((m) => m.name === selected);
-  const inputPrice = model ? Number(model.cost_input_price) : 0;
-  const outputPrice = model ? Number(model.cost_output_price) : 0;
+  const inputPrice = model ? (model.input_price ?? Number(model.cost_input_price ?? 0)) : 0;
+  const outputPrice = model ? (model.output_price ?? Number(model.cost_output_price ?? 0)) : 0;
   const cost = (inputTokens / 1000) * inputPrice + (outputTokens / 1000) * outputPrice;
 
   return (
