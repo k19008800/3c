@@ -48,7 +48,16 @@ export default function LoginPage() {
       const data = await res.json();
       if (res.ok && data.token) {
         localStorage.setItem("token", data.token);
-        router.push(data.user?.totpEnabled ? "/2fa" : "/dashboard");
+        const role = data.user?.role;
+        if (data.user?.totpEnabled) {
+          router.push("/2fa");
+        } else if (role === "admin" || role === "super_admin") {
+          router.push("/app/");
+        } else if (role === "agent") {
+          router.push("/app/");
+        } else {
+          router.push("/dashboard");
+        }
       } else {
         setError(data.message || "邮箱或密码错误");
       }
