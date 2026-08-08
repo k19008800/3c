@@ -74,7 +74,17 @@ export function invoiceRoutes(app: FastifyInstance) {
     return { code: 0, data: { consumed, applied, available: Math.max(0, consumed - applied) }, message: "ok" };
   });
 
-  // 2. 我的发票列表
+  // 2. 发票列表（用户端主路由 /invoices）
+  app.get("/invoices", { onRequest: [auth] }, async (req) => {
+    const userId = Number((req as any).user.sub);
+    const rows = await pool.query(
+      "SELECT * FROM invoices WHERE user_id=$1 ORDER BY created_at DESC LIMIT 100",
+      [userId],
+    );
+    return { code: 0, data: { list: rows.rows.map(fmt) }, message: "ok" };
+  });
+
+  // 2b. 我的发票列表（/me 路径保留兼容）
   app.get("/me/invoices", { onRequest: [auth] }, async (req) => {
     const userId = Number((req as any).user.sub);
     const rows = await pool.query(
@@ -84,7 +94,47 @@ export function invoiceRoutes(app: FastifyInstance) {
     return { code: 0, data: { list: rows.rows.map(fmt) }, message: "ok" };
   });
 
-  // 3. 申请发票
+  // 3. 申请发票（用户端主路由 /invoices）
+  app.post("/invoices", { onRequest: [auth] }, async (req, reply) => {
+    const userId = Number((req as any).user.sub);
+    const b = req.body as { amount: number; type?: string; title?: string; tax_no?: string; address?: string; bank_account?: string; email?: string; remark?: string };
+    const amount = Math.round((Number(b.amount) || 0) * 100) / 100;
+    if (amount <= 0) return reply.code(400).send({ code: 400, error: "INVALID_AMOUNT", message: "发票金额无效" });
+    if (!b.title?.trim()) return reply.code(400).send({ code: 400, error: "MISSING_TITLE", message: "请填写发票抬头" });
+    const type = b.type === "special" ? "special" : "ordinary";
+    if (type === "special" && !b.tax_no?.trim()) return reply.code(400).send({ code: 400, error: "MISSING_TAXNO", message: "专票需填写税号" });
+
+    const consumed = await userConsumed(userId);
+    const applied = await userApplied(userId);
+    const available = Math.max(0, consumed - applied);
+    if (amount > available) return reply.code(400).send({ code: 400, error: "EXCEED_QUOTA", message: `可开票额度不足，当前可用 ¥${available.toFixed(2)}` });
+
+    const taxRate = 13;
+    const taxAmount = Math.round((amount * taxRate) / 100 * 100) / 100;
+    const totalAmount = Math.round((amount + taxAmount) * 100) / 100;
+
+    const created = await db
+      .insert(invoices)
+      .values({
+        userId,
+        amount: String(amount),
+        taxRate: String(taxRate),
+        taxAmount: String(taxAmount),
+        totalAmount: String(totalAmount),
+        type,
+        status: "pending",
+        title: b.title.trim(),
+        taxNo: b.tax_no ?? null,
+        address: b.address ?? null,
+        bankAccount: b.bank_account ?? null,
+        email: b.email ?? null,
+        remark: b.remark ?? null,
+      })
+      .returning({ id: invoices.id });
+    return { code: 0, data: { id: created[0]!.id, amount, totalAmount, status: "pending" }, message: "发票申请已提交" };
+  });
+
+  // 3b. 申请发票（/me 路径保留兼容）
   app.post("/me/invoices", { onRequest: [auth] }, async (req, reply) => {
     const userId = Number((req as any).user.sub);
     const b = req.body as { amount: number; type?: string; title?: string; tax_no?: string; address?: string; bank_account?: string; email?: string; remark?: string };
@@ -267,7 +317,24 @@ export function invoiceRoutes(app: FastifyInstance) {
     };
   });
 
-  // ===== 下载发票 PDF（用户端 + 管理端）=====
+  // ===== 下载发票 PDF（用户端 /invoices/:id/pdf + /me 兼容）=====
+  app.get("/invoices/:id/pdf", { onRequest: [auth] }, async (req, reply) => {
+    const id = Number((req.params as any).id);
+    const rows = await pool.query("SELECT * FROM invoices WHERE id=$1 AND user_id=$2", [id, (req as any).user.sub]);
+    const inv = rows.rows[0];
+    if (!inv) return reply.code(404).send({ code: 404, error: "NOT_FOUND" });
+    const u = await pool.query("SELECT email, username FROM users WHERE id=$1", [(req as any).user.sub]);
+    const pdf = await generateInvoicePdf({
+      invoiceNo: inv.invoice_no ?? `INV${inv.id}`, title: inv.title, taxNo: inv.tax_no, type: inv.type,
+      amount: Number(inv.amount).toFixed(2), taxRate: Number(inv.tax_rate ?? 13).toFixed(2),
+      taxAmount: inv.tax_amount ? Number(inv.tax_amount).toFixed(2) : "", totalAmount: Number(inv.total_amount ?? inv.amount).toFixed(2),
+      email: inv.email, createdAt: new Date(inv.created_at).toLocaleString(), userName: u.rows[0]?.username ?? "",
+    });
+    reply.header("Content-Type", "application/pdf");
+    reply.header("Content-Disposition", `attachment; filename="invoice-${inv.id}.pdf"`);
+    return reply.send(pdf);
+  });
+
   app.get("/me/invoices/:id/download", { onRequest: [auth] }, async (req, reply) => {
     const id = Number((req.params as any).id);
     const rows = await pool.query("SELECT * FROM invoices WHERE id=$1 AND user_id=$2", [id, (req as any).user.sub]);

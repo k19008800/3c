@@ -1,0 +1,119 @@
+/**
+ * Table — 通用数据表格样式
+ * 对应 ux-guidelines §9 表格交互
+ *
+ * 表头背景 #fafafa，th/td padding 14px 16px，边框 #d9d9d9
+ */
+
+/* ===== 外层容器 ===== */
+.shared-table-wrapper {
+  width: 100%;
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+}
+
+/* ===== 表格容器（定位父级，用于 loading overlay）===== */
+.shared-table-container {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* ===== 表格 ===== */
+.shared-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background-color: var(--color-panel);
+}
+
+/* ===== 表头 ===== */
+.shared-table__th {
+  padding: 14px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+  background-color: var(--color-table-header-bg); /* #fafafa */
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+}
+
+.shared-table__th--sortable {
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.shared-table__th--sortable:hover {
+  color: var(--color-primary);
+}
+
+/* ===== 排序箭头 ===== */
+.shared-table__sort-arrow {
+  display: inline-block;
+  width: 1.2em;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  margin-left: 2px;
+  transition: color var(--transition-fast);
+}
+
+.shared-table__th--sortable:hover .shared-table__sort-arrow {
+  color: var(--color-primary);
+}
+
+/* ===== 数据行 ===== */
+.shared-table__tr {
+  transition: background-color var(--transition-fast);
+}
+
+.shared-table__tr:hover {
+  background-color: var(--color-row-hover); /* #f8f9ff */
+}
+
+.shared-table__tr--clickable {
+  cursor: pointer;
+}
+
+/* ===== 数据单元格 ===== */
+.shared-table__td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-divider);
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===== 空数据单元格 ===== */
+.shared-table__empty-cell {
+  padding: 0;
+  border-bottom: none;
+}
+
+/* ===== Loading 遮罩 ===== */
+.shared-table__loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.6);
+  pointer-events: auto;
+}
+
+.shared-table__loading-text {
+  padding: var(--space-sm) var(--space-xl);
+  border-radius: var(--radius-md);
+  background-color: var(--color-primary);
+  color: #fff;
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  box-shadow: var(--shadow-tooltip);
+}

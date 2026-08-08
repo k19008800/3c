@@ -1,0 +1,121 @@
+/*
+ * Toast 通知样式
+ * 引用 tokens.css 中的 CSS 变量
+ */
+
+/* ===== Container ===== */
+
+.toast-container {
+  position: fixed;
+  top: var(--space-2xl, 24px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-toast, 500);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm, 8px);
+  pointer-events: none;
+}
+
+/* ===== Toast Item ===== */
+
+.toast-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm, 8px);
+  padding: var(--space-md, 12px) var(--space-lg, 16px);
+  min-width: 280px;
+  max-width: 480px;
+  border-radius: var(--radius-md, 8px);
+  font-size: var(--font-size-md, 14px);
+  line-height: 1.5;
+  color: var(--color-text, #333);
+  box-shadow: var(--shadow-toast, 0 4px 12px rgba(0, 0, 0, 0.12));
+  pointer-events: auto;
+  transition: opacity var(--transition-normal, 0.25s ease),
+    transform var(--transition-normal, 0.25s ease);
+}
+
+/* Enter animation */
+.toast-item--enter {
+  opacity: 1;
+  transform: translateY(0);
+  animation: toastSlideIn 0.25s ease;
+}
+
+/* Exit animation */
+.toast-item--exit {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== Type Variants ===== */
+
+.toast-item--success {
+  background: var(--color-success-bg, #e8f5e9);
+  color: var(--color-success-text, #2e7d32);
+}
+
+.toast-item--error {
+  background: var(--color-danger-bg, #ffebee);
+  color: var(--color-danger-text, #c62828);
+}
+
+.toast-item--warning {
+  background: var(--color-warning-bg, #fff3e0);
+  color: var(--color-warning-text, #e65100);
+}
+
+.toast-item--info {
+  background: var(--color-info-bg, #e3f2fd);
+  color: var(--color-info-text, #1565c0);
+}
+
+/* ===== Icon ===== */
+
+.toast-icon {
+  font-size: var(--font-size-lg, 16px);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* ===== Message ===== */
+
+.toast-message {
+  flex: 1;
+  word-break: break-word;
+}
+
+/* ===== Close Button ===== */
+
+.toast-close {
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px;
+  line-height: 1;
+  opacity: 0.6;
+  flex-shrink: 0;
+  color: inherit;
+  border-radius: var(--radius-sm, 6px);
+  transition: opacity var(--transition-fast, 0.15s ease),
+    background var(--transition-fast, 0.15s ease);
+}
+
+.toast-close:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.06);
+}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "../lib/api";
+import { HelpIcon, StatusBadge, Pagination } from "@3cloud/shared-ui";
 
 /**
  * §30 权限审计日志 —— 记录角色变更/用户分配等操作
@@ -14,7 +15,6 @@ export default function AdminPermissionAuditPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [actionFilter, setActionFilter] = useState("");
-  const [help, setHelp] = useState(false);
   const pageSize = 20;
 
   useEffect(() => {
@@ -29,28 +29,14 @@ export default function AdminPermissionAuditPage() {
 
   return (
     <div>
-      <div style={{ background: "linear-gradient(135deg,#667eea,#764ba2)", color: "#fff", padding: "20px 24px", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ fontSize: 24 }}>📋</span>
-        <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>权限审计日志
-          <span style={{ cursor: "help", fontSize: 14, marginLeft: 8 }} onClick={() => setHelp(!help)}>[?]</span>
-        </span>
-      </div>
-      {help && (
-        <div style={{ background: "#eef2ff", border: "1px solid #c7d2fe", borderRadius: 8, padding: "12px 16px", marginBottom: 16, fontSize: 13 }}>
-          <strong>权限审计日志 [?]</strong>
-          <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
-            <li>记录所有角色创建/编辑/删除操作</li>
-            <li>记录用户角色分配和移除操作</li>
-            <li>可按操作类型筛选，查看操作详情</li>
-          </ul>
-        </div>
-      )}
+      <h2 style={{ marginBottom: 4 }}>
+        权限审计日志
+        <HelpIcon text="记录所有角色创建/编辑/删除操作、用户角色分配和移除操作。可按操作类型筛选，查看操作详情。" level="page" />
+      </h2>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-        <label style={{ fontSize: 13 }}>操作类型：
-          <span style={{ cursor: "help", fontSize: 12, marginLeft: 2, color: "#64748b" }}>[?]</span>
-        </label>
-        <select value={actionFilter} onChange={e => { setActionFilter(e.target.value); setPage(1); }} style={{ padding: "6px", border: "1px solid #ccc", borderRadius: 4 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, marginTop: 16 }}>
+        <label style={{ fontSize: 13 }}>操作类型：</label>
+        <select value={actionFilter} onChange={e => { setActionFilter(e.target.value); setPage(1); }} style={{ padding: "6px", border: `1px solid var(--color-border)`, borderRadius: 4 }}>
           <option value="">全部</option>
           <option value="role_created">创建角色</option>
           <option value="role_updated">编辑角色</option>
@@ -58,12 +44,12 @@ export default function AdminPermissionAuditPage() {
           <option value="user_role_assigned">分配角色</option>
           <option value="user_role_removed">移除角色</option>
         </select>
-        <span style={{ fontSize: 12, color: "#64748b" }}>共 {total} 条</span>
+        <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>共 {total} 条</span>
       </div>
 
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
         <thead>
-          <tr style={{ background: "#f1f5f9" }}>
+          <tr style={{ background: "var(--color-bg)" }}>
             <th style={{ padding: "8px 12px", textAlign: "left" }}>操作</th>
             <th style={{ padding: "8px 12px", textAlign: "left" }}>操作者</th>
             <th style={{ padding: "8px 12px", textAlign: "left" }}>目标用户</th>
@@ -73,16 +59,14 @@ export default function AdminPermissionAuditPage() {
         </thead>
         <tbody>
           {logs.map(l => (
-            <tr key={l.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
+            <tr key={l.id} style={{ borderBottom: `1px solid var(--color-border)` }}>
               <td style={{ padding: "8px 12px" }}>
-                <span style={{ background: actionColor(l.action), color: "#fff", padding: "2px 6px", borderRadius: 4, fontSize: 11 }}>
-                  {actionLabel(l.action)}
-                </span>
+                <StatusBadge status={actionStatus(l.action)}>{actionLabel(l.action)}</StatusBadge>
               </td>
               <td style={{ padding: "8px 12px" }}>{l.operator_email ?? "-"}</td>
               <td style={{ padding: "8px 12px" }}>{l.target_email ?? "-"}</td>
               <td style={{ padding: "8px 12px", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={l.detail ?? ""}>{l.detail ?? "-"}</td>
-              <td style={{ padding: "8px 12px", fontSize: 12, color: "#64748b" }}>{l.created_at?.slice(0, 19).replace("T", " ")}</td>
+              <td style={{ padding: "8px 12px", fontSize: 12, color: "var(--color-text-secondary)" }}>{l.created_at?.slice(0, 19).replace("T", " ")}</td>
             </tr>
           ))}
         </tbody>
@@ -90,11 +74,12 @@ export default function AdminPermissionAuditPage() {
 
       {/* 分页 */}
       {total > pageSize && (
-        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 16 }}>
-          <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} style={{ padding: "4px 12px", border: "1px solid #ccc", borderRadius: 4, background: "#fff", cursor: page > 1 ? "pointer" : "default" }}>上一页</button>
-          <span style={{ padding: "4px 12px", fontSize: 13 }}>第 {page} / {Math.ceil(total / pageSize)} 页</span>
-          <button disabled={page >= Math.ceil(total / pageSize)} onClick={() => setPage(p => p + 1)} style={{ padding: "4px 12px", border: "1px solid #ccc", borderRadius: 4, background: "#fff", cursor: page < Math.ceil(total / pageSize) ? "pointer" : "default" }}>下一页</button>
-        </div>
+        <Pagination
+          current={page}
+          total={total}
+          pageSize={pageSize}
+          onChange={(p) => setPage(p)}
+        />
       )}
     </div>
   );
@@ -105,7 +90,13 @@ function actionLabel(a: string): string {
   return map[a] || a;
 }
 
-function actionColor(a: string): string {
-  const map: Record<string, string> = { role_created: "#16a34a", role_updated: "#2563eb", role_deleted: "#dc2626", user_role_assigned: "#9333ea", user_role_removed: "#ea580c" };
-  return map[a] || "#64748b";
+function actionStatus(a: string): "success" | "warning" | "danger" | "info" | "default" {
+  const map: Record<string, "success" | "warning" | "danger" | "info" | "default"> = {
+    role_created: "success",
+    role_updated: "info",
+    role_deleted: "danger",
+    user_role_assigned: "info",
+    user_role_removed: "warning",
+  };
+  return map[a] || "default";
 }

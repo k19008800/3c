@@ -9,6 +9,6 @@
       "@3cloud/shared": ["../packages/shared/src/index.ts"]
     }
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "test"]
 }

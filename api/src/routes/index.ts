@@ -48,7 +48,13 @@ import { meOnboardingRoutes } from "./me-onboarding";
 import { meNotificationPreferencesRoutes } from "./me-notification-preferences";
 import { meStatsRoutes } from "./me-stats";
 import { meEnhanceRoutes } from "./me-enhance";
+import { meWebhooksRoutes } from "./me-webhooks";
+import { meTeamRoutes } from "./me-team";
 import { wsChatRoutes } from "./ws-chat";
+import { adminBalanceAlertRoutes } from "./admin-balance-alert";
+import { adminCustomerLifecycleRoutes } from "./admin-customer-lifecycle";
+import { adminSubscriptionRoutes } from "./admin-subscription";
+import { mePlaygroundRoutes } from "./me-playground";
 
 /**
  * 路由统一注册入口
@@ -112,6 +118,7 @@ export function registerRoutes(app: FastifyInstance) {
 
   // §20 用户端安全与预算
   void app.register(meSecurityRoutes, { prefix });
+  void app.register(adminSecurityRoutes, { prefix });
 
   // §26 工单系统
   void app.register(meTicketsRoutes, { prefix });
@@ -120,6 +127,11 @@ export function registerRoutes(app: FastifyInstance) {
   // §27 在线客服
   void app.register(meChatRoutes, { prefix });
   void app.register(adminChatRoutes, { prefix });
+  // §32.1 全局 Webhook（用户端）
+  void app.register(meWebhooksRoutes, { prefix });
+  // §32.4 团队管理
+  void app.register(meTeamRoutes, { prefix });
+
   // §27 WebSocket 端点（独立前缀，非 REST）
   void app.register(wsChatRoutes, { prefix: "/ws" });
 
@@ -170,4 +182,16 @@ export function registerRoutes(app: FastifyInstance) {
 
   // 通知订阅
   void app.register(notificationRoutes, { prefix });
+
+  // §20.6 余额预警管理
+  void app.register(adminBalanceAlertRoutes, { prefix });
+
+  // §11 客户生命周期
+  void app.register(adminCustomerLifecycleRoutes, { prefix });
+
+  // 订阅计划管理
+  void app.register(adminSubscriptionRoutes, { prefix });
+
+  // Playground / API 调试
+  void app.register(mePlaygroundRoutes, { prefix });
 }

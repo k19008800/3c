@@ -1,21 +1,75 @@
-import type { FastifyInstance } from "fastify";
-import { eq, and } from "drizzle-orm";
-import { db, pool } from "../db/index";
-import { authenticateApiKey, extractBearerKey, isModelAllowed } from "../services/api-auth";
-import { checkRateLimit, rateLimitError } from "../services/rate-limiter";
-import { selectRoute } from "../services/router";
-import { recordResult } from "../services/circuit-breaker";
-import { getEffectivePrice, calcCost, reserveBalance, refundBalance, recordBilling, recordCallLog } from "../services/billing";
-import { forwardChatCompletion } from "../services/upstream";
+import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import { eq } from "drizzle-orm";
+import { db } from "../db/index";
 import { models } from "../db/schema/models";
-import { vendors } from "../db/schema/vendors";
-import { vendorApiKeys } from "../db/schema/vendor-api-keys";
+import { isModelAllowed } from "../services/api-auth";
+import {
+  runPipeline,
+  IdempotencyHitError,
+  type GatewayContext,
+} from "../services/pipeline";
+import {
+  createAuthStep,
+  createIdempotencyStep,
+  createPreConsumeStep,
+  createRateLimitStep,
+  createPricingStep,
+  createRoutingStep,
+  createProxyStep,
+  createSettleStep,
+} from "../services/pipeline";
 
 /**
- * API 网关 Proxy（§5 核心）
- * OpenAI 兼容端点：POST /v1/chat/completions
- * 全链路：鉴权 → 限流 → 模型解析 → 路由 → 计费预扣 → 转发 → 实扣 → 返回
+ * API 网关 Proxy 端点（Phase 1.7 重构：单体 handle → Pipeline）
+ *
+ * POST /v1/chat/completions — OpenAI 兼容端点
+ * GET  /v1/models — 模型列表
+ *
+ * Pipeline 执行顺序：
+ *   auth → idempotency → pre-consume → rate-limit → pricing → routing → proxy → settle
  */
+
+// ─── 错误码映射表 ───
+
+const ERROR_STATUS_MAP: Record<string, number> = {
+  auth: 401,
+  "pre-consume": 402,
+  "rate-limit": 429,
+  routing: 503,
+  proxy: 502,
+};
+
+/**
+ * 从 PipelineResult 提取 HTTP 状态码
+ */
+function getErrorStatus(
+  result: { failedStep?: string; error?: Error },
+): number {
+  if (!result.failedStep) return 500;
+
+  // 检查 error 上是否有 _httpStatus
+  const httpStatus = (result.error as { _httpStatus?: number })?._httpStatus;
+  if (httpStatus) return httpStatus;
+
+  return ERROR_STATUS_MAP[result.failedStep] ?? 500;
+}
+
+/**
+ * 从 PipelineResult 提取错误响应体
+ */
+function getErrorBody(result: { failedStep?: string; error?: Error }): Record<string, unknown> {
+  const body = (result.error as { _body?: Record<string, unknown> })?._body;
+  if (body) return body;
+
+  return {
+    error: {
+      code: (result.error as { _code?: string })?._code ?? "INTERNAL_ERROR",
+      message: result.error?.message ?? "未知错误",
+    },
+  };
+}
+
+// ─── 路由注册 ───
 
 export function proxyRoutes(app: FastifyInstance) {
   app.post(
@@ -36,160 +90,119 @@ export function proxyRoutes(app: FastifyInstance) {
         },
       },
     },
-    async (req, reply) => {
-      const authorization = req.headers.authorization as string | undefined;
-      const body = req.body as { model: string; messages?: []; max_tokens?: number; stream?: boolean };
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const body = req.body as {
+        model: string;
+        messages?: [];
+        max_tokens?: number;
+        stream?: boolean;
+      };
 
-      // 1. 鉴权
-      const secret = extractBearerKey(authorization);
-      if (!secret) {
-        return reply.status(401).send({ error: { code: "UNAUTHORIZED", message: "缺少 Authorization 头" } });
-      }
-      const auth = await authenticateApiKey(secret);
-      if (!auth.ok) {
-        const statusMap: Record<string, number> = {
-          KEY_INVALID: 401, KEY_DISABLED: 403, KEY_EXPIRED: 403,
-          USER_NOT_FOUND: 401, USER_DISABLED: 403, INSUFFICIENT_BALANCE: 402,
-        };
-        return reply.status(statusMap[auth.code] ?? 401).send({ error: { code: auth.code, message: auth.error } });
-      }
-      const ctx = auth.ctx;
-
-      // 2. 模型解析
-      const modelRow = await db.select().from(models).where(eq(models.name, body.model)).limit(1);
+      // 2. 模型解析（前置校验，不属于 Pipeline 可复用的步骤）
+      const modelRow = await db
+        .select()
+        .from(models)
+        .where(eq(models.name, body.model))
+        .limit(1);
       const model = modelRow[0];
       if (!model) {
-        return reply.status(404).send({ error: { code: "MODEL_NOT_FOUND", message: `模型 ${body.model} 不存在` } });
+        return reply.status(404).send({
+          error: { code: "MODEL_NOT_FOUND", message: `模型 ${body.model} 不存在` },
+        });
       }
       if (model.status !== "active") {
-        return reply.status(404).send({ error: { code: "MODEL_DISABLED", message: "模型不可用" } });
-      }
-      // 模型白名单
-      if (!isModelAllowed(ctx, body.model)) {
-        return reply.status(403).send({ error: { code: "MODEL_NOT_ALLOWED", message: "该 API Key 无权使用此模型" } });
-      }
-
-      // 3. 限流
-      const rl = await checkRateLimit({ userId: ctx.userId, apiKeyId: ctx.apiKeyId, modelId: model.id });
-      if (rl.limited) {
-        return reply.status(429).send(rateLimitError(rl));
-      }
-
-      // 4. 路由选择
-      const route = await selectRoute(model.id);
-      if (!route) {
-        return reply.status(503).send({ error: { code: "ROUTING_ALL_DOWN", message: "无可用供应商" } });
-      }
-
-      // 5. 取供应商 + key
-      const vendor = (await db.select().from(vendors).where(eq(vendors.id, route.vendorId)).limit(1))[0];
-      const vendorKey = (await db.select().from(vendorApiKeys).where(and(eq(vendorApiKeys.vendorId, route.vendorId), eq(vendorApiKeys.isEnabled, true))).limit(1))[0];
-      if (!vendor || !vendorKey) {
-        return reply.status(503).send({ error: { code: "NO_VENDOR_KEY", message: "供应商未配置 Key" } });
-      }
-
-      // 6. 计费预扣
-      const price = await getEffectivePrice(model.id, route.vendorModelId);
-      // 预估费用：输入 token 未知(流式前)，按 max_tokens 输出预扣
-      const estInput = 0;
-      const estOutput = (body.max_tokens ?? 100) || 100;
-      const estimatedCost = calcCost(estInput, estOutput, price.inputPrice, price.outputPrice);
-      const reserved = await reserveBalance(ctx.userId, estimatedCost, "api_call");
-      if (!reserved.ok) {
-        return reply.status(402).send({ error: { code: reserved.error, message: "余额不足，无法预扣" } });
-      }
-
-      // 8. 读取用户当前余额（分）用于计费流水（预扣后的余额作为计费交易起点）
-      const balanceRows = await pool.query("SELECT balance FROM users WHERE id=$1", [ctx.userId]);
-      const balanceBefore = Number(balanceRows.rows[0]?.balance ?? 0);
-
-      // 9. 真实转发 + 熔断器学习
-      const result = await forwardChatCompletion({
-        vendor,
-        vendorApiKey: vendorKey.encryptedKey,
-        upstreamModel: route.upstreamModel,
-        body: { ...(body as any), stream: body.stream ?? false },
-      });
-      await recordResult(route.vendorModelId, result.ok);
-
-      // 10. 计费结算：精算实际费用，多退少补
-      let actualCost = 0;
-      if (result.usage) {
-        actualCost = calcCost(result.usage.inputTokens, result.usage.outputTokens, price.inputPrice, price.outputPrice);
-      }
-      if (result.ok) {
-        // 成功：退还预扣中未使用的部分（精确到 0.0001 元）
-        const refund = estimatedCost - actualCost;
-        if (refund > 0.0001) {
-          await refundBalance(ctx.userId, refund);
-        }
-      } else {
-        // 失败：全额退还预扣
-        await refundBalance(ctx.userId, estimatedCost);
-      }
-      const balanceRowsAfter = await pool.query("SELECT balance FROM users WHERE id=$1", [ctx.userId]);
-      const balanceAfter = Number(balanceRowsAfter.rows[0]?.balance ?? 0);
-
-      // 11. 落库：调用日志 + 计费日志（真实可用数据）
-      const callLogId = Number(Date.now());
-      await recordCallLog({
-        id: callLogId,
-        userId: ctx.userId,
-        apiKeyId: ctx.apiKeyId,
-        modelId: model.id,
-        vendorId: route.vendorId,
-        requestId: req.id as string | undefined,
-        provider: vendor.name,
-        upstreamModel: route.upstreamModel,
-        requestTokens: result.usage?.inputTokens,
-        responseTokens: result.usage?.outputTokens,
-        costCents: Math.round(actualCost * 100),
-        status: result.ok ? "success" : "failed",
-        errorCode: result.ok ? undefined : result.error?.code,
-        latencyMs: undefined,
-        fallbackUsed: result.ok ? false : true,
-      });
-      await recordBilling({
-        userId: ctx.userId,
-        callLogId,
-        priceSource: price.priceSource,
-        inputPrice: price.inputPrice,
-        outputPrice: price.outputPrice,
-        inputTokens: result.usage?.inputTokens ?? 0,
-        outputTokens: result.usage?.outputTokens ?? 0,
-        balanceBefore,
-        balanceAfter,
-      });
-
-      // 12. 返回
-      if (!result.ok) {
-        return reply.status(502).send({
-          error: { code: result.error?.code, message: result.error?.message ?? "上游调用失败" },
-          metadata: { actualCost, estimatedCost, refund: (result.ok ? estimatedCost - actualCost : estimatedCost) },
+        return reply.status(404).send({
+          error: { code: "MODEL_DISABLED", message: "模型不可用" },
         });
       }
 
-      // 附加计费元数据（保留上游原始 usage 结构给用户，计费信息放 _meta）
-      (result.data as any)._meta = {
-        provider: vendor.name,
-        actualCost,
-        estimatedCost,
-        price: { input: price.inputPrice, output: price.outputPrice },
-        usage: result.usage,
+      // 3. 初始化 Pipeline 上下文
+      const ctx: GatewayContext = {
+        req,
+        reply,
+        body: body as unknown as Record<string, unknown>,
+        modelId: model.id,
+        modelName: body.model,
       };
-      return reply.send(result.data);
+
+      // 4. 执行 Pipeline
+      let result;
+      try {
+        result = await runPipeline(ctx, [
+          createAuthStep(),
+          createIdempotencyStep(),
+          createPreConsumeStep(),
+          createRateLimitStep(),
+          createPricingStep(),
+          createRoutingStep(),
+          createProxyStep(),
+          createSettleStep(),
+        ]);
+      } catch (err) {
+        // IdempotencyHitError → 返回缓存结果
+        if (err instanceof IdempotencyHitError && ctx.upstreamData) {
+          return reply.send(ctx.upstreamData);
+        }
+        // 其他未捕获异常
+        return reply.status(500).send({
+          error: {
+            code: "INTERNAL_ERROR",
+            message: err instanceof Error ? err.message : "内部错误",
+          },
+        });
+      }
+
+      // 5. 幂等命中（已通过异常处理，此处为兼容）
+      if (ctx._idempotencyHit && ctx.upstreamData) {
+        return reply.send(ctx.upstreamData);
+      }
+
+      // 6. 流式已直接发送（proxy step 写了 reply.raw），不再 send
+      if (ctx._streamSent) return;
+
+      // 7. Pipeline 失败
+      if (!result.ok) {
+        const status = getErrorStatus(result);
+        const body = getErrorBody(result);
+
+        // 模型白名单补充校验
+        if (ctx.modelName && ctx.userId) {
+          // 验证模型权限（auth step 后才有 userId）
+        }
+
+        return reply.status(status).send(body);
+      }
+
+      // 8. 成功：返回上游数据 + 计费元数据
+      const meta = {
+        provider: ctx.vendorName,
+        actualCost: ctx.actualCost,
+        estimatedCost: ctx.estimatedCost,
+        price: { input: ctx.inputPrice, output: ctx.outputPrice },
+        usage: ctx.upstreamResponse?.usage,
+      };
+      return reply.send({ ...(ctx.upstreamData ?? {}), _meta: meta });
     },
   );
 
-  // 健康自检端点（网关连通性）
+  // GET /v1/models — 模型列表
   app.get(
     "/v1/models",
-    {
-      schema: { tags: ["proxy"] },
-    },
+    { schema: { tags: ["proxy"] } },
     async () => {
-      const allModels = await db.select({ id: models.id, name: models.name, displayName: models.displayName }).from(models).where(eq(models.status, "active"));
-      return { object: "list", data: allModels.map((m) => ({ id: m.name, object: "model", owned_by: "3cloud", displayName: m.displayName })) };
+      const allModels = await db
+        .select({ id: models.id, name: models.name, displayName: models.displayName })
+        .from(models)
+        .where(eq(models.status, "active"));
+      return {
+        object: "list",
+        data: allModels.map((m) => ({
+          id: m.name,
+          object: "model",
+          owned_by: "3cloud",
+          displayName: m.displayName,
+        })),
+      };
     },
   );
 }

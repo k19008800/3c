@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "../store/auth";
+import { HelpIcon, EmptyState } from "@3cloud/shared-ui";
 
 interface Activity {
   id: string; timestamp: number; model: string; status: "success" | "error";
   inputTokens: number; outputTokens: number; cost: number; provider: string; userId: number | null;
 }
 
-const card = { background: "#fff", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
+const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 
 export default function AdminActivityPage() {
   const token = useAuthStore((s) => s.token);
@@ -53,31 +54,34 @@ export default function AdminActivityPage() {
     if (autoScroll && listRef.current) listRef.current.scrollTop = 0;
   }, [events, autoScroll]);
 
-  const filtered = filter ? events.filter((x) => x.status === filter || (filter === "model" && true)) : events;
+  const filtered = filter ? events.filter((x) => x.status === filter) : events;
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
-      <h2 style={{ marginBottom: 20 }}>实时活动流</h2>
+      <h2 style={{ marginBottom: 20 }}>
+        实时活动流
+        <HelpIcon text="实时 API 活动监控 — 通过 SSE 订阅全平台 API 调用事件流。查看模型、供应商、Token 消耗和消费金额。支持按成功/失败筛选。" level="page" />
+      </h2>
 
       <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
-        <span style={{ fontSize: 13, ...(conn === "connected" ? { color: "#16a34a" } : { color: conn === "connecting" ? "#d97706" : "#dc2626" }) }}>
+        <span style={{ fontSize: 13, ...(conn === "connected" ? { color: "var(--color-success-text)" } : { color: conn === "connecting" ? "#d97706" : "var(--color-danger-text)" }) }}>
           {conn === "connected" ? "● 实时连接中" : conn === "connecting" ? "● 连接中" : "○ 已断开"}
         </span>
-        <button onClick={() => setAutoScroll(!autoScroll)} style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer", fontSize: 13 }}>{autoScroll ? "自动滚动：开" : "自动滚动：关"}</button>
-        <select value={filter} onChange={(e) => setFilter(e.target.value)} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #cbd5e1", fontSize: 13 }}>
+        <button onClick={() => setAutoScroll(!autoScroll)} style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, background: "var(--color-panel)", cursor: "pointer", fontSize: 13 }}>{autoScroll ? "自动滚动：开" : "自动滚动：关"}</button>
+        <select value={filter} onChange={(e) => setFilter(e.target.value)} style={{ padding: "6px 10px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 13 }}>
           <option value="">全部</option><option value="success">仅成功</option><option value="error">仅失败</option>
         </select>
-        <button onClick={() => setEvents([])} style={{ marginLeft: "auto", padding: "6px 12px", borderRadius: 6, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer", fontSize: 13 }}>清空</button>
+        <button onClick={() => setEvents([])} style={{ marginLeft: "auto", padding: "6px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, background: "var(--color-panel)", cursor: "pointer", fontSize: 13 }}>清空</button>
       </div>
 
       <div ref={listRef} style={{ ...card, maxHeight: 600, overflow: "auto" }}>
-        {filtered.length === 0 ? <div style={{ color: "#94a3b8", textAlign: "center", padding: 40 }}>等待 API 调用事件...</div> : filtered.map((ev) => (
-          <div key={ev.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid #f1f5f9", fontSize: 13 }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: ev.status === "success" ? "#16a34a" : "#dc2626", flexShrink: 0 }} />
+        {filtered.length === 0 ? <EmptyState title="等待 API 调用事件..." description="API 调用事件将实时显示在此处" icon="📡" /> : filtered.map((ev) => (
+          <div key={ev.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid var(--color-border)` /* #f1f5f9 ≈ var(--color-bg) tone */, fontSize: 13 }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: ev.status === "success" ? "var(--color-success-text)" : "var(--color-danger-text)", flexShrink: 0 }} />
             <span style={{ fontFamily: "monospace", fontWeight: 600, minWidth: 140 }}>{ev.model}</span>
-            <span style={{ fontSize: 12, color: "#64748b" }}>{ev.provider}</span>
-            <span style={{ color: "#64748b" }}>{ev.inputTokens}+{ev.outputTokens} tok</span>
-            <span style={{ color: "#166534", fontWeight: 600 }}>¥{ev.cost.toFixed(4)}</span>
+            <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{ev.provider}</span>
+            <span style={{ color: "var(--color-text-secondary)" }}>{ev.inputTokens}+{ev.outputTokens} tok</span>
+            <span style={{ color: "var(--color-success-text)", fontWeight: 600 }}>¥{ev.cost.toFixed(4)}</span>
             <span style={{ marginLeft: "auto", color: "#94a3b8", fontSize: 12 }}>{new Date(ev.timestamp).toLocaleTimeString()}</span>
           </div>
         ))}

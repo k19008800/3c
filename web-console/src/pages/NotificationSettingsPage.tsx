@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
+import {
+  HelpIcon,
+  SkeletonGroup,
+  useToast,
+} from "@3cloud/shared-ui";
 
 // §22.6 通知偏好设置页
 // 对应 SPEC-§22-用户端体验增强.md §22.6
@@ -14,14 +19,22 @@ interface NotificationPrefs {
   balanceLowThreshold: number;
 }
 
-const CATEGORIES: Record<string, { label: string; events: string[]; forced?: string[] }> = {
+const CATEGORIES: Record<
+  string,
+  { label: string; events: string[]; forced?: string[] }
+> = {
   finance: {
     label: "财务通知",
     events: ["recharge_success", "consumption_notify", "balance_low", "refund_status"],
   },
   security: {
     label: "安全通知",
-    events: ["login_reminder", "key_created_deleted", "login_anomaly", "2fa_changed"],
+    events: [
+      "login_reminder",
+      "key_created_deleted",
+      "login_anomaly",
+      "2fa_changed",
+    ],
     forced: ["login_anomaly", "2fa_changed"],
   },
   system: {
@@ -53,33 +66,36 @@ const EVENT_LABELS: Record<string, string> = {
 
 export default function NotificationSettingsPage() {
   const qc = useQueryClient();
-  const [notice, setNotice] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const { toast } = useToast();
 
   const { data: prefs, isLoading } = useQuery<NotificationPrefs>({
     queryKey: ["me-notif-prefs"],
-    queryFn: async () => (await api.get<{ data: NotificationPrefs }>("/me/preferences/notifications")).data.data,
+    queryFn: async () =>
+      (await api.get<{ data: NotificationPrefs }>("/me/preferences/notifications")).data.data,
   });
 
   const [localPrefs, setLocalPrefs] = useState<NotificationPrefs | null>(null);
   const effective = localPrefs ?? prefs;
 
   const saveMut = useMutation({
-    mutationFn: async (data: NotificationPrefs) => (await api.put("/me/preferences/notifications", data)).data,
+    mutationFn: async (data: NotificationPrefs) =>
+      (await api.put("/me/preferences/notifications", data)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["me-notif-prefs"] });
-      setNotice({ type: "success", msg: "✅ 通知偏好已保存" });
+      toast.success("✅ 通知偏好已保存");
     },
-    onError: (e) => setNotice({ type: "error", msg: extractError(e) }),
+    onError: (e) => toast.error(extractError(e)),
   });
 
   const resetMut = useMutation({
-    mutationFn: async () => (await api.post("/me/preferences/notifications/reset")).data,
+    mutationFn: async () =>
+      (await api.post("/me/preferences/notifications/reset")).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["me-notif-prefs"] });
       setLocalPrefs(null);
-      setNotice({ type: "success", msg: "✅ 已恢复默认设置" });
+      toast.success("✅ 已恢复默认设置");
     },
-    onError: (e) => setNotice({ type: "error", msg: extractError(e) }),
+    onError: (e) => toast.error(extractError(e)),
   });
 
   const updateField = (field: string, value: any) => {
@@ -87,9 +103,16 @@ export default function NotificationSettingsPage() {
     setLocalPrefs({ ...effective, [field]: value });
   };
 
-  const toggleEvent = (channel: "inAppPreferences" | "emailPreferences", event: string, value: boolean) => {
+  const toggleEvent = (
+    channel: "inAppPreferences" | "emailPreferences",
+    event: string,
+    value: boolean,
+  ) => {
     if (!effective) return;
-    setLocalPrefs({ ...effective, [channel]: { ...effective[channel], [event]: value } });
+    setLocalPrefs({
+      ...effective,
+      [channel]: { ...effective[channel], [event]: value },
+    });
   };
 
   const handleSave = () => {
@@ -103,20 +126,45 @@ export default function NotificationSettingsPage() {
     }
   };
 
-  if (isLoading) return <div style={{ fontFamily: "system-ui, sans-serif" }}>加载中...</div>;
-  if (!effective) return <div style={{ fontFamily: "system-ui, sans-serif" }}>无法加载设置</div>;
+  if (isLoading)
+    return <SkeletonGroup lines={8} style={{ maxWidth: 720 }} />;
+  if (!effective) return <div>无法加载设置</div>;
 
-  const card = { background: "#fff", borderRadius: 10, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,.06)", marginBottom: 16 };
+  const card = {
+    background: "#fff",
+    borderRadius: 10,
+    padding: 20,
+    boxShadow: "0 1px 4px rgba(0,0,0,.06)",
+    marginBottom: 16,
+  };
 
   const forcedEvents = new Set(["login_anomaly", "2fa_changed"]);
 
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", maxWidth: 720 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <h2 style={{ margin: 0 }}>通知偏好设置</h2>
+    <div style={{ maxWidth: 720 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 20,
+        }}
+      >
+        <h2 style={{ margin: 0 }}>
+          通知偏好设置
+          <HelpIcon text="详细配置各类通知的推送方式，包括站内信和邮件通知。安全类关键通知强制开启，不可关闭。" level="page" />
+        </h2>
         <button
           onClick={handleReset}
-          style={{ background: "none", border: "1px solid #e2e8f0", color: "#64748b", padding: "6px 14px", borderRadius: 6, cursor: "pointer", fontSize: 13 }}
+          style={{
+            background: "none",
+            border: "1px solid var(--color-border)",
+            color: "var(--color-text-secondary)",
+            padding: "6px 14px",
+            borderRadius: 6,
+            cursor: "pointer",
+            fontSize: 13,
+          }}
         >
           恢复默认
         </button>
@@ -124,7 +172,10 @@ export default function NotificationSettingsPage() {
 
       {/* 邮件全局设置 */}
       <div style={card}>
-        <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 600 }}>邮件通知设置</h3>
+        <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 600 }}>
+          邮件通知设置
+          <HelpIcon text="设置是否开启邮件通知以及接收频率。实时通知立即发送，每日摘要每天早上发送。" level="button" />
+        </h3>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
           <label style={{ fontWeight: 500, fontSize: 14 }}>邮件通知</label>
           <input
@@ -133,7 +184,9 @@ export default function NotificationSettingsPage() {
             onChange={(e) => updateField("emailEnabled", e.target.checked)}
             style={{ width: 18, height: 18 }}
           />
-          <span style={{ fontSize: 13, color: "#94a3b8" }}>{effective.emailEnabled ? "已开启" : "已关闭"}</span>
+          <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+            {effective.emailEnabled ? "已开启" : "已关闭"}
+          </span>
         </div>
         {effective.emailEnabled && (
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -141,7 +194,12 @@ export default function NotificationSettingsPage() {
             <select
               value={effective.emailFrequency}
               onChange={(e) => updateField("emailFrequency", e.target.value)}
-              style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 13 }}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 6,
+                border: "1px solid var(--color-border)",
+                fontSize: 13,
+              }}
             >
               <option value="realtime">实时</option>
               <option value="daily">每日摘要（早 9:00）</option>
@@ -157,7 +215,7 @@ export default function NotificationSettingsPage() {
           <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 600 }}>{cat.label}</h3>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead>
-              <tr style={{ color: "#64748b" }}>
+              <tr style={{ color: "var(--color-text-secondary)" }}>
                 <th style={{ padding: "8px", textAlign: "left" }}>事件</th>
                 <th style={{ padding: "8px", textAlign: "center", width: 80 }}>站内</th>
                 <th style={{ padding: "8px", textAlign: "center", width: 80 }}>邮件</th>
@@ -170,17 +228,23 @@ export default function NotificationSettingsPage() {
                 const inApp = effective.inAppPreferences?.[event] ?? true;
                 const email = effective.emailPreferences?.[event] ?? true;
                 return (
-                  <tr key={event} style={{ borderTop: "1px solid #f1f5f9" }}>
+                  <tr key={event} style={{ borderTop: "1px solid var(--color-border)" }}>
                     <td style={{ padding: "8px", fontWeight: 500 }}>
                       {EVENT_LABELS[event] ?? event}
-                      {isForced && <span style={{ marginLeft: 6, color: "#2563eb", fontSize: 11 }}>🔒</span>}
+                      {isForced && (
+                        <span style={{ marginLeft: 6, color: "var(--color-primary)", fontSize: 11 }}>
+                          🔒
+                        </span>
+                      )}
                     </td>
                     <td style={{ padding: "8px", textAlign: "center" }}>
                       <input
                         type="checkbox"
                         checked={inApp}
                         disabled={isForced}
-                        onChange={(e) => toggleEvent("inAppPreferences", event, e.target.checked)}
+                        onChange={(e) =>
+                          toggleEvent("inAppPreferences", event, e.target.checked)
+                        }
                         style={{ width: 18, height: 18 }}
                       />
                     </td>
@@ -189,12 +253,18 @@ export default function NotificationSettingsPage() {
                         type="checkbox"
                         checked={email}
                         disabled={isForced || !effective.emailEnabled}
-                        onChange={(e) => toggleEvent("emailPreferences", event, e.target.checked)}
+                        onChange={(e) =>
+                          toggleEvent("emailPreferences", event, e.target.checked)
+                        }
                         style={{ width: 18, height: 18 }}
                       />
                     </td>
                     <td style={{ padding: "8px", textAlign: "center" }}>
-                      {isForced && <span style={{ fontSize: 11, color: "#94a3b8" }}>强制</span>}
+                      {isForced && (
+                        <span style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>
+                          强制
+                        </span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -203,13 +273,23 @@ export default function NotificationSettingsPage() {
           </table>
           {catKey === "finance" && (
             <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 13, color: "#64748b" }}>余额不足阈值：</span>
+              <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+                余额不足阈值：
+              </span>
               <span style={{ fontSize: 13, fontWeight: 600 }}>¥</span>
               <input
                 type="number"
                 value={effective.balanceLowThreshold}
-                onChange={(e) => updateField("balanceLowThreshold", parseInt(e.target.value) || 10)}
-                style={{ width: 80, padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 13 }}
+                onChange={(e) =>
+                  updateField("balanceLowThreshold", parseInt(e.target.value) || 10)
+                }
+                style={{
+                  width: 80,
+                  padding: "4px 8px",
+                  borderRadius: 6,
+                  border: "1px solid var(--color-border)",
+                  fontSize: 13,
+                }}
                 min={1}
               />
             </div>
@@ -223,7 +303,7 @@ export default function NotificationSettingsPage() {
           onClick={handleSave}
           disabled={!localPrefs || saveMut.isPending}
           style={{
-            background: "#2563eb",
+            background: "var(--color-primary)",
             color: "#fff",
             border: "none",
             padding: "10px 32px",
@@ -237,19 +317,6 @@ export default function NotificationSettingsPage() {
           保存所有设置
         </button>
       </div>
-
-      {/* Toast */}
-      {notice && (
-        <div style={{
-          position: "fixed", top: 16, right: 16, zIndex: 1100,
-          padding: "12px 20px", borderRadius: 8, color: "#fff",
-          background: notice.type === "success" ? "#16a34a" : "#dc2626",
-          boxShadow: "0 4px 12px rgba(0,0,0,.15)",
-        }}>
-          {notice.msg}
-          <button onClick={() => setNotice(null)} style={{ marginLeft: 12, background: "none", border: "none", color: "#fff", cursor: "pointer" }}>×</button>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,0 +1,73 @@
+/**
+ * Skeleton — 骨架屏样式
+ * 对应 ux-guidelines §1.1 页面级加载
+ *
+ * 动画：shimmer 扫光，从左到右
+ */
+
+/* ===== 基类 ===== */
+.shared-skeleton {
+  display: block;
+  background-color: #e8e8e8;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-sm);
+}
+
+/* shimmer 扫光遮罩 */
+.shared-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.5) 30%,
+    rgba(255, 255, 255, 0.7) 50%,
+    rgba(255, 255, 255, 0.5) 70%,
+    transparent 100%
+  );
+  animation: shared-skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+/* ===== 变体 ===== */
+
+/* text: 含圆角，模拟单行文字 */
+.shared-skeleton--text {
+  border-radius: var(--radius-sm);
+  height: 16px;
+}
+
+/* rect: 直角矩形 */
+.shared-skeleton--rect {
+  border-radius: 0;
+}
+
+/* circle: 正圆（宽高应设相等）*/
+.shared-skeleton--circle {
+  border-radius: 50%;
+}
+
+/* ===== SkeletonGroup ===== */
+.shared-skeleton-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md) 0;
+}
+
+.shared-skeleton-group .shared-skeleton {
+  margin-bottom: 0;
+}
+
+/* ===== 动画 ===== */
+@keyframes shared-skeleton-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}

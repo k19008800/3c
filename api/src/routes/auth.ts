@@ -20,12 +20,12 @@ function safeUser(u: any) {
   return {
     id: u.id,
     email: u.email,
-    username: u.username,
+    username: u.username ?? null,
     phone: u.phone ?? null,
     role: u.role,
     status: u.status,
     balance: u.balance,
-    realNameStatus: u.realNameStatus,
+    realNameStatus: u.realNameStatus ?? 'unverified',
     createdAt: u.createdAt,
   };
 }

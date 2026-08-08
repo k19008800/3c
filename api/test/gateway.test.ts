@@ -3,6 +3,7 @@ import { buildApp } from "../src/app";
 import type { FastifyInstance } from "fastify";
 import { hashApiKey, keyPrefixOf } from "../src/services/api-auth";
 import { pool } from "../src/db/index";
+import { redis } from "../src/lib/redis";
 
 /**
  * API 网关 proxy 集成测试
@@ -101,6 +102,11 @@ describe("API 网关 proxy（chat/completions）", () => {
     }) as any;
 
     try {
+      
+      // 清理幂等缓存（使用 SCAN + DEL 处理通配符）
+      const keys = await redis.keys("idempotency:*");
+      if (keys.length > 0) await redis.del(...keys);
+      
       const res = await app.inject({
         method: "POST",
         url: "/v1/chat/completions",

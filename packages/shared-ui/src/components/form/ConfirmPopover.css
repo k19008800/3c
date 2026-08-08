@@ -1,0 +1,97 @@
+@import "../../tokens.css";
+
+/* ===== ConfirmPopover ===== */
+
+.sfc-confirm-popover {
+  position: relative;
+  display: inline-block;
+}
+
+.sfc-confirm-popover__trigger {
+  cursor: pointer;
+  display: inline-block;
+}
+
+.sfc-confirm-popover__popover {
+  position: absolute;
+  top: calc(100% + var(--space-sm));
+  left: 0;
+  min-width: 240px;
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-tooltip);
+  z-index: var(--z-tooltip);
+  padding: var(--space-lg);
+  animation: sfc-popover-fade-in var(--transition-fast) ease;
+}
+
+@keyframes sfc-popover-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sfc-confirm-popover__content {
+  margin-bottom: var(--space-md);
+}
+
+.sfc-confirm-popover__title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+.sfc-confirm-popover__description {
+  margin: var(--space-xs) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.sfc-confirm-popover__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+}
+
+.sfc-confirm-popover__btn {
+  height: 32px;
+  padding: 0 var(--space-lg);
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  background: var(--color-panel);
+  color: var(--color-text);
+  transition: all var(--transition-fast);
+}
+
+.sfc-confirm-popover__btn--cancel {
+  background: var(--color-panel);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.sfc-confirm-popover__btn--cancel:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.sfc-confirm-popover__btn--confirm {
+  color: #fff;
+  background: var(--color-danger-text);
+  border-color: var(--color-danger-text);
+}
+
+.sfc-confirm-popover__btn--confirm:hover {
+  background: #b71c1c;
+  border-color: #b71c1c;
+}

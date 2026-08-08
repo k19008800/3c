@@ -1,0 +1,97 @@
+/*
+ * Modal 弹窗样式
+ * 引用 tokens.css 中的 CSS 变量
+ */
+
+/* ===== Overlay ===== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-modal-overlay, rgba(0, 0, 0, 0.4));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal, 400);
+  opacity: 0;
+  transition: opacity var(--transition-normal, 0.25s ease);
+}
+
+.modal-overlay--enter {
+  opacity: 1;
+}
+
+/* ===== Panel ===== */
+
+.modal-panel {
+  position: relative;
+  background: var(--color-panel, #fff);
+  border-radius: var(--radius-xl, 16px);
+  box-shadow: var(--shadow-modal, 0 4px 20px rgba(0, 0, 0, 0.15));
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(-24px);
+  transition: opacity var(--transition-normal, 0.25s ease),
+    transform var(--transition-normal, 0.25s ease);
+}
+
+.modal-panel--enter {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ===== Header ===== */
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-xl, 20px) var(--space-2xl, 24px) var(--space-lg, 16px);
+  border-bottom: 1px solid var(--color-divider, #eee);
+  flex-shrink: 0;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: var(--font-size-lg, 16px);
+  font-weight: 600;
+  color: var(--color-text, #333);
+}
+
+/* ===== Close Button ===== */
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--color-text-secondary, #888);
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  border-radius: var(--radius-sm, 6px);
+  transition: color var(--transition-fast, 0.15s ease),
+    background var(--transition-fast, 0.15s ease);
+}
+
+.modal-close:hover {
+  color: var(--color-text, #333);
+  background: var(--color-divider-light, #f5f5f5);
+}
+
+/* Close button when there's no title — positioned in top-right corner */
+.modal-close--no-title {
+  position: absolute;
+  top: var(--space-lg, 16px);
+  right: var(--space-lg, 16px);
+  z-index: 1;
+}
+
+/* ===== Body ===== */
+
+.modal-body {
+  padding: var(--space-xl, 20px) var(--space-2xl, 24px);
+  overflow-y: auto;
+  flex: 1;
+}

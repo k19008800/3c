@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
+import { HelpIcon } from "@3cloud/shared-ui";
 
 /**
  * §12.3 缓存管理控制台
@@ -28,24 +29,23 @@ export default function AdminSysCachePage() {
     <div>
       <h2>
         缓存管理
-        <span title="缓存管理控制台 — 查看 Redis 缓存键列表、按模式搜索、删除指定缓存键、一键清理业务缓存（billing:*）。"
-          style={{ cursor: "help", fontSize: 14, color: "#94a3b8", marginLeft: 6 }}>[?]</span>
+        <HelpIcon text="缓存管理控制台 — 查看 Redis 缓存键列表、按模式搜索、删除指定缓存键、一键清理业务缓存（billing:*）。" level="page" />
       </h2>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
-        <input value={pattern} onChange={(e) => setPattern(e.target.value)} placeholder="缓存键模式 (如 billing:*)" style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #cbd5e1", width: 240 }} />
-        <span style={{ fontSize: 12, color: "#64748b" }}>共 {q.data?.count || 0} 个键</span>
-        <span style={{ fontSize: 12, color: "#64748b" }}>{q.data?.memory || ""}</span>
-        <button onClick={() => flushMut.mutate()} style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #ef4444", background: "#fff", color: "#ef4444", cursor: "pointer", marginLeft: "auto" }}>
+        <input value={pattern} onChange={(e) => setPattern(e.target.value)} placeholder="缓存键模式 (如 billing:*)" style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, width: 240 }} />
+        <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>共 {q.data?.count || 0} 个键</span>
+        <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{q.data?.memory || ""}</span>
+        <button onClick={() => flushMut.mutate()} style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid var(--color-danger-text)`, background: "var(--color-panel)", color: "var(--color-danger-text)", cursor: "pointer", marginLeft: "auto" }}>
           清理业务缓存
         </button>
       </div>
 
-      <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8 }}>
+      <div style={{ background: "var(--color-panel)", border: `1px solid var(--color-border)`, borderRadius: 8 }}>
         {q.data?.keys?.length > 0 ? q.data.keys.map((key: string) => (
-          <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 16px", borderBottom: "1px solid #e2e8f0", fontSize: 13, fontFamily: "monospace" }}>
+          <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 16px", borderBottom: `1px solid var(--color-border)`, fontSize: 13, fontFamily: "monospace" }}>
             <span>{key}</span>
-            <button onClick={() => delMut.mutate(key)} style={{ padding: "2px 8px", borderRadius: 4, border: "1px solid #ef4444", background: "#fff", color: "#ef4444", fontSize: 11, cursor: "pointer" }}>
+            <button onClick={() => delMut.mutate(key)} style={{ padding: "2px 8px", borderRadius: 4, border: `1px solid var(--color-danger-text)`, background: "var(--color-panel)", color: "var(--color-danger-text)", fontSize: 11, cursor: "pointer" }}>
               删除
             </button>
           </div>

@@ -1,0 +1,136 @@
+/**
+ * 3Cloud 设计令牌 — 精确对齐 portal-common.css
+ * 来源：kb/3cloud/prototypes/portal-common.css (v1, 439行)
+ * 所有 shared-ui 组件 + 页面统一引用此文件
+ */
+
+:root {
+  /* ===== 色板（对齐 portal-common.css）===== */
+  --color-bg: #f0f2f5;
+  --color-panel: #fff;
+  --color-primary: #4f6ef7;
+  --color-primary-hover: #3b5de7;
+  --color-primary-light: #eef1ff;
+  --color-primary-lighter: #f8f9ff;
+  --color-border: #d9d9d9;
+  --color-divider: #eee;
+  --color-divider-light: #f5f5f5;
+
+  /* 文字 */
+  --color-text: #333;
+  --color-text-secondary: #888;
+  --color-text-muted: #999;
+
+  /* 语义色 */
+  --color-success-bg: #e8f5e9;
+  --color-success-text: #2e7d32;
+  --color-warning-bg: #fff3e0;
+  --color-warning-text: #e65100;
+  --color-danger-bg: #ffebee;
+  --color-danger-text: #e53935;
+  --color-info-bg: #e8f0ff;
+  --color-info-text: #1a3a8a;
+
+  /* 组件色 */
+  --color-disabled-bg: #f5f5f5;
+  --color-modal-overlay: rgba(0, 0, 0, 0.4);
+  --color-sidebar-bg: #13151e;
+  --color-sidebar-text: #666;
+  --color-sidebar-hover: #ccc;
+  --color-sidebar-active: #6a8aff;
+  --color-sidebar-logo: #e0e0e0;
+  --color-sidebar-divider: rgba(255, 255, 255, 0.06);
+  --color-table-header-bg: #fafafa;
+  --color-row-hover: #f8f9ff;
+  --color-row-selected: #eef1ff;
+
+  /* 特殊 */
+  --color-bell-badge: #e53935;
+  --color-success-border: #c8e6c9;
+  --color-danger-border: #ffcdd2;
+  --color-warning-border: #ffe0b2;
+  --color-info-border: #c5d5ff;
+
+  /* ===== 圆角 ===== */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+
+  /* ===== 间距 ===== */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+
+  /* ===== 组件尺寸 ===== */
+  --btn-height: 40px;
+  --btn-sm-height: 32px;
+  --input-height: 40px;
+  --table-cell-padding: 14px 16px;
+  --sidebar-width: 220px;
+  --sidebar-logo-padding: 0 20px 24px;
+  --sidebar-nav-padding: 12px 20px;
+  --main-padding: 20px 24px;
+  --modal-default-width: 520px;
+  --pagination-btn-size: 32px;
+  --help-icon-size: 18px;
+
+  /* ===== 阴影 ===== */
+  --shadow-panel: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --shadow-modal: 0 4px 20px rgba(0, 0, 0, 0.15);
+  --shadow-toast: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-tooltip: 0 2px 8px rgba(0, 0, 0, 0.12);
+  --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.06);
+
+  /* ===== 字体 ===== */
+  --font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-family-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-md: 13px;
+  --font-size-base: 14px;
+  --font-size-lg: 15px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 20px;
+  --font-size-3xl: 22px;
+  --font-size-4xl: 28px;
+
+  /* ===== 过渡 ===== */
+  --transition-fast: 0.15s;
+  --transition-normal: 0.2s;
+  --transition-slow: 0.25s;
+
+  /* ===== Z-index ===== */
+  --z-sidebar: 100;
+  --z-dropdown: 200;
+  --z-sticky: 300;
+  --z-modal: 1000;
+  --z-toast: 2000;
+  --z-overlay: 600;
+
+  /* ===== 侧栏 ===== */
+  --sidebar-bg: #13151e;
+  --sidebar-width: 220px;
+  --sidebar-nav-gap: 10px;
+  --sidebar-active-border: 3px solid #6a8aff;
+  --sidebar-active-bg: rgba(79, 110, 247, 0.12);
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.03);
+}
+
+/* ===== 全局重置 ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f0f2f5;
+  color: #333;
+}
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #aaa; }

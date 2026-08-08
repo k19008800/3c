@@ -72,6 +72,30 @@ export function meTicketsRoutes(app: FastifyInstance) {
     return { code: 0, data: { ticket: { ...tk[0], category_label: TICKET_CATEGORY_LABEL[tk[0].category] ?? tk[0].category, status_label: TICKET_STATUS[tk[0].status] ?? tk[0].status, priority_label: TICKET_PRIORITY[tk[0].priority] ?? tk[0].priority, attachments: tk[0].attachments ? JSON.parse(tk[0].attachments) : [] }, replies: replies.map((r: any) => ({ id: r.id, ticket_id: r.ticketId, user_id: r.userId, is_staff: r.isStaff, content: r.content, attachments: r.attachments ? JSON.parse(r.attachments) : [], created_at: r.createdAt })), satisfaction: sat[0] ?? null }, message: "ok" };
   });
 
+  // 3b. 工单消息列表（独立端点）
+  app.get("/me/tickets/:id/messages", { onRequest: [auth] }, async (req, reply) => {
+    const userId = uid(req);
+    const id = Number((req.params as any).id);
+    const tk = await db.select().from(tickets).where(and(eq(tickets.id, id), eq(tickets.userId, userId), eq(tickets.isSpam, false))).limit(1);
+    if (!tk[0]) return reply.code(404).send({ code: 404, error: "NOT_FOUND" });
+    const replies = await db.select().from(ticketReplies).where(eq(ticketReplies.ticketId, id)).orderBy(ticketReplies.createdAt);
+    return {
+      code: 0,
+      data: {
+        messages: replies.map((r: any) => ({
+          id: r.id,
+          ticket_id: r.ticketId,
+          user_id: r.userId,
+          is_staff: r.isStaff,
+          content: r.content,
+          attachments: r.attachments ? JSON.parse(r.attachments) : [],
+          created_at: r.createdAt,
+        })),
+      },
+      message: "ok",
+    };
+  });
+
   // 4. 回复工单
   app.post("/me/tickets/:id/reply", { onRequest: [auth] }, async (req, reply) => {
     const userId = uid(req);

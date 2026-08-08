@@ -1,0 +1,60 @@
+/**
+ * EmptyState — 空数据占位样式
+ * 对应 ux-guidelines §3 空数据态
+ */
+
+.shared-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3xl) var(--space-lg);
+  text-align: center;
+  min-height: 200px;
+}
+
+.shared-empty-state__icon {
+  font-size: 64px;
+  line-height: 1;
+  margin-bottom: var(--space-lg);
+  opacity: 0.6;
+}
+
+.shared-empty-state__title {
+  font-size: var(--font-size-lg);
+  color: var(--color-text);
+  margin-bottom: var(--space-sm);
+  font-weight: 500;
+}
+
+.shared-empty-state__description {
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-xl);
+  max-width: 360px;
+  line-height: 1.6;
+}
+
+.shared-empty-state__action {
+  margin-top: var(--space-sm);
+}
+
+.shared-empty-state__action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--btn-height);
+  padding: 0 var(--space-xl);
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: var(--color-primary);
+  color: #fff;
+  font-size: var(--font-size-md);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  font-family: var(--font-family);
+}
+
+.shared-empty-state__action-btn:hover {
+  background-color: var(--color-primary-hover);
+}

@@ -5,481 +5,228 @@ import { api } from "../lib/api";
 import ConsentBanner from "../components/ConsentBanner";
 
 /**
- * Console 主布局：侧边栏 + 顶栏 + 内容区
+ * Console 主布局 — 精确对齐 portal-common.css + prototypes
+ * 侧栏 220px / #13151e / Logo / Emoji导航 / 蓝色选中线
+ * 顶栏 用户邮箱 / 余额 / 通知铃铛 / 退出
+ * 主内容区 margin-left:220px / padding 20px 24px / bg #f0f2f5
  */
+
+type NavDef = { to: string; label: string; icon: string; end?: boolean };
+
 export default function ConsoleLayout() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
 
-  // 公告未读数
   const unreadQ = useQuery({
     queryKey: ["me-announcements-unread"],
     queryFn: async () => (await api.get<{ data: { unread: number } }>("/me/announcements/unread-count")).data.data,
     refetchInterval: 60000,
   });
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
+  const handleLogout = () => { logout(); navigate("/login"); };
 
-  const navItems = [
-    { to: "/", label: "仪表盘", end: true },
-    { to: "/api-keys", label: "API Keys" },
-    { to: "/logs", label: "调用日志" },
-    { to: "/recharge", label: "充值中心" },
-    { to: "/billing", label: "账单中心" },
-    { to: "/invoices", label: "发票开具" },
-    { to: "/redemption", label: "兑换中心" },
-    { to: "/announcements", label: "公告" },
-    { to: "/real-name", label: "实名认证" },
-    { to: "/notification", label: "通知设置" },
-    { to: "/tickets", label: "我的工单" },
-    { to: "/help", label: "帮助中心" },
-    { to: "/chat", label: "在线客服" },
-    { to: "/security", label: "安全中心" },
-    { to: "/data-export", label: "数据导出" },
-    { to: "/agent/settings", label: "代理设置" },
-    { to: "/agent/settlements", label: "结算对账" },
-    { to: "/account-deletion", label: "账号注销" },
+  // ── 侧栏导航（对齐原型 emoji 图标）──
+  const portalNav: NavDef[] = [
+    { to: "/", label: "仪表盘", icon: "📊", end: true },
+    { to: "/api-keys", label: "API Keys", icon: "🔑" },
+    { to: "/logs", label: "调用日志", icon: "📋" },
+    { to: "/recharge", label: "充值中心", icon: "💰" },
+    { to: "/billing", label: "账单中心", icon: "📄" },
+    { to: "/invoices", label: "发票开具", icon: "🧾" },
+    { to: "/redemption", label: "兑换中心", icon: "🎟️" },
+    { to: "/announcements", label: "公告", icon: "📢" },
+    { to: "/real-name", label: "实名认证", icon: "🆔" },
+    { to: "/notification", label: "通知设置", icon: "🔔" },
+    { to: "/tickets", label: "我的工单", icon: "🎫" },
+    { to: "/chat", label: "在线客服", icon: "💬" },
+    { to: "/security", label: "安全中心", icon: "🛡️" },
+    { to: "/data-export", label: "数据导出", icon: "📦" },
+    { to: "/agent/settings", label: "代理设置", icon: "🏢" },
+    { to: "/agent/settlements", label: "结算对账", icon: "📑" },
+    { to: "/account-deletion", label: "账号注销", icon: "🗑️" },
   ];
-  const navSales = [
-    { to: "/sales/customers", label: "客户管理", end: false },
-    { to: "/sales/reminders", label: "跟进提醒", end: false },
-    { to: "/sales/performance", label: "业绩看板", end: false },
-  ];
-  // 管理入口（admin / super_admin 可见）
+
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
   const isSales = user?.role === "sales" || isAdmin;
 
+  // 管理后台子菜单（折叠组，对齐原型 nav-sub 结构）
+  const adminNav: { group: string; icon: string; items: NavDef[] }[] = [
+    { group: "管理后台", icon: "⚙️", items: [
+      { to: "/admin/customers", label: "客户管理", icon: "👥" },
+      { to: "/admin/agents", label: "代理管理", icon: "🤝" },
+      { to: "/admin/withdrawals", label: "提现审核", icon: "🏦" },
+      { to: "/admin/vendors", label: "供应商管理", icon: "🏭" },
+      { to: "/admin/vendor-settlements", label: "供应商结算", icon: "💳" },
+      { to: "/admin/finance", label: "财务管理", icon: "💰" },
+      { to: "/admin/consent", label: "合规管理", icon: "📜" },
+      { to: "/admin/knowledge-base", label: "客服支撑", icon: "📚" },
+      { to: "/admin/models", label: "模型管理", icon: "🧠" },
+      { to: "/admin/invoices", label: "税票管理", icon: "🧾" },
+      { to: "/admin/real-name", label: "实名审核", icon: "✅" },
+      { to: "/admin/redemption", label: "兑换码", icon: "🎟️" },
+      { to: "/admin/announcements", label: "公告管理", icon: "📢" },
+      { to: "/admin/campaigns", label: "营销活动", icon: "🎯" },
+      { to: "/admin/email-templates", label: "邮件模板", icon: "📧" },
+      { to: "/admin/activity", label: "实时活动流", icon: "📡" },
+      { to: "/admin/tickets", label: "工单管理", icon: "🎫" },
+      { to: "/admin/support", label: "客服效能", icon: "📈" },
+      { to: "/admin/chat", label: "在线客服", icon: "💬" },
+      { to: "/admin/deletion", label: "注销审核", icon: "🗑️" },
+    ]},
+    { group: "权限管理", icon: "🔒", items: [
+      { to: "/admin/roles", label: "角色权限", icon: "👤" },
+      { to: "/admin/users-permission", label: "用户权限一览", icon: "👥" },
+      { to: "/admin/permission-audit", label: "权限审计", icon: "🔍" },
+    ]},
+    { group: "系统管理", icon: "🖥️", items: [
+      { to: "/admin/sys/db", label: "数据库管理", icon: "🗄️" },
+      { to: "/admin/sys/cache", label: "缓存管理", icon: "⚡" },
+      { to: "/admin/sys/logs", label: "日志查看器", icon: "📝" },
+      { to: "/admin/webhooks", label: "Webhook 配置", icon: "🔗" },
+      { to: "/admin/sys/version", label: "版本与变更", icon: "🏷️" },
+    ]},
+  ];
+
+  const salesNav: NavDef[] = [
+    { to: "/sales/customers", label: "客户管理", icon: "👥" },
+    { to: "/sales/reminders", label: "跟进提醒", icon: "⏰" },
+    { to: "/sales/performance", label: "业绩看板", icon: "📊" },
+  ];
+
   return (
-    <div style={{ display: "flex", minHeight: "100vh", fontFamily: "system-ui, sans-serif" }}>
-      {/* 侧边栏 */}
-      <aside style={{ width: 200, background: "#1e293b", color: "#fff", padding: "16px 0" }}>
-        <div style={{ padding: "0 20px 16px", fontWeight: 700, fontSize: 18 }}>3Cloud 控制台</div>
-        <nav style={{ display: "flex", flexDirection: "column" }}>
-          {navItems.map((item) => (
+    <div style={{ display: "flex", minHeight: "100vh", fontFamily: "var(--font-family)" }}>
+      {/* ═══════ 侧栏（对齐原型 .sidebar）═══════ */}
+      <aside style={{
+        position: "fixed", left: 0, top: 0, bottom: 0,
+        width: 220, background: "#13151e",
+        padding: "20px 0", zIndex: 100,
+        display: "flex", flexDirection: "column",
+      }}>
+        {/* Logo */}
+        <div style={{
+          padding: "0 20px 24px",
+          borderBottom: "1px solid rgba(255,255,255,.06)",
+          fontSize: 18, fontWeight: 600, color: "#e0e0e0",
+          display: "flex", alignItems: "center", gap: 8,
+        }}>
+          <span style={{ fontSize: 22 }}>☁️</span>
+          3Cloud
+        </div>
+
+        <nav style={{ flex: 1, overflowY: "auto", marginTop: 4 }}>
+          {/* Portal 导航 */}
+          {portalNav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.end}
               style={({ isActive }) => ({
-                padding: "10px 20px",
-                color: isActive ? "#38bdf8" : "#cbd5e1",
+                padding: "12px 20px", display: "flex", alignItems: "center", gap: 10,
+                fontSize: 14, color: isActive ? "#6a8aff" : "#666",
                 textDecoration: "none",
-                background: isActive ? "#0f172a" : "transparent",
-                borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                background: isActive ? "rgba(79,110,247,.12)" : "transparent",
+                borderRight: isActive ? "3px solid #6a8aff" : "3px solid transparent",
+                transition: "background .15s, color .15s",
               })}
             >
+              <span style={{ fontSize: 16 }}>{item.icon}</span>
               {item.label}
             </NavLink>
           ))}
+
+          {/* 业务员工作台 */}
           {isSales && (
-            <> 
+            <>
               <div style={{ padding: "16px 20px 6px", fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>
                 业务员工作台
               </div>
-              {navSales.map((item) => (
+              {salesNav.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  end={item.end}
                   style={({ isActive }) => ({
-                    padding: "10px 20px",
-                    color: isActive ? "#38bdf8" : "#cbd5e1",
+                    padding: "12px 20px", display: "flex", alignItems: "center", gap: 10,
+                    fontSize: 14, color: isActive ? "#6a8aff" : "#666",
                     textDecoration: "none",
-                    background: isActive ? "#0f172a" : "transparent",
-                    borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
+                    background: isActive ? "rgba(79,110,247,.12)" : "transparent",
+                    borderRight: isActive ? "3px solid #6a8aff" : "3px solid transparent",
+                    transition: "background .15s, color .15s",
                   })}
                 >
+                  <span style={{ fontSize: 16 }}>{item.icon}</span>
                   {item.label}
                 </NavLink>
               ))}
             </>
           )}
-          {isAdmin && (
-            <>
+
+          {/* 管理后台（折叠组） */}
+          {isAdmin && adminNav.map((group) => (
+            <div key={group.group}>
               <div style={{ padding: "16px 20px 6px", fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>
-                管理后台
+                {group.group}
               </div>
-              <NavLink
-                to="/admin/customers"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                客户管理
-              </NavLink>
-              <NavLink
-                to="/admin/agents"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                代理管理
-              </NavLink>
-              <NavLink
-                to="/admin/withdrawals"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                提现审核
-              </NavLink>
-              <NavLink
-                to="/admin/vendors"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                供应商管理
-              </NavLink>
-              <NavLink
-                to="/admin/vendor-settlements"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                供应商结算
-              </NavLink>
-              <NavLink
-                to="/admin/finance"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                财务管理
-              </NavLink>
-              <NavLink
-                to="/admin/consent"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                合规管理
-              </NavLink>
-              <NavLink
-                to="/admin/knowledge-base"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                客服支撑
-              </NavLink>
-              <div style={{ padding: "16px 20px 6px", fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>
-                权限管理
-              </div>
-              <NavLink
-                to="/admin/roles"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                角色权限
-              </NavLink>
-              <NavLink
-                to="/admin/users-permission"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                用户权限一览
-              </NavLink>
-              <NavLink
-                to="/admin/permission-audit"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                权限审计
-              </NavLink>
-              <div style={{ padding: "16px 20px 6px", fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>
-                系统管理
-              </div>
-              <NavLink
-                to="/admin/sys/db"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                数据库管理
-              </NavLink>
-              <NavLink
-                to="/admin/sys/cache"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                缓存管理
-              </NavLink>
-              <NavLink
-                to="/admin/sys/logs"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                日志查看器
-              </NavLink>
-              <NavLink
-                to="/admin/webhooks"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                Webhook 配置
-              </NavLink>
-              <NavLink
-                to="/admin/sys/version"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                版本与变更
-              </NavLink>
-              <NavLink
-                to="/admin/models"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                模型管理
-              </NavLink>
-              <NavLink
-                to="/admin/invoices"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                税票管理
-              </NavLink>
-              <NavLink
-                to="/admin/real-name"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                实名审核
-              </NavLink>
-              <NavLink
-                to="/admin/redemption"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                兑换码
-              </NavLink>
-              <NavLink
-                to="/admin/announcements"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                公告管理
-              </NavLink>
-              <NavLink
-                to="/admin/campaigns"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                营销活动
-              </NavLink>
-              <NavLink
-                to="/admin/email-templates"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                邮件模板
-              </NavLink>
-              <NavLink
-                to="/admin/activity"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                实时活动流
-              </NavLink>
-              <NavLink
-                to="/admin/tickets"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                工单管理
-              </NavLink>
-              <NavLink
-                to="/admin/support"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                客服效能
-              </NavLink>
-              <NavLink
-                to="/admin/chat"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                在线客服
-              </NavLink>
-              <NavLink
-                to="/admin/deletion"
-                style={({ isActive }) => ({
-                  padding: "10px 20px",
-                  color: isActive ? "#38bdf8" : "#cbd5e1",
-                  textDecoration: "none",
-                  background: isActive ? "#0f172a" : "transparent",
-                  borderLeft: isActive ? "3px solid #38bdf8" : "3px solid transparent",
-                })}
-              >
-                注销审核
-              </NavLink>
-            </>
-          )}
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  style={({ isActive }) => ({
+                    padding: "10px 20px 10px 48px", display: "flex", alignItems: "center", gap: 8,
+                    fontSize: 13, color: isActive ? "#6a8aff" : "#666",
+                    textDecoration: "none",
+                    background: isActive ? "rgba(79,110,247,.12)" : "transparent",
+                    borderRight: isActive ? "3px solid #6a8aff" : "3px solid transparent",
+                    transition: "background .15s, color .15s",
+                  })}
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+            </div>
+          ))}
         </nav>
       </aside>
 
-      {/* 主区 */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        <header
-          style={{
-            height: 56,
-            borderBottom: "1px solid #e2e8f0",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            padding: "0 24px",
-            gap: 16,
-          }}
-        >
-          <span>
-            余额: <strong>¥{((user?.balance ?? 0) / 100).toFixed(2)}</strong>
-          </span>
-          <span>{user?.username ?? user?.email}</span>
-          <Link to="/announcements" style={{ position: "relative", textDecoration: "none", fontSize: 20, cursor: "pointer" }} title="公告">
-            📢
-            {unreadQ.data?.unread ? (
-              <span style={{ position: "absolute", top: -6, right: -12, background: "#dc2626", color: "#fff", borderRadius: 10, padding: "0 6px", fontSize: 11, minWidth: 18, textAlign: "center" }}>
-                {unreadQ.data.unread > 99 ? "99+" : unreadQ.data.unread}
-              </span>
-            ) : null}
-          </Link>
-          <button onClick={handleLogout} style={{ cursor: "pointer", padding: "6px 12px" }}>
-            退出
-          </button>
-        </header>
-        <main style={{ padding: 24, flex: 1, background: "#f8fafc" }}>
+      {/* ═══════ 主内容区（对齐原型 .main）═══════ */}
+      <div style={{ marginLeft: 220, flex: 1, display: "flex", flexDirection: "column" }}>
+        {/* 顶栏（对齐原型 .topbar） */}
+        <div style={{
+          display: "flex", justifyContent: "space-between",
+          alignItems: "center", marginBottom: 24,
+          padding: "20px 24px 0",
+        }}>
+          <div style={{ fontSize: 13, color: "#888" }}>
+            <span style={{ color: "#666", cursor: "default" }}>{user?.username ?? user?.email ?? "未登录"}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 13, color: "#888" }}>
+            <span style={{ cursor: "pointer", color: "#6a8aff", fontWeight: 500 }} onClick={() => navigate("/recharge")}>
+              余额: ¥{((user?.balance ?? 0) / 100).toFixed(2)}
+            </span>
+            <Link to="/announcements" style={{ position: "relative", fontSize: 18, cursor: "pointer", textDecoration: "none" }} title="公告">
+              🔔
+              {unreadQ.data?.unread ? (
+                <span style={{
+                  position: "absolute", top: -4, right: -8,
+                  background: "#e53935", color: "#fff",
+                  fontSize: 10, width: 16, height: 16, borderRadius: "50%",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  {unreadQ.data.unread > 99 ? "99+" : unreadQ.data.unread}
+                </span>
+              ) : null}
+            </Link>
+            <button onClick={handleLogout} style={{
+              background: "none", border: "none", color: "#888",
+              fontSize: 13, cursor: "pointer", padding: 0,
+            }}>
+              退出
+            </button>
+          </div>
+        </div>
+
+        {/* 内容 */}
+        <main style={{ padding: "0 24px 20px", flex: 1, background: "#f0f2f5" }}>
           <ConsentBanner />
           <Outlet />
         </main>

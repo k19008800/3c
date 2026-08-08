@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { extractError } from "../lib/api";
 import { useAuthStore } from "../store/auth";
+import { HelpIcon } from "@3cloud/shared-ui";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("admin@3cloud.io");
@@ -26,9 +27,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f1f5f9", fontFamily: "system-ui, sans-serif" }}>
-      <form onSubmit={handleSubmit} style={{ background: "#fff", padding: 40, borderRadius: 12, width: 360, boxShadow: "0 4px 20px rgba(0,0,0,.08)" }}>
-        <h1 style={{ marginBottom: 24, fontSize: 22 }}>3Cloud 控制台</h1>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--color-bg)", fontFamily: "system-ui, sans-serif" }}>
+      <form onSubmit={handleSubmit} style={{ background: "var(--color-panel)", padding: 40, borderRadius: 12, width: 360, boxShadow: "0 4px 20px rgba(0,0,0,.08)" }}>
+        <h1 style={{ marginBottom: 24, fontSize: 22, display: "flex", alignItems: "center", gap: 8 }}>
+          3Cloud 控制台
+          <HelpIcon text="管理控制台登录入口。使用管理员账号密码登录后管理 3Cloud 平台。默认演示账号：admin@3cloud.io / seed-admin。" level="page" />
+        </h1>
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: "block", marginBottom: 6, fontSize: 14 }}>邮箱</label>
           <input
@@ -36,7 +40,7 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="邮箱"
-            style={{ width: "100%", padding: 10, boxSizing: "border-box", borderRadius: 6, border: "1px solid #cbd5e1" }}
+            style={{ width: "100%", padding: 10, boxSizing: "border-box", borderRadius: 6, border: `1px solid var(--color-border)` }}
             required
           />
         </div>
@@ -47,19 +51,19 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="密码"
-            style={{ width: "100%", padding: 10, boxSizing: "border-box", borderRadius: 6, border: "1px solid #cbd5e1" }}
+            style={{ width: "100%", padding: 10, boxSizing: "border-box", borderRadius: 6, border: `1px solid var(--color-border)` }}
             required
           />
         </div>
-        {error && <div style={{ color: "#dc2626", marginBottom: 12, fontSize: 14 }}>{error}</div>}
+        {error && <div style={{ color: "var(--color-danger-text)", marginBottom: 12, fontSize: 14 }}>{error}</div>}
         <button
           type="submit"
           disabled={loading}
-          style={{ width: "100%", padding: 12, background: "#2563eb", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 15 }}
+          style={{ width: "100%", padding: 12, background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 15 }}
         >
           {loading ? "登录中..." : "登录"}
         </button>
-        <p style={{ marginTop: 12, fontSize: 12, color: "#64748b" }}>默认演示账号：admin@3cloud.io / seed-admin</p>
+        <p style={{ marginTop: 12, fontSize: 12, color: "var(--color-text-secondary)" }}>默认演示账号：admin@3cloud.io / seed-admin</p>
       </form>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
+import { HelpIcon, StatusBadge, Modal, useToast } from "@3cloud/shared-ui";
 
 /**
  * 合规法务管理（SPEC-§33）
@@ -38,16 +39,15 @@ interface ExportRow {
   notification_sent: boolean;
 }
 
-const card: React.CSSProperties = { background: "#fff", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)", marginBottom: 16 };
+const card: React.CSSProperties = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)", marginBottom: 16 };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
-const inp: React.CSSProperties = { padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", width: "100%", boxSizing: "border-box", marginBottom: 10, fontFamily: "inherit" };
-const EXPORT_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  pending: { bg: "#fef3c7", color: "#92400e", label: "待处理" },
-  processing: { bg: "#dbeafe", color: "#1e40af", label: "处理中" },
-  completed: { bg: "#dcfce7", color: "#166534", label: "已完成" },
-  failed: { bg: "#fee2e2", color: "#991b1b", label: "失败" },
-  rejected: { bg: "#f1f5f9", color: "#64748b", label: "已拒绝" },
-  overdue: { bg: "#fee2e2", color: "#991b1b", label: "已过期" },
+const inp: React.CSSProperties = { padding: "8px 12px", borderRadius: 8, border: `1px solid var(--color-border)`, width: "100%", boxSizing: "border-box", marginBottom: 10, fontFamily: "inherit" };
+
+const EXPORT_STATUS_MAP: Record<string, "success" | "warning" | "danger" | "info" | "default"> = {
+  pending: "warning", processing: "info", completed: "success", failed: "danger", rejected: "default", overdue: "danger",
+};
+const EXPORT_LABEL: Record<string, string> = {
+  pending: "待处理", processing: "处理中", completed: "已完成", failed: "失败", rejected: "已拒绝", overdue: "已过期",
 };
 
 const HELP: Record<string, { title: string; body: string }> = {
@@ -58,19 +58,14 @@ const HELP: Record<string, { title: string; body: string }> = {
 
 export default function AdminConsentPage() {
   const qc = useQueryClient();
+  const { toast } = useToast();
   const [tab, setTab] = useState<"privacy" | "tos" | "export">("privacy");
-  const [notice, setNotice] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
 
   return (
     <div style={{ maxWidth: 1000, margin: "0 auto", padding: 24, fontFamily: "system-ui, sans-serif" }}>
       <h2 style={{ marginBottom: 4 }}>
-        合规法务管理{" "}
-        <span
-          style={{ fontSize: 13, color: "#94a3b8", cursor: "help" }}
-          title="覆盖隐私政策/服务条款版本管理、用户数据导出（GDPR 数据可携带权）。所有协议变更属敏感操作，全程留审计。"
-        >
-          [?]
-        </span>
+        合规法务管理
+        <HelpIcon text="覆盖隐私政策/服务条款版本管理、用户数据导出（GDPR 数据可携带权）。所有协议变更属敏感操作，全程留审计。" level="page" />
       </h2>
       <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
         {([["privacy", "隐私政策"], ["tos", "服务条款"], ["export", "数据导出"]] as const).map(([k, label]) => (
@@ -79,8 +74,8 @@ export default function AdminConsentPage() {
             onClick={() => setTab(k)}
             style={{
               ...btnBase,
-              background: tab === k ? "#2563eb" : "#e2e8f0",
-              color: tab === k ? "#fff" : "#334155",
+              background: tab === k ? "var(--color-primary)" : "var(--color-border)",
+              color: tab === k ? "#fff" : "var(--color-text)",
             }}
           >
             {label}
@@ -88,21 +83,15 @@ export default function AdminConsentPage() {
         ))}
       </div>
 
-      {notice && (
-        <div style={{ padding: "10px 14px", borderRadius: 8, marginBottom: 14, fontSize: 14, background: notice.type === "ok" ? "#dcfce7" : "#fee2e2", color: notice.type === "ok" ? "#166534" : "#991b1b" }}>
-          {notice.msg}
-        </div>
-      )}
-
-      {tab === "privacy" && <PolicySection kind="privacy" notice={setNotice} qc={qc} help={HELP.privacy!} />}
-      {tab === "tos" && <PolicySection kind="tos" notice={setNotice} qc={qc} help={HELP.tos!} />}
-      {tab === "export" && <ExportSection notice={setNotice} qc={qc} help={HELP.export!} />}
+      {tab === "privacy" && <PolicySection kind="privacy" toast={toast} qc={qc} help={HELP.privacy!} />}
+      {tab === "tos" && <PolicySection kind="tos" toast={toast} qc={qc} help={HELP.tos!} />}
+      {tab === "export" && <ExportSection toast={toast} qc={qc} help={HELP.export!} />}
     </div>
   );
 }
 
 /* ============ 隐私政策 / 服务条款 共用 ============ */
-function PolicySection({ kind, notice, qc, help }: { kind: "privacy" | "tos"; notice: (n: { type: "ok" | "err"; msg: string } | null) => void; qc: ReturnType<typeof useQueryClient>; help: { title: string; body: string } }) {
+function PolicySection({ kind, toast, qc, help }: { kind: "privacy" | "tos"; toast: ReturnType<typeof useToast>["toast"]; qc: ReturnType<typeof useQueryClient>; help: { title: string; body: string } }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ version: "", title: "", content: "", summary: "" });
   const [viewId, setViewId] = useState<number | null>(null);
@@ -128,47 +117,51 @@ function PolicySection({ kind, notice, qc, help }: { kind: "privacy" | "tos"; no
     mutationFn: async () => (await api.post(`/admin/settings/${endpoint}/versions`, form)).data,
     onSuccess: () => {
       setShowForm(false); setForm({ version: "", title: "", content: "", summary: "" });
-      notice({ type: "ok", msg: `已创建${label}草稿` });
+      toast.success(`已创建${label}草稿`);
       qc.invalidateQueries({ queryKey: [`admin-${endpoint}`] });
     },
-    onError: (e: any) => notice({ type: "err", msg: extractError(e) }),
+    onError: (e: any) => toast.error(extractError(e)),
   });
 
   const publishMut = useMutation({
     mutationFn: async (id: number) => (await api.post(`/admin/settings/${endpoint}/versions/${id}/publish`, {})).data,
     onSuccess: (d: any) => {
-      notice({ type: "ok", msg: d.message || "已发布" });
+      toast.success(d.message || "已发布");
       qc.invalidateQueries({ queryKey: [`admin-${endpoint}`] });
     },
-    onError: (e: any) => notice({ type: "err", msg: extractError(e) }),
+    onError: (e: any) => toast.error(extractError(e)),
   });
 
   const rollbackMut = useMutation({
     mutationFn: async (id: number) => (await api.post(`/admin/settings/${endpoint}/versions/${id}/rollback`, {})).data,
     onSuccess: (d: any) => {
-      notice({ type: "ok", msg: d.message || "已回滚" });
+      toast.success(d.message || "已回滚");
       qc.invalidateQueries({ queryKey: [`admin-${endpoint}`] });
     },
-    onError: (e: any) => notice({ type: "err", msg: extractError(e) }),
+    onError: (e: any) => toast.error(extractError(e)),
   });
+
+  const getVersionStatus = (s: string): "success" | "warning" | "danger" | "info" | "default" => {
+    if (s === "published") return "success";
+    if (s === "revoked") return "danger";
+    return "default";
+  };
 
   return (
     <div>
       <div style={card}>
         <h3 style={{ marginTop: 0, display: "flex", alignItems: "center" }}>
-          {label}版本管理{" "}
-          <span style={{ fontSize: 13, color: "#94a3b8", cursor: "help", marginLeft: 8 }} title={help.body}>
-            [?]
-          </span>
+          {label}版本管理
+          <HelpIcon text={help.body} level="page" />
         </h3>
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          <button onClick={() => setShowForm(!showForm)} style={{ ...btnBase, background: "#2563eb", color: "#fff" }}>
+          <button onClick={() => setShowForm(!showForm)} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff" }}>
             {showForm ? "取消" : "发布新版本"}
           </button>
         </div>
 
         {showForm && (
-          <div style={{ background: "#f8fafc", padding: 16, borderRadius: 8, marginBottom: 14, border: "1px solid #e2e8f0" }}>
+          <div style={{ background: "var(--color-bg)", padding: 16, borderRadius: 8, marginBottom: 14, border: `1px solid var(--color-border)` }}>
             <input style={inp} placeholder="版本号（如 v2.1）" value={form.version} onChange={(e) => setForm({ ...form, version: e.target.value })} />
             <input style={inp} placeholder="标题（可选）" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
             <textarea
@@ -181,7 +174,7 @@ function PolicySection({ kind, notice, qc, help }: { kind: "privacy" | "tos"; no
             <button
               onClick={() => createMut.mutate()}
               disabled={!form.version.trim() || !form.content.trim() || createMut.isPending}
-              style={{ ...btnBase, background: "#2563eb", color: "#fff", opacity: !form.version.trim() || !form.content.trim() ? 0.6 : 1 }}
+              style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", opacity: !form.version.trim() || !form.content.trim() ? 0.6 : 1 }}
             >
               {createMut.isPending ? "创建中..." : "保存草稿"}
             </button>
@@ -189,13 +182,13 @@ function PolicySection({ kind, notice, qc, help }: { kind: "privacy" | "tos"; no
         )}
 
         {versionsQ.isLoading ? (
-          <div style={{ color: "#64748b" }}>加载中...</div>
+          <div style={{ color: "var(--color-text-secondary)" }}>加载中...</div>
         ) : versionsQ.data?.length === 0 ? (
           <div style={{ color: "#94a3b8" }}>暂无版本记录</div>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead>
-              <tr style={{ borderBottom: "2px solid #e2e8f0", textAlign: "left" }}>
+              <tr style={{ borderBottom: `2px solid var(--color-border)`, textAlign: "left" }}>
                 <th style={{ padding: "8px" }}>版本</th>
                 <th style={{ padding: "8px" }}>状态</th>
                 <th style={{ padding: "8px" }}>发布时间</th>
@@ -207,40 +200,24 @@ function PolicySection({ kind, notice, qc, help }: { kind: "privacy" | "tos"; no
             </thead>
             <tbody>
               {versionsQ.data?.map((v) => (
-                <tr key={v.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                <tr key={v.id} style={{ borderBottom: `1px solid var(--color-border)` }}>
                   <td style={{ padding: "8px", fontWeight: 600 }}>{v.version}</td>
                   <td style={{ padding: "8px" }}>
-                    <span
-                      style={{
-                        padding: "3px 8px", borderRadius: 6, fontSize: 12,
-                        background: v.status === "published" ? "#dcfce7" : v.status === "revoked" ? "#fee2e2" : "#f1f5f9",
-                        color: v.status === "published" ? "#166534" : v.status === "revoked" ? "#991b1b" : "#64748b",
-                      }}
-                    >
+                    <StatusBadge status={getVersionStatus(v.status)}>
                       {v.status === "published" ? "已发布" : v.status === "revoked" ? "已撤销" : "草稿"}
-                    </span>
+                    </StatusBadge>
                   </td>
                   <td style={{ padding: "8px", color: "#475569" }}>{v.published_at ? new Date(v.published_at).toLocaleDateString() : "—"}</td>
                   <td style={{ padding: "8px" }}>{v.consent_count}</td>
-                  <td style={{ padding: "8px", color: v.pending_count > 0 ? "#b91c1c" : "#475569" }}>{v.status === "published" ? v.pending_count : "—"}</td>
+                  <td style={{ padding: "8px", color: v.pending_count > 0 ? "var(--color-danger-text)" : "#475569" }}>{v.status === "published" ? v.pending_count : "—"}</td>
                   <td style={{ padding: "8px" }}>{v.status === "published" ? `${v.consent_rate}%` : "—"}</td>
                   <td style={{ padding: "8px" }}>
-                    <button onClick={() => setViewId(v.id)} style={{ ...btnBase, background: "#e2e8f0", color: "#334155", marginRight: 6 }}>查看</button>
+                    <button onClick={() => setViewId(v.id)} style={{ ...btnBase, background: "var(--color-border)", color: "var(--color-text)", marginRight: 6 }}>查看</button>
                     {v.status === "draft" && (
-                      <button
-                        onClick={() => publishMut.mutate(v.id)}
-                        style={{ ...btnBase, background: "#2563eb", color: "#fff", marginRight: 6 }}
-                      >
-                        发布
-                      </button>
+                      <button onClick={() => publishMut.mutate(v.id)} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", marginRight: 6 }}>发布</button>
                     )}
                     {(v.status === "published" || v.status === "revoked") && versionsQ.data!.some((x) => x.status === "published" && x.id !== v.id) && (
-                      <button
-                        onClick={() => rollbackMut.mutate(v.id)}
-                        style={{ ...btnBase, background: "#f59e0b", color: "#fff" }}
-                      >
-                        回滚到此
-                      </button>
+                      <button onClick={() => rollbackMut.mutate(v.id)} style={{ ...btnBase, background: "#f59e0b", color: "#fff" }}>回滚到此</button>
                     )}
                   </td>
                 </tr>
@@ -250,34 +227,28 @@ function PolicySection({ kind, notice, qc, help }: { kind: "privacy" | "tos"; no
         )}
       </div>
 
-      {/* 版本内容查看 */}
-      {viewId && viewQ.data && (
-        <div style={card}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h3 style={{ margin: 0 }}>
-              版本 {viewQ.data.version} 内容
-              <span style={{ fontSize: 13, color: "#94a3b8", marginLeft: 8, cursor: "help" }} title="查看该版本完整内容。">[?]</span>
-            </h3>
-            <button onClick={() => setViewId(null)} style={{ ...btnBase, background: "#e2e8f0", color: "#334155" }}>关闭</button>
+      {/* 版本内容查看 Modal */}
+      <Modal open={!!viewId && !!viewQ.data} onClose={() => setViewId(null)} title={`版本 ${viewQ.data?.version ?? ""} 内容`}>
+        {viewQ.data && (
+          <div>
+            {viewQ.data.summary && (
+              <div style={{ margin: "12px 0", padding: "10px 14px", background: "#fefce8", borderRadius: 8, fontSize: 13, color: "#854d0e" }}>
+                变更摘要：{viewQ.data.summary}
+              </div>
+            )}
+            <pre style={{ whiteSpace: "pre-wrap", background: "var(--color-bg)", padding: 16, borderRadius: 8, fontSize: 13, lineHeight: 1.7 }}>
+              {viewQ.data.title && `${viewQ.data.title}\n\n`}
+              版本：{viewQ.data.version} ｜ 状态：{viewQ.data.status === "published" ? "已发布" : viewQ.data.status === "revoked" ? "已撤销" : "草稿"} ｜ 已同意：{viewQ.data.consent_count} 人
+            </pre>
           </div>
-          {viewQ.data.summary && (
-            <div style={{ margin: "12px 0", padding: "10px 14px", background: "#fefce8", borderRadius: 8, fontSize: 13, color: "#854d0e" }}>
-              变更摘要：{viewQ.data.summary}
-            </div>
-          )}
-          <pre style={{ whiteSpace: "pre-wrap", background: "#f8fafc", padding: 16, borderRadius: 8, fontSize: 13, lineHeight: 1.7 }}>
-            {viewQ.data.title && `${viewQ.data.title}\n\n`}
-            {/* 内容接口未暴露，此处展示版本元信息 */}
-            版本：{viewQ.data.version} ｜ 状态：{viewQ.data.status === "published" ? "已发布" : viewQ.data.status === "revoked" ? "已撤销" : "草稿"} ｜ 已同意：{viewQ.data.consent_count} 人
-          </pre>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }
 
 /* ============ 数据导出 ============ */
-function ExportSection({ notice, qc, help }: { notice: (n: { type: "ok" | "err"; msg: string } | null) => void; qc: ReturnType<typeof useQueryClient>; help: { title: string; body: string } }) {
+function ExportSection({ toast, qc, help }: { toast: ReturnType<typeof useToast>["toast"]; qc: ReturnType<typeof useQueryClient>; help: { title: string; body: string } }) {
   const [statusFilter, setStatusFilter] = useState("");
 
   const listQ = useQuery({
@@ -295,27 +266,27 @@ function ExportSection({ notice, qc, help }: { notice: (n: { type: "ok" | "err";
   const processMut = useMutation({
     mutationFn: async (id: number) => (await api.post(`/admin/data-export/${id}/process`, {})).data,
     onSuccess: (d: any) => {
-      notice({ type: d.data?.status === "completed" ? "ok" : "err", msg: d.message || "已处理" });
+      toast.success(d.message || "已处理");
       qc.invalidateQueries({ queryKey: ["admin-data-export"] });
       qc.invalidateQueries({ queryKey: ["admin-data-export-stats"] });
     },
-    onError: (e: any) => notice({ type: "err", msg: extractError(e) }),
+    onError: (e: any) => toast.error(extractError(e)),
   });
 
   const rejectMut = useMutation({
     mutationFn: async ({ id, reason }: { id: number; reason: string }) => (await api.post(`/admin/data-export/${id}/reject`, { reason })).data,
     onSuccess: () => {
-      notice({ type: "ok", msg: "已拒绝" });
+      toast.success("已拒绝");
       qc.invalidateQueries({ queryKey: ["admin-data-export"] });
       qc.invalidateQueries({ queryKey: ["admin-data-export-stats"] });
     },
-    onError: (e: any) => notice({ type: "err", msg: extractError(e) }),
+    onError: (e: any) => toast.error(extractError(e)),
   });
 
   const resendMut = useMutation({
     mutationFn: async (id: number) => (await api.post(`/admin/data-export/${id}/resend`, {})).data,
-    onSuccess: (d: any) => notice({ type: "ok", msg: d.message || (d.data?.notification_sent ? "已发送" : "SMTP 未配置") }),
-    onError: (e: any) => notice({ type: "err", msg: extractError(e) }),
+    onSuccess: (d: any) => toast.success(d.message || (d.data?.notification_sent ? "已发送" : "SMTP 未配置")),
+    onError: (e: any) => toast.error(extractError(e)),
   });
 
   const [rejectId, setRejectId] = useState<number | null>(null);
@@ -337,11 +308,11 @@ function ExportSection({ notice, qc, help }: { notice: (n: { type: "ok" | "err";
           <button
             onClick={() => rejectMut.mutate({ id: rejectId, reason: rejectReason })}
             disabled={!rejectReason.trim()}
-            style={{ ...btnBase, background: "#dc2626", color: "#fff", opacity: !rejectReason.trim() ? 0.6 : 1 }}
+            style={{ ...btnBase, background: "var(--color-danger-text)", color: "#fff", opacity: !rejectReason.trim() ? 0.6 : 1 }}
           >
             确认拒绝
           </button>
-          <button onClick={() => setRejectId(null)} style={{ ...btnBase, background: "#e2e8f0", color: "#334155" }}>取消</button>
+          <button onClick={() => setRejectId(null)} style={{ ...btnBase, background: "var(--color-border)", color: "var(--color-text)" }}>取消</button>
         </div>
       </div>
     );
@@ -351,22 +322,17 @@ function ExportSection({ notice, qc, help }: { notice: (n: { type: "ok" | "err";
     <div>
       <div style={card}>
         <h3 style={{ marginTop: 0, display: "flex", alignItems: "center" }}>
-          数据导出请求管理{" "}
-          <span style={{ fontSize: 13, color: "#94a3b8", cursor: "help", marginLeft: 8 }} title={help.body}>
-            [?]
-          </span>
+          数据导出请求管理
+          <HelpIcon text={help.body} level="page" />
         </h3>
 
         {statsQ.data && (
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
-            {Object.entries(statsQ.data).map(([k, v]) => {
-              const s = EXPORT_STYLE[k] ?? { bg: "#f1f5f9", color: "#475569", label: k };
-              return (
-                <span key={k} style={{ background: s.bg, color: s.color, padding: "4px 12px", borderRadius: 999, fontSize: 12 }}>
-                  {s.label} {v}
-                </span>
-              );
-            })}
+            {Object.entries(statsQ.data).map(([k, v]) => (
+              <StatusBadge key={k} status={EXPORT_STATUS_MAP[k] ?? "default"} variant="pill">
+                {EXPORT_LABEL[k] ?? k} {v}
+              </StatusBadge>
+            ))}
           </div>
         )}
 
@@ -381,13 +347,13 @@ function ExportSection({ notice, qc, help }: { notice: (n: { type: "ok" | "err";
         </select>
 
         {listQ.isLoading ? (
-          <div style={{ color: "#64748b" }}>加载中...</div>
+          <div style={{ color: "var(--color-text-secondary)" }}>加载中...</div>
         ) : listQ.data?.length === 0 ? (
           <div style={{ color: "#94a3b8" }}>暂无导出请求</div>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
-              <tr style={{ borderBottom: "2px solid #e2e8f0", textAlign: "left" }}>
+              <tr style={{ borderBottom: `2px solid var(--color-border)`, textAlign: "left" }}>
                 <th style={{ padding: "8px" }}>ID</th>
                 <th style={{ padding: "8px" }}>用户</th>
                 <th style={{ padding: "8px" }}>申请时间</th>
@@ -399,42 +365,36 @@ function ExportSection({ notice, qc, help }: { notice: (n: { type: "ok" | "err";
             </thead>
             <tbody>
               {listQ.data?.map((r) => {
-                const st = EXPORT_STYLE[r.status] ?? { bg: "#f1f5f9", color: "#475569", label: r.status };
+                const st = EXPORT_STATUS_MAP[r.status] ?? "default";
                 return (
-                  <tr key={r.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                  <tr key={r.id} style={{ borderBottom: `1px solid var(--color-border)` }}>
                     <td style={{ padding: "8px" }}>#{r.id}</td>
                     <td style={{ padding: "8px" }}>
                       <div style={{ fontWeight: 600 }}>{r.username}</div>
-                      <div style={{ color: "#64748b", fontSize: 12 }}>{r.email}</div>
+                      <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>{r.email}</div>
                     </td>
                     <td style={{ padding: "8px", color: "#475569" }}>{new Date(r.requested_at).toLocaleString()}</td>
                     <td style={{ padding: "8px" }}>
-                      <span style={{ background: st.bg, color: st.color, padding: "3px 8px", borderRadius: 6, fontSize: 12 }}>{st.label}</span>
+                      <StatusBadge status={st}>{EXPORT_LABEL[r.status] ?? r.status}</StatusBadge>
                     </td>
                     <td style={{ padding: "8px", color: "#475569" }}>
-                      {r.status === "completed" && r.file_size_bytes ? `${(r.file_size_bytes / 1024).toFixed(1)} KB / ${r.file_count} 文件` : r.error_message ? <span style={{ color: "#b91c1c" }}>{r.error_message}</span> : "—"}
+                      {r.status === "completed" && r.file_size_bytes ? `${(r.file_size_bytes / 1024).toFixed(1)} KB / ${r.file_count} 文件` : r.error_message ? <span style={{ color: "var(--color-danger-text)" }}>{r.error_message}</span> : "—"}
                     </td>
-                    <td style={{ padding: "8px", color: r.deadline && new Date(r.deadline) < new Date() ? "#b91c1c" : "#475569" }}>
+                    <td style={{ padding: "8px", color: r.deadline && new Date(r.deadline) < new Date() ? "var(--color-danger-text)" : "#475569" }}>
                       {r.deadline ? new Date(r.deadline).toLocaleDateString() : "—"}
                     </td>
                     <td style={{ padding: "8px" }}>
                       {r.status === "pending" && (
                         <>
-                          <button
-                            onClick={() => processMut.mutate(r.id)}
-                            disabled={processMut.isPending}
-                            style={{ ...btnBase, background: "#2563eb", color: "#fff", marginRight: 6 }}
-                          >
-                            处理
-                          </button>
-                          <button onClick={() => setRejectId(r.id)} style={{ ...btnBase, background: "#dc2626", color: "#fff" }}>拒绝</button>
+                          <button onClick={() => processMut.mutate(r.id)} disabled={processMut.isPending} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", marginRight: 6 }}>处理</button>
+                          <button onClick={() => setRejectId(r.id)} style={{ ...btnBase, background: "var(--color-danger-text)", color: "#fff" }}>拒绝</button>
                         </>
                       )}
                       {r.status === "failed" && (
                         <button onClick={() => processMut.mutate(r.id)} style={{ ...btnBase, background: "#f59e0b", color: "#fff" }}>重新处理</button>
                       )}
                       {r.status === "completed" && (
-                        <button onClick={() => resendMut.mutate(r.id)} style={{ ...btnBase, background: "#e2e8f0", color: "#334155" }}>重发链接</button>
+                        <button onClick={() => resendMut.mutate(r.id)} style={{ ...btnBase, background: "var(--color-border)", color: "var(--color-text)" }}>重发链接</button>
                       )}
                     </td>
                   </tr>

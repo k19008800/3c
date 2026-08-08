@@ -1,19 +1,42 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
+import { HelpIcon, SkeletonGroup, useToast } from "@3cloud/shared-ui";
 
 /**
  * 在线客服 对齐 SPEC-§27.1（用户端）
  */
-const card: React.CSSProperties = { background: "#fff", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
-const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
+const card: React.CSSProperties = {
+  background: "#fff",
+  padding: 20,
+  borderRadius: 10,
+  boxShadow: "0 1px 4px rgba(0,0,0,.06)",
+};
+const btnBase: React.CSSProperties = {
+  padding: "8px 14px",
+  borderRadius: 8,
+  border: "none",
+  cursor: "pointer",
+  fontWeight: 600,
+  fontSize: 13,
+};
 
-interface ChatMsg { id: number; sender_type: string; content: string; created_at: string; }
-interface HistItem { session_id: number; status: string; created_at: string; msg_count: number; }
+interface ChatMsg {
+  id: number;
+  sender_type: string;
+  content: string;
+  created_at: string;
+}
+interface HistItem {
+  session_id: number;
+  status: string;
+  created_at: string;
+  msg_count: number;
+}
 
 export default function UserChatPage() {
-  const [notice, setNotice] = useState<{ type: "success" | "error"; msg: string } | null>(null);
-  const [status, setStatus] = useState<string>("idle"); // idle | connecting | queued | active | closed
+  const { toast } = useToast();
+  const [status, setStatus] = useState<string>("idle");
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [queued, setQueued] = useState<{ position: number } | null>(null);
@@ -24,43 +47,91 @@ export default function UserChatPage() {
   const authToken = useAuthToken();
   const histQ = useQuery({
     queryKey: ["me-chat-history"],
-    queryFn: async () => (await api.get<{ data: { list: HistItem[] } }>("/me/chat/history")).data.data,
+    queryFn: async () =>
+      (await api.get<{ data: { list: HistItem[] } }>("/me/chat/history")).data.data,
   });
   const sessMsgsQ = useQuery({
     queryKey: ["me-chat-msgs", historyId],
-    queryFn: async () => (await api.get<{ data: { messages: ChatMsg[] } }>(`/me/chat/sessions/${historyId}/messages`)).data.data,
+    queryFn: async () =>
+      (await api.get<{ data: { messages: ChatMsg[] } }>(`/me/chat/sessions/${historyId}/messages`))
+        .data.data,
     enabled: !!historyId,
   });
 
-  // 滚动到底部
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-  // 断开清理
-  useEffect(() => () => { wsRef.current?.close(); }, []);
+  useEffect(
+    () => () => {
+      wsRef.current?.close();
+    },
+    [],
+  );
 
   const connect = () => {
-    if (!authToken) { setNotice({ type: "error", msg: "请先登录" }); return; }
+    if (!authToken) {
+      toast.error("请先登录");
+      return;
+    }
     setStatus("connecting");
-    const ws = new WebSocket(`ws://${location.host}/api/v1/ws/chat?token=${encodeURIComponent(authToken)}`);
+    const ws = new WebSocket(
+      `ws://${location.host}/api/v1/ws/chat?token=${encodeURIComponent(authToken)}`,
+    );
     wsRef.current = ws;
-    ws.onopen = () => { ws.send(JSON.stringify({ type: "start" })); };
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: "start" }));
+    };
     ws.onmessage = (e) => {
       const d = JSON.parse(e.data);
-      if (d.type === "queued") { setStatus("queued"); setQueued({ position: d.position }); }
-      else if (d.type === "connected" || d.type === "staff_connected") { setStatus("active"); setMessages((m) => [...m, { id: Date.now(), sender_type: "system", content: "客服已接入，请问有什么可以帮助您？", created_at: new Date().toISOString() }]); }
-      else if (d.type === "staff_message") { setMessages((m) => [...m, { id: d.message.id, sender_type: "staff", content: d.message.content, created_at: d.message.created_at }]); }
-      else if (d.type === "echo_user") { /* own msg echoed */ }
-      else if (d.type === "closed" || d.type === "session_closed") { setStatus("closed"); ws.close(); }
-      else if (d.type === "error") setNotice({ type: "error", msg: d.message });
+      if (d.type === "queued") {
+        setStatus("queued");
+        setQueued({ position: d.position });
+      } else if (d.type === "connected" || d.type === "staff_connected") {
+        setStatus("active");
+        setMessages((m) => [
+          ...m,
+          {
+            id: Date.now(),
+            sender_type: "system",
+            content: "客服已接入，请问有什么可以帮助您？",
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } else if (d.type === "staff_message") {
+        setMessages((m) => [
+          ...m,
+          {
+            id: d.message.id,
+            sender_type: "staff",
+            content: d.message.content,
+            created_at: d.message.created_at,
+          },
+        ]);
+      } else if (d.type === "closed" || d.type === "session_closed") {
+        setStatus("closed");
+        ws.close();
+      } else if (d.type === "error") toast.error(d.message);
     };
-    ws.onerror = () => { setStatus("idle"); setNotice({ type: "error", msg: "连接失败" }); };
+    ws.onerror = () => {
+      setStatus("idle");
+      toast.error("连接失败");
+    };
   };
 
   const send = () => {
     if (!input.trim() || !wsRef.current) return;
     const content = input.trim();
     wsRef.current.send(JSON.stringify({ type: "message", content }));
-    setMessages((m) => [...m, { id: Date.now(), sender_type: "user", content, created_at: new Date().toISOString() }]);
+    setMessages((m) => [
+      ...m,
+      {
+        id: Date.now(),
+        sender_type: "user",
+        content,
+        created_at: new Date().toISOString(),
+      },
+    ]);
     setInput("");
   };
 
@@ -71,41 +142,133 @@ export default function UserChatPage() {
   };
 
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif" }}>
-      <h2 style={{ marginBottom: 4 }}>在线客服</h2>
-      <p style={{ color: "#94a3b8", marginTop: 0, fontSize: 13 }}>常见问题 5 分钟内回复 · SPEC-§27</p>
+    <div>
+      <h2 style={{ marginBottom: 4 }}>
+        在线客服
+        <HelpIcon text="与客服实时沟通，支持文本聊天。常见问题通常在 5 分钟内回复。可查看历史会话记录。" level="page" />
+      </h2>
+      <p style={{ color: "var(--color-text-secondary)", marginTop: 0, fontSize: 13 }}>
+        常见问题 5 分钟内回复 · SPEC-§27
+      </p>
 
       <div style={{ display: "flex", gap: 16 }}>
         {/* 当前会话 */}
         <div style={{ ...card, flex: 3, display: "flex", flexDirection: "column", minHeight: 480 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 12,
+            }}
+          >
             <strong>客服会话</strong>
-            {["active", "queued"].includes(status) && <button onClick={closeChat} style={{ ...btnBase, background: "#f1f5f9", color: "#dc2626", padding: "4px 10px" }}>关闭会话</button>}
+            {["active", "queued"].includes(status) && (
+              <button
+                onClick={closeChat}
+                style={{
+                  ...btnBase,
+                  background: "var(--color-bg)",
+                  color: "var(--color-danger-text)",
+                  padding: "4px 10px",
+                }}
+              >
+                关闭会话
+              </button>
+            )}
           </div>
 
           {status === "idle" && (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#64748b" }}>
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--color-text-secondary)",
+              }}
+            >
               <div style={{ fontSize: 40, marginBottom: 12 }}>💬</div>
               <div>需要帮助？我们通常会在 5 分钟内回复</div>
-              <button onClick={connect} style={{ ...btnBase, background: "#2563eb", color: "#fff", marginTop: 16 }}>开始咨询</button>
+              <button
+                onClick={connect}
+                style={{
+                  ...btnBase,
+                  background: "var(--color-primary)",
+                  color: "#fff",
+                  marginTop: 16,
+                }}
+              >
+                开始咨询
+              </button>
             </div>
           )}
-          {status === "connecting" && <div style={{ color: "#94a3b8", textAlign: "center", padding: 40 }}>连接中...</div>}
+          {status === "connecting" && <SkeletonGroup lines={3} />}
           {status === "queued" && (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#92400e" }}>
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--color-warning-text)",
+              }}
+            >
               <div style={{ fontSize: 40 }}>⏳</div>
               <div style={{ marginTop: 8 }}>您前面还有 {queued?.position} 位用户在等待</div>
-              <div style={{ fontSize: 13, color: "#64748b", marginTop: 8 }}>不想等待？可先留言描述问题，客服空闲后回复您</div>
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "var(--color-text-secondary)",
+                  marginTop: 8,
+                }}
+              >
+                不想等待？可先留言描述问题，客服空闲后回复您
+              </div>
             </div>
           )}
 
-          {/* 消息区 */}
           {["active", "closed"].includes(status) && (
             <div style={{ flex: 1, overflowY: "auto", padding: "8px 4px" }}>
               {messages.map((m) => (
-                <div key={m.id} style={{ display: "flex", justifyContent: m.sender_type === "user" ? "flex-end" : "flex-start", marginBottom: 10 }}>
-                  <div style={{ maxWidth: "75%", padding: "10px 14px", borderRadius: 10, lineHeight: 1.6, fontSize: 14, background: m.sender_type === "user" ? "#dcfce7" : m.sender_type === "system" ? "#f1f5f9" : "#eef2ff" }}>
-                    <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>{m.sender_type === "user" ? "我" : m.sender_type === "staff" ? "客服" : "系统"}</div>
+                <div
+                  key={m.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: m.sender_type === "user" ? "flex-end" : "flex-start",
+                    marginBottom: 10,
+                  }}
+                >
+                  <div
+                    style={{
+                      maxWidth: "75%",
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      lineHeight: 1.6,
+                      fontSize: 14,
+                      background:
+                        m.sender_type === "user"
+                          ? "var(--color-success-bg)"
+                          : m.sender_type === "system"
+                          ? "var(--color-bg)"
+                          : "var(--color-bg)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "var(--color-text-secondary)",
+                        marginBottom: 4,
+                      }}
+                    >
+                      {m.sender_type === "user"
+                        ? "我"
+                        : m.sender_type === "staff"
+                        ? "客服"
+                        : "系统"}
+                    </div>
                     {m.content}
                   </div>
                 </div>
@@ -121,15 +284,45 @@ export default function UserChatPage() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && send()}
                 placeholder="输入消息..."
-                style={{ ...card, padding: "10px 14px", boxShadow: "none", border: "1px solid #cbd5e1", flex: 1, margin: 0 }}
+                style={{
+                  ...card,
+                  padding: "10px 14px",
+                  boxShadow: "none",
+                  border: "1px solid var(--color-border)",
+                  flex: 1,
+                  margin: 0,
+                }}
               />
-              <button onClick={send} disabled={!input.trim()} style={{ ...btnBase, background: input.trim() ? "#2563eb" : "#cbd5e1", color: "#fff" }}>发送</button>
+              <button
+                onClick={send}
+                disabled={!input.trim()}
+                style={{
+                  ...btnBase,
+                  background: input.trim() ? "var(--color-primary)" : "var(--color-border)",
+                  color: "#fff",
+                }}
+              >
+                发送
+              </button>
             </div>
           )}
           {status === "closed" && (
-            <div style={{ textAlign: "center", color: "#64748b", padding: 16 }}>
+            <div style={{ textAlign: "center", color: "var(--color-text-secondary)", padding: 16 }}>
               <div>💬 感谢您的咨询，本次会话已结束</div>
-              <button onClick={() => { setStatus("idle"); setMessages([]); }} style={{ ...btnBase, background: "#2563eb", color: "#fff", marginTop: 12 }}>重新发起咨询</button>
+              <button
+                onClick={() => {
+                  setStatus("idle");
+                  setMessages([]);
+                }}
+                style={{
+                  ...btnBase,
+                  background: "var(--color-primary)",
+                  color: "#fff",
+                  marginTop: 12,
+                }}
+              >
+                重新发起咨询
+              </button>
             </div>
           )}
         </div>
@@ -137,35 +330,62 @@ export default function UserChatPage() {
         {/* 历史记录 */}
         <div style={{ ...card, flex: 2 }}>
           <h4 style={{ margin: "0 0 12px" }}>历史会话</h4>
-          {(histQ.data?.list ?? []).length === 0 ? <div style={{ color: "#94a3b8" }}>暂无历史记录</div> : (
+          {(histQ.data?.list ?? []).length === 0 ? (
+            <div style={{ color: "var(--color-text-secondary)" }}>暂无历史记录</div>
+          ) : (
             <div>
               {(histQ.data?.list ?? []).map((h) => (
-                <div key={h.session_id} onClick={() => { setHistoryId(h.session_id); }} style={{ padding: 10, marginBottom: 8, background: "#f8fafc", borderRadius: 8, cursor: "pointer", border: h.session_id === historyId ? "1px solid #2563eb" : "1px solid transparent" }}>
+                <div
+                  key={h.session_id}
+                  onClick={() => {
+                    setHistoryId(h.session_id);
+                  }}
+                  style={{
+                    padding: 10,
+                    marginBottom: 8,
+                    background: "var(--color-bg)",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    border:
+                      h.session_id === historyId
+                        ? "1px solid var(--color-primary)"
+                        : "1px solid transparent",
+                  }}
+                >
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <strong style={{ fontSize: 13 }}>会话 #{h.session_id}</strong>
-                    <span style={{ fontSize: 11, color: h.status === "closed" ? "#94a3b8" : "#16a34a" }}>{h.status === "closed" ? "已结束" : h.status === "active" ? "进行中" : "等待中"}</span>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color:
+                          h.status === "closed"
+                            ? "var(--color-text-secondary)"
+                            : "var(--color-success-text)",
+                      }}
+                    >
+                      {h.status === "closed"
+                        ? "已结束"
+                        : h.status === "active"
+                        ? "进行中"
+                        : "等待中"}
+                    </span>
                   </div>
-                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>{h.created_at ? new Date(h.created_at).toLocaleString() : ""} · {h.msg_count} 条消息</div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "var(--color-text-secondary)",
+                      marginTop: 4,
+                    }}
+                  >
+                    {h.created_at ? new Date(h.created_at).toLocaleString() : ""} ·{" "}
+                    {h.msg_count} 条消息
+                  </div>
                 </div>
               ))}
-              <div style={{ marginTop: 12 }}>
-                <strong style={{ fontSize: 13 }}>历史消息</strong>
-                {(sessMsgsQ?.data?.messages ?? []).map((msg) => (
-                  <div key={msg.id} style={{ fontSize: 13, color: "#475569", marginTop: 6, paddingLeft: 8, borderLeft: "2px solid #e2e8f0" }}>
-                    <span style={{ color: "#94a3b8", fontSize: 11 }}>[{msg.sender_type}]</span> {msg.content}
-                  </div>
-                ))}
-              </div>
             </div>
           )}
         </div>
       </div>
-
-      {notice && (
-        <div style={{ position: "fixed", top: 16, right: 16, zIndex: 3000, padding: "12px 20px", borderRadius: 8, color: "#fff", background: notice.type === "success" ? "#16a34a" : "#dc2626" }}>
-          {notice.msg}<button onClick={() => setNotice(null)} style={{ marginLeft: 12, background: "none", border: "none", color: "#fff", cursor: "pointer" }}>✕</button>
-        </div>
-      )}
     </div>
   );
 }
@@ -177,7 +397,9 @@ function useAuthToken() {
     try {
       const raw = localStorage.getItem("3cloud_token") ?? localStorage.getItem("token");
       setT(raw ?? null);
-    } catch { setT(null); }
+    } catch {
+      setT(null);
+    }
   }, []);
   return t;
 }

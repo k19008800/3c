@@ -1,6 +1,16 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
+import {
+  HelpIcon,
+  StatusBadge,
+  Table,
+  Modal,
+  EmptyState,
+  SkeletonGroup,
+  useToast,
+} from "@3cloud/shared-ui";
+import type { ColumnDef } from "@3cloud/shared-ui";
 
 /* ============ 类型定义 ============ */
 interface RechargeResult {
@@ -9,7 +19,12 @@ interface RechargeResult {
   qr_code_url?: string;
   expires_at?: string;
   promotion?: { free_amount: number };
-  bank_info?: { account_name: string; account_number: string; bank_name: string; branch_name: string };
+  bank_info?: {
+    account_name: string;
+    account_number: string;
+    bank_name: string;
+    branch_name: string;
+  };
 }
 interface RechargeRecord {
   id: number;
@@ -38,18 +53,14 @@ const METHOD_LABEL: Record<string, string> = {
   wechat: "微信支付",
   bank_transfer: "对公转账（需审核）",
 };
-const STATUS_LABEL: Record<string, string> = {
-  pending: "待支付",
-  success: "已到账",
-  failed: "失败",
-  expired: "已过期",
-  bank_pending: "待上传凭证",
-  under_review: "审核中",
-  rejected: "已驳回",
-};
 
 /* ============ 卡片通用样式 ============ */
-const card = { background: "#fff", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
+const card: React.CSSProperties = {
+  background: "#fff",
+  padding: 20,
+  borderRadius: 10,
+  boxShadow: "0 1px 4px rgba(0,0,0,.06)",
+};
 const btnBase: React.CSSProperties = {
   padding: "10px 18px",
   borderRadius: 8,
@@ -63,11 +74,15 @@ export default function RechargePage() {
   const [amount, setAmount] = useState<number>(100);
   const [method, setMethod] = useState<"alipay" | "wechat" | "bank_transfer">("alipay");
   const [paying, setPaying] = useState<RechargeResult | null>(null);
-  const [result, setResult] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [bankOrder, setBankOrder] = useState<RechargeResult | null>(null);
+  const { toast } = useToast();
 
   // 余额
-  interface BalanceResp { code: number; data: { balance: number }; message: string }
+  interface BalanceResp {
+    code: number;
+    data: { balance: number };
+    message: string;
+  }
   const balanceQ = useQuery({
     queryKey: ["me-balance"],
     queryFn: async () => (await api.get<BalanceResp>("/me/balance")).data.data.balance,
@@ -77,13 +92,21 @@ export default function RechargePage() {
   // 充值记录
   const ordersQ = useQuery({
     queryKey: ["me-recharge-orders"],
-    queryFn: async () => (await api.get<{ code: number; data: { list: RechargeRecord[] }; message: string }>("/me/recharge-orders?page=1&page_size=10")).data.data.list,
+    queryFn: async () =>
+      (
+        await api.get<{
+          code: number;
+          data: { list: RechargeRecord[] };
+          message: string;
+        }>("/me/recharge-orders?page=1&page_size=10")
+      ).data.data.list,
   });
 
   // 优惠
   const promoQ = useQuery({
     queryKey: ["me-promotions"],
-    queryFn: async () => (await api.get("/me/promotions")).data.data.list as Promotion[],
+    queryFn: async () =>
+      (await api.get("/me/promotions")).data.data.list as Promotion[],
   });
 
   // 发起充值
@@ -99,12 +122,12 @@ export default function RechargePage() {
       if (d.bank_info) setBankOrder(d);
       else setPaying(d);
     },
-    onError: (e) => setResult({ type: "error", msg: extractError(e) }),
+    onError: (e) => toast.error(extractError(e)),
   });
 
   // 确认到账（轮询/刷新）
   const confirmPaid = async (_orderId: string) => {
-    setResult({ type: "success", msg: "充值成功！余额已更新" });
+    toast.success("充值成功！余额已更新");
     setPaying(null);
     qc.invalidateQueries({ queryKey: ["me-balance"] });
     qc.invalidateQueries({ queryKey: ["me-recharge-orders"] });
@@ -113,32 +136,126 @@ export default function RechargePage() {
   const balance = balanceQ.data ?? 0;
   const topPromo = promoQ.data?.[0];
 
+  const recordColumns: ColumnDef<RechargeRecord>[] = [
+    {
+      key: "order_id",
+      title: "订单号",
+      dataIndex: "order_id",
+      render: (v) => (
+        <span style={{ fontFamily: "monospace", fontSize: 12 }}>{v as string}</span>
+      ),
+    },
+    {
+      key: "amount",
+      title: "金额",
+      dataIndex: "amount",
+      render: (v) => `¥${(v as number).toFixed(2)}`,
+    },
+    {
+      key: "payment_method",
+      title: "支付方式",
+      dataIndex: "payment_method",
+      render: (v) => METHOD_LABEL[v as string] ?? (v as string),
+    },
+    {
+      key: "status",
+      title: "状态",
+      dataIndex: "status",
+      render: (v) => {
+        const s = v as string;
+        if (s === "success") return <StatusBadge status="success">已到账</StatusBadge>;
+        if (s === "pending" || s === "under_review" || s === "bank_pending")
+          return <StatusBadge status="warning">待处理</StatusBadge>;
+        if (s === "failed" || s === "rejected")
+          return <StatusBadge status="danger">失败</StatusBadge>;
+        return <StatusBadge status="default">{s}</StatusBadge>;
+      },
+    },
+    {
+      key: "created_at",
+      title: "时间",
+      dataIndex: "created_at",
+      render: (v) => (
+        <span style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>
+          {new Date(v as string).toLocaleString()}
+        </span>
+      ),
+    },
+  ];
+
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif" }}>
-      <h2 style={{ marginBottom: 20 }}>充值中心</h2>
+    <div>
+      <h2 style={{ marginBottom: 20 }}>
+        充值中心
+        <HelpIcon text="账户余额充值，支持支付宝、微信扫码支付和对公转账。选择金额和支付方式后创建充值订单。" level="page" />
+      </h2>
 
       {/* 余额卡片 + 充值面板 */}
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(260px, 340px) 1fr", gap: 16, marginBottom: 24 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(260px, 340px) 1fr",
+          gap: 16,
+          marginBottom: 24,
+        }}
+      >
         {/* 左：余额卡 */}
-        <div style={{ ...card, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 200 }}>
+        <div
+          style={{
+            ...card,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            minHeight: 200,
+          }}
+        >
           <div>
-            <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>当前余额</div>
-            <div style={{ fontSize: 32, fontWeight: 700, color: balance <= 1 ? "#dc2626" : balance <= 10 ? "#d97706" : "#0f172a" }}>
+            <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 8 }}>
+              当前余额
+            </div>
+            <div
+              style={{
+                fontSize: 32,
+                fontWeight: 700,
+                color:
+                  balance <= 1
+                    ? "var(--color-danger-text)"
+                    : balance <= 10
+                    ? "var(--color-warning-text)"
+                    : "var(--color-text)",
+              }}
+            >
               ¥{balance.toFixed(2)}
             </div>
-            <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>余额不足 ¥10 时注意及时充值</div>
+            <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>
+              余额不足 ¥10 时注意及时充值
+            </div>
           </div>
           {topPromo ? (
-            <div style={{ background: "#fef3c7", padding: 10, borderRadius: 8, fontSize: 12, color: "#92400e", marginTop: 12 }}>
+            <div
+              style={{
+                background: "var(--color-warning-bg)",
+                padding: 10,
+                borderRadius: 8,
+                fontSize: 12,
+                color: "var(--color-warning-text)",
+                marginTop: 12,
+              }}
+            >
               🎉 {topPromo.rule}
-              <div style={{ color: "#b45309", marginTop: 2 }}>剩 {topPromo.remainingDays} 天</div>
+              <div style={{ color: "var(--color-warning-text)", marginTop: 2 }}>
+                剩 {topPromo.remainingDays} 天
+              </div>
             </div>
           ) : null}
         </div>
 
         {/* 右：支付面板 */}
         <div style={card}>
-          <h3 style={{ marginBottom: 16 }}>充值金额</h3>
+          <h3 style={{ marginBottom: 16 }}>
+            充值金额
+            <HelpIcon text="选择或输入充值金额，支持支付宝/微信/对公转账。" level="button" />
+          </h3>
           {/* 快捷金额 */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
             {PRESETS.map((p) => (
@@ -147,9 +264,12 @@ export default function RechargePage() {
                 onClick={() => setAmount(p)}
                 style={{
                   ...btnBase,
-                  background: amount === p ? "#2563eb" : "#eef2ff",
-                  color: amount === p ? "#fff" : "#1e3a8a",
-                  border: amount === p ? "1px solid #2563eb" : "1px solid #c7d2fe",
+                  background: amount === p ? "var(--color-primary)" : "var(--color-bg)",
+                  color: amount === p ? "#fff" : "var(--color-text)",
+                  border:
+                    amount === p
+                      ? "1px solid var(--color-primary)"
+                      : "1px solid var(--color-border)",
                 }}
               >
                 ¥{p}
@@ -166,12 +286,19 @@ export default function RechargePage() {
               step={0.01}
               value={amount}
               onChange={(e) => setAmount(Number(e.target.value))}
-              style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", width: 140 }}
+              style={{
+                padding: "8px 12px",
+                borderRadius: 8,
+                border: "1px solid var(--color-border)",
+                width: 140,
+              }}
             />
-            <span style={{ fontSize: 13, color: "#94a3b8" }}>(¥1 - ¥50,000)</span>
+            <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+              (¥1 - ¥50,000)
+            </span>
           </div>
           {/* 充值后余额预览 */}
-          <div style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>
+          <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 16 }}>
             充值后余额: <strong>¥{(balance + amount).toFixed(2)}</strong>
           </div>
 
@@ -184,9 +311,12 @@ export default function RechargePage() {
                 onClick={() => setMethod(m)}
                 style={{
                   ...btnBase,
-                  background: method === m ? "#2563eb" : "#fff",
-                  color: method === m ? "#fff" : "#334155",
-                  border: method === m ? "1px solid #2563eb" : "1px solid #cbd5e1",
+                  background: method === m ? "var(--color-primary)" : "#fff",
+                  color: method === m ? "#fff" : "var(--color-text)",
+                  border:
+                    method === m
+                      ? "1px solid var(--color-primary)"
+                      : "1px solid var(--color-border)",
                 }}
               >
                 {METHOD_LABEL[m]}
@@ -200,7 +330,7 @@ export default function RechargePage() {
             disabled={rechargeMut.isPending || amount < 1}
             style={{
               ...btnBase,
-              background: "#16a34a",
+              background: "var(--color-success-text)",
               color: "#fff",
               fontSize: 16,
               padding: "12px 40px",
@@ -216,101 +346,53 @@ export default function RechargePage() {
       <div style={card}>
         <h3 style={{ marginBottom: 16 }}>充值记录</h3>
         {ordersQ.isLoading ? (
-          <div style={{ color: "#94a3b8" }}>加载中...</div>
+          <SkeletonGroup lines={4} />
         ) : ordersQ.data?.length === 0 ? (
-          <div style={{ color: "#94a3b8", padding: 20, textAlign: "center" }}>暂无充值记录</div>
+          <EmptyState icon="💳" title="暂无充值记录" description="您还没有任何充值" actionText="去充值" onAction={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-            <thead>
-              <tr style={{ color: "#64748b", textAlign: "left" }}>
-                <th style={{ padding: "8px" }}>订单号</th>
-                <th style={{ padding: "8px" }}>金额</th>
-                <th style={{ padding: "8px" }}>支付方式</th>
-                <th style={{ padding: "8px" }}>状态</th>
-                <th style={{ padding: "8px" }}>时间</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ordersQ.data?.map((r) => (
-                <tr key={r.id} style={{ borderTop: "1px solid #f1f5f9" }}>
-                  <td style={{ padding: "8px", fontFamily: "monospace", fontSize: 12 }}>{r.order_id}</td>
-                  <td style={{ padding: "8px" }}>¥{r.amount.toFixed(2)}</td>
-                  <td style={{ padding: "8px" }}>{METHOD_LABEL[r.payment_method] ?? r.payment_method}</td>
-                  <td style={{ padding: "8px" }}>
-                    <span
-                      style={{
-                        padding: "2px 8px",
-                        borderRadius: 6,
-                        fontSize: 12,
-                        background: r.status === "success" ? "#dcfce7" : r.status === "pending" || r.status === "under_review" ? "#fef9c3" : "#fee2e2",
-                        color: r.status === "success" ? "#166534" : r.status === "pending" || r.status === "under_review" ? "#854d0e" : "#991b1b",
-                      }}
-                    >
-                      {STATUS_LABEL[r.status] ?? r.status}
-                    </span>
-                  </td>
-                  <td style={{ padding: "8px", color: "#64748b", fontSize: 12 }}>
-                    {new Date(r.created_at).toLocaleString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <Table
+            columns={recordColumns}
+            dataSource={ordersQ.data ?? []}
+            loading={ordersQ.isLoading}
+            emptyText="暂无充值记录"
+          />
         )}
       </div>
 
       {/* 扫码支付弹窗 */}
-      {paying && method !== "bank_transfer" && (
-        <PayModal
-          amount={amount}
-          qrUrl={paying.qr_code_url ?? ""}
-          expiresAt={paying.expires_at ?? ""}
-          onClose={() => setPaying(null)}
-          onSuccess={() => confirmPaid(paying.order_id)}
-        />
-      )}
+      <Modal open={!!paying && method !== "bank_transfer"} onClose={() => setPaying(null)} title="扫码支付">
+        {paying && (
+          <PayModalContent
+            amount={amount}
+            qrUrl={paying.qr_code_url ?? ""}
+            expiresAt={paying.expires_at ?? ""}
+            onClose={() => setPaying(null)}
+            onSuccess={() => confirmPaid(paying.order_id)}
+          />
+        )}
+      </Modal>
 
       {/* 对公转账弹窗 */}
-      {bankOrder && (
-        <BankModal
-          bankInfo={bankOrder.bank_info!}
-          amount={amount}
-          onClose={() => setBankOrder(null)}
-          onSubmitted={() => {
-            setBankOrder(null);
-            setResult({ type: "success", msg: "凭证已提交，财务将尽快审核（工作日 T+1）" });
-            qc.invalidateQueries({ queryKey: ["me-recharge-orders"] });
-          }}
-        />
-      )}
-
-      {/* 结果提示 */}
-      {result && (
-        <div
-          style={{
-            position: "fixed",
-            top: 16,
-            right: 16,
-            zIndex: 100,
-            padding: "12px 20px",
-            borderRadius: 8,
-            color: "#fff",
-            background: result.type === "success" ? "#16a34a" : "#dc2626",
-            boxShadow: "0 4px 12px rgba(0,0,0,.15)",
-          }}
-        >
-          {result.msg}
-          <button onClick={() => setResult(null)} style={{ marginLeft: 12, background: "none", border: "none", color: "#fff", cursor: "pointer" }}>
-            ✕
-          </button>
-        </div>
-      )}
+      <Modal open={!!bankOrder} onClose={() => setBankOrder(null)} title="对公转账">
+        {bankOrder && (
+          <BankModalContent
+            bankInfo={bankOrder.bank_info!}
+            amount={amount}
+            onClose={() => setBankOrder(null)}
+            onSubmitted={() => {
+              setBankOrder(null);
+              toast.success("凭证已提交，财务将尽快审核（工作日 T+1）");
+              qc.invalidateQueries({ queryKey: ["me-recharge-orders"] });
+            }}
+          />
+        )}
+      </Modal>
     </div>
   );
 }
 
-/* ============ 扫码支付弹窗 ============ */
-function PayModal({
+/* ============ 扫码支付弹窗内容 ============ */
+function PayModalContent({
   amount,
   qrUrl,
   expiresAt,
@@ -324,8 +406,6 @@ function PayModal({
   onSuccess: () => void;
 }) {
   const [done, setDone] = useState(false);
-
-  // 倒计时
   const expiresMs = new Date(expiresAt).getTime() - Date.now();
   const [left, setLeft] = useState(Math.max(0, Math.floor(expiresMs / 1000)));
   useEffect(() => {
@@ -334,82 +414,117 @@ function PayModal({
   }, []);
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
-      <div style={{ background: "#fff", padding: 32, borderRadius: 12, width: 340, textAlign: "center" }}>
-        <h3 style={{ marginBottom: 8 }}>扫码支付</h3>
-        <p style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>¥{amount.toFixed(2)}</p>
-        <div
+    <div style={{ textAlign: "center" }}>
+      <p style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}>¥{amount.toFixed(2)}</p>
+      <div
+        style={{
+          width: 200,
+          height: 200,
+          margin: "0 auto 16px",
+          border: "1px solid var(--color-border)",
+          borderRadius: 8,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--color-bg)",
+        }}
+      >
+        {qrUrl ? (
+          <img src={qrUrl} alt="支付二维码" width={180} height={180} />
+        ) : (
+          <span style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>二维码加载中</span>
+        )}
+      </div>
+      <p style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 8 }}>
+        剩余有效时间:{" "}
+        <strong>
+          {Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")}
+        </strong>
+      </p>
+      <p style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 16 }}>
+        请使用支付宝/微信扫码完成支付
+      </p>
+      <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+        <button
+          onClick={onClose}
+          style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-text)" }}
+        >
+          关闭
+        </button>
+        <button
+          onClick={() => {
+            setDone(true);
+            onSuccess();
+          }}
           style={{
-            width: 200,
-            height: 200,
-            margin: "0 auto 16px",
-            border: "1px solid #e2e8f0",
-            borderRadius: 8,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "#f8fafc",
+            ...btnBase,
+            background: done ? "var(--color-success-text)" : "var(--color-primary)",
+            color: "#fff",
           }}
         >
-          {qrUrl ? <img src={qrUrl} alt="支付二维码" width={180} height={180} /> : <span style={{ color: "#94a3b8", fontSize: 12 }}>二维码加载中</span>}
-        </div>
-        <p style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>
-          剩余有效时间: <strong>{Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")}</strong>
-        </p>
-        <p style={{ fontSize: 12, color: "#94a3b8", marginBottom: 16 }}>请使用支付宝/微信扫码完成支付</p>
-        <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-          <button onClick={onClose} style={{ ...btnBase, background: "#f1f5f9", color: "#334155" }}>
-            关闭
-          </button>
-          <button
-            onClick={() => {
-              setDone(true);
-              onSuccess();
-            }}
-            style={{ ...btnBase, background: done ? "#16a34a" : "#2563eb", color: "#fff" }}
-          >
-            我已支付
-          </button>
-        </div>
+          我已支付
+        </button>
       </div>
     </div>
   );
 }
 
-/* ============ 对公转账弹窗 ============ */
-function BankModal({
+/* ============ 对公转账弹窗内容 ============ */
+function BankModalContent({
   bankInfo,
   amount,
   onClose,
   onSubmitted,
 }: {
-  bankInfo: { account_name: string; account_number: string; bank_name: string; branch_name: string };
+  bankInfo: {
+    account_name: string;
+    account_number: string;
+    bank_name: string;
+    branch_name: string;
+  };
   amount: number;
   onClose: () => void;
   onSubmitted: () => void;
 }) {
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
-      <div style={{ background: "#fff", padding: 32, borderRadius: 12, width: 420 }}>
-        <h3 style={{ marginBottom: 16 }}>对公转账</h3>
-        <p style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>转账金额: ¥{amount.toFixed(2)}</p>
-        <div style={{ background: "#f8fafc", padding: 16, borderRadius: 8, marginBottom: 16, fontSize: 14, lineHeight: 2 }}>
-          <div>户名: <strong>{bankInfo.account_name}</strong></div>
-          <div>账号: <strong style={{ fontFamily: "monospace" }}>{bankInfo.account_number}</strong></div>
-          <div>开户行: {bankInfo.bank_name}</div>
-          <div>支行: {bankInfo.branch_name}</div>
+    <div>
+      <p style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>转账金额: ¥{amount.toFixed(2)}</p>
+      <div
+        style={{
+          background: "var(--color-bg)",
+          padding: 16,
+          borderRadius: 8,
+          marginBottom: 16,
+          fontSize: 14,
+          lineHeight: 2,
+        }}
+      >
+        <div>
+          户名: <strong>{bankInfo.account_name}</strong>
         </div>
-        <p style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>
-          💡 转账后请在「充值记录」中对应订单上传凭证，财务审核到账后自动充值（工作日 T+1）。
-        </p>
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button onClick={onClose} style={{ ...btnBase, background: "#f1f5f9", color: "#334155" }}>
-            关闭
-          </button>
-          <button onClick={onSubmitted} style={{ ...btnBase, background: "#2563eb", color: "#fff" }}>
-            我已转账，去上传凭证
-          </button>
+        <div>
+          账号:{" "}
+          <strong style={{ fontFamily: "monospace" }}>{bankInfo.account_number}</strong>
         </div>
+        <div>开户行: {bankInfo.bank_name}</div>
+        <div>支行: {bankInfo.branch_name}</div>
+      </div>
+      <p style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 16 }}>
+        💡 转账后请在「充值记录」中对应订单上传凭证，财务审核到账后自动充值（工作日 T+1）。
+      </p>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <button
+          onClick={onClose}
+          style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-text)" }}
+        >
+          关闭
+        </button>
+        <button
+          onClick={onSubmitted}
+          style={{ ...btnBase, background: "var(--color-primary)", color: "#fff" }}
+        >
+          我已转账，去上传凭证
+        </button>
       </div>
     </div>
   );

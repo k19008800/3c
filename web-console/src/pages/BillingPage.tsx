@@ -2,6 +2,14 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { downloadBlob } from "../lib/download";
+import {
+  HelpIcon,
+  Table,
+  SkeletonGroup,
+  EmptyState,
+  useToast,
+} from "@3cloud/shared-ui";
+import type { ColumnDef } from "@3cloud/shared-ui";
 
 /* ============ 类型 ============ */
 interface CurrentBilling {
@@ -31,23 +39,27 @@ const card = { background: "#fff", padding: 20, borderRadius: 10, boxShadow: "0 
 
 export default function BillingPage() {
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const currentQ = useQuery({
     queryKey: ["me-billing-current"],
-    queryFn: async () => (await api.get<{ data: CurrentBilling }>("/me/billing/current")).data.data,
+    queryFn: async () =>
+      (await api.get<{ data: CurrentBilling }>("/me/billing/current")).data.data,
   });
   const historyQ = useQuery({
     queryKey: ["me-billing-history"],
-    queryFn: async () => (await api.get<{ data: { list: BillingMonth[] } }>("/me/billing/history")).data.data.list,
+    queryFn: async () =>
+      (await api.get<{ data: { list: BillingMonth[] } }>("/me/billing/history")).data.data.list,
   });
   const dailyQ = useQuery({
     queryKey: ["me-billing-daily"],
-    queryFn: async () => (await api.get<{ data: { list: DailyCost[] } }>("/me/billing/current/daily")).data.data.list,
+    queryFn: async () =>
+      (await api.get<{ data: { list: DailyCost[] } }>("/me/billing/current/daily")).data.data.list,
   });
   const detailQ = useQuery({
     queryKey: ["me-billing-detail", expandedMonth],
-    queryFn: async () => (await api.get<{ data: MonthDetail }>(`/me/billing/history/${expandedMonth}`)).data.data,
+    queryFn: async () =>
+      (await api.get<{ data: MonthDetail }>(`/me/billing/history/${expandedMonth}`)).data.data,
     enabled: !!expandedMonth,
   });
 
@@ -55,23 +67,75 @@ export default function BillingPage() {
 
   const handleDownload = async () => {
     try {
-      const res = await api.get(`/me/billing/history/${cur?.period}/download`, { responseType: "blob" });
+      const res = await api.get(`/me/billing/history/${cur?.period}/download`, {
+        responseType: "blob",
+      });
       downloadBlob(res.data, `billing-${cur?.period}.csv`);
-      setNotice("账单 CSV 已下载");
+      toast.success("账单 CSV 已下载");
     } catch (e) {
-      setNotice(extractError(e));
+      toast.error(extractError(e));
     }
   };
 
+  const historyColumns: ColumnDef<BillingMonth>[] = [
+    { key: "month", title: "周期", dataIndex: "month" },
+    {
+      key: "total_cost",
+      title: "消费金额",
+      dataIndex: "total_cost",
+      render: (v) => `¥${(v as number).toFixed(4)}`,
+    },
+    { key: "bill_count", title: "计费记录", dataIndex: "bill_count", render: (v) => `${v} 条` },
+    {
+      key: "action",
+      title: "操作",
+      render: (_, record) => (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setExpandedMonth(expandedMonth === (record as BillingMonth).month ? null : (record as BillingMonth).month);
+          }}
+          style={{
+            background: "none",
+            border: "none",
+            color: "var(--color-primary)",
+            cursor: "pointer",
+            fontWeight: 600,
+          }}
+        >
+          {expandedMonth === (record as BillingMonth).month ? "收起" : "查看明细"}
+        </button>
+      ),
+    },
+  ];
+
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif" }}>
-      <h2 style={{ marginBottom: 20 }}>账单中心</h2>
+    <div>
+      <h2 style={{ marginBottom: 20 }}>
+        账单中心
+        <HelpIcon text="查看您的消费账单和每日消费趋势。支持按月查看详细计费记录和按模型汇总，可下载本月账单 CSV。" level="page" />
+      </h2>
 
       {/* 当前周期摘要 */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 16, marginBottom: 24 }}>
-        <StatCard label={`本周期 (${cur?.period ?? "-"}) 消费`} value={`¥${(cur?.total_cost ?? 0).toFixed(4)}`} hint="已出账金额" />
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+          gap: 16,
+          marginBottom: 24,
+        }}
+      >
+        <StatCard
+          label={`本周期 (${cur?.period ?? "-"}) 消费`}
+          value={`¥${(cur?.total_cost ?? 0).toFixed(4)}`}
+          hint="已出账金额"
+        />
         <StatCard label="计费记录" value={String(cur?.bill_count ?? "-")} hint="本周期订单数" />
-        <StatCard label="距离下期结算" value={`${cur?.days_left ?? "-"} 天`} hint="月度账单周期" />
+        <StatCard
+          label="距离下期结算"
+          value={`${cur?.days_left ?? "-"} 天`}
+          hint="月度账单周期"
+        />
         <button
           onClick={handleDownload}
           style={{
@@ -80,7 +144,7 @@ export default function BillingPage() {
             border: "none",
             cursor: "pointer",
             fontWeight: 600,
-            background: "#2563eb",
+            background: "var(--color-primary)",
             color: "#fff",
             alignSelf: "center",
           }}
@@ -91,7 +155,10 @@ export default function BillingPage() {
 
       {/* 每日消费趋势 */}
       <div style={{ ...card, marginBottom: 24 }}>
-        <h3 style={{ marginBottom: 16 }}>本月每日消费趋势</h3>
+        <h3 style={{ marginBottom: 16 }}>
+          本月每日消费趋势
+          <HelpIcon text="以柱状图展示本月的每日消费金额变化趋势。" level="button" />
+        </h3>
         <DailyBarChart data={dailyQ.data ?? []} />
       </div>
 
@@ -99,96 +166,41 @@ export default function BillingPage() {
       <div style={card}>
         <h3 style={{ marginBottom: 16 }}>历史账单</h3>
         {historyQ.isLoading ? (
-          <div style={{ color: "#94a3b8" }}>加载中...</div>
+          <SkeletonGroup lines={5} />
         ) : historyQ.data?.length === 0 ? (
-          <div style={{ color: "#94a3b8", padding: 20, textAlign: "center" }}>暂无账单记录</div>
+          <EmptyState icon="📋" title="暂无账单记录" description="当前没有账单数据" />
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-            <thead>
-              <tr style={{ color: "#64748b", textAlign: "left" }}>
-                <th style={{ padding: "8px" }}>周期</th>
-                <th style={{ padding: "8px" }}>消费金额</th>
-                <th style={{ padding: "8px" }}>计费记录</th>
-                <th style={{ padding: "8px" }}>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {historyQ.data?.map((m) => (
-                <MonthRow
-                  key={m.month}
-                  m={m}
-                  expanded={expandedMonth === m.month}
-                  detail={expandedMonth === m.month && !detailQ.isLoading ? detailQ.data : undefined}
-                  onToggle={() => setExpandedMonth(expandedMonth === m.month ? null : m.month)}
-                />
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {notice && (
-        <div style={{ position: "fixed", top: 16, right: 16, zIndex: 100, padding: "12px 20px", borderRadius: 8, color: "#fff", background: "#2563eb", boxShadow: "0 4px 12px rgba(0,0,0,.15)" }}>
-          {notice}
-          <button onClick={() => setNotice(null)} style={{ marginLeft: 12, background: "none", border: "none", color: "#fff", cursor: "pointer" }}>
-            ✕
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ============ 统计卡 ============ */
-function StatCard({ label, value, hint }: { label: string; value: string; hint: string }) {
-  return (
-    <div style={card}>
-      <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 700 }}>{value}</div>
-      <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>{hint}</div>
-    </div>
-  );
-}
-
-/* ============ 历史账单行（可展开明细）============ */
-function MonthRow({
-  m,
-  expanded,
-  detail,
-  onToggle,
-}: {
-  m: BillingMonth;
-  expanded: boolean;
-  detail?: MonthDetail;
-  onToggle: () => void;
-}) {
-  return (
-    <>
-      <tr style={{ borderTop: "1px solid #f1f5f9" }}>
-        <td style={{ padding: "8px", fontWeight: 600 }}>{m.month}</td>
-        <td style={{ padding: "8px" }}>¥{m.total_cost.toFixed(4)}</td>
-        <td style={{ padding: "8px", color: "#64748b" }}>{m.bill_count} 条</td>
-        <td style={{ padding: "8px" }}>
-          <button onClick={onToggle} style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", fontWeight: 600 }}>
-            {expanded ? "收起" : "查看明细"}
-          </button>
-        </td>
-      </tr>
-      {expanded && (
-        <tr>
-          <td colSpan={4} style={{ padding: "16px", background: "#f8fafc" }}>
-            {!detail ? (
-              <div style={{ color: "#94a3b8" }}>加载中...</div>
-            ) : (
-              <div>
-                <div style={{ display: "flex", gap: 24, marginBottom: 12, fontSize: 13, color: "#475569" }}>
-                  <span>总消费: <strong>¥{detail.summary.total_cost.toFixed(4)}</strong></span>
-                  <span>总退款: <strong>¥{detail.summary.total_refund.toFixed(4)}</strong></span>
-                  <span>调用次数: <strong>{detail.summary.total_calls}</strong></span>
+          <>
+            <Table
+              columns={historyColumns}
+              dataSource={historyQ.data ?? []}
+              loading={historyQ.isLoading}
+              emptyText="暂无账单记录"
+            />
+            {expandedMonth && detailQ.data && (
+              <div style={{ padding: "16px", background: "var(--color-bg)", marginTop: 8, borderRadius: 8 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 24,
+                    marginBottom: 12,
+                    fontSize: 13,
+                    color: "var(--color-text)",
+                  }}
+                >
+                  <span>
+                    总消费: <strong>¥{detailQ.data.summary.total_cost.toFixed(4)}</strong>
+                  </span>
+                  <span>
+                    总退款: <strong>¥{detailQ.data.summary.total_refund.toFixed(4)}</strong>
+                  </span>
+                  <span>
+                    调用次数: <strong>{detailQ.data.summary.total_calls}</strong>
+                  </span>
                 </div>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
-                    <tr style={{ color: "#64748b", textAlign: "left" }}>
+                    <tr style={{ color: "var(--color-text-secondary)", textAlign: "left" }}>
                       <th style={{ padding: "6px" }}>定价来源</th>
                       <th style={{ padding: "6px" }}>消费金额</th>
                       <th style={{ padding: "6px" }}>调用次数</th>
@@ -196,12 +208,18 @@ function MonthRow({
                     </tr>
                   </thead>
                   <tbody>
-                    {detail.items.length === 0 ? (
-                      <tr><td colSpan={4} style={{ color: "#94a3b8", padding: "8px" }}>该周期暂无详细记录</td></tr>
+                    {detailQ.data.items.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} style={{ color: "var(--color-text-secondary)", padding: "8px" }}>
+                          该周期暂无详细记录
+                        </td>
+                      </tr>
                     ) : (
-                      detail.items.map((it) => (
-                        <tr key={it.price_source} style={{ borderTop: "1px solid #e2e8f0" }}>
-                          <td style={{ padding: "6px", fontFamily: "monospace", fontSize: 12 }}>{it.price_source}</td>
+                      detailQ.data.items.map((it) => (
+                        <tr key={it.price_source} style={{ borderTop: "1px solid var(--color-border)" }}>
+                          <td style={{ padding: "6px", fontFamily: "monospace", fontSize: 12 }}>
+                            {it.price_source}
+                          </td>
                           <td style={{ padding: "6px" }}>¥{it.cost.toFixed(4)}</td>
                           <td style={{ padding: "6px" }}>{it.calls}</td>
                           <td style={{ padding: "6px" }}>¥{it.refund.toFixed(4)}</td>
@@ -210,39 +228,24 @@ function MonthRow({
                     )}
                   </tbody>
                 </table>
-
-                {/* 按模型汇总 */}
-                <div style={{ marginTop: 16 }}>
-                  <div style={{ fontSize: 13, color: "#475569", fontWeight: 600, marginBottom: 8 }}>按模型汇总</div>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                    <thead>
-                      <tr style={{ color: "#64748b", textAlign: "left" }}>
-                        <th style={{ padding: "6px" }}>模型</th>
-                        <th style={{ padding: "6px" }}>调用次数</th>
-                        <th style={{ padding: "6px" }}>消费金额</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detail.model_items?.length === 0 || !detail.model_items ? (
-                        <tr><td colSpan={3} style={{ color: "#94a3b8", padding: "8px" }}>暂无模型明细</td></tr>
-                      ) : (
-                        detail.model_items.map((mi) => (
-                          <tr key={mi.model} style={{ borderTop: "1px solid #e2e8f0" }}>
-                            <td style={{ padding: "6px" }}>{mi.model}</td>
-                            <td style={{ padding: "6px" }}>{mi.calls}</td>
-                            <td style={{ padding: "6px" }}>¥{mi.cost.toFixed(4)}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
               </div>
             )}
-          </td>
-        </tr>
-      )}
-    </>
+            {expandedMonth && detailQ.isLoading && <SkeletonGroup lines={4} style={{ marginTop: 8 }} />}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ============ 统计卡 ============ */
+function StatCard({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <div style={card}>
+      <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 700, color: "var(--color-text)" }}>{value}</div>
+      <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>{hint}</div>
+    </div>
   );
 }
 
@@ -252,25 +255,44 @@ function DailyBarChart({ data }: { data: DailyCost[] }) {
   return (
     <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 120, padding: "8px 4px" }}>
       {data.length === 0 ? (
-        <div style={{ color: "#94a3b8", fontSize: 13, alignSelf: "center", display: "flex", alignItems: "center", height: 120 }}>
+        <div
+          style={{
+            color: "var(--color-text-secondary)",
+            fontSize: 13,
+            alignSelf: "center",
+            display: "flex",
+            alignItems: "center",
+            height: 120,
+          }}
+        >
           本月暂无消费数据
         </div>
       ) : (
         data.map((d) => {
           const h = Math.max(2, (d.cost / max) * 100);
           return (
-            <div key={d.day} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+            <div
+              key={d.day}
+              style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}
+            >
               <div
                 title={`${d.day}: ¥${d.cost.toFixed(4)}`}
                 style={{
                   width: "100%",
                   maxWidth: 24,
                   height: h,
-                  background: d.cost > 0 ? "#3b82f6" : "#e2e8f0",
+                  background: d.cost > 0 ? "var(--color-primary)" : "var(--color-border)",
                   borderRadius: "3px 3px 0 0",
                 }}
               />
-              <div style={{ fontSize: 9, color: "#94a3b8", transform: "rotate(-45deg)", whiteSpace: "nowrap" }}>
+              <div
+                style={{
+                  fontSize: 9,
+                  color: "var(--color-text-secondary)",
+                  transform: "rotate(-45deg)",
+                  whiteSpace: "nowrap",
+                }}
+              >
                 {d.day.slice(8)}
               </div>
             </div>

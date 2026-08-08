@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
+import { HelpIcon, SkeletonGroup, EmptyState, useToast } from "@3cloud/shared-ui";
 
 /**
  * §22.3 用户端 Playground - API 在线调试
@@ -41,6 +42,7 @@ export default function PlaygroundPage() {
   const [error, setError] = useState<string | null>(null);
   const [tokens, setTokens] = useState<{ input: number; output: number; cost: number } | null>(null);
   const responseRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const { data: keys } = useQuery<ApiKey[]>({
     queryKey: ["me-keys"],
@@ -55,7 +57,7 @@ export default function PlaygroundPage() {
   const activeKey = keys?.find((k) => k.id === selectedKeyId) ?? keys?.[0];
 
   const updateMessage = (index: number, content: string) => {
-    setMessages((prev) => prev.map((m, i) => i === index ? { ...m, content } : m));
+    setMessages((prev) => prev.map((m, i) => (i === index ? { ...m, content } : m)));
   };
 
   const removeMessage = (index: number) => {
@@ -76,7 +78,6 @@ export default function PlaygroundPage() {
     setIsStreaming(true);
 
     try {
-      // 实际请求走代理
       const proxyUrl = "/api/v1/v1/chat/completions";
       const model = customModel || selectedModel;
 
@@ -84,7 +85,7 @@ export default function PlaygroundPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${activeKey.keyPrefix}`,
+          Authorization: `Bearer ${activeKey.keyPrefix}`,
           "X-Playground": "1",
         },
         body: JSON.stringify({
@@ -107,40 +108,83 @@ export default function PlaygroundPage() {
         setTokens({
           input: data.usage.prompt_tokens ?? 0,
           output: data.usage.completion_tokens ?? 0,
-          cost: 0, // 费用从 billing 获取
+          cost: 0,
         });
       }
+      toast.success("请求完成");
     } catch (err: any) {
       setError(err.message ?? "请求失败");
+      toast.error("请求失败：" + (err.message ?? "未知错误"));
     } finally {
       setIsSending(false);
       setIsStreaming(false);
     }
   };
 
-  const card = { background: "#fff", borderRadius: 10, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,.06)", marginBottom: 16 };
+  const card = {
+    background: "#fff",
+    borderRadius: 10,
+    padding: 20,
+    boxShadow: "0 1px 4px rgba(0,0,0,.06)",
+    marginBottom: 16,
+  };
 
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif" }}>
-      <h2 style={{ marginBottom: 20 }}>🧪 API Playground</h2>
-      <p style={{ color: "#64748b", marginBottom: 20, fontSize: 14 }}>在线调试 API，零代码测试模型调用</p>
+    <div>
+      <h2 style={{ marginBottom: 4 }}>
+        🧪 API Playground
+        <HelpIcon text="在线调试 API，无需编写代码即可测试模型调用。选择 API Key 和模型，编辑消息后发送请求查看响应。" level="page" />
+      </h2>
+      <p style={{ color: "var(--color-text-secondary)", marginBottom: 20, fontSize: 14 }}>
+        在线调试 API，零代码测试模型调用
+      </p>
 
       {/* 配置区域 */}
       <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <label style={{ fontSize: 13, fontWeight: 500, color: "#475569", display: "block", marginBottom: 4 }}>API Key</label>
+          <label
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: "var(--color-text)",
+              display: "block",
+              marginBottom: 4,
+            }}
+          >
+            API Key
+          </label>
           <select
             value={selectedKeyId ?? ""}
-            onChange={(e) => setSelectedKeyId(e.target.value ? parseInt(e.target.value) : null)}
-            style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 13 }}
+            onChange={(e) =>
+              setSelectedKeyId(e.target.value ? parseInt(e.target.value) : null)
+            }
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              borderRadius: 6,
+              border: "1px solid var(--color-border)",
+              fontSize: 13,
+            }}
           >
             {keys?.map((k) => (
-              <option key={k.id} value={k.id}>{k.name} ({k.keyPrefix}...)</option>
+              <option key={k.id} value={k.id}>
+                {k.name} ({k.keyPrefix}...)
+              </option>
             ))}
           </select>
         </div>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <label style={{ fontSize: 13, fontWeight: 500, color: "#475569", display: "block", marginBottom: 4 }}>模型</label>
+          <label
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: "var(--color-text)",
+              display: "block",
+              marginBottom: 4,
+            }}
+          >
+            模型
+          </label>
           <div style={{ display: "flex", gap: 8 }}>
             <select
               value={customModel ? "__custom__" : selectedModel}
@@ -149,14 +193,22 @@ export default function PlaygroundPage() {
                 setSelectedModel(e.target.value);
                 setCustomModel("");
               }}
-              style={{ flex: 1, padding: "8px 12px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 13 }}
+              style={{
+                flex: 1,
+                padding: "8px 12px",
+                borderRadius: 6,
+                border: "1px solid var(--color-border)",
+                fontSize: 13,
+              }}
             >
               <optgroup label="常用模型">
                 <option value="deepseek-chat">DeepSeek Chat</option>
                 <option value="qwen-plus">Qwen Plus</option>
                 <option value="gpt-4o-mini">GPT-4o Mini</option>
                 {models?.slice(0, 20).map((m) => (
-                  <option key={m.id} value={m.name}>{m.name}</option>
+                  <option key={m.id} value={m.name}>
+                    {m.name}
+                  </option>
                 ))}
               </optgroup>
               <option value="__custom__">自定义模型名...</option>
@@ -166,7 +218,13 @@ export default function PlaygroundPage() {
                 value={customModel}
                 onChange={(e) => setCustomModel(e.target.value)}
                 placeholder="输入模型名"
-                style={{ width: 150, padding: "8px 12px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 13 }}
+                style={{
+                  width: 150,
+                  padding: "8px 12px",
+                  borderRadius: 6,
+                  border: "1px solid var(--color-border)",
+                  fontSize: 13,
+                }}
               />
             )}
           </div>
@@ -179,14 +237,26 @@ export default function PlaygroundPage() {
           <div style={card}>
             <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 600 }}>消息</h3>
             {messages.map((msg, i) => (
-              <div key={i} style={{ marginBottom: 12, padding: 12, background: "#f8fafc", borderRadius: 8 }}>
+              <div
+                key={i}
+                style={{ marginBottom: 12, padding: 12, background: "var(--color-bg)", borderRadius: 8 }}
+              >
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                   <select
                     value={msg.role}
                     onChange={(e) => {
-                      setMessages((prev) => prev.map((m, idx) => idx === i ? { ...m, role: e.target.value as Message["role"] } : m));
+                      setMessages((prev) =>
+                        prev.map((m, idx) =>
+                          idx === i ? { ...m, role: e.target.value as Message["role"] } : m,
+                        ),
+                      );
                     }}
-                    style={{ padding: "2px 8px", borderRadius: 4, border: "1px solid #e2e8f0", fontSize: 12 }}
+                    style={{
+                      padding: "2px 8px",
+                      borderRadius: 4,
+                      border: "1px solid var(--color-border)",
+                      fontSize: 12,
+                    }}
                   >
                     <option value="system">system</option>
                     <option value="user">user</option>
@@ -194,7 +264,13 @@ export default function PlaygroundPage() {
                   </select>
                   <button
                     onClick={() => removeMessage(i)}
-                    style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 13 }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--color-danger-text)",
+                      cursor: "pointer",
+                      fontSize: 13,
+                    }}
                   >
                     删除
                   </button>
@@ -207,7 +283,7 @@ export default function PlaygroundPage() {
                     minHeight: 60,
                     padding: 8,
                     borderRadius: 6,
-                    border: "1px solid #e2e8f0",
+                    border: "1px solid var(--color-border)",
                     fontSize: 13,
                     fontFamily: "monospace",
                     resize: "vertical",
@@ -216,8 +292,15 @@ export default function PlaygroundPage() {
               </div>
             ))}
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => addMessage("user")} style={btnStyle}>+ 添加用户消息</button>
-              <button onClick={() => addMessage("system")} style={{ ...btnStyle, background: "#f1f5f9", color: "#475569" }}>+ System</button>
+              <button onClick={() => addMessage("user")} style={btnStyle}>
+                + 添加用户消息
+              </button>
+              <button
+                onClick={() => addMessage("system")}
+                style={{ ...btnStyle, background: "var(--color-bg)", color: "var(--color-text)" }}
+              >
+                + System
+              </button>
             </div>
           </div>
 
@@ -227,7 +310,7 @@ export default function PlaygroundPage() {
             style={{
               width: "100%",
               padding: "12px",
-              background: isSending ? "#93c5fd" : "#2563eb",
+              background: isSending ? "var(--color-border)" : "var(--color-primary)",
               color: "#fff",
               border: "none",
               borderRadius: 8,
@@ -245,28 +328,55 @@ export default function PlaygroundPage() {
           <div style={card} ref={responseRef}>
             <h3 style={{ margin: "0 0 12px", fontSize: 16, fontWeight: 600 }}>响应</h3>
             {error && (
-              <div style={{ background: "#fef2f2", color: "#dc2626", padding: 12, borderRadius: 8, marginBottom: 12, fontSize: 13 }}>
+              <div
+                style={{
+                  background: "var(--color-danger-bg)",
+                  color: "var(--color-danger-text)",
+                  padding: 12,
+                  borderRadius: 8,
+                  marginBottom: 12,
+                  fontSize: 13,
+                }}
+              >
                 {error}
               </div>
             )}
             {isStreaming && !response && (
-              <div style={{ color: "#94a3b8", fontSize: 14 }}>等待响应...</div>
+              <SkeletonGroup lines={3} />
             )}
             {response && (
-              <div style={{ background: "#0f172a", color: "#e2e8f0", padding: 16, borderRadius: 8, fontSize: 13, whiteSpace: "pre-wrap", fontFamily: "monospace", maxHeight: 400, overflow: "auto" }}>
+              <div
+                style={{
+                  background: "#0f172a",
+                  color: "var(--color-border)",
+                  padding: 16,
+                  borderRadius: 8,
+                  fontSize: 13,
+                  whiteSpace: "pre-wrap",
+                  fontFamily: "monospace",
+                  maxHeight: 400,
+                  overflow: "auto",
+                }}
+              >
                 {response}
               </div>
             )}
             {tokens && (
-              <div style={{ marginTop: 12, display: "flex", gap: 16, fontSize: 13, color: "#64748b" }}>
+              <div
+                style={{
+                  marginTop: 12,
+                  display: "flex",
+                  gap: 16,
+                  fontSize: 13,
+                  color: "var(--color-text-secondary)",
+                }}
+              >
                 <span>输入: {tokens.input} tokens</span>
                 <span>输出: {tokens.output} tokens</span>
               </div>
             )}
             {!response && !error && !isStreaming && (
-              <div style={{ color: "#94a3b8", fontSize: 14, padding: 20, textAlign: "center" }}>
-                编辑左侧消息后点击"发送请求"
-              </div>
+              <EmptyState icon="📨" title="等待请求" description='编辑左侧消息后点击「发送请求」' />
             )}
           </div>
         </div>
@@ -277,7 +387,7 @@ export default function PlaygroundPage() {
 
 const btnStyle: React.CSSProperties = {
   padding: "6px 14px",
-  background: "#2563eb",
+  background: "var(--color-primary)",
   color: "#fff",
   border: "none",
   borderRadius: 6,

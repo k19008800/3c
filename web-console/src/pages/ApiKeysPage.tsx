@@ -1,6 +1,15 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
+import {
+  HelpIcon,
+  Table,
+  StatusBadge,
+  useToast,
+  SkeletonGroup,
+  ConfirmPopover,
+} from "@3cloud/shared-ui";
+import type { ColumnDef } from "@3cloud/shared-ui";
 
 interface ApiKey {
   id: number;
@@ -17,7 +26,7 @@ export default function ApiKeysPage() {
   const [newKeyName, setNewKeyName] = useState("");
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [createdSecret, setCreatedSecret] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const { data, isLoading } = useQuery<{ list: ApiKey[] }>({
     queryKey: ["api-keys"],
@@ -31,47 +40,123 @@ export default function ApiKeysPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (name: string) => (await api.post("/me/api-keys", { name, model_whitelist: selectedModels.length ? selectedModels : undefined })).data,
+    mutationFn: async (name: string) =>
+      (await api.post("/me/api-keys", { name, model_whitelist: selectedModels.length ? selectedModels : undefined })).data,
     onSuccess: (data) => {
       setCreatedSecret(data.key);
       setNewKeyName("");
       setSelectedModels([]);
+      toast.success("API Key 创建成功");
       queryClient.invalidateQueries({ queryKey: ["api-keys"] });
     },
-    onError: (e: any) => setError(extractError(e)),
+    onError: (e: any) => toast.error(extractError(e)),
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => await api.delete(`/me/api-keys/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["api-keys"] }),
+    onSuccess: () => {
+      toast.success("API Key 已删除");
+      queryClient.invalidateQueries({ queryKey: ["api-keys"] });
+    },
   });
 
   const toggleMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: string }) => await api.patch(`/me/api-keys/${id}`, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["api-keys"] }),
+    mutationFn: async ({ id, status }: { id: number; status: string }) =>
+      await api.patch(`/me/api-keys/${id}`, { status }),
+    onSuccess: () => {
+      toast.success("状态已更新");
+      queryClient.invalidateQueries({ queryKey: ["api-keys"] });
+    },
   });
 
-  return (
-    <div style={{ fontFamily: "system-ui, sans-serif" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <h2 style={{ margin: 0 }}>API Keys</h2>
-        <div style={{ display: "flex", gap: 8 }}>
-          <input value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)} placeholder="Key 名称" style={{ padding: 8, borderRadius: 6, border: "1px solid #cbd5e1" }} />
+  const columns: ColumnDef<ApiKey>[] = [
+    { key: "name", title: "名称", dataIndex: "name" },
+    {
+      key: "key",
+      title: "Key",
+      render: (_, record) => <span style={{ fontFamily: "monospace", fontSize: 13 }}>{record.keyPrefix}...</span>,
+    },
+    {
+      key: "status",
+      title: "状态",
+      dataIndex: "status",
+      render: (v) => {
+        const s = v as string;
+        if (s === "active") return <StatusBadge status="success">启用</StatusBadge>;
+        if (s === "disabled") return <StatusBadge status="warning">已禁用</StatusBadge>;
+        return <StatusBadge status="danger">{s}</StatusBadge>;
+      },
+    },
+    {
+      key: "createdAt",
+      title: "创建时间",
+      dataIndex: "createdAt",
+      render: (v) => (
+        <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+          {new Date(v as string).toLocaleString()}
+        </span>
+      ),
+    },
+    {
+      key: "action",
+      title: "操作",
+      render: (_, record) => (
+        <span>
           <button
-            onClick={() => createMutation.mutate(newKeyName)}
-            disabled={!newKeyName || createMutation.isPending}
-            style={{ padding: "8px 14px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleMutation.mutate({
+                id: record.id,
+                status: record.status === "active" ? "disabled" : "active",
+              });
+            }}
+            style={{
+              marginRight: 8,
+              padding: "4px 10px",
+              cursor: "pointer",
+              borderRadius: 6,
+              border: "1px solid var(--color-border)",
+              background: "var(--color-bg)",
+              color: "var(--color-text)",
+            }}
           >
-            创建 Key
+            {record.status === "active" ? "禁用" : "启用"}
           </button>
-        </div>
+          <ConfirmPopover
+            title={`确定要删除 "${record.name}" 吗？`}
+            description="此操作不可撤销"
+            onConfirm={() => deleteMutation.mutate(record.id)}
+          >
+            <button
+              style={{
+                padding: "4px 10px",
+                cursor: "pointer",
+                borderRadius: 6,
+                border: "1px solid var(--color-border)",
+                background: "var(--color-bg)",
+                color: "var(--color-danger-text)",
+              }}
+            >
+              删除
+            </button>
+          </ConfirmPopover>
+        </span>
+      ),
+    },
+  ];
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <h2 style={{ margin: 0 }}>
+          API Keys
+          <HelpIcon text="管理您的 API 密钥，可创建、启用/禁用和删除密钥。模型白名单可限制密钥可访问的模型范围。" level="page" />
+        </h2>
       </div>
 
-      {error && <div style={{ color: "#dc2626", marginBottom: 12 }}>{error}</div>}
-
       {/* 模型白名单选择（可选） */}
-      <div style={{ marginBottom: 16, background: "#f8fafc", padding: 12, borderRadius: 8 }}>
-        <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>
+      <div style={{ marginBottom: 16, background: "var(--color-bg)", padding: 12, borderRadius: 8 }}>
+        <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 8 }}>
           模型白名单（{selectedModels.length ? `已选 ${selectedModels.length}` : "不限制所有模型"}）
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -84,7 +169,15 @@ export default function ApiKeysPage() {
                 onClick={() => {
                   setSelectedModels(on ? selectedModels.filter((x) => x !== name) : [...selectedModels, name]);
                 }}
-                style={{ padding: "5px 12px", borderRadius: 6, fontSize: 12, cursor: "pointer", border: "1px solid #cbd5e1", background: on ? "#2563eb" : "#fff", color: on ? "#fff" : "#475569" }}
+                style={{
+                  padding: "5px 12px",
+                  borderRadius: 6,
+                  fontSize: 12,
+                  cursor: "pointer",
+                  border: "1px solid var(--color-border)",
+                  background: on ? "var(--color-primary)" : "#fff",
+                  color: on ? "#fff" : "var(--color-text)",
+                }}
               >
                 {name}
               </button>
@@ -94,61 +187,64 @@ export default function ApiKeysPage() {
       </div>
 
       {createdSecret && (
-        <div style={{ background: "#f0fdf4", border: "1px solid #86efac", padding: 16, borderRadius: 8, marginBottom: 20 }}>
+        <div
+          style={{
+            background: "var(--color-success-bg)",
+            border: "1px solid var(--color-success-text)",
+            padding: 16,
+            borderRadius: 8,
+            marginBottom: 20,
+          }}
+        >
           <div style={{ fontWeight: 700, marginBottom: 6 }}>✅ Key 创建成功（仅此一次显示，请妥善保存）</div>
-          <code style={{ background: "#fff", padding: 8, borderRadius: 4, display: "block", wordBreak: "break-all" }}>{createdSecret}</code>
-          <button onClick={() => setCreatedSecret(null)} style={{ marginTop: 8, background: "none", border: "none", color: "#2563eb", cursor: "pointer" }}>关闭</button>
+          <code
+            style={{
+              background: "#fff",
+              padding: 8,
+              borderRadius: 4,
+              display: "block",
+              wordBreak: "break-all",
+            }}
+          >
+            {createdSecret}
+          </code>
+          <button
+            onClick={() => setCreatedSecret(null)}
+            style={{ marginTop: 8, background: "none", border: "none", color: "var(--color-primary)", cursor: "pointer" }}
+          >
+            关闭
+          </button>
         </div>
       )}
 
-      {isLoading ? (
-        <div>加载中...</div>
+      {isLoading && !data ? (
+        <SkeletonGroup lines={5} />
       ) : (
-        <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", borderRadius: 10, overflow: "hidden" }}>
-          <thead>
-            <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
-              <th style={{ padding: 12 }}>名称</th>
-              <th style={{ padding: 12 }}>Key</th>
-              <th style={{ padding: 12 }}>状态</th>
-              <th style={{ padding: 12 }}>创建时间</th>
-              <th style={{ padding: 12 }}>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data?.list.map((k) => (
-              <tr key={k.id} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                <td style={{ padding: 12 }}>{k.name}</td>
-                <td style={{ padding: 12, fontFamily: "monospace", fontSize: 13 }}>{k.keyPrefix}...</td>
-                <td style={{ padding: 12 }}>
-                  <span
-                    style={{
-                      padding: "2px 8px",
-                      borderRadius: 4,
-                      fontSize: 12,
-                      background: k.status === "active" ? "#dcfce7" : k.status === "disabled" ? "#fef9c3" : "#fee2e2",
-                      color: k.status === "active" ? "#166534" : k.status === "disabled" ? "#854d0e" : "#991b1b",
-                    }}
-                  >
-                    {k.status}
-                  </span>
-                </td>
-                <td style={{ padding: 12, fontSize: 13, color: "#64748b" }}>{new Date(k.createdAt).toLocaleString()}</td>
-                <td style={{ padding: 12 }}>
-                  <button
-                    onClick={() => toggleMutation.mutate({ id: k.id, status: k.status === "active" ? "disabled" : "active" })}
-                    style={{ marginRight: 8, padding: "4px 10px", cursor: "pointer" }}
-                  >
-                    {k.status === "active" ? "禁用" : "启用"}
-                  </button>
-                  <button onClick={() => deleteMutation.mutate(k.id)} style={{ padding: "4px 10px", cursor: "pointer", color: "#dc2626" }}>
-                    删除
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div style={{ marginBottom: 16, display: "flex", gap: 8 }}>
+          <input
+            value={newKeyName}
+            onChange={(e) => setNewKeyName(e.target.value)}
+            placeholder="Key 名称"
+            style={{ padding: 8, borderRadius: 6, border: "1px solid var(--color-border)", flex: 1, maxWidth: 260 }}
+          />
+          <button
+            onClick={() => createMutation.mutate(newKeyName)}
+            disabled={!newKeyName || createMutation.isPending}
+            style={{
+              padding: "8px 14px",
+              background: "var(--color-primary)",
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              cursor: "pointer",
+            }}
+          >
+            创建 Key
+          </button>
+        </div>
       )}
+
+      <Table columns={columns as any} dataSource={data?.list as any ?? []} loading={isLoading} emptyText="暂无 API Key" />
     </div>
   );
 }

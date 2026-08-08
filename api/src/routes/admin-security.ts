@@ -1,8 +1,9 @@
 import type { FastifyInstance } from "fastify";
-import { eq } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { db, pool } from "../db/index";
 import { users } from "../db/schema/users";
 import { userBudgetSettings } from "../db/schema/user-budget";
+import { riskRules, securityEvents } from "../db/schema/risk-rules";
 import { getOrCreateBudget, unblockUser } from "../services/budget-engine";
 
 /**
@@ -144,5 +145,104 @@ export function adminSecurityRoutes(app: FastifyInstance) {
     if (r.rowCount === 0) return reply.code(404).send({ code: 404, error: "NOT_FOUND" });
     await pool.query(`INSERT INTO operation_logs (user_id, action, detail, created_at) VALUES ($1,'device_force_logout','管理员强制登出设备',NOW())`, [Number((req as any).user.sub)]);
     return { code: 0, data: { success: true }, message: "已强制登出该设备" };
+  });
+
+  // ============ §20.4 风控规则管理 CRUD ============
+  // 列表
+  app.get("/admin/security/rules", { onRequest: [admin] }, async (req) => {
+    const q = req.query as any;
+    const page = Math.max(Number(q.page ?? 1), 1);
+    const pageSize = Math.min(Number(q.limit ?? 20), 100);
+    const offset = (page - 1) * pageSize;
+    let where = "WHERE 1=1";
+    const params: any[] = [];
+    const pp = (v: any) => { params.push(v); return `$${params.length}`; };
+    if (q.type) where += ` AND r.type = ${pp(q.type)}`;
+    if (q.action) where += ` AND r.action = ${pp(q.action)}`;
+    if (q.enabled !== undefined) where += ` AND r.enabled = ${pp(q.enabled === "true" || q.enabled === true)}`;
+    const rows = await pool.query(
+      `SELECT r.*, u.email AS created_by_email
+       FROM risk_rules r LEFT JOIN users u ON u.id=r.created_by ${where}
+       ORDER BY r.priority DESC, r.created_at DESC LIMIT ${pp(pageSize)} OFFSET ${pp(offset)}`, params);
+    const total = await pool.query(`SELECT COUNT(*)::int AS c FROM risk_rules r ${where}`, params.slice(0, params.length - 2));
+    return { code: 0, data: { list: rows.rows, pagination: { page, page_size: pageSize, total: Number(total.rows[0]?.c ?? 0) } }, message: "ok" };
+  });
+
+  // 创建
+  app.post("/admin/security/rules", { onRequest: [admin] }, async (req, reply) => {
+    const b = req.body as any;
+    if (!b.name || !b.type) return reply.code(400).send({ code: 400, error: "BAD_PARAMS", message: "缺少 name/type" });
+    const r = await db.insert(riskRules).values({
+      name: b.name,
+      type: b.type,
+      conditions: b.conditions ?? {},
+      action: b.action ?? "block",
+      enabled: b.enabled !== undefined ? b.enabled : true,
+      priority: b.priority ?? 0,
+      createdBy: Number((req as any).user.sub),
+    }).returning();
+    return { code: 0, data: r[0], message: "已创建" };
+  });
+
+  // 更新
+  app.put("/admin/security/rules/:id", { onRequest: [admin] }, async (req, reply) => {
+    const id = Number((req.params as any).id);
+    const b = req.body as any;
+    const existing = await db.select().from(riskRules).where(eq(riskRules.id, id)).limit(1);
+    if (!existing[0]) return reply.code(404).send({ code: 404, error: "NOT_FOUND" });
+    const upd: Record<string, any> = { updatedAt: new Date() };
+    if (b.name !== undefined) upd.name = b.name;
+    if (b.type !== undefined) upd.type = b.type;
+    if (b.conditions !== undefined) upd.conditions = b.conditions;
+    if (b.action !== undefined) upd.action = b.action;
+    if (b.enabled !== undefined) upd.enabled = b.enabled;
+    if (b.priority !== undefined) upd.priority = b.priority;
+    const r = await db.update(riskRules).set(upd).where(eq(riskRules.id, id)).returning();
+    return { code: 0, data: r[0], message: "已更新" };
+  });
+
+  // 删除
+  app.delete("/admin/security/rules/:id", { onRequest: [admin] }, async (req, reply) => {
+    const id = Number((req.params as any).id);
+    const existing = await db.select().from(riskRules).where(eq(riskRules.id, id)).limit(1);
+    if (!existing[0]) return reply.code(404).send({ code: 404, error: "NOT_FOUND" });
+    await db.delete(riskRules).where(eq(riskRules.id, id));
+    return { code: 0, data: { success: true }, message: "已删除" };
+  });
+
+  // ============ §20.5 安全事件管理 ============
+  app.get("/admin/security/events", { onRequest: [admin] }, async (req) => {
+    const q = req.query as any;
+    const page = Math.max(Number(q.page ?? 1), 1);
+    const pageSize = Math.min(Number(q.limit ?? 20), 100);
+    const offset = (page - 1) * pageSize;
+    let where = "WHERE 1=1";
+    const params: any[] = [];
+    const pp = (v: any) => { params.push(v); return `$${params.length}`; };
+    if (q.type) where += ` AND e.type = ${pp(q.type)}`;
+    if (q.severity) where += ` AND e.severity = ${pp(q.severity)}`;
+    if (q.status) where += ` AND e.status = ${pp(q.status)}`;
+    if (q.userId) where += ` AND e.user_id = ${pp(Number(q.userId))}`;
+    const rows = await pool.query(
+      `SELECT e.*, u.email, u.username
+       FROM security_events e LEFT JOIN users u ON u.id=e.user_id ${where}
+       ORDER BY e.created_at DESC LIMIT ${pp(pageSize)} OFFSET ${pp(offset)}`, params);
+    const total = await pool.query(`SELECT COUNT(*)::int AS c FROM security_events e ${where}`, params.slice(0, params.length - 2));
+    return { code: 0, data: { list: rows.rows, pagination: { page, page_size: pageSize, total: Number(total.rows[0]?.c ?? 0) } }, message: "ok" };
+  });
+
+  // 处理事件
+  app.post("/admin/security/events/:id/handle", { onRequest: [admin] }, async (req, reply) => {
+    const id = Number((req.params as any).id);
+    const b = req.body as any;
+    const existing = await db.select().from(securityEvents).where(eq(securityEvents.id, id)).limit(1);
+    if (!existing[0]) return reply.code(404).send({ code: 404, error: "NOT_FOUND" });
+    const r = await db.update(securityEvents).set({
+      status: b.status ?? "resolved",
+      handledBy: Number((req as any).user.sub),
+      handledAt: new Date(),
+      resolution: b.resolution ?? null,
+    }).where(eq(securityEvents.id, id)).returning();
+    return { code: 0, data: r[0], message: "已处理" };
   });
 }

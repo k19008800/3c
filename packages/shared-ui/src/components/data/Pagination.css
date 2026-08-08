@@ -1,0 +1,138 @@
+/**
+ * Pagination — 分页样式
+ * 对应 ux-guidelines §7 分页
+ *
+ * 分页按钮尺寸：height 32px / min-width 32px / 6px 圆角
+ */
+
+.shared-pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+  padding: var(--space-md) 0;
+  user-select: none;
+}
+
+/* ===== 总数 ===== */
+.shared-pagination__total {
+  color: var(--color-text-secondary);
+  margin-right: var(--space-sm);
+  white-space: nowrap;
+}
+
+/* ===== 页码控制区 ===== */
+.shared-pagination__controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ===== 分页按钮（通用）===== */
+.shared-pagination__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--pagination-btn-size); /* 32px */
+  height: var(--pagination-btn-size);
+  padding: 0 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm); /* 6px */
+  background-color: var(--color-panel);
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: border-color var(--transition-fast),
+    color var(--transition-fast),
+    background-color var(--transition-fast);
+  line-height: 1;
+}
+
+.shared-pagination__btn:hover:not(:disabled):not(.shared-pagination__btn--active) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.shared-pagination__btn:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  background-color: var(--color-disabled-bg);
+}
+
+/* ===== 当前页码高亮 ===== */
+.shared-pagination__btn--active {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+  font-weight: 600;
+  cursor: default;
+}
+
+.shared-pagination__btn--active:hover {
+  background-color: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  color: #fff;
+}
+
+/* ===== 省略号 ===== */
+.shared-pagination__ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--pagination-btn-size);
+  height: var(--pagination-btn-size);
+  color: var(--color-text-secondary);
+  letter-spacing: 2px;
+}
+
+/* ===== 每页条数选择器 ===== */
+.shared-pagination__size-select {
+  height: var(--pagination-btn-size);
+  padding: 0 var(--space-xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-panel);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  cursor: pointer;
+  outline: none;
+  margin-left: var(--space-md);
+}
+
+.shared-pagination__size-select:focus {
+  border-color: var(--color-primary);
+}
+
+/* ===== 跳转 ===== */
+.shared-pagination__jump {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  margin-left: var(--space-sm);
+}
+
+.shared-pagination__jump-input {
+  width: 44px;
+  height: var(--pagination-btn-size);
+  padding: 0 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family);
+  color: var(--color-text);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.shared-pagination__jump-input:focus {
+  border-color: var(--color-primary);
+}

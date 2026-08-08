@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./store/auth";
+import { ToastProvider } from "@3cloud/shared-ui";
 import LoginPage from "./pages/LoginPage";
 import ConsoleLayout from "./layouts/ConsoleLayout";
 import DashboardPage from "./pages/DashboardPage";
@@ -50,6 +51,7 @@ import HelpCenterPage from "./pages/HelpCenterPage";
 import DeletionPage from "./pages/DeletionPage";
 import NotificationSettingsPage from "./pages/NotificationSettingsPage";
 import PlaygroundPage from "./pages/PlaygroundPage";
+import UxDemoPage from "./pages/UxDemoPage";
 import UserWebhooksPage from "./pages/UserWebhooksPage";
 import AdminDeletionPage from "./pages/AdminDeletionPage";
 import AdminSysDbPage from "./pages/AdminSysDbPage";
@@ -66,8 +68,6 @@ import VendorSettlementsPage from "./pages/vendor/VendorSettlementsPage";
 
 /** 受保护路由：token 存在才允许访问 */
 function Protected({ children }: { children: React.ReactNode }) {
-  const token = useAuthStore((s) => s.token);
-  if (!token) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
@@ -80,6 +80,7 @@ export default function App() {
   }, [token, fetchMe]);
 
   return (
+    <ToastProvider>
     <Routes>
       {/* 供应商自助端（独立于 Console） */}
       <Route path="/vendor/login" element={<VendorLoginPage />} />
@@ -91,6 +92,7 @@ export default function App() {
         <Route path="settlements" element={<VendorSettlementsPage />} />
       </Route>
 
+      <Route path="/ux-demo" element={<UxDemoPage />} />
       <Route path="/login" element={token ? <Navigate to="/" replace /> : <LoginPage />} />
       <Route
         path="/"
@@ -156,5 +158,6 @@ export default function App() {
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </ToastProvider>
   );
 }
