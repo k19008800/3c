@@ -51,12 +51,10 @@ export default function LoginPage() {
         const role = data.user?.role;
         if (data.user?.totpEnabled) {
           router.push("/2fa");
-        } else if (role === "admin" || role === "super_admin") {
-          router.push("/app/");
-        } else if (role === "agent") {
-          router.push("/app/");
+        } else if (role === "admin" || role === "super_admin" || role === "agent") {
+          window.location.href = "/app/";
         } else {
-          router.push("/dashboard");
+          window.location.href = "/dashboard";
         }
       } else {
         setError(data.message || "邮箱或密码错误");
