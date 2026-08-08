@@ -204,7 +204,6 @@ export default function NotificationPage() {
                 cursor: "pointer",
                 background: "none",
                 border: "none",
-                borderBottom: activeCat === cat.key ? "2px solid var(--color-primary)" : "2px solid transparent",
                 transition: "all var(--transition-fast)",
               }}
             >
