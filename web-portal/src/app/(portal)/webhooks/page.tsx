@@ -217,7 +217,7 @@ export default function UserWebhooksPage() {
         >
           编辑
         </button>
-        <ConfirmPopover title="确认删除" message="删除后无法恢复，确定要删除此 Webhook？"
+        <ConfirmPopover title="确认删除 — 删除后无法恢复"
           onConfirm={() => handleDelete(record.id)}>
           <button style={{
             padding: "4px 10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-danger-text)",
