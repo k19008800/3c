@@ -54,6 +54,8 @@ import PlaygroundPage from "./pages/PlaygroundPage";
 import UxDemoPage from "./pages/UxDemoPage";
 import UserWebhooksPage from "./pages/UserWebhooksPage";
 import AdminDeletionPage from "./pages/AdminDeletionPage";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
+import AdminCockpitPage from "./pages/AdminCockpitPage";
 import AdminSysDbPage from "./pages/AdminSysDbPage";
 import AdminSysCachePage from "./pages/AdminSysCachePage";
 import AdminSysLogsPage from "./pages/AdminSysLogsPage";
@@ -69,6 +71,13 @@ import VendorSettlementsPage from "./pages/vendor/VendorSettlementsPage";
 /** 受保护路由：token 存在才允许访问 */
 function Protected({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
+}
+
+/** 首页按角色跳转 */
+function DashboardRedirect() {
+  const role = useAuthStore((s) => s.user?.role);
+  const admin = role === "admin" || role === "super_admin";
+  return admin ? <Navigate to="/admin/dashboard" replace /> : <DashboardPage />;
 }
 
 export default function App() {
@@ -102,7 +111,7 @@ export default function App() {
           </Protected>
         }
       >
-        <Route index element={<DashboardPage />} />
+        <Route index element={<DashboardRedirect />} />
         <Route path="api-keys" element={<ApiKeysPage />} />
         <Route path="logs" element={<LogsPage />} />
         <Route path="recharge" element={<RechargePage />} />
@@ -110,6 +119,8 @@ export default function App() {
         <Route path="invoices" element={<InvoicesPage />} />
         <Route path="agent/settings" element={<AgentSettingsPage />} />
         <Route path="agent/settlements" element={<AgentSettlementPage />} />
+        <Route path="admin/dashboard" element={<AdminDashboardPage />} />
+        <Route path="admin/cockpit" element={<AdminCockpitPage />} />
         <Route path="admin/agents" element={<AdminAgentsPage />} />
         <Route path="admin/withdrawals" element={<AdminWithdrawalsPage />} />
         <Route path="admin/vendors" element={<AdminVendorsPage />} />

@@ -53,6 +53,8 @@ export default function ConsoleLayout() {
   // 管理后台子菜单（折叠组，对齐原型 nav-sub 结构）
   const adminNav: { group: string; icon: string; items: NavDef[] }[] = [
     { group: "管理后台", icon: "⚙️", items: [
+      { to: "/admin/dashboard", label: "业务看板", icon: "📊" },
+      { to: "/admin/cockpit", label: "数据驾驶舱", icon: "🚀" },
       { to: "/admin/customers", label: "客户管理", icon: "👥" },
       { to: "/admin/agents", label: "代理管理", icon: "🤝" },
       { to: "/admin/withdrawals", label: "提现审核", icon: "🏦" },
