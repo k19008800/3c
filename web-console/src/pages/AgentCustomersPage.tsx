@@ -49,7 +49,7 @@ export default function AgentCustomersPage() {
                 <td style={{ padding: "8px 14px", textAlign: "right", fontWeight: 600, color: "#22c55e" }}>¥{(c.total_commission / 100).toFixed(2)}</td>
                 <td style={{ padding: "8px 14px", textAlign: "center" }}>{c.commission_rate}%</td>
                 <td style={{ padding: "8px 14px", textAlign: "center" }}>
-                  <StatusBadge label={c.status === "active" ? "活跃" : "已禁用"} variant={c.status === "active" ? "success" : "danger"} />
+                  <StatusBadge status={c.status === "active" ? "success" : "danger"}>{c.status === "active" ? "活跃" : "已禁用"}</StatusBadge>
                 </td>
                 <td style={{ padding: "8px 14px", fontSize: 12, color: "#888" }}>{new Date(c.joined_at).toLocaleDateString()}</td>
               </tr>

@@ -30,7 +30,7 @@ export default function AdminDisputePage() {
       pending: ["warning", "待处理"], investigating: ["info", "调查中"], refunded: ["success", "已退款"], dismissed: ["default", "已驳回"],
     };
     const [v, label] = map[s] ?? ["default" as const, l ?? s];
-    return <StatusBadge label={label} variant={v} />;
+    return <StatusBadge status={v}>{label}</StatusBadge>;
   };
 
   return (

@@ -52,8 +52,7 @@ export default function TopupRecordsPage() {
                 <td style={{ padding: "8px 14px", textAlign: "right", fontWeight: 600 }}>¥{(r.amount / 100).toFixed(2)}</td>
                 <td style={{ padding: "8px 14px" }}>{r.payment_method}</td>
                 <td style={{ padding: "8px 14px", textAlign: "center" }}>
-                  <StatusBadge label={r.status_label ?? r.status}
-                    variant={r.status === "success" ? "success" : r.status === "pending" ? "warning" : "danger"} />
+                  <StatusBadge status={r.status === "success" ? "success" : r.status === "pending" ? "warning" : "danger"}>{r.status_label ?? r.status}</StatusBadge>
                 </td>
                 <td style={{ padding: "8px 14px", fontSize: 12, color: "#888" }}>{new Date(r.created_at).toLocaleString()}</td>
               </tr>

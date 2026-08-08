@@ -43,7 +43,7 @@ export default function AdminContentModerationPage() {
       blocked: ["🛑 拦截", "danger"], flagged: ["⚠️ 标记", "warning"], passed: ["✅ 放行", "success"],
     };
     const [label, v] = map[r] ?? [r, "default"] as any;
-    return <StatusBadge label={label} variant={v} />;
+    return <StatusBadge status={v}>{label}</StatusBadge>;
   };
 
   return (

@@ -132,7 +132,7 @@ export default function AdminSubscriptionPage() {
                   <td style={{ padding: "8px 14px" }}>{s.username}</td>
                   <td style={{ padding: "8px 14px" }}>{s.plan_name}</td>
                   <td style={{ padding: "8px 14px", textAlign: "center" }}>
-                    <StatusBadge label={s.status === "active" ? "生效中" : s.status === "expired" ? "已过期" : s.status} variant={s.status === "active" ? "success" : s.status === "expired" ? "danger" : "warning"} />
+                    <StatusBadge status={s.status === "active" ? "success" : s.status === "expired" ? "danger" : "warning"}>{s.status === "active" ? "生效中" : s.status === "expired" ? "已过期" : s.status}</StatusBadge>
                   </td>
                   <td style={{ padding: "8px 14px", fontSize: 12 }}>{new Date(s.started_at).toLocaleDateString()}</td>
                   <td style={{ padding: "8px 14px", fontSize: 12 }}>{new Date(s.expires_at).toLocaleDateString()}</td>

@@ -60,7 +60,7 @@ export default function AdminDataRequestPage() {
       rejected: ["已驳回", "danger"], exported: ["已导出", "default"], delivered: ["已交付", "success"],
     };
     const [label, type] = m[s.status] ?? [s.status_label ?? s.status, "default"];
-    return <StatusBadge label={label} variant={type} />;
+    return <StatusBadge status={type}>{label}</StatusBadge>;
   };
 
   return (

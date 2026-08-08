@@ -98,8 +98,7 @@ export default function AgentWithdrawPage() {
                 <td style={{ padding: "8px 14px", textAlign: "right", fontWeight: 600 }}>¥{(r.amount / 100).toFixed(2)}</td>
                 <td style={{ padding: "8px 14px" }}>{r.bank_name}</td>
                 <td style={{ padding: "8px 14px", textAlign: "center" }}>
-                  <StatusBadge label={r.status_label ?? r.status}
-                    variant={r.status === "approved" ? "success" : r.status === "rejected" ? "danger" : r.status === "pending" ? "warning" : "info"} />
+                  <StatusBadge status={r.status === "approved" ? "success" : r.status === "rejected" ? "danger" : r.status === "pending" ? "warning" : "info"}>{r.status_label ?? r.status}</StatusBadge>
                 </td>
                 <td style={{ padding: "8px 14px", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#666" }}>{r.reviewer_note ?? "-"}</td>
                 <td style={{ padding: "8px 14px", fontSize: 12, color: "#888" }}>{new Date(r.created_at).toLocaleDateString()}</td>
