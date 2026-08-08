@@ -110,7 +110,14 @@ export function publicRoutes(app: FastifyInstance) {
     "/public/status",
     { schema: { tags: ["public"] } },
     async () => {
-      const vendors = await pool.query("SELECT id, name, status, health_score FROM vendors");
+      const vendors = await pool.query(
+        `SELECT v.id, v.name, v.status,
+                COALESCE(AVG(vm.health_score), 100)::int AS health_score
+         FROM vendors v
+         LEFT JOIN vendor_models vm ON vm.vendor_id = v.id
+         GROUP BY v.id, v.name, v.status
+         ORDER BY v.name`,
+      );
       return {
         api: { status: "operational" },
         vendors: vendors.rows.map((v: any) => ({
