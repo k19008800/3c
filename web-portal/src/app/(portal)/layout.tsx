@@ -1,17 +1,34 @@
-/**
- * Portal layout — fixed sidebar + topbar + main content area
- * Used by all internal portal pages (realname, notifications, deletion, etc.)
- */
 "use client";
 
 import "@3cloud/shared-ui/src/tokens.css";
 import { ToastProvider } from "@3cloud/shared-ui";
 import PortalSidebar from "./_components/PortalSidebar";
 import PortalTopbar from "./_components/PortalTopbar";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed] = useState(false);
+  const [authed, setAuthed] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+    } else {
+      setAuthed(true);
+    }
+  }, [pathname, router]);
+
+  if (!authed) {
+    return (
+      <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center", background: "#f0f2f5", fontFamily: "var(--font-family)" }}>
+        <div style={{ fontSize: 14, color: "#64748b" }}>验证中…</div>
+      </div>
+    );
+  }
 
   return (
     <ToastProvider>
