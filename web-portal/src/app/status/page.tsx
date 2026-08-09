@@ -1,5 +1,8 @@
-// 系统状态页 — 服务端组件（SSR）
-const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3000";
+"use client";
+
+import { useEffect, useState } from "react";
+
+// 系统状态页 — 客户端组件，通过 Next.js rewrite 代理访问后端 API
 
 interface VendorStatus {
   name: string;
@@ -14,31 +17,56 @@ interface StatusData {
 
 async function getStatus(): Promise<StatusData> {
   try {
-    const res = await fetch(`${API_BASE}/api/v1/public/status`, { cache: "no-store" });
-    if (res.ok) return await res.json();
+    // 通过 Next.js rewrite → localhost:3030/health
+    const healthRes = await fetch("/health");
+    if (!healthRes.ok) throw new Error("API health check failed");
+    const health = await healthRes.json();
+    const apiStatus = health.status === "ok" ? "operational" : "degraded";
+
+    let vendors: VendorStatus[] = [];
+    try {
+      // 通过 Next.js rewrite → localhost:3030/api/v1/public/status
+      const res = await fetch("/api/v1/public/status");
+      if (res.ok) {
+        const data = await res.json();
+        vendors = data.vendors ?? [];
+      }
+    } catch { /* 供应商标识不可用 */ }
+
+    return { api: { status: apiStatus }, vendors };
   } catch {
-    /* 兜底 */
+    return { api: { status: "unknown" }, vendors: [] };
   }
-  return { api: { status: "unknown" }, vendors: [] };
 }
 
-export const metadata = {
-  title: "3Cloud 系统状态",
-  description: "3Cloud 各 API 端点与服务实时状态",
-};
+export default function StatusPage() {
+  const [status, setStatus] = useState<StatusData | null>(null);
 
-export default async function StatusPage() {
-  const status = await getStatus();
+  useEffect(() => {
+    getStatus().then(setStatus);
+  }, []);
+
+  if (!status) {
+    return (
+      <div style={{ maxWidth: 760, margin: "0 auto", padding: "48px 24px" }}>
+        <h1 style={{ fontSize: 32, marginBottom: 24 }}>系统状态</h1>
+        <p style={{ color: "#94a3b8" }}>加载中…</p>
+      </div>
+    );
+  }
+
   const apiOk = status.api.status === "operational";
 
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "48px 24px" }}>
       <h1 style={{ fontSize: 32, marginBottom: 24 }}>系统状态</h1>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 20, background: apiOk ? "#f0fdf4" : "#fef2f2", borderRadius: 12, marginBottom: 24 }}>
-        <span style={{ width: 12, height: 12, borderRadius: "50%", background: apiOk ? "#22c55e" : "#ef4444" }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 20, background: apiOk ? "#f0fdf4" : status.api.status === "unknown" ? "#fffbeb" : "#fef2f2", borderRadius: 12, marginBottom: 24 }}>
+        <span style={{ width: 12, height: 12, borderRadius: "50%", background: apiOk ? "#22c55e" : status.api.status === "unknown" ? "#f59e0b" : "#ef4444" }} />
         <div>
-          <div style={{ fontWeight: 700 }}>{apiOk ? "全部系统正常运行" : "部分系统异常"}</div>
+          <div style={{ fontWeight: 700 }}>
+            {apiOk ? "全部系统正常运行" : status.api.status === "unknown" ? "无法连接 API 网关" : "部分系统异常"}
+          </div>
           <div style={{ fontSize: 13, color: "#64748b" }}>3Cloud API 网关</div>
         </div>
       </div>

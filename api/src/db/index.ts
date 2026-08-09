@@ -1,14 +1,11 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
-import * as schema from "./schema/index";
-import "dotenv/config";
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import * as schema from './schema/index';
 
-const { Pool } = pg;
+const connectionString = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/threecloud_v3';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/threecloud_v2",
-});
+const client = postgres(connectionString, { max: 20 });
 
-export const db = drizzle(pool, { schema });
-
-export { pool };
+export const db = drizzle(client, { schema });
+export { schema };
+export default db;

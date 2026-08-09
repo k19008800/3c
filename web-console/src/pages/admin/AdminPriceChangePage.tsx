@@ -34,7 +34,7 @@ export default function AdminPriceChangePage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>价格变更通知</h2>
-        <HelpIcon helpKey="price_change" />
+        <HelpIcon text="price_change" />
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
@@ -43,8 +43,8 @@ export default function AdminPriceChangePage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>📢 价格变更列表 <HelpIcon helpKey="price_change" /></div>
-        {listQ.isLoading ? <SkeletonGroup count={5} /> : (
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>📢 价格变更列表 <HelpIcon text="price_change" /></div>
+        {listQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>模型</th>
@@ -71,7 +71,7 @@ export default function AdminPriceChangePage() {
                   </td>
                   <td style={{ padding: "10px 12px" }}>
                     <StatusBadge status={pc.status === "approved" ? "success" : pc.status === "pending" ? "warning" : "default"}>
-                      {{ pending: "待审批", approved: "已通过", rejected: "已驳回", notified: "已通知" }[pc.status] ?? pc.status}
+                      {({ pending: "待审批", approved: "已通过", rejected: "已驳回", notified: "已通知" } as Record<string, string>)[pc.status] ?? pc.status}
                     </StatusBadge>
                   </td>
                   <td style={{ padding: "10px 12px", display: "flex", gap: 4 }}>

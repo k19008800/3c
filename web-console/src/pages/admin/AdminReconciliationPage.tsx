@@ -17,7 +17,7 @@ export default function AdminReconciliationPage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>对账报表</h2>
-        <HelpIcon helpKey="reconciliation" />
+        <HelpIcon text="reconciliation" />
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
@@ -45,8 +45,8 @@ export default function AdminReconciliationPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>📊 对账明细 <HelpIcon helpKey="reconciliation" /></div>
-        {recQ.isLoading ? <SkeletonGroup count={5} /> : (
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>📊 对账明细 <HelpIcon text="reconciliation" /></div>
+        {recQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>供应商</th>

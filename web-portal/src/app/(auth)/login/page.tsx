@@ -20,10 +20,6 @@ const styles = {
   error: { display: "flex", alignItems: "center", gap: 8, background: "#fff1f0", border: "1px solid #ffccc7", borderRadius: 6, padding: "10px 12px", fontSize: 13, color: "#cf1322", marginBottom: 16 } as const,
   footer: { textAlign: "center", marginTop: 20, fontSize: 13, color: "#888" } as const,
   link: { color: "#4f6ef7", textDecoration: "none", cursor: "pointer" } as const,
-  divider: { display: "flex", alignItems: "center", margin: "24px 0 16px", color: "#bbb", fontSize: 13 } as const,
-  dividerLine: { flex: 1, height: 1, background: "#eee" } as const,
-  socialBtns: { display: "flex", gap: 12 } as const,
-  socialBtn: { flex: 1, height: 40, border: "1px solid #d9d9d9", borderRadius: 8, background: "#fff", fontSize: 13, cursor: "pointer" } as const,
 };
 
 export default function LoginPage() {
@@ -43,11 +39,11 @@ export default function LoginPage() {
       const res = await fetch("/api/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password }),
+        body: JSON.stringify({ email: email.trim(), password: password.trim() }),
       });
       const data = await res.json();
-      if (res.ok && data.token) {
-        localStorage.setItem("token", data.token);
+      if (res.ok && data.accessToken) {
+        localStorage.setItem("token", data.accessToken);
         const role = data.user?.role;
         if (data.user?.totpEnabled) {
           router.push("/2fa");

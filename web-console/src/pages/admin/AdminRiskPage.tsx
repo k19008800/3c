@@ -18,7 +18,7 @@ export default function AdminRiskPage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>风控看板</h2>
-        <HelpIcon helpKey="risk" />
+        <HelpIcon text="risk" />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 16, marginBottom: 20 }}>
@@ -38,8 +38,8 @@ export default function AdminRiskPage() {
       </div>
 
       <div style={{ ...card, marginBottom: 20 }}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>最近风险事件 <HelpIcon helpKey="risk" /></div>
-        {riskQ.isLoading ? <SkeletonGroup count={5} /> : (
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>最近风险事件 <HelpIcon text="risk" /></div>
+        {riskQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>时间</th>
@@ -58,7 +58,7 @@ export default function AdminRiskPage() {
                   <td style={{ padding: "10px 12px" }}>{e.detail}</td>
                   <td style={{ padding: "10px 12px" }}>
                     <StatusBadge status={e.status === "pending" ? "warning" : e.status === "handled" ? "success" : "danger"}>
-                      {{ pending: "待处理", handled: "已处理", blocked: "已冻结" }[e.status] ?? e.status}
+                      {({ pending: "待处理", handled: "已处理", blocked: "已冻结" } as Record<string, string>)[e.status] ?? e.status}
                     </StatusBadge>
                   </td>
                   <td style={{ padding: "10px 12px" }}>

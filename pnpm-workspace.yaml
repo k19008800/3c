@@ -1,6 +1,8 @@
 packages:
-  - "packages/*"
-  - "api"
-  - "apps/*"
-  - "web-console"
-  - "web-portal"
+  - 'api'
+  - 'packages/*'
+  - 'web-console'
+  - 'web-portal'
+allowBuilds:
+  esbuild: true
+  sharp: true

@@ -29,7 +29,7 @@ export default function AdminMultimodalModelsPage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>多模态模型管理</h2>
-        <HelpIcon helpKey="multimodal" />
+        <HelpIcon text="multimodal" />
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
@@ -48,8 +48,8 @@ export default function AdminMultimodalModelsPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>🎛️ 多模态模型列表 <HelpIcon helpKey="multimodal" /></div>
-        {listQ.isLoading ? <SkeletonGroup count={5} /> : (
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>🎛️ 多模态模型列表 <HelpIcon text="multimodal" /></div>
+        {listQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>模型名</th>
@@ -64,7 +64,7 @@ export default function AdminMultimodalModelsPage() {
               {(listQ.data?.list ?? []).map((m: any) => (
                 <tr key={m.id} style={{ borderTop: "1px solid #f0f0f0" }}>
                   <td style={{ padding: "10px 12px", fontWeight: 500 }}>{m.display_name ?? m.model_name}</td>
-                  <td style={{ padding: "10px 12px" }}>{{ vision: "👁️ 视觉", image_gen: "🎨 图片生成", audio: "🔊 音频", video: "🎬 视频", video_gen: "🎥 视频生成", multimodal: "🌈 多模态" }[m.type] ?? m.type}</td>
+                  <td style={{ padding: "10px 12px" }}>{({ vision: "👁️ 视觉", image_gen: "🎨 图片生成", audio: "🔊 音频", video: "🎬 视频", video_gen: "🎥 视频生成", multimodal: "🌈 多模态" } as Record<string, string>)[m.type] ?? m.type}</td>
                   <td style={{ padding: "10px 12px", color: "#888" }}>{m.vendor_name}</td>
                   <td style={{ padding: "10px 12px", fontSize: 11 }}>
                     {(m.capabilities ?? []).map((c: string) => (

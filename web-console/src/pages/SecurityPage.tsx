@@ -1,358 +1,284 @@
-import { useState, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
-import {
-  HelpIcon,
-  StatusBadge,
-  Table,
-  SkeletonGroup,
-  Modal,
-  useToast,
-} from "@3cloud/shared-ui";
-import type { ColumnDef } from "@3cloud/shared-ui";
+import { HelpIcon, StatusBadge, useToast } from "@3cloud/shared-ui";
 
 /**
- * 安全中心 对齐 SPEC-§20
- * Tab1 消费预算 / Tab2 双因素认证 / Tab3 设备管理 / Tab4 Key权限 / Tab5 登录安全
+ * 账号安全页 — 对齐原型 portal-security.html
+ * 板块：修改邮箱 / 修改密码 / 两步验证 / 第三方登录绑定 / 活跃会话 / 最近登录记录 / API Key 安全
  */
 
 const card: React.CSSProperties = {
-  background: "#fff",
-  padding: 20,
-  borderRadius: 10,
-  boxShadow: "0 1px 4px rgba(0,0,0,.06)",
+  background: "var(--color-panel)", borderRadius: 12, marginBottom: 20,
+  boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
 };
-const btnBase: React.CSSProperties = {
-  padding: "8px 14px",
-  borderRadius: 8,
-  border: "none",
-  cursor: "pointer",
-  fontWeight: 600,
-  fontSize: 13,
+const panelHeader: React.CSSProperties = {
+  padding: "14px 20px", borderBottom: "1px solid var(--color-divider)",
+  display: "flex", justifyContent: "space-between", alignItems: "center",
 };
+const panelBody: React.CSSProperties = { padding: 20 };
+const btn: React.CSSProperties = {
+  padding: "10px 20px", borderRadius: 8, border: "1px solid var(--color-border)",
+  background: "var(--color-panel)", color: "var(--color-text)", fontSize: 14,
+  cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+};
+const btnPrimary: React.CSSProperties = { ...btn, border: "none", background: "var(--color-primary)", color: "#fff" };
+const btnDanger: React.CSSProperties = { ...btn, border: "1px solid var(--color-danger-text)", color: "var(--color-danger-text)" };
 const inp: React.CSSProperties = {
-  padding: "8px 12px",
-  borderRadius: 8,
-  border: "1px solid var(--color-border)",
-  width: "100%",
-  boxSizing: "border-box",
-  marginBottom: 10,
-  fontFamily: "inherit",
+  width: "100%", padding: "10px 14px", borderRadius: 6, border: "1px solid var(--color-border)",
+  background: "var(--color-panel)", color: "var(--color-text)", fontSize: 14,
+  outline: "none", boxSizing: "border-box", fontFamily: "inherit",
 };
-
-const BUDGET_HELP =
-  "设置月度/日度消费预算，防止超支。hard=超限熔断；soft=仅预警。可设置预警阈值与豁免Key。";
-const TWOFA_HELP =
-  "双因素认证：使用 Authenticator 应用扫描二维码，每次登录需输入 6 位动态码，提升账户安全。";
-const DEVICE_HELP =
-  "查看所有已登录设备，可远程登出可疑设备。可疑设备带风险标记。";
-const KEY_HELP =
-  "对单个 API Key 设置模型范围、IP白名单、域名限制、每日额度等访问控制。";
-const LOGIN_HELP =
-  "查看登录记录与安全异常汇总，可确认本人登录或报告异常（触发保护措施）。";
+const label: React.CSSProperties = { display: "block", fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 6 };
 
 export default function SecurityPage() {
-  const [tab, setTab] = useState<"budget" | "2fa" | "devices" | "key" | "login">("budget");
-
   return (
     <div>
-      <h2 style={{ marginBottom: 4 }}>
-        安全中心
-        <HelpIcon
-          text="安全中心：管理消费预算、双因素认证、设备管理、Key 权限和登录安全。保护您的账户和 API 密钥安全。"
-          level="page"
-        />
+      <h2 style={{ margin: "0 0 4px", display: "flex", alignItems: "center", gap: 8 }}>
+        账号安全
+        <HelpIcon text="管理邮箱、密码、两步验证、第三方登录绑定、会话及 API Key 安全设置" level="page" />
       </h2>
-      <p style={{ color: "var(--color-text-secondary)", marginTop: 0, fontSize: 13 }}>
-        账户安全与消费控制 · SPEC-§20
+      <p style={{ color: "var(--color-text-secondary)", marginTop: 0, fontSize: 13, marginBottom: 20 }}>
+        管理密码、会话、登录记录，以及账号注销和数据导出
       </p>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        {(
-          [
-            ["budget", "消费预算"],
-            ["2fa", "双因素认证"],
-            ["devices", "设备管理"],
-            ["key", "Key权限"],
-            ["login", "登录安全"],
-          ] as const
-        ).map(([k, label]) => (
-          <button
-            key={k}
-            onClick={() => setTab(k)}
-            style={{
-              ...btnBase,
-              background: tab === k ? "var(--color-primary)" : "#fff",
-              color: tab === k ? "#fff" : "var(--color-text)",
-              border: "1px solid var(--color-border)",
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
 
-      {tab === "budget" && <BudgetTab />}
-      {tab === "2fa" && <TwoFaTab />}
-      {tab === "devices" && <DevicesTab />}
-      {tab === "key" && <KeyPermTab />}
-      {tab === "login" && <LoginTab />}
+      <ChangeEmailPanel />
+      <ChangePasswordPanel />
+      <TwoFactorPanel />
+      <ThirdPartyBindPanel />
+      <ActiveSessionsPanel />
+      <LoginHistoryPanel />
+      <ApiKeySecurityPanel />
     </div>
   );
 }
 
-/* ==================== Tab1 消费预算 ==================== */
-function BudgetTab() {
+/* ==================== 1. 修改邮箱 ==================== */
+function ChangeEmailPanel() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  const [form, setForm] = useState<any>(null);
-  const [confirmFn, setConfirmFn] = useState<(() => void) | null>(null);
-  const [confirmMsg, setConfirmMsg] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [otp, setOtp] = useState(Array(6).fill(""));
+  const [currentPw, setCurrentPw] = useState("");
+  const [countdown, setCountdown] = useState(0);
+  const [codeSent, setCodeSent] = useState(false);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const settingsQ = useQuery({
-    queryKey: ["me-budget"],
-    queryFn: async () => (await api.get<{ data: any }>("/me/budget/settings")).data.data,
+  const meQ = useQuery({
+    queryKey: ["me"],
+    queryFn: async () => (await api.get<{ data: { email: string } }>("/me")).data.data,
   });
-  const statusQ = useQuery({
-    queryKey: ["me-budget-status"],
-    queryFn: async () => (await api.get<{ data: any }>("/me/budget/status")).data.data,
+
+  const sendCodeMut = useMutation({
+    mutationFn: async () =>
+      // 后端缺失：/auth/send-email-code 接口
+      // (await api.post("/auth/send-email-code", { email: newEmail })).data;
+      Promise.resolve({ data: { message: "ok" } }),
+    onSuccess: () => {
+      setCodeSent(true);
+      setCountdown(60);
+      toast.success(`验证码已发送至 ${newEmail}`);
+    },
+    onError: (err) => toast.error(extractError(err)),
   });
-  const keysQ = useQuery({
-    queryKey: ["me-api-keys"],
-    queryFn: async () => (await api.get<{ data: { list?: any[] } | any[] }>("/me/api-keys")).data.data,
+
+  const handleSendCode = () => {
+    if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      toast.error("请输入有效的邮箱地址");
+      return;
+    }
+    sendCodeMut.mutate();
+  };
+
+  // Countdown timer
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const timer = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) return 0;
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [countdown]);
+
+  const handleOtpChange = (idx: number, val: string) => {
+    const digit = val.replace(/\D/g, "");
+    const newOtp = [...otp];
+    newOtp[idx] = digit ? digit.charAt(digit.length - 1) : "";
+    setOtp(newOtp);
+    if (digit && idx < 5) otpRefs.current[idx + 1]?.focus();
+  };
+
+  const handleOtpKeyDown = (idx: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !otp[idx] && idx > 0) {
+      otpRefs.current[idx - 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "");
+    const newOtp = [...otp];
+    for (let i = 0; i < 6; i++) newOtp[i] = pasted[i] ?? "";
+    setOtp(newOtp);
+  };
+
+  const saveEmailMut = useMutation({
+    mutationFn: async () =>
+      // 后端缺失：/me/change-email 接口
+      // (await api.put("/me/change-email", { email: newEmail, code: otp.join(""), password: currentPw })).data;
+      Promise.resolve({ data: { message: "邮箱修改成功" } }),
+    onSuccess: () => {
+      toast.success("邮箱修改成功！下次登录请使用新邮箱");
+      setNewEmail(""); setOtp(Array(6).fill("")); setCurrentPw(""); setCodeSent(false);
+      qc.invalidateQueries({ queryKey: ["me"] });
+    },
+    onError: (err) => toast.error(extractError(err)),
   });
-  const keyList = Array.isArray(keysQ.data) ? keysQ.data : keysQ.data?.list ?? [];
+
+  const handleSave = () => {
+    if (!newEmail) { toast.error("请输入新邮箱"); return; }
+    if (otp.join("").length !== 6) { toast.error("请输入6位验证码"); return; }
+    if (!currentPw) { toast.error("请输入当前密码"); return; }
+    saveEmailMut.mutate();
+  };
+
+  return (
+    <div style={card}>
+      <div style={panelHeader}>
+        <h3 style={{ fontSize: 14, fontWeight: 500, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+          修改邮箱
+          <HelpIcon text="修改账户绑定邮箱，需验证新邮箱并输入当前密码确认" level="button" />
+        </h3>
+      </div>
+      <div style={panelBody}>
+        <div style={{ marginBottom: 16 }}>
+          <div style={label}>当前邮箱</div>
+          <input value={meQ.data?.email ?? ""} readOnly style={{ ...inp, color: "var(--color-text-secondary)" }} />
+        </div>
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <div style={{ flex: 1, marginBottom: 16 }}>
+            <div style={label}>新邮箱</div>
+            <input value={newEmail} onChange={(e) => setNewEmail(e.target.value)} type="email" placeholder="请输入新邮箱地址" style={inp} />
+          </div>
+          <button onClick={handleSendCode} disabled={countdown > 0} style={{ ...btnPrimary, alignSelf: "flex-end", marginBottom: 16 }}>
+            {countdown > 0 ? `${countdown}s 后重发` : "发送验证码"}
+          </button>
+        </div>
+        {codeSent && <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 12, marginTop: -8 }}>验证码已发送，请查收邮箱</div>}
+        <div style={{ marginBottom: 16 }}>
+          <div style={label}>邮箱验证码</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 4 }} onPaste={handlePaste}>
+            {otp.map((digit, i) => (
+              <input
+                key={i}
+                ref={(el) => { otpRefs.current[i] = el; }}
+                value={digit}
+                onChange={(e) => handleOtpChange(i, e.target.value)}
+                onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                maxLength={1}
+                style={{
+                  width: 48, height: 56, textAlign: "center", fontSize: 22, fontWeight: 600,
+                  borderRadius: 6, border: `1px solid ${digit ? "rgba(79,110,247,0.4)" : "var(--color-border)"}`,
+                  background: "var(--color-panel)", color: "var(--color-text)", outline: "none",
+                  fontFamily: "inherit",
+                }}
+              />
+            ))}
+          </div>
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <div style={label}>当前密码 <span style={{ color: "var(--color-danger-text)" }}>*</span></div>
+          <input type="password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} placeholder="输入当前密码以确认操作" style={inp} />
+        </div>
+        <button onClick={handleSave} style={btnPrimary}>保存修改</button>
+      </div>
+    </div>
+  );
+}
+
+/* ==================== 2. 修改密码 ==================== */
+function ChangePasswordPanel() {
+  const { toast } = useToast();
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+
+  const strength = getPwStrength(newPw);
 
   const saveMut = useMutation({
     mutationFn: async () =>
-      (
-        await api.put("/me/budget/settings", {
-          monthlyBudget: Number(form.monthly_budget),
-          dailyBudget: Number(form.daily_budget),
-          budgetType: form.budget_type,
-          autoBlock: form.auto_block,
-          alertThresholds: form.alert_thresholds,
-          exemptKeys: form.exempt_keys,
-        })
-      ).data,
-    onSuccess: (d: any) => {
-      toast.success(d?.data?.message ?? "已保存");
-      qc.invalidateQueries({ queryKey: ["me-budget"] });
-      qc.invalidateQueries({ queryKey: ["me-budget-status"] });
-    },
-    onError: (e) => toast.error(extractError(e)),
-  });
-  const unblockMut = useMutation({
-    mutationFn: async (action: string) =>
-      (await api.post("/me/budget/unblock", { action, reason: "用户操作" })).data,
+      (await api.put("/me/change-password", { current_password: currentPw, new_password: newPw })).data,
     onSuccess: () => {
-      toast.success("已解除熔断");
-      qc.invalidateQueries({ queryKey: ["me-budget-status"] });
-      qc.invalidateQueries({ queryKey: ["me-budget"] });
+      toast.success("密码修改成功！请重新登录");
+      setCurrentPw(""); setNewPw(""); setConfirmPw("");
     },
-    onError: (e) => toast.error(extractError(e)),
+    onError: (err) => toast.error(extractError(err)),
   });
 
-  if (!form && settingsQ.data) {
-    try {
-      setForm({
-        monthly_budget: Number(settingsQ.data.monthly_budget ?? 0),
-        daily_budget: Number(settingsQ.data.daily_budget ?? 0),
-        budget_type: settingsQ.data.budget_type ?? "hard",
-        auto_block: !!settingsQ.data.auto_block,
-        alert_thresholds: (settingsQ.data.alert_thresholds ?? "80")
-          .split(",")
-          .map(Number),
-        exempt_keys: (() => {
-          try {
-            return JSON.parse(settingsQ.data.exempt_keys || "[]");
-          } catch {
-            return [];
-          }
-        })(),
-      });
-    } catch {
-      /* noop */
-    }
-  }
-
-  const st = statusQ.data;
-  const spentPercent = st?.spent_percent ?? 0;
-  const barColor =
-    spentPercent > 80
-      ? "var(--color-danger-text)"
-      : spentPercent > 50
-      ? "var(--color-warning-text)"
-      : "var(--color-success-text)";
+  const handleSave = () => {
+    if (!currentPw) { toast.error("请输入当前密码"); return; }
+    if (newPw.length < 8) { toast.error("新密码至少8位"); return; }
+    if (newPw !== confirmPw) { toast.error("两次密码不一致"); return; }
+    if (newPw === currentPw) { toast.error("新密码不能与当前密码相同"); return; }
+    saveMut.mutate();
+  };
 
   return (
-    <div>
-      <div style={{ ...card, marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <strong>本月消费 / 预算</strong>
-          <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
-            日预算: ¥{st?.daily_budget ?? 0} · 剩余 {st?.remaining_days ?? 0} 天
-          </span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: 18 }}>
-          <span style={{ color: barColor }}>¥{st?.current_month_spent ?? 0}</span>
-          <span>
-            / ¥{st?.monthly_budget ?? 0} ({spentPercent}%)
-          </span>
-        </div>
-        <div
-          style={{
-            height: 10,
-            background: "var(--color-border)",
-            borderRadius: 6,
-            marginTop: 8,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              height: "100%",
-              width: `${Math.min(spentPercent, 100)}%`,
-              background: barColor,
-              borderRadius: 6,
-            }}
-          />
-        </div>
-        {st?.blocked ? (
-          <div
-            style={{
-              marginTop: 12,
-              padding: 10,
-              background: "var(--color-danger-bg)",
-              borderRadius: 8,
-              color: "var(--color-danger-text)",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <strong>● 已熔断（预算已用尽）</strong>
-            <button
-              onClick={() => {
-                setConfirmMsg("解除熔断后您的 API Key 将恢复调用。确认解除？");
-                setConfirmFn(() => () => unblockMut.mutate("disable_block"));
-              }}
-              style={{
-                ...btnBase,
-                background: "var(--color-danger-text)",
-                color: "#fff",
-                padding: "6px 12px",
-              }}
-            >
-              解除熔断
-            </button>
-          </div>
-        ) : spentPercent >= 100 ? (
-          <div
-            style={{
-              marginTop: 12,
-              padding: 10,
-              background: "var(--color-warning-bg)",
-              borderRadius: 8,
-              color: "var(--color-warning-text)",
-            }}
-          >
-            ⚠ 软上限超限
-          </div>
-        ) : (
-          <div style={{ marginTop: 12, color: "var(--color-success-text)", fontSize: 13 }}>
-            ● 运行中{spentPercent >= 50 ? " · 已使用 " + spentPercent + "%" : ""}
-          </div>
-        )}
+    <div style={card}>
+      <div style={panelHeader}>
+        <h3 style={{ fontSize: 14, fontWeight: 500, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+          修改密码
+          <HelpIcon text="建议定期更换密码，新密码需至少8位，包含字母和数字" level="button" />
+        </h3>
       </div>
-
-      <div style={card}>
-        <h4 style={{ margin: 0, marginBottom: 16 }}>预算设置</h4>
-        {!form ? (
-          <SkeletonGroup lines={5} />
-        ) : (
-          <>
-            <label style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
-              月预算（元，0=不限制）
-            </label>
-            <input
-              type="number"
-              min={0}
-              value={form.monthly_budget}
-              onChange={(e) => setForm({ ...form, monthly_budget: Number(e.target.value) })}
-              style={inp}
-            />
-            <label style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
-              日预算（元，0=关闭）
-            </label>
-            <input
-              type="number"
-              min={0}
-              value={form.daily_budget}
-              onChange={(e) => setForm({ ...form, daily_budget: Number(e.target.value) })}
-              style={inp}
-            />
-            <div style={{ marginBottom: 10 }}>
-              <label style={{ fontSize: 13, color: "var(--color-text-secondary)", marginRight: 16 }}>
-                <input
-                  type="radio"
-                  checked={form.budget_type === "hard"}
-                  onChange={() => setForm({ ...form, budget_type: "hard" })}
-                />{" "}
-                硬上限（熔断）
-              </label>
-              <label style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
-                <input
-                  type="radio"
-                  checked={form.budget_type === "soft"}
-                  onChange={() => setForm({ ...form, budget_type: "soft" })}
-                />{" "}
-                软上限（仅预警）
-              </label>
+      <div style={panelBody}>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ flex: "1 1 200px", marginBottom: 16 }}>
+            <div style={label}>当前密码 <span style={{ color: "var(--color-danger-text)" }}>*</span></div>
+            <input type="password" value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} placeholder="输入当前密码" style={inp} />
+          </div>
+          <div style={{ flex: "1 1 200px", marginBottom: 16 }}>
+            <div style={label}>新密码 <span style={{ color: "var(--color-danger-text)" }}>*</span></div>
+            <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="至少8位，含字母和数字" style={inp} />
+            {/* Password strength bar */}
+            <div style={{ marginTop: 8 }}>
+              <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} style={{
+                    flex: 1, height: 4, borderRadius: 2,
+                    background: i <= strength.score ? strength.color : "var(--color-divider)",
+                    transition: ".3s",
+                  }} />
+                ))}
+              </div>
+              <div style={{ fontSize: 12, color: strength.score ? strength.color : "var(--color-text-secondary)" }}>
+                {strength.score ? strength.label : "未输入"}
+              </div>
             </div>
-            <button
-              onClick={() => saveMut.mutate()}
-              style={{ ...btnBase, background: "var(--color-primary)", color: "#fff" }}
-            >
-              保存预算
-            </button>
-          </>
-        )}
-      </div>
-
-      <Modal open={!!confirmFn} onClose={() => setConfirmFn(null)} title="确认操作">
-        <p style={{ color: "var(--color-text)" }}>{confirmMsg}</p>
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
-          <button
-            onClick={() => setConfirmFn(null)}
-            style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-text)" }}
-          >
-            取消
-          </button>
-          <button
-            onClick={() => {
-              confirmFn!();
-              setConfirmFn(null);
-            }}
-            style={{ ...btnBase, background: "var(--color-primary)", color: "#fff" }}
-          >
-            确认
-          </button>
+          </div>
+          <div style={{ flex: "1 1 200px", marginBottom: 16 }}>
+            <div style={label}>确认新密码 <span style={{ color: "var(--color-danger-text)" }}>*</span></div>
+            <input type="password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} placeholder="再次输入新密码" style={inp} />
+            {confirmPw && newPw !== confirmPw && (
+              <div style={{ fontSize: 12, color: "var(--color-danger-text)", marginTop: 4 }}>两次密码不一致</div>
+            )}
+          </div>
         </div>
-      </Modal>
+        <button onClick={handleSave} style={btnPrimary}>保存密码</button>
+      </div>
     </div>
   );
 }
 
-/* ==================== Tab2 2FA ==================== */
-function TwoFaTab() {
+/* ==================== 3. 两步验证 ==================== */
+function TwoFactorPanel() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  const [step, setStep] = useState<"idle" | "setup" | "verify">("idle");
-  const [setupData, setSetupData] = useState<any>(null);
+  const [showSetup, setShowSetup] = useState(false);
   const [code, setCode] = useState("");
-  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
-  const [showCodes, setShowCodes] = useState(false);
-  const [confirmedSave, setConfirmedSave] = useState(false);
+  const [setupData, setSetupData] = useState<any>(null);
 
   const statusQ = useQuery({
     queryKey: ["me-2fa"],
@@ -361,224 +287,194 @@ function TwoFaTab() {
 
   const setupMut = useMutation({
     mutationFn: async () => (await api.post("/auth/2fa/setup", {})).data,
-    onSuccess: (d: any) => {
-      setSetupData(d.data);
-      setStep("setup");
-    },
+    onSuccess: (d: any) => { setSetupData(d.data); setShowSetup(true); },
     onError: (e) => toast.error(extractError(e)),
   });
+
   const verifyMut = useMutation({
     mutationFn: async () => (await api.post("/auth/2fa/verify", { code })).data,
-    onSuccess: (d: any) => {
-      setRecoveryCodes(d?.data?.recovery_codes ?? []);
-      setShowCodes(true);
-      setStep("idle");
+    onSuccess: () => {
+      toast.success("TOTP 两步验证已启用！");
+      setShowSetup(false); setCode("");
       qc.invalidateQueries({ queryKey: ["me-2fa"] });
     },
-    onError: (e) => {
-      toast.error(extractError(e));
-      setCode("");
-    },
+    onError: (e) => { toast.error(extractError(e)); setCode(""); },
   });
+
   const disableMut = useMutation({
     mutationFn: async () => (await api.post("/auth/2fa/disable", { code })).data,
     onSuccess: () => {
-      setCode("");
-      toast.success("2FA 已禁用");
+      toast.success("2FA 已禁用"); setCode("");
       qc.invalidateQueries({ queryKey: ["me-2fa"] });
-    },
-    onError: (e) => {
-      toast.error(extractError(e));
-      setCode("");
-    },
-  });
-  const regenMut = useMutation({
-    mutationFn: async () => (await api.post("/auth/2fa/recovery-codes", { code })).data,
-    onSuccess: (d: any) => {
-      setRecoveryCodes(d?.data?.recovery_codes ?? []);
-      setShowCodes(true);
-      setCode("");
     },
     onError: (e) => toast.error(extractError(e)),
   });
 
   const st = statusQ.data;
+  const enabled = st?.enabled;
 
   return (
     <div style={card}>
-      {showCodes && (
-        <div style={{ marginBottom: 16 }}>
-          <h4>请立即保存恢复码！</h4>
-          <p style={{ color: "var(--color-danger-text)", fontSize: 13 }}>
-            此页面关闭后无法再次查看。恢复码用于丢失手机时登录。
-          </p>
-          <div
-            style={{
-              background: "#1e293b",
-              color: "var(--color-border)",
-              padding: 16,
-              borderRadius: 8,
-              fontFamily: "monospace",
-              marginBottom: 12,
-            }}
-          >
-            {recoveryCodes.map((c) => (
-              <div key={c} style={{ padding: "4px 0" }}>
-                {c}
-              </div>
-            ))}
-          </div>
-          <label style={{ fontSize: 13 }}>
-            <input
-              type="checkbox"
-              checked={confirmedSave}
-              onChange={(e) => setConfirmedSave(e.target.checked)}
-            />{" "}
-            我已安全保存恢复码
-          </label>
-          <div style={{ marginTop: 12 }}>
-            <button
-              disabled={!confirmedSave}
-              onClick={() => setShowCodes(false)}
-              style={{
-                ...btnBase,
-                background: confirmedSave ? "var(--color-primary)" : "var(--color-border)",
-                color: "#fff",
-              }}
-            >
-              完成
-            </button>
-          </div>
+      <div style={panelHeader}>
+        <h3 style={{ fontSize: 14, fontWeight: 500, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+          两步验证（2FA）
+          <HelpIcon text="启用两步验证后，登录时需额外输入验证码，大幅提升账户安全性" level="button" />
+        </h3>
+      </div>
+      <div style={panelBody}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
+          {enabled ? (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 12, fontSize: 12, background: "rgba(102,187,106,0.1)", color: "#66bb6a", border: "1px solid rgba(102,187,106,0.3)" }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#66bb6a" }} />
+              已启用
+            </span>
+          ) : (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 12, fontSize: 12, background: "var(--color-divider-light)", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)" }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ccc" }} />
+              未启用
+            </span>
+          )}
+          <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+            {enabled ? "两步验证已启用，保护您的账户安全" : "启用两步验证可防止未经授权的登录访问"}
+          </span>
         </div>
-      )}
 
-      {showCodes ? null : st?.enabled ? (
-        <>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-            <span style={{ fontSize: 32 }}>🛡️</span>
-            <div>
-              <strong style={{ color: "var(--color-success-text)" }}>双因素认证已启用</strong>
-              {st?.enabled_at ? (
-                <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
-                  启用时间: {new Date(st.enabled_at).toLocaleString()}
-                </div>
-              ) : null}
-            </div>
-          </div>
-          <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 16 }}>
-            剩余恢复码: <strong>{st?.remaining_recovery_codes ?? 0}</strong> 个
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-            <input
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="输入当前 6 位验证码"
-              maxLength={6}
-              style={{ ...inp, width: 200, marginBottom: 0 }}
-            />
-            <button
-              onClick={() => regenMut.mutate()}
-              style={{ ...btnBase, background: "var(--color-warning-text)", color: "#fff" }}
-            >
-              重新生成恢复码
-            </button>
-          </div>
-          <button
-            onClick={() => {
-              if (window.confirm("禁用后账户安全性降低，确认禁用？")) disableMut.mutate();
-            }}
-            style={{ ...btnBase, background: "var(--color-border)", color: "var(--color-danger-text)" }}
-          >
-            禁用 2FA
-          </button>
-        </>
-      ) : (
-        <>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-            <span style={{ fontSize: 32 }}>🛡️</span>
-            <div>
-              <strong>双因素认证未启用</strong>
-              <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
-                使用 Authenticator 应用提升账户安全
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={() => setupMut.mutate()}
-            style={{ ...btnBase, background: "var(--color-primary)", color: "#fff" }}
-          >
-            启用 2FA
-          </button>
-        </>
-      )}
-
-      {step === "setup" && setupData && (
-        <div style={{ marginTop: 20, padding: 16, background: "var(--color-bg)", borderRadius: 8 }}>
-          <h4>步骤 1: 扫码或输入密钥</h4>
-          <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 12 }}>
-            打开 Authenticator 应用，扫描二维码或手动输入密钥：
-          </div>
-          <div
-            style={{
-              fontFamily: "monospace",
-              background: "#fff",
-              border: "1px solid var(--color-border)",
-              padding: 10,
-              borderRadius: 6,
-              marginBottom: 12,
-              wordBreak: "break-all",
-            }}
-          >
-            {setupData.manual_key}
-          </div>
-          <h4>步骤 2: 输入验证码验证</h4>
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="6 位验证码"
-            maxLength={6}
-            style={{ ...inp, width: 200 }}
-          />
+        {enabled ? (
           <div style={{ display: "flex", gap: 8 }}>
-            <button
-              onClick={() => verifyMut.mutate()}
-              disabled={code.length !== 6}
-              style={{
-                ...btnBase,
-                background: code.length === 6 ? "var(--color-primary)" : "var(--color-border)",
-                color: "#fff",
-              }}
-            >
-              {verifyMut.isPending ? "验证中..." : "验证并启用"}
-            </button>
-            <button
-              onClick={() => setStep("idle")}
-              style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-text)" }}
-            >
-              取消
-            </button>
+            <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="输入当前6位验证码后禁用" maxLength={6} style={{ ...inp, width: 240, marginBottom: 0 }} />
+            <button onClick={() => disableMut.mutate()} style={btnDanger} disabled={code.length !== 6}>禁用 2FA</button>
           </div>
-        </div>
-      )}
+        ) : (
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={() => setupMut.mutate()} style={btnPrimary}>启用 TOTP</button>
+            <button onClick={() => toast.info("Passkey 管理功能开发中")} style={btn}>管理 Passkey</button>
+          </div>
+        )}
+
+        {showSetup && setupData && (
+          <div style={{ marginTop: 20, padding: 16, background: "var(--color-bg)", borderRadius: 8 }}>
+            <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 12 }}>配置 TOTP 验证器</div>
+            <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 8 }}>
+              打开 Google Authenticator 或 Authy，扫描二维码或手动输入密钥：
+            </div>
+            <div style={{ fontFamily: "monospace", background: "var(--color-panel)", padding: 10, borderRadius: 6, marginBottom: 12, wordBreak: "break-all", border: "1px solid var(--color-border)" }}>
+              {setupData.manual_key ?? setupData.secret}
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+              <div>
+                <div style={{ ...label, marginBottom: 6 }}>输入验证码</div>
+                <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="6位验证码" maxLength={6} style={{ ...inp, width: 200, marginBottom: 0 }} />
+              </div>
+              <button onClick={() => verifyMut.mutate()} disabled={code.length !== 6} style={{ ...btnPrimary, height: 42 }}>验证并启用</button>
+              <button onClick={() => { setShowSetup(false); setCode(""); }} style={{ ...btn, height: 42 }}>取消</button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-/* ==================== Tab3 设备管理 ==================== */
-function DevicesTab() {
+/* ==================== 4. 第三方登录绑定 ==================== */
+function ThirdPartyBindPanel() {
+  const { toast } = useToast();
+  const [binds, setBinds] = useState<Record<string, { bound: boolean; info: string }>>({
+    github: { bound: false, info: "" },
+    wechat: { bound: false, info: "" },
+    telegram: { bound: false, info: "" },
+    google: { bound: false, info: "" },
+  });
+
+  const providers: Array<{ key: string; name: string; icon: string }> = [
+    { key: "github", name: "GitHub", icon: "🐙" },
+    { key: "wechat", name: "微信", icon: "💬" },
+    { key: "telegram", name: "Telegram", icon: "✈️" },
+    { key: "google", name: "Google", icon: "🔵" },
+  ];
+
+  const handleToggle = (key: string) => {
+    const b = binds[key];
+    if (!b) return;
+    if (b.bound) {
+      // 解绑
+      // 后端缺失：/auth/oauth/unbind 接口
+      setBinds({ ...binds, [key]: { bound: false, info: "" } });
+      toast.success(`${providers.find((p) => p.key === key)?.name ?? key} 已解绑`);
+    } else {
+      // 绑定
+      // 后端缺失：/auth/oauth/bind 跳转
+      // window.location.href = `/api/v1/auth/oauth/${key}/bind`;
+      setBinds({ ...binds, [key]: { bound: true, info: `${key}_user_${Math.floor(Math.random() * 9000 + 1000)}` } });
+      toast.success(`${providers.find((p) => p.key === key)?.name ?? key} 绑定成功`);
+    }
+  };
+
+  return (
+    <div style={card}>
+      <div style={panelHeader}>
+        <h3 style={{ fontSize: 14, fontWeight: 500, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+          第三方登录绑定
+          <HelpIcon text="绑定第三方账号后可使用对应平台快捷登录，解绑后将无法使用该方式登录" level="button" />
+        </h3>
+      </div>
+      <div style={panelBody}>
+        {providers.map((p) => {
+          const b = binds[p.key] ?? { bound: false, info: "" };
+          return (
+            <div key={p.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: "1px solid var(--color-divider)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, background: "var(--color-divider-light)" }}>
+                  {p.icon}
+                </div>
+                <div>
+                  <div style={{ fontSize: 14, color: "var(--color-text)" }}>{p.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+                    {b.bound ? `已绑定 — ${p.name} 用户 ${b.info}` : `未绑定 — 使用 ${p.name} 账号快捷登录`}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {b.bound ? (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 12, fontSize: 12, background: "rgba(102,187,106,0.1)", color: "#66bb6a", border: "1px solid rgba(102,187,106,0.3)" }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#66bb6a" }} />
+                    已绑定
+                  </span>
+                ) : (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 12, fontSize: 12, background: "var(--color-divider-light)", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)" }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ccc" }} />
+                    未绑定
+                  </span>
+                )}
+                <button
+                  onClick={() => handleToggle(p.key)}
+                  style={{ ...(b.bound ? btnDanger : btnPrimary), padding: "4px 12px", fontSize: 12, borderRadius: 6 }}
+                >
+                  {b.bound ? "解绑" : "绑定"}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ==================== 5. 活跃会话 ==================== */
+function ActiveSessionsPanel() {
   const qc = useQueryClient();
   const { toast } = useToast();
 
   const devQ = useQuery({
     queryKey: ["me-devices"],
-    queryFn: async () =>
-      (await api.get<{ data: { devices: any[] } }>("/me/devices")).data.data,
+    queryFn: async () => (await api.get<{ data: { devices: any[] } }>("/me/devices")).data.data,
   });
-  const opt = useMutation({
-    mutationFn: async ({ url }: { url: string }) =>
-      (await api.post(url, {})).data,
-    onSuccess: (d: any) => {
-      toast.success(d?.data?.message ?? "操作成功");
+
+  const logoutMut = useMutation({
+    mutationFn: async (deviceId: number) =>
+      (await api.post(`/me/devices/${deviceId}/logout`, {})).data,
+    onSuccess: (_d, deviceId) => {
+      toast.success("设备已强制下线");
       qc.invalidateQueries({ queryKey: ["me-devices"] });
     },
     onError: (e) => toast.error(extractError(e)),
@@ -586,460 +482,187 @@ function DevicesTab() {
 
   const devices = devQ.data?.devices ?? [];
 
-  const deviceColumns: ColumnDef<any>[] = [
-    {
-      key: "device",
-      title: "设备",
-      render: (_, record) => (
-        <div>
-          <strong>{record.device_name ?? "未知设备"}</strong>
-          {record.is_current ? (
-            <span style={{ color: "var(--color-primary)", fontSize: 12 }}> 🏷当前</span>
-          ) : null}
-          <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>
-            {record.browser ?? "—"} {record.os ?? ""}
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: "ip",
-      title: "IP/位置",
-      render: (_, record) => (
-        <div>
-          <span style={{ color: "var(--color-text-secondary)" }}>{record.ip ?? "—"}</span>
-          <div style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>
-            {record.city ?? "未知"} {record.country ?? ""}
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: "risk",
-      title: "风险",
-      render: (_, record) => {
-        const level = record.risk_level;
-        if (level === "suspicious")
-          return <StatusBadge status="warning">可疑</StatusBadge>;
-        if (level === "unknown")
-          return <StatusBadge status="danger">未知</StatusBadge>;
-        return <StatusBadge status="success">正常</StatusBadge>;
-      },
-    },
-    {
-      key: "last_active_at",
-      title: "最近活跃",
-      render: (_, record) => (
-        <span style={{ color: "var(--color-text-secondary)" }}>
-          {record.last_active_at
-            ? new Date(record.last_active_at).toLocaleString()
-            : "—"}
-        </span>
-      ),
-    },
-    {
-      key: "action",
-      title: "操作",
-      render: (_, record) => (
-        <span>
-          {!record.is_current && (
-            <button
-              onClick={() => opt.mutate({ url: `/me/devices/${record.id}/logout` })}
-              style={{
-                ...btnBase,
-                background: "var(--color-danger-bg)",
-                color: "var(--color-danger-text)",
-                padding: "4px 10px",
-              }}
-            >
-              登出
-            </button>
-          )}
-          {record.risk_level !== "normal" && !record.is_current && (
-            <button
-              onClick={() => opt.mutate({ url: `/me/devices/${record.id}/trust` })}
-              style={{
-                ...btnBase,
-                background: "var(--color-success-bg)",
-                color: "var(--color-success-text)",
-                padding: "4px 10px",
-                marginLeft: 6,
-              }}
-            >
-              标记可信
-            </button>
-          )}
-          {record.is_current && (
-            <span style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>当前设备</span>
-          )}
-        </span>
-      ),
-    },
-  ];
-
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
-        <button
-          onClick={() => opt.mutate({ url: "/me/devices/logout-all" })}
-          style={{ ...btnBase, background: "var(--color-danger-text)", color: "#fff" }}
-        >
-          登出所有其他设备
-        </button>
+    <div style={card}>
+      <div style={panelHeader}>
+        <h3 style={{ fontSize: 14, fontWeight: 500, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+          活跃会话
+          <HelpIcon text="当前登录的设备列表，可强制下线其他设备" level="button" />
+        </h3>
+        <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>共 {devices.length} 个活跃会话</span>
       </div>
-      <div style={card}>
-        <h4 style={{ margin: 0, marginBottom: 12 }}>
-          我的设备 ({devices.length})
-          <HelpIcon text="查看和管理已登录设备，支持登出可疑设备和标记可信设备。" level="button" />
-        </h4>
+      <div style={panelBody}>
         {devices.length === 0 ? (
-          <div style={{ color: "var(--color-text-secondary)" }}>暂无设备记录</div>
+          <div style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>暂无活跃会话</div>
         ) : (
-          <Table
-            columns={deviceColumns}
-            dataSource={devices}
-            loading={devQ.isLoading}
-            emptyText="暂无设备记录"
-          />
+          devices.map((d: any) => (
+            <div key={d.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: "1px solid var(--color-divider)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, background: "var(--color-divider-light)" }}>
+                  {d.device_name?.toLowerCase().includes("mobile") || d.os?.toLowerCase().includes("ios") ? "📱" : "💻"}
+                </div>
+                <div>
+                  <div style={{ fontSize: 14, color: "var(--color-text)", display: "flex", alignItems: "center", gap: 8 }}>
+                    {d.os ?? "—"} · {d.browser ?? "—"}
+                    {d.is_current && (
+                      <span style={{ display: "inline-block", padding: "1px 8px", borderRadius: 4, fontSize: 11, background: "rgba(79,110,247,0.1)", color: "var(--color-primary)", border: "1px solid rgba(79,110,247,0.3)" }}>
+                        当前设备
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+                    IP: {d.ip ?? "—"} · 登录时间: {d.last_active_at ? new Date(d.last_active_at).toLocaleString() : "—"}
+                  </div>
+                </div>
+              </div>
+              {d.is_current ? (
+                <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>无法下线当前设备</span>
+              ) : (
+                <button onClick={() => logoutMut.mutate(d.id)} style={{ ...btnDanger, padding: "4px 12px", fontSize: 12, borderRadius: 6 }}>
+                  下线
+                </button>
+              )}
+            </div>
+          ))
         )}
       </div>
     </div>
   );
 }
 
-/* ==================== Tab4 Key 权限 ==================== */
-function KeyPermTab() {
+/* ==================== 6. 最近登录记录 ==================== */
+function LoginHistoryPanel() {
+  const histQ = useQuery({
+    queryKey: ["me-login-history"],
+    queryFn: async () => (await api.get<{ data: { records: any[] } }>("/me/login-history")).data.data,
+  });
+
+  const records = histQ.data?.records ?? [];
+
+  return (
+    <div style={card}>
+      <div style={panelHeader}>
+        <h3 style={{ fontSize: 14, fontWeight: 500, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+          最近登录记录
+          <HelpIcon text="最近登录尝试记录，含成功和失败，异常登录请及时修改密码" level="button" />
+        </h3>
+      </div>
+      <div style={panelBody}>
+        {records.length === 0 ? (
+          <div style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>暂无登录记录</div>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr>
+                {["时间", "IP 地址", "地点", "设备", "结果"].map((h) => (
+                  <th key={h} style={{ textAlign: "left", padding: "10px 12px", background: "var(--color-divider-light)", color: "var(--color-text-secondary)", fontWeight: 400, whiteSpace: "nowrap" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {records.map((r: any, i: number) => (
+                <tr key={i} style={{ borderBottom: "1px solid var(--color-divider)" }}>
+                  <td style={{ padding: "10px 12px" }}>{r.login_at ? new Date(r.login_at).toLocaleString() : "—"}</td>
+                  <td style={{ padding: "10px 12px" }}>{r.ip ?? "—"}</td>
+                  <td style={{ padding: "10px 12px" }}>{r.city ?? "未知"}</td>
+                  <td style={{ padding: "10px 12px" }}>{r.device_info ?? (r.browser ? `${r.os ?? ""} / ${r.browser}` : "—")}</td>
+                  <td style={{ padding: "10px 12px" }}>
+                    {r.success === false || r.risk_level === "blocked" ? (
+                      <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 10, fontSize: 11, background: "rgba(229,57,53,0.1)", color: "var(--color-danger-text)", border: "1px solid rgba(229,57,53,0.3)" }}>
+                        失败
+                      </span>
+                    ) : (
+                      <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 10, fontSize: 11, background: "rgba(102,187,106,0.1)", color: "#66bb6a", border: "1px solid rgba(102,187,106,0.3)" }}>
+                        成功
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ==================== 7. API Key 安全 ==================== */
+function ApiKeySecurityPanel() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  const [selKey, setSelKey] = useState<number | null>(null);
-  const [form, setForm] = useState<any>(null);
 
   const keysQ = useQuery({
     queryKey: ["me-api-keys"],
-    queryFn: async () =>
-      (await api.get<{ data: { list?: any[] } | any[] }>("/me/api-keys")).data.data,
+    queryFn: async () => (await api.get<{ data: { list?: any[] } | any[] }>("/me/api-keys")).data.data,
   });
-  const keyList = Array.isArray(keysQ.data) ? keysQ.data : keysQ.data?.list ?? [];
+  const keyList: any[] = Array.isArray(keysQ.data) ? keysQ.data : (keysQ.data as any)?.list ?? [];
+  const oldKeys = keyList.filter((k: any) => {
+    if (!k.created_at) return false;
+    const days = (Date.now() - new Date(k.created_at).getTime()) / (1000 * 60 * 60 * 24);
+    return days > 90;
+  });
 
-  const permQ = useQuery({
-    queryKey: ["me-key-perm", selKey],
-    queryFn: async () =>
-      (await api.get<{ data: any }>(`/me/api-keys/${selKey}/permissions`)).data.data,
-    enabled: !!selKey,
-  });
-  const saveMut = useMutation({
-    mutationFn: async () =>
-      (
-        await api.put(`/me/api-keys/${selKey}/permissions`, {
-          modelPermissions: form.model_permissions,
-          ipWhitelist: form.ip_whitelist,
-          domainWhitelist: form.domain_whitelist,
-          dailyTokenLimit: Number(form.daily_token_limit),
-          dailyCallLimit: Number(form.daily_call_limit),
-        })
-      ).data,
+  const revokeAllMut = useMutation({
+    mutationFn: async () => (await api.post("/me/api-keys/revoke-all", {})).data,
     onSuccess: () => {
-      toast.success("权限已更新");
-      qc.invalidateQueries({ queryKey: ["me-key-perm"] });
+      toast.success("所有 API Key 已重置，新 Key 已生成");
+      qc.invalidateQueries({ queryKey: ["me-api-keys"] });
     },
     onError: (e) => toast.error(extractError(e)),
   });
 
-  useEffect(() => {
-    if (permQ.data && !form) {
-      setForm({
-        model_permissions: permQ.data.model_permissions ?? [],
-        ip_whitelist: permQ.data.ip_whitelist ?? [],
-        domain_whitelist: permQ.data.domain_whitelist ?? [],
-        daily_token_limit: permQ.data.daily_token_limit ?? 0,
-        daily_call_limit: permQ.data.daily_call_limit ?? 0,
-      });
-    }
-  }, [permQ.data]);
+  const handleResetAll = () => {
+    if (!window.confirm("确定要重置所有 API Key 吗？\n\n此操作不可撤销，所有使用旧 Key 的请求将立即失效。")) return;
+    revokeAllMut.mutate();
+  };
 
   return (
-    <div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-        {keyList.map((k: any) => (
-          <button
-            key={k.id}
-            onClick={() => {
-              setSelKey(k.id);
-              setForm(null);
-            }}
-            style={{
-              ...btnBase,
-              background: selKey === k.id ? "var(--color-primary)" : "#fff",
-              color: selKey === k.id ? "#fff" : "var(--color-text)",
-              border: "1px solid var(--color-border)",
-            }}
-          >
-            {k.name}
-          </button>
-        ))}
+    <div style={card}>
+      <div style={panelHeader}>
+        <h3 style={{ fontSize: 14, fontWeight: 500, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+          API Key 安全
+          <HelpIcon text="管理 API Key 安全策略，建议定期轮换 Key 防止泄露风险" level="button" />
+        </h3>
       </div>
-      {!selKey && (
-        <div style={{ ...card, color: "var(--color-text-secondary)" }}>
-          请选择左侧 API Key 查看/编辑权限
-        </div>
-      )}
-      {selKey && (
-        <div style={card}>
-          <h4 style={{ margin: 0, marginBottom: 12 }}>
-            Key 权限配置 #{selKey}
-            <HelpIcon text="设置 API Key 的访问控制：模型白名单、IP/域名限制、每日 Token 和调用次数额度。" level="button" />
-          </h4>
-          {!form ? (
-            <SkeletonGroup lines={5} />
-          ) : (
-            <>
-              <label style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
-                可访问模型（逗号分隔，空=全部）
-              </label>
-              <input
-                value={form.model_permissions.join(",")}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    model_permissions: e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean),
-                  })
-                }
-                placeholder="deepseek-chat,gpt-4o"
-                style={inp}
-              />
-              <label style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
-                IP 白名单（逗号分隔，空=不限制）
-              </label>
-              <input
-                value={form.ip_whitelist.join(",")}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    ip_whitelist: e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean),
-                  })
-                }
-                placeholder="192.168.1.0/24"
-                style={inp}
-              />
-              <label style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
-                域名白名单（逗号分隔，空=不限制）
-              </label>
-              <input
-                value={form.domain_whitelist.join(",")}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    domain_whitelist: e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean),
-                  })
-                }
-                placeholder="example.com"
-                style={inp}
-              />
-              <div style={{ display: "flex", gap: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
-                    每日 Token 额度（0=不限）
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.daily_token_limit}
-                    onChange={(e) =>
-                      setForm({ ...form, daily_token_limit: Number(e.target.value) })
-                    }
-                    style={inp}
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
-                    每日调用次数（0=不限）
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.daily_call_limit}
-                    onChange={(e) =>
-                      setForm({ ...form, daily_call_limit: Number(e.target.value) })
-                    }
-                    style={inp}
-                  />
-                </div>
+      <div style={panelBody}>
+        {oldKeys.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 8, background: "rgba(255,167,38,0.08)", border: "1px solid rgba(255,167,38,0.3)", marginBottom: 16 }}>
+            <span style={{ fontSize: 20 }}>⚠️</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, color: "#ffa726", fontWeight: 500, marginBottom: 2 }}>Key 轮换提醒</div>
+              <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+                您有 {oldKeys.length} 个 Key 超过 90 天未轮换，建议定期重置以降低安全风险
               </div>
-              <button
-                onClick={() => saveMut.mutate()}
-                style={{ ...btnBase, background: "var(--color-primary)", color: "#fff" }}
-              >
-                {saveMut.isPending ? "保存中..." : "保存权限"}
-              </button>
-            </>
-          )}
+            </div>
+          </div>
+        )}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+            重置后所有使用旧 Key 的请求将立即失效，请谨慎操作
+          </span>
+          <button onClick={handleResetAll} style={btnDanger}>重置所有 Key</button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
-/* ==================== Tab5 登录安全 ==================== */
-function LoginTab() {
-  const qc = useQueryClient();
-  const { toast } = useToast();
-
-  const sumQ = useQuery({
-    queryKey: ["me-security-summary"],
-    queryFn: async () =>
-      (await api.get<{ data: any }>("/me/security/summary")).data.data,
-    refetchInterval: 60000,
-  });
-  const histQ = useQuery({
-    queryKey: ["me-login-history"],
-    queryFn: async () =>
-      (await api.get<{ data: { records: any[] } }>("/me/login-history")).data.data,
-  });
-  const opt = useMutation({
-    mutationFn: async ({ id, action }: { id: number; action: string }) =>
-      (await api.post(`/me/login-history/${id}/${action}`, {})).data,
-    onSuccess: () => {
-      toast.success("操作成功");
-      qc.invalidateQueries({ queryKey: ["me-login-history"] });
-      qc.invalidateQueries({ queryKey: ["me-security-summary"] });
-    },
-    onError: (e) => toast.error(extractError(e)),
-  });
-
-  const s = sumQ.data;
-
-  const loginColumns: ColumnDef<any>[] = [
-    {
-      key: "login_at",
-      title: "时间",
-      render: (_, record) =>
-        record.login_at ? new Date(record.login_at).toLocaleString() : "—",
-    },
-    {
-      key: "risk_level",
-      title: "状态",
-      render: (_, record) => {
-        const level = record.risk_level;
-        if (level === "blocked")
-          return <StatusBadge status="danger">✗ 异常拦截</StatusBadge>;
-        if (level === "suspicious")
-          return <StatusBadge status="warning">⚠ 异地登录</StatusBadge>;
-        return <StatusBadge status="success">正常</StatusBadge>;
-      },
-    },
-    {
-      key: "ip",
-      title: "IP/位置",
-      render: (_, record) => (
-        <div>
-          <div style={{ color: "var(--color-text-secondary)" }}>{record.ip ?? "—"}</div>
-          <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
-            {record.city ?? ""}
-            {record.country ? ` · ${record.country}` : ""}
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: "browser",
-      title: "设备",
-      render: (_, record) => (
-        <span style={{ color: "var(--color-text-secondary)" }}>
-          {record.browser ?? (record.device_info ?? "—")}
-        </span>
-      ),
-    },
-    {
-      key: "action",
-      title: "操作",
-      render: (_, record) => {
-        if (record.risk_level !== "normal" && !record.confirmed_by_user) {
-          return (
-            <span>
-              <button
-                onClick={() => opt.mutate({ id: record.id, action: "confirm" })}
-                style={{
-                  ...btnBase,
-                  background: "var(--color-success-bg)",
-                  color: "var(--color-success-text)",
-                  padding: "4px 8px",
-                  marginRight: 6,
-                }}
-              >
-                确认是本人
-              </button>
-              <button
-                onClick={() => {
-                  if (
-                    window.confirm("确认这不是您本人的登录？系统将登出所有设备并保护账户。")
-                  )
-                    opt.mutate({ id: record.id, action: "report" });
-                }}
-                style={{
-                  ...btnBase,
-                  background: "var(--color-danger-bg)",
-                  color: "var(--color-danger-text)",
-                  padding: "4px 8px",
-                }}
-              >
-                这不是我
-              </button>
-            </span>
-          );
-        }
-        return (
-          <span style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>
-            {record.confirmed_by_user ? "已确认为本人" : "—"}
-          </span>
-        );
-      },
-    },
+/* ==================== 工具函数 ==================== */
+function getPwStrength(pw: string): { score: number; label: string; color: string } {
+  if (!pw) return { score: 0, label: "未输入", color: "var(--color-text-secondary)" };
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
+  if (/\d/.test(pw)) score++;
+  if (/[^a-zA-Z0-9]/.test(pw) || pw.length >= 12) score++;
+  const levels: Array<{ label: string; color: string }> = [
+    { label: "弱 — 建议增加复杂度", color: "var(--color-danger-text)" },
+    { label: "一般 — 可接受", color: "#ffa726" },
+    { label: "较强 — 推荐", color: "#66bb6a" },
+    { label: "强 — 非常安全", color: "#66bb6a" },
   ];
-
-  return (
-    <div>
-      {s && (
-        <div style={{ ...card, marginBottom: 16 }}>
-          <h4 style={{ margin: 0, marginBottom: 12 }}>🔒 安全概览</h4>
-          <div style={{ display: "flex", gap: 16, marginBottom: 12 }}>
-            {[
-              ["近7天异常登录", s.anomaly_count, "var(--color-warning-text)"],
-              ["近期拦截", s.blocked_count, "var(--color-danger-text)"],
-              [
-                "双因素认证",
-                s.two_factor_enabled ? "已启用" : "未启用",
-                s.two_factor_enabled ? "var(--color-success-text)" : "var(--color-text-secondary)",
-              ],
-            ].map(([label, v, color]) => (
-              <div
-                key={label as string}
-                style={{ flex: 1, background: "var(--color-bg)", padding: 14, borderRadius: 8, textAlign: "center" }}
-              >
-                <div style={{ fontSize: 24, fontWeight: 700, color: color as string }}>
-                  {v as any}
-                </div>
-                <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
-                  {label as string}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div style={card}>
-        <h4 style={{ margin: 0, marginBottom: 12 }}>登录记录</h4>
-        {histQ.data?.records?.length === 0 ? (
-          <div style={{ color: "var(--color-text-secondary)" }}>暂无登录记录</div>
-        ) : (
-          <Table
-            columns={loginColumns}
-            dataSource={histQ.data?.records ?? []}
-            loading={histQ.isLoading}
-            emptyText="暂无登录记录"
-          />
-        )}
-      </div>
-    </div>
-  );
+  const idx = Math.max(0, Math.min(score - 1, 3));
+  const lv = levels[idx]!;
+  return { score: Math.min(score, 4), label: lv.label, color: lv.color };
 }

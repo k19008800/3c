@@ -27,7 +27,7 @@ export default function AdminConsumptionAnomalyPage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>消费异常提醒</h2>
-        <HelpIcon helpKey="consumption_anomaly" />
+        <HelpIcon text="consumption_anomaly" />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 20 }}>
@@ -55,8 +55,8 @@ export default function AdminConsumptionAnomalyPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>⚠️ 异常列表 <HelpIcon helpKey="consumption_anomaly" /></div>
-        {listQ.isLoading ? <SkeletonGroup count={5} /> : (
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>⚠️ 异常列表 <HelpIcon text="consumption_anomaly" /></div>
+        {listQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>时间</th>
@@ -76,12 +76,12 @@ export default function AdminConsumptionAnomalyPage() {
                   <td style={{ padding: "10px 12px", fontWeight: 600 }}>¥{a.amount}</td>
                   <td style={{ padding: "10px 12px" }}>
                     <StatusBadge status={a.severity === "critical" ? "danger" : a.severity === "warning" ? "warning" : "info"}>
-                      {{ critical: "严重", warning: "警告", info: "提醒" }[a.severity] ?? a.severity}
+                      {({ critical: "严重", warning: "警告", info: "提醒" } as Record<string, string>)[a.severity] ?? a.severity}
                     </StatusBadge>
                   </td>
                   <td style={{ padding: "10px 12px" }}>
                     <StatusBadge status={a.status === "pending" ? "warning" : "success"}>
-                      {{ pending: "待处理", resolved: "已处理", ignored: "已忽略" }[a.status] ?? a.status}
+                      {({ pending: "待处理", resolved: "已处理", ignored: "已忽略" } as Record<string, string>)[a.status] ?? a.status}
                     </StatusBadge>
                   </td>
                   <td style={{ padding: "10px 12px", display: "flex", gap: 4 }}>

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 
-const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3000";
+export const dynamic = "force-dynamic";
+
+const API_BASE = "http://127.0.0.1:3030";
 
 // ===== 类型 =====
 interface SiteConfig {
@@ -55,12 +57,28 @@ async function fetchStats(): Promise<Stats> {
   return { models: 0, vendors: 0, users: 0, totalTokens: 0 };
 }
 
-async function fetchPricing(): Promise<{ list: PriceItem[] }> {
+async function fetchPricing(): Promise<{ pricing: PriceItem[] }> {
   try {
     const res = await fetch(`${API_BASE}/api/v1/public/pricing`, { cache: "no-store" });
-    if (res.ok) return await res.json();
+    if (res.ok) {
+      const data = await res.json();
+      // API 返回 { pricing: [{ modelName, supplierName, inputPrice (str), outputPrice (str), ... }] }
+      // 映射到页面使用的字段名
+      return {
+        pricing: (data.pricing ?? []).map((m: any) => ({
+          name: m.modelName ?? "",
+          display_name: m.modelName ?? "",
+          vendor: m.supplierName ?? "",
+          category: "对话",
+          context_length: 0,
+          description: null,
+          input_price: parseFloat(m.inputPrice) || 0,
+          output_price: parseFloat(m.outputPrice) || 0,
+        })),
+      };
+    }
   } catch {}
-  return { list: [] };
+  return { pricing: [] };
 }
 
 // ===== 工具函数 =====
@@ -100,11 +118,11 @@ export default async function HomePage() {
   ]);
 
   const siteName = config.site_name ?? "3Cloud";
-  const featuredModels = pricing.list.slice(0, 8);
+  const featuredModels = pricing.pricing.slice(0, 8);
 
   // 按分类聚合去重取热门模型
   const modelsByCategory = new Map<string, PriceItem[]>();
-  for (const m of pricing.list) {
+  for (const m of pricing.pricing) {
     const cat = m.category ?? "chat";
     if (!modelsByCategory.has(cat)) modelsByCategory.set(cat, []);
     const arr = modelsByCategory.get(cat)!;
@@ -226,7 +244,7 @@ export default async function HomePage() {
 
           {/* 模型卡片 */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
-            {pricing.list.slice(0, 12).map((m) => (
+            {pricing.pricing.slice(0, 12).map((m) => (
               <div key={`${m.name}-${m.vendor}`} style={{ background: "#fff", borderRadius: 10, padding: "20px 24px", border: "1px solid #e2e8f0", transition: "box-shadow .2s" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                   <strong style={{ fontSize: 15 }}>{m.display_name || m.name}</strong>
@@ -244,7 +262,7 @@ export default async function HomePage() {
 
           <div style={{ textAlign: "center", marginTop: 32 }}>
             <a href="/models" style={{ color: "#2563eb", textDecoration: "none", fontWeight: 600, fontSize: 15 }}>
-              查看全部模型 ({pricing.list.length}+) →
+              查看全部模型 ({pricing.pricing.length}+) →
             </a>
           </div>
         </div>

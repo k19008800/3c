@@ -18,7 +18,7 @@ export default function AdminCommissionFlowPage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>佣金流水</h2>
-        <HelpIcon helpKey="commission_flow" />
+        <HelpIcon text="commission_flow" />
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
@@ -48,8 +48,8 @@ export default function AdminCommissionFlowPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>💸 佣金流水明细 <HelpIcon helpKey="commission_flow" /></div>
-        {commQ.isLoading ? <SkeletonGroup count={5} /> : (
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>💸 佣金流水明细 <HelpIcon text="commission_flow" /></div>
+        {commQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>时间</th>
@@ -73,7 +73,7 @@ export default function AdminCommissionFlowPage() {
                     <span style={{ padding: "4px 10px", borderRadius: 12, fontSize: 11,
                       background: c.status === "settled" ? "#e8f5e9" : "#fff8e1",
                       color: c.status === "settled" ? "#2e7d32" : "#e65100" }}>
-                      {{ pending: "待结算", settled: "已结算", withdrawn: "已提现" }[c.status] ?? c.status}
+                      {({ pending: "待结算", settled: "已结算", withdrawn: "已提现" } as Record<string, string>)[c.status] ?? c.status}
                     </span>
                   </td>
                 </tr>

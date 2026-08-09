@@ -1,261 +1,218 @@
 /**
- * 上游请求代理 — SSE 流式转发 + 非流式 passthrough
+ * SSE 流式转发代理 + 非流式透传
  *
  * 职责：
- * - streamRelay(): 逐 chunk 读取上游流式响应 → 解析 SSE → 累积 usage → 转发给客户端
- * - relayNonStream(): 直接 fetch + passthrough 完整 JSON 响应
+ * - streamRelay：逐行读取上游响应 → 解析 SSE → 累积 usage → 转发
+ * - relayNonStream：非流式直接读取 body → 透传
  *
- * 累积 usage 规则：
- *   取最后一个 finish_reason 非空的 chunk 中的 usage（对齐 New API 逻辑）
- *
- * @see newapi-migration-guide.md §2.1 SSE 流式转发完整方案
- * @see relay/common_handler/ (New API Go 源码参照)
+ * @see newapi-migration-guide.md §2.1 SSE 流式转发 + §2.2 中断后结算
  * @module services/upstream
  */
 
-import { SseLineBuffer, parseSseLine } from "./sse-parser";
-import type { ParsedSseLine } from "./sse-parser";
+import type { FastifyReply } from 'fastify';
+import type { PipelineContext } from '../pipeline/types.js';
+import { parseSSELines } from './sse-parser.js';
 
-// ---------------------------------------------------------------------------
-// 类型定义
-// ---------------------------------------------------------------------------
+// ============================================================
+// Types
+// ============================================================
 
-/**
- * SSE 流式转发累积的状态
- *
- * 异常中断时此状态被保留，外层可根据 lastValidUsage 决定计费策略：
- * - lastValidUsage 非 null → 采信上游
- * - lastValidUsage 为 null → 本地 tiktoken fallback
- */
-export interface StreamState {
-  /** 最后一个 finish_reason 非空帧中的 usage（最可信的 token 统计） */
-  lastValidUsage: TokenUsage | null;
-  /** 已接收的 chunk 总数 */
-  totalChunks: number;
-  /** 最后一个非空的 finish_reason */
-  finishReason: string | null;
-}
-
-/** OpenAI 协议 token 用量 */
+/** OpenAI 兼容的 Token 用量对象 */
 export interface TokenUsage {
   prompt_tokens: number;
   completion_tokens: number;
   total_tokens: number;
 }
 
-/** 上游代理错误 */
-export class UpstreamError extends Error {
-  /** HTTP 状态码 */
-  readonly statusCode: number;
-  /** 上游返回的错误体（JSON 解析结果，可能为 undefined） */
-  readonly upstreamBody?: Record<string, unknown>;
-
-  constructor(statusCode: number, message: string, upstreamBody?: Record<string, unknown>) {
-    super(message);
-    this.name = "UpstreamError";
-    this.statusCode = statusCode;
-    this.upstreamBody = upstreamBody;
-  }
+/** SSE 流式转发后返回的状态 */
+export interface StreamState {
+  /** 最后一个 finish_reason 非空的 chunk 中的 usage（最可靠的用量数据） */
+  lastValidUsage: TokenUsage | null;
+  /** 累积的生成文本（从 delta.content 拼接） */
+  generatedText: string;
+  /** 最后一个有效的 finish_reason 值 */
+  finishReason: string | null;
+  /** 收到的 chunk 总数 */
+  totalChunks: number;
 }
 
-// ---------------------------------------------------------------------------
-// streamRelay — SSE 流式转发
-// ---------------------------------------------------------------------------
+/** 非流式响应的包装 */
+export interface NonStreamResult {
+  /** 响应体（已解析为 JSON） */
+  body: Record<string, unknown>;
+  /** 从响应中提取的 usage 数据 */
+  usage: TokenUsage | null;
+}
+
+// ============================================================
+// SSE 流式转发
+// ============================================================
 
 /**
- * 执行 SSE 流式转发：逐 chunk 读取上游流，解析 SSE 行，累积 usage，转发给客户端。
+ * SSE 流式转发代理
  *
- * 算法流程：
- *   1. 从 Upstream ReadableStream 逐 chunk 读取
- *   2. TextDecoder 解码 → SseLineBuffer 按行分割
- *   3. 对每个 data: 行 → parseSseLine 解析 JSON
- *   4. 提取 usage / finish_reason → 更新 StreamState
- *   5. 调用 onData(rawLine) 转发给客户端
- *   6. 遇到 [DONE] → 正常结束
- *   7. 异常中断 → 抛出原始错误（StreamState 保留在调用方通过 try/catch 获取）
+ * 逐行读取上游响应 → 解析 SSE data: 行 → 累积 usage 和文本 → 转发给客户端
  *
- * @param upstreamStream - 上游 fetch 响应的 body（ReadableStream<Uint8Array>）
- * @param onData - 每收到一条完整的 SSE 行时调用（用于转发给客户端），接收包含"data: "前缀的原始行
- * @returns 累积的 StreamState（含 lastValidUsage）
- * @throws 上游流读取错误（中断时 state 保留在调用方的 catch 块中处理）
+ * 逻辑：
+ *   1. 写 SSE 响应头 (Content-Type: text/event-stream)
+ *   2. 逐 chunk 读取上游 body
+ *   3. 按 \n 分割 → 逐行解析
+ *   4. data: {...} → JSON.parse → 提取 usage / delta.content / finish_reason
+ *   5. 保存最后有效 chunk（finish_reason 非空）的 usage
+ *   6. 原样转发给客户端
+ *   7. data: [DONE] → 结束
+ *   8. 返回 StreamState（含累积的 usage 和文本）
  *
- * @example
- * ```ts
- * const state: StreamState = { lastValidUsage: null, totalChunks: 0, finishReason: null };
- * try {
- *   await streamRelay(upstreamResp.body!, (line) => reply.raw.write(line + '\n'), state);
- * } catch (err) {
- *   // state.lastValidUsage 保留中断前已累积的数据
- * }
- * ```
+ * @param ctx - 请求上下文
+ * @param reply - Fastify 响应对象
+ * @param upstreamResp - 上游 HTTP 响应（ReadableStream body）
+ * @returns StreamState 含 lastValidUsage, generatedText, finishReason, totalChunks
  */
 export async function streamRelay(
-  upstreamStream: ReadableStream<Uint8Array>,
-  onData: (line: string) => void,
-  state?: StreamState,
+  ctx: PipelineContext,
+  reply: FastifyReply,
+  upstreamResp: Response,
 ): Promise<StreamState> {
-  const streamState: StreamState = state ?? {
+  const state: StreamState = {
     lastValidUsage: null,
-    totalChunks: 0,
+    generatedText: '',
     finishReason: null,
+    totalChunks: 0,
   };
 
-  const reader = upstreamStream.getReader();
+  // 写 SSE 响应头
+  reply.raw.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Request-Id': ctx.requestId,
+  });
+
+  if (!upstreamResp.body) {
+    // 上游无 body，直接结束
+    reply.raw.end();
+    return state;
+  }
+
+  const reader = upstreamResp.body.getReader();
   const decoder = new TextDecoder();
-  const buffer = new SseLineBuffer();
+  const bufferRef = { value: '' };
 
   try {
     while (true) {
       const { done, value } = await reader.read();
-      if (done) {
-        // 流结束 → flush 剩余行
-        const remaining = buffer.flush();
-        processLines(remaining, onData, streamState);
-        break;
-      }
+      if (done) break;
 
-      // 解码本次 chunk，喂入行缓冲
-      const text = decoder.decode(value, { stream: true });
-      const lines = buffer.feed(text);
+      const chunk = decoder.decode(value, { stream: true });
 
-      // 处理所有完整行
-      processLines(lines, onData, streamState);
-    }
-  } finally {
-    // 确保 reader 被释放
-    try {
-      reader.releaseLock();
-    } catch {
-      // reader 可能已被释放
-    }
-  }
-
-  return streamState;
-}
-
-/**
- * 处理一批 SSE 行：解析、累积状态、转发
- */
-function processLines(
-  lines: string[],
-  onData: (line: string) => void,
-  state: StreamState,
-): void {
-  for (const line of lines) {
-    const parsed = parseSseLine(line);
-    if (!parsed) continue;
-
-    // 转发原始行给客户端（无论是否可解析）
-    onData(parsed.raw);
-
-    // [DONE] 信号 → 不处理
-    if (parsed.isDone) continue;
-
-    // 非 data: 行 → 已转发，但不用统计
-    if (!line.startsWith("data: ")) continue;
-
-    // 解析到 JSON chunk
-    if (parsed.parsed) {
-      state.totalChunks++;
-
-      const choices = parsed.parsed.choices;
-      const firstChoice = Array.isArray(choices) && choices.length > 0 ? (choices[0] as Record<string, unknown> | null) : null;
-      const finishReason = firstChoice?.finish_reason;
-
-      // 🔑 只有 finish_reason 非空的帧，其 usage 才是最终有效值
-      if (finishReason && typeof finishReason === "string" && finishReason.length > 0) {
-        state.finishReason = finishReason;
-        const usage = parsed.parsed.usage;
-        if (usage && typeof usage === "object") {
-          const u = usage as Record<string, unknown>;
-          const promptTokens = typeof u.prompt_tokens === "number" ? u.prompt_tokens : 0;
-          const completionTokens = typeof u.completion_tokens === "number" ? u.completion_tokens : 0;
-          const totalTokens = typeof u.total_tokens === "number" ? u.total_tokens : promptTokens + completionTokens;
-          state.lastValidUsage = {
-            prompt_tokens: promptTokens,
-            completion_tokens: completionTokens,
-            total_tokens: totalTokens,
-          };
+      // 使用 SSE 解析器处理跨 buffer 边界
+      parseSSELines(bufferRef, chunk, (data, isData) => {
+        if (!isData) {
+          // 非 data: 行 → 原样转发（如 event: ..., id: ...）
+          reply.raw.write(`${data}\n`);
+          return;
         }
-      }
+
+        // data: [DONE] → 结束信号
+        if (data === '[DONE]') {
+          reply.raw.write('data: [DONE]\n\n');
+          return;
+        }
+
+        // 尝试解析 JSON
+        try {
+          const parsed = JSON.parse(data);
+          state.totalChunks++;
+
+          // 提取 choices[0].delta.content → 累积文本
+          const deltaContent = parsed.choices?.[0]?.delta?.content;
+          if (typeof deltaContent === 'string') {
+            state.generatedText += deltaContent;
+          }
+
+          // 提取 finish_reason → 只有非空的 finish_reason 的 chunk 才更新 usage
+          const finishReason = parsed.choices?.[0]?.finish_reason;
+          if (finishReason) {
+            state.finishReason = finishReason;
+
+            // 有 usage → 保存（这是最终/最可靠的值）
+            if (parsed.usage) {
+              state.lastValidUsage = {
+                prompt_tokens: Number(parsed.usage.prompt_tokens) || 0,
+                completion_tokens: Number(parsed.usage.completion_tokens) || 0,
+                total_tokens: Number(parsed.usage.total_tokens) || 0,
+              };
+            }
+          }
+        } catch {
+          // 非 JSON data 行 → 跳过解析
+        }
+
+        // 原样转发给客户端
+        reply.raw.write(`data: ${data}\n`);
+      });
     }
+  } catch (err) {
+    // 中断时保留 state 中已累积的数据，外层负责计费决策
+    throw err;
+  } finally {
+    // 确保连接关闭
+    reply.raw.end();
   }
+
+  return state;
 }
 
-// ---------------------------------------------------------------------------
-// relayNonStream — 非流式转发
-// ---------------------------------------------------------------------------
+// ============================================================
+// 非流式透传
+// ============================================================
 
 /**
- * 非流式请求转发：直接 fetch 上游 API，返回完整 JSON 响应。
+ * 非流式直接透传
  *
- * 4xx/5xx 响应 → 解析上游错误体 → throw UpstreamError
+ * 读取上游完整 body → 透传给客户端
  *
- * @param upstreamUrl - 上游 API 完整 URL
- * @param apiKey - 上游 API Key（用于 Authorization header）
- * @param body - 请求体（已序列化为 JSON 字符串）
- * @param extraHeaders - 额外的请求头（可选）
- * @returns 上游返回的完整 JSON 响应体
- * @throws {UpstreamError} 上游返回 4xx/5xx 时抛出，附带 statusCode 和上游错误体
- *
- * @example
- * ```ts
- * const data = await relayNonStream("https://api.openai.com/v1/chat/completions", "sk-xxx", body);
- * ```
+ * @param ctx - 请求上下文
+ * @param reply - Fastify 响应对象
+ * @param upstreamResp - 上游 HTTP 响应
+ * @returns NonStreamResult 含解析后的 body 和 usage
  */
 export async function relayNonStream(
-  upstreamUrl: string,
-  apiKey: string,
-  body: string,
-  extraHeaders?: Record<string, string>,
-): Promise<Record<string, unknown>> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${apiKey}`,
-    ...extraHeaders,
-  };
+  ctx: PipelineContext,
+  reply: FastifyReply,
+  upstreamResp: Response,
+): Promise<NonStreamResult> {
+  const contentType = upstreamResp.headers.get('content-type') || 'application/json';
+  const statusCode = upstreamResp.status;
 
-  const res = await fetch(upstreamUrl, {
-    method: "POST",
-    headers,
-    body,
-  });
+  // 读取上游 body
+  const rawBody = await upstreamResp.text();
+  let parsedBody: Record<string, unknown> = {};
+  let usage: TokenUsage | null = null;
 
-  // 尝试解析响应体
-  let parsed: Record<string, unknown> | undefined;
   try {
-    parsed = JSON.parse(await res.text()) as Record<string, unknown>;
+    parsedBody = JSON.parse(rawBody);
   } catch {
-    // 非 JSON 响应体
+    // 非 JSON 响应 → 原样返回
+    parsedBody = { raw: rawBody };
   }
 
-  if (!res.ok) {
-    // 上游 4xx/5xx → 提取错误消息
-    const errorMsg = extractUpstreamErrorMessage(parsed, res.status);
-    throw new UpstreamError(res.status, errorMsg, parsed);
+  // 提取 usage
+  if (parsedBody.usage) {
+    const u = parsedBody.usage as Record<string, unknown>;
+    usage = {
+      prompt_tokens: Number(u.prompt_tokens) || 0,
+      completion_tokens: Number(u.completion_tokens) || 0,
+      total_tokens: Number(u.total_tokens) || 0,
+    };
   }
 
-  return parsed ?? {};
-}
+  // 透传响应
+  reply
+    .status(statusCode)
+    .header('Content-Type', contentType)
+    .header('X-Request-Id', ctx.requestId)
+    .send(parsedBody);
 
-/**
- * 从上游错误响应中提取可读的错误消息
- */
-function extractUpstreamErrorMessage(
-  body: Record<string, unknown> | undefined,
-  statusCode: number,
-): string {
-  if (!body) return `上游返回 ${statusCode}`;
-
-  // OpenAI 风格: { error: { message: "..." } }
-  const error = body.error;
-  if (error && typeof error === "object") {
-    const errObj = error as Record<string, unknown>;
-    if (typeof errObj.message === "string") return errObj.message;
-  }
-
-  // 通用风格: { message: "..." }
-  if (typeof body.message === "string") return body.message;
-
-  return `上游返回 ${statusCode}`;
+  return { body: parsedBody, usage };
 }

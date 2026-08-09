@@ -17,7 +17,7 @@ export default function AdminConversionFunnelPage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>转化漏斗</h2>
-        <HelpIcon helpKey="conversion_funnel" />
+        <HelpIcon text="conversion_funnel" />
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
@@ -31,8 +31,8 @@ export default function AdminConversionFunnelPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>📊 转化漏斗 <HelpIcon helpKey="conversion_funnel" /></div>
-        {funnelQ.isLoading ? <SkeletonGroup count={5} /> : (
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>📊 转化漏斗 <HelpIcon text="conversion_funnel" /></div>
+        {funnelQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <div>
             {(funnelQ.data?.stages ?? [
               { name: "网站访问", value: 12000, color: "#4f6ef7" },

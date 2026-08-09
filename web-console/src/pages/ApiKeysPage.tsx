@@ -7,25 +7,53 @@ import {
   StatusBadge,
   useToast,
   SkeletonGroup,
-  ConfirmPopover,
+  Modal,
+  CopyButton,
 } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
 
+/* ============ 类型 ============ */
 interface ApiKey {
   id: number;
   name: string;
   keyPrefix: string;
+  fullKey?: string; // only on create
   status: string;
+  mode?: "vendor" | "group" | "unlimited";
   expiresAt: string | null;
   lastUsedAt: string | null;
+  todayCalls?: number;
   createdAt: string;
 }
 
+/* ============ 常量 ============ */
+const PERM_MODE_LABEL: Record<string, string> = {
+  vendor: "绑定供应商",
+  group: "绑定分组",
+  unlimited: "无限制",
+};
+
+const MOCK_GROUPS = ["基础模型组（8 个模型）", "高级模型组（5 个模型）", "图像模型组（3 个模型）"];
+
+const btnBase: React.CSSProperties = {
+  padding: "4px 12px",
+  borderRadius: 6,
+  border: "1px solid #d9d9d9",
+  background: "#fff",
+  fontSize: 12,
+  cursor: "pointer",
+};
+
 export default function ApiKeysPage() {
   const queryClient = useQueryClient();
-  const [newKeyName, setNewKeyName] = useState("");
-  const [selectedModels, setSelectedModels] = useState<string[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState("新 Key");
+  const [newMode, setNewMode] = useState<"vendor" | "group" | "unlimited">("group");
+  const [newGroup, setNewGroup] = useState(MOCK_GROUPS[0]);
+  const [newExpiry, setNewExpiry] = useState("");
+  const [newIpWhitelist, setNewIpWhitelist] = useState("");
   const [createdSecret, setCreatedSecret] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
   const { data, isLoading } = useQuery<{ list: ApiKey[] }>({
@@ -33,23 +61,20 @@ export default function ApiKeysPage() {
     queryFn: async () => (await api.get("/me/api-keys")).data,
   });
 
-  // 全部模型（用于白名单选择）
-  const allModels = useQuery<{ list: { id: string; displayName?: string }[] }>({
-    queryKey: ["all-models"],
-    queryFn: async () => (await api.get("/public/models")).data,
-  });
-
   const createMutation = useMutation({
-    mutationFn: async (name: string) =>
-      (await api.post("/me/api-keys", { name, model_whitelist: selectedModels.length ? selectedModels : undefined })).data,
-    onSuccess: (data) => {
-      setCreatedSecret(data.key);
-      setNewKeyName("");
-      setSelectedModels([]);
+    mutationFn: async () => {
+      const body: any = { name: newName, mode: newMode };
+      if (newMode === "group") body.group = newGroup;
+      if (newExpiry) body.expires_at = newExpiry;
+      if (newIpWhitelist.trim()) body.ip_whitelist = newIpWhitelist.split("\n").filter(Boolean);
+      return (await api.post("/me/api-keys", body)).data;
+    },
+    onSuccess: (d) => {
+      setCreatedSecret(d.key);
       toast.success("API Key 创建成功");
       queryClient.invalidateQueries({ queryKey: ["api-keys"] });
     },
-    onError: (e: any) => toast.error(extractError(e)),
+    onError: (e) => toast.error(extractError(e)),
   });
 
   const deleteMutation = useMutation({
@@ -58,23 +83,66 @@ export default function ApiKeysPage() {
       toast.success("API Key 已删除");
       queryClient.invalidateQueries({ queryKey: ["api-keys"] });
     },
+    onError: (e) => toast.error(extractError(e)),
   });
 
   const toggleMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) =>
       await api.patch(`/me/api-keys/${id}`, { status }),
     onSuccess: () => {
-      toast.success("状态已更新");
       queryClient.invalidateQueries({ queryKey: ["api-keys"] });
     },
+    onError: (e) => toast.error(extractError(e)),
   });
 
+  const handleCopy = (key: string) => {
+    navigator.clipboard.writeText(key).then(() => toast.success("已复制到剪贴板"));
+  };
+
+  const keys = data?.list ?? [];
+  const filtered = searchQuery
+    ? keys.filter((k) => k.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : keys;
+
   const columns: ColumnDef<ApiKey>[] = [
-    { key: "name", title: "名称", dataIndex: "name" },
+    {
+      key: "name",
+      title: "名称",
+      dataIndex: "name",
+    },
     {
       key: "key",
       title: "Key",
-      render: (_, record) => <span style={{ fontFamily: "monospace", fontSize: 13 }}>{record.keyPrefix}...</span>,
+      render: (_, record) => (
+        <span style={{ fontFamily: "SF Mono, Fira Code, monospace", color: "#888", fontSize: 12 }}>
+          {record.keyPrefix}...
+        </span>
+      ),
+    },
+    {
+      key: "mode",
+      title: "权限模式",
+      dataIndex: "mode",
+      render: (v) => {
+        const mode = (v as string) ?? "unlimited";
+        return <span style={{ fontSize: 12, color: "#666" }}>{PERM_MODE_LABEL[mode] ?? "无限制"}</span>;
+      },
+    },
+    {
+      key: "lastUsedAt",
+      title: "最后调用",
+      dataIndex: "lastUsedAt",
+      render: (v) => (
+        <span style={{ fontSize: 12, color: "#888" }}>
+          {v ? new Date(v as string).toLocaleString() : "—"}
+        </span>
+      ),
+    },
+    {
+      key: "todayCalls",
+      title: "今日调用",
+      dataIndex: "todayCalls",
+      render: (v) => <span style={{ fontSize: 13 }}>{(v as number)?.toLocaleString() ?? "—"}</span>,
     },
     {
       key: "status",
@@ -83,168 +151,295 @@ export default function ApiKeysPage() {
       render: (v) => {
         const s = v as string;
         if (s === "active") return <StatusBadge status="success">启用</StatusBadge>;
-        if (s === "disabled") return <StatusBadge status="warning">已禁用</StatusBadge>;
-        return <StatusBadge status="danger">{s}</StatusBadge>;
+        if (s === "disabled") return <StatusBadge status="danger">已禁用</StatusBadge>;
+        if (s === "expiring") return <StatusBadge status="warning">即将过期</StatusBadge>;
+        return <StatusBadge status="default">{s}</StatusBadge>;
       },
-    },
-    {
-      key: "createdAt",
-      title: "创建时间",
-      dataIndex: "createdAt",
-      render: (v) => (
-        <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
-          {new Date(v as string).toLocaleString()}
-        </span>
-      ),
     },
     {
       key: "action",
       title: "操作",
       render: (_, record) => (
-        <span>
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
           <button
+            style={btnBase}
             onClick={(e) => {
               e.stopPropagation();
-              toggleMutation.mutate({
-                id: record.id,
-                status: record.status === "active" ? "disabled" : "active",
-              });
-            }}
-            style={{
-              marginRight: 8,
-              padding: "4px 10px",
-              cursor: "pointer",
-              borderRadius: 6,
-              border: "1px solid var(--color-border)",
-              background: "var(--color-bg)",
-              color: "var(--color-text)",
+              handleCopy(`sk-${record.keyPrefix}...`);
             }}
           >
-            {record.status === "active" ? "禁用" : "启用"}
+            复制
           </button>
-          <ConfirmPopover
-            title={`确定要删除 "${record.name}" 吗？`}
-            description="此操作不可撤销"
-            onConfirm={() => deleteMutation.mutate(record.id)}
+          <button
+            style={btnBase}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (confirm("确定要删除该 API Key 吗？")) {
+                deleteMutation.mutate(record.id);
+              }
+            }}
           >
+            删除
+          </button>
+          {record.status === "disabled" ? (
             <button
-              style={{
-                padding: "4px 10px",
-                cursor: "pointer",
-                borderRadius: 6,
-                border: "1px solid var(--color-border)",
-                background: "var(--color-bg)",
-                color: "var(--color-danger-text)",
+              style={{ ...btnBase, color: "#22c55e", borderColor: "#22c55e" }}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleMutation.mutate({ id: record.id, status: "active" });
               }}
             >
-              删除
+              启用
             </button>
-          </ConfirmPopover>
-        </span>
+          ) : record.status === "active" ? (
+            <button
+              style={{ ...btnBase, color: "#e53935", borderColor: "#e53935" }}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleMutation.mutate({ id: record.id, status: "disabled" });
+              }}
+            >
+              禁用
+            </button>
+          ) : null}
+        </div>
       ),
     },
   ];
 
+  const handleCreateSubmit = () => {
+    setShowCreate(false);
+    createMutation.mutate();
+  };
+
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <h2 style={{ margin: 0 }}>
-          API Keys
-          <HelpIcon text="管理您的 API 密钥，可创建、启用/禁用和删除密钥。模型白名单可限制密钥可访问的模型范围。" level="page" />
+      {/* 标题行 */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <h2 style={{ margin: 0, display: "flex", alignItems: "center", gap: 8, fontSize: 20, fontWeight: 600 }}>
+          🔑 API Key 管理
+          <HelpIcon text="管理 API 调用密钥。支持 3 种权限模式和 IP 白名单" level="page" />
         </h2>
       </div>
 
-      {/* 模型白名单选择（可选） */}
-      <div style={{ marginBottom: 16, background: "var(--color-bg)", padding: 12, borderRadius: 8 }}>
-        <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 8 }}>
-          模型白名单（{selectedModels.length ? `已选 ${selectedModels.length}` : "不限制所有模型"}）
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {(allModels.data?.list ?? []).map((m) => {
-            const name = typeof m === "string" ? m : (m?.id ?? m?.displayName ?? "");
-            const on = selectedModels.includes(name);
-            return (
-              <button
-                key={name}
-                onClick={() => {
-                  setSelectedModels(on ? selectedModels.filter((x) => x !== name) : [...selectedModels, name]);
-                }}
-                style={{
-                  padding: "5px 12px",
-                  borderRadius: 6,
-                  fontSize: 12,
-                  cursor: "pointer",
-                  border: "1px solid var(--color-border)",
-                  background: on ? "var(--color-primary)" : "#fff",
-                  color: on ? "#fff" : "var(--color-text)",
-                }}
-              >
-                {name}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {createdSecret && (
-        <div
-          style={{
-            background: "var(--color-success-bg)",
-            border: "1px solid var(--color-success-text)",
-            padding: 16,
-            borderRadius: 8,
-            marginBottom: 20,
-          }}
-        >
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>✅ Key 创建成功（仅此一次显示，请妥善保存）</div>
-          <code
-            style={{
-              background: "#fff",
-              padding: 8,
-              borderRadius: 4,
-              display: "block",
-              wordBreak: "break-all",
+      {/* 工具栏 */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            onClick={() => {
+              setNewName("新 Key");
+              setNewMode("group");
+              setNewGroup(MOCK_GROUPS[0]);
+              setNewExpiry("");
+              setNewIpWhitelist("");
+              setCreatedSecret(null);
+              setShowCreate(true);
             }}
-          >
-            {createdSecret}
-          </code>
-          <button
-            onClick={() => setCreatedSecret(null)}
-            style={{ marginTop: 8, background: "none", border: "none", color: "var(--color-primary)", cursor: "pointer" }}
-          >
-            关闭
-          </button>
-        </div>
-      )}
-
-      {isLoading && !data ? (
-        <SkeletonGroup lines={5} />
-      ) : (
-        <div style={{ marginBottom: 16, display: "flex", gap: 8 }}>
-          <input
-            value={newKeyName}
-            onChange={(e) => setNewKeyName(e.target.value)}
-            placeholder="Key 名称"
-            style={{ padding: 8, borderRadius: 6, border: "1px solid var(--color-border)", flex: 1, maxWidth: 260 }}
-          />
-          <button
-            onClick={() => createMutation.mutate(newKeyName)}
-            disabled={!newKeyName || createMutation.isPending}
             style={{
-              padding: "8px 14px",
-              background: "var(--color-primary)",
+              background: "#4f6ef7",
               color: "#fff",
               border: "none",
-              borderRadius: 6,
+              padding: "10px 20px",
+              borderRadius: 8,
+              fontSize: 14,
               cursor: "pointer",
             }}
           >
-            创建 Key
+            + 创建 Key
+            <HelpIcon text="创建新的 API 调用密钥，可指定权限模式和过期时间" />
           </button>
+        </div>
+        <div>
+          <input
+            type="text"
+            placeholder="搜索 Key 名称…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: 240,
+              height: 40,
+              border: "1px solid #d9d9d9",
+              borderRadius: 8,
+              padding: "0 12px",
+              fontSize: 14,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* 创建成功提示 */}
+      {createdSecret && (
+        <div style={{ background: "#e8f5e9", border: "1px solid #c8e6c9", borderRadius: 8, padding: 16, marginBottom: 16 }}>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>✅ API Key 创建成功 — 仅展示一次，请立即复制</div>
+          <code style={{ background: "#fff", padding: "8px 12px", borderRadius: 6, display: "block", wordBreak: "break-all", fontFamily: "monospace", fontSize: 14 }}>
+            {createdSecret}
+          </code>
+          <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+            <button onClick={() => handleCopy(createdSecret)} style={{ ...btnBase, color: "#22c55e", borderColor: "#22c55e" }}>
+              复制 Key
+            </button>
+            <button onClick={() => setCreatedSecret(null)} style={btnBase}>
+              返回列表
+            </button>
+          </div>
         </div>
       )}
 
-      <Table columns={columns as any} dataSource={data?.list as any ?? []} loading={isLoading} emptyText="暂无 API Key" />
+      {/* 表格 */}
+      {isLoading ? (
+        <SkeletonGroup lines={5} />
+      ) : (
+        <Table
+          columns={columns}
+          dataSource={filtered}
+          loading={isLoading}
+          emptyText="暂无 API Key，点击上方「创建 Key」开始"
+        />
+      )}
+
+      {/* ===== 创建 Key 弹窗（原型：modal with form fields） ===== */}
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="创建 API Key">
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Key 名称 */}
+          <div>
+            <label style={{ display: "block", fontSize: 13, color: "#333", marginBottom: 6 }}>
+              名称 <span style={{ color: "#e53935" }}>*</span>
+            </label>
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="例如：生产环境"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                border: "1px solid #d9d9d9",
+                borderRadius: 8,
+                fontSize: 14,
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+
+          {/* 权限模式 */}
+          <div>
+            <label style={{ display: "block", fontSize: 13, color: "#333", marginBottom: 6 }}>
+              权限模式 <span style={{ color: "#e53935" }}>*</span>
+              <HelpIcon text="A: 绑定供应商+模型 / B: 绑定模型分组 / C: 无限制" />
+            </label>
+            <select
+              value={newMode}
+              onChange={(e) => setNewMode(e.target.value as any)}
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                border: "1px solid #d9d9d9",
+                borderRadius: 8,
+                fontSize: 14,
+                background: "#fff",
+                boxSizing: "border-box",
+              }}
+            >
+              <option value="vendor">A - 绑定供应商+模型</option>
+              <option value="group">B - 绑定模型分组</option>
+              <option value="unlimited">C - 无限制</option>
+            </select>
+          </div>
+
+          {/* 选择分组（仅 group 模式显示） */}
+          {newMode === "group" && (
+            <div>
+              <label style={{ display: "block", fontSize: 13, color: "#333", marginBottom: 6 }}>选择分组</label>
+              <select
+                value={newGroup}
+                onChange={(e) => setNewGroup(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid #d9d9d9",
+                  borderRadius: 8,
+                  fontSize: 14,
+                  background: "#fff",
+                  boxSizing: "border-box",
+                }}
+              >
+                {MOCK_GROUPS.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* 过期时间 */}
+          <div>
+            <label style={{ display: "block", fontSize: 13, color: "#333", marginBottom: 6 }}>
+              过期时间 <span style={{ color: "#888", fontWeight: 400 }}>（可选）</span>
+            </label>
+            <input
+              type="date"
+              value={newExpiry}
+              onChange={(e) => setNewExpiry(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                border: "1px solid #d9d9d9",
+                borderRadius: 8,
+                fontSize: 14,
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+
+          {/* IP 白名单 */}
+          <div>
+            <label style={{ display: "block", fontSize: 13, color: "#333", marginBottom: 6 }}>
+              IP 白名单 <span style={{ color: "#888", fontWeight: 400 }}>（可选，一行一个）</span>
+            </label>
+            <textarea
+              value={newIpWhitelist}
+              onChange={(e) => setNewIpWhitelist(e.target.value)}
+              placeholder={"192.168.1.1\n10.0.0.0/24"}
+              rows={3}
+              style={{
+                width: "100%",
+                border: "1px solid #d9d9d9",
+                borderRadius: 8,
+                padding: 8,
+                fontSize: 13,
+                resize: "none",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+
+          {/* 操作按钮 */}
+          <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 8 }}>
+            <button
+              onClick={() => setShowCreate(false)}
+              style={{ ...btnBase, padding: "10px 24px", fontSize: 14 }}
+            >
+              取消
+            </button>
+            <button
+              onClick={handleCreateSubmit}
+              disabled={!newName.trim() || createMutation.isPending}
+              style={{
+                padding: "10px 24px",
+                border: "none",
+                borderRadius: 8,
+                background: !newName.trim() ? "#a0b4f9" : "#4f6ef7",
+                color: "#fff",
+                cursor: !newName.trim() ? "not-allowed" : "pointer",
+                fontSize: 14,
+              }}
+            >
+              {createMutation.isPending ? "创建中..." : "确认创建"}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

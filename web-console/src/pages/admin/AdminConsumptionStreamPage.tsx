@@ -18,7 +18,7 @@ export default function AdminConsumptionStreamPage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>消费流监控</h2>
-        <HelpIcon helpKey="consumption_stream" />
+        <HelpIcon text="consumption_stream" />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 20 }}>
@@ -47,8 +47,8 @@ export default function AdminConsumptionStreamPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>📊 实时消费流 <HelpIcon helpKey="consumption_stream" /></div>
-        {streamQ.isLoading ? <SkeletonGroup count={5} /> : (
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>📊 实时消费流 <HelpIcon text="consumption_stream" /></div>
+        {streamQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>时间</th>

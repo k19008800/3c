@@ -34,15 +34,15 @@ export default function AdminRiskRulesPage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>风控规则配置</h2>
-        <HelpIcon helpKey="risk_rules" />
+        <HelpIcon text="risk_rules" />
       </div>
 
       <div style={{ ...card, marginBottom: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-          <span style={{ fontWeight: 600 }}>📏 风控规则列表 <HelpIcon helpKey="risk_rules" /></span>
+          <span style={{ fontWeight: 600 }}>📏 风控规则列表 <HelpIcon text="risk_rules" /></span>
           <button style={{ ...btnBase, background: "#4f6ef7", color: "#fff" }} onClick={() => setEditItem({ name: "", description: "", type: "frequency", threshold: 0, action: "block" })}>＋ 新增规则</button>
         </div>
-        {listQ.isLoading ? <SkeletonGroup count={5} /> : (
+        {listQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>规则名</th>
@@ -57,11 +57,11 @@ export default function AdminRiskRulesPage() {
                 <tr key={r.id} style={{ borderTop: "1px solid #f0f0f0" }}>
                   <td style={{ padding: "10px 12px", fontWeight: 500 }}>{r.name}</td>
                   <td style={{ padding: "10px 12px" }}>
-                    {{ frequency: "高频调用", ip_anomaly: "异常IP", multi_account: "多账号关联", abnormal_spend: "异常消费", geo_anomaly: "地域异常" }[r.type] ?? r.type}
+                    {({ frequency: "高频调用", ip_anomaly: "异常IP", multi_account: "多账号关联", abnormal_spend: "异常消费", geo_anomaly: "地域异常" } as Record<string, string>)[r.type] ?? r.type}
                   </td>
                   <td style={{ padding: "10px 12px" }}>{r.threshold ?? "—"}</td>
                   <td style={{ padding: "10px 12px" }}>
-                    {{ block: "⛔ 阻断", warn: "⚠️ 告警", freeze: "❄️ 冻结", review: "📋 人工审核" }[r.action] ?? r.action}
+                    {({ block: "⛔ 阻断", warn: "⚠️ 告警", freeze: "❄️ 冻结", review: "📋 人工审核" } as Record<string, string>)[r.action] ?? r.action}
                   </td>
                   <td style={{ padding: "10px 12px" }}>
                     <StatusBadge status={r.is_enabled ? "success" : "default"}>{r.is_enabled ? "启用" : "禁用"}</StatusBadge>

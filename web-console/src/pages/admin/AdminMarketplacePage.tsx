@@ -18,7 +18,7 @@ export default function AdminMarketplacePage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>模型市场</h2>
-        <HelpIcon helpKey="marketplace" />
+        <HelpIcon text="marketplace" />
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
@@ -36,7 +36,7 @@ export default function AdminMarketplacePage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16, marginBottom: 20 }}>
-        {listQ.isLoading ? <SkeletonGroup count={6} /> : (listQ.data?.list ?? []).map((m: any) => (
+        {listQ.isLoading ? <SkeletonGroup lines={6} /> : (listQ.data?.list ?? []).map((m: any) => (
           <div key={m.id} style={{ ...card, display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontWeight: 600, fontSize: 15 }}>{m.display_name ?? m.model_name}</span>

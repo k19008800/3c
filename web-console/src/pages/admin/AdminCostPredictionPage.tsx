@@ -17,7 +17,7 @@ export default function AdminCostPredictionPage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>成本预测</h2>
-        <HelpIcon helpKey="cost_prediction" />
+        <HelpIcon text="cost_prediction" />
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
@@ -45,8 +45,8 @@ export default function AdminCostPredictionPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>🔮 各供应商成本预测 <HelpIcon helpKey="cost_prediction" /></div>
-        {predQ.isLoading ? <SkeletonGroup count={5} /> : (
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>🔮 各供应商成本预测 <HelpIcon text="cost_prediction" /></div>
+        {predQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>供应商</th>
@@ -70,7 +70,7 @@ export default function AdminCostPredictionPage() {
                     <span style={{ padding: "4px 10px", borderRadius: 12, fontSize: 11,
                       background: p.risk === "high" ? "#fce4ec" : p.risk === "medium" ? "#fff8e1" : "#e8f5e9",
                       color: p.risk === "high" ? "#c62828" : p.risk === "medium" ? "#e65100" : "#2e7d32" }}>
-                      {{ high: "高", medium: "中", low: "低" }[p.risk] ?? "—"}
+                      {({ high: "高", medium: "中", low: "低" } as Record<string, string>)[p.risk] ?? "—"}
                     </span>
                   </td>
                 </tr>

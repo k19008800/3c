@@ -27,7 +27,7 @@ export default function AdminReconciliationDiffPage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>对账差异</h2>
-        <HelpIcon helpKey="reconciliation_diff" />
+        <HelpIcon text="reconciliation_diff" />
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
@@ -41,8 +41,8 @@ export default function AdminReconciliationDiffPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>🔍 对账差异列表 <HelpIcon helpKey="reconciliation_diff" /></div>
-        {diffQ.isLoading ? <SkeletonGroup count={5} /> : (
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>🔍 对账差异列表 <HelpIcon text="reconciliation_diff" /></div>
+        {diffQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>ID</th>
@@ -69,7 +69,7 @@ export default function AdminReconciliationDiffPage() {
                   </td>
                   <td style={{ padding: "10px 12px" }}>
                     <StatusBadge status={d.status === "unresolved" ? "warning" : "success"}>
-                      {{ unresolved: "待处理", resolved: "已处理", ignored: "已忽略" }[d.status] ?? d.status}
+                      {({ unresolved: "待处理", resolved: "已处理", ignored: "已忽略" } as Record<string, string>)[d.status] ?? d.status}
                     </StatusBadge>
                   </td>
                   <td style={{ padding: "10px 12px", display: "flex", gap: 4 }}>

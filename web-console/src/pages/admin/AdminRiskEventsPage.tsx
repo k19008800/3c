@@ -28,7 +28,7 @@ export default function AdminRiskEventsPage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>风控事件管理</h2>
-        <HelpIcon helpKey="risk_events" />
+        <HelpIcon text="risk_events" />
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
@@ -45,8 +45,8 @@ export default function AdminRiskEventsPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>📋 风控事件列表 <HelpIcon helpKey="risk_events" /></div>
-        {listQ.isLoading ? <SkeletonGroup count={5} /> : (
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>📋 风控事件列表 <HelpIcon text="risk_events" /></div>
+        {listQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>ID</th>
@@ -68,12 +68,12 @@ export default function AdminRiskEventsPage() {
                   <td style={{ padding: "10px 12px", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>{e.detail}</td>
                   <td style={{ padding: "10px 12px" }}>
                     <StatusBadge status={e.severity === "high" ? "danger" : e.severity === "medium" ? "warning" : "info"}>
-                      {{ high: "高", medium: "中", low: "低" }[e.severity] ?? e.severity}
+                      {({ high: "高", medium: "中", low: "低" } as Record<string, string>)[e.severity] ?? e.severity}
                     </StatusBadge>
                   </td>
                   <td style={{ padding: "10px 12px" }}>
                     <StatusBadge status={e.status === "pending" ? "warning" : e.status === "handled" ? "success" : "danger"}>
-                      {{ pending: "待处理", handled: "已处理", blocked: "已冻结", ignored: "已忽略" }[e.status] ?? e.status}
+                      {({ pending: "待处理", handled: "已处理", blocked: "已冻结", ignored: "已忽略" } as Record<string, string>)[e.status] ?? e.status}
                     </StatusBadge>
                   </td>
                   <td style={{ padding: "10px 12px", display: "flex", gap: 4 }}>

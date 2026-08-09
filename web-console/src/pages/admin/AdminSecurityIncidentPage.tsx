@@ -28,7 +28,7 @@ export default function AdminSecurityIncidentPage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>安全事件响应</h2>
-        <HelpIcon helpKey="security_incident" />
+        <HelpIcon text="security_incident" />
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
@@ -44,8 +44,8 @@ export default function AdminSecurityIncidentPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>🛡️ 安全事件列表 <HelpIcon helpKey="security_incident" /></div>
-        {listQ.isLoading ? <SkeletonGroup count={5} /> : (
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>🛡️ 安全事件列表 <HelpIcon text="security_incident" /></div>
+        {listQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>ID</th>
@@ -65,13 +65,13 @@ export default function AdminSecurityIncidentPage() {
                   <td style={{ padding: "10px 12px" }}>{inc.incident_type}</td>
                   <td style={{ padding: "10px 12px" }}>
                     <StatusBadge status={inc.severity === "critical" ? "danger" : inc.severity === "high" ? "warning" : "info"}>
-                      {{ critical: "严重", high: "高", medium: "中", low: "低" }[inc.severity] ?? inc.severity}
+                      {({ critical: "严重", high: "高", medium: "中", low: "低" } as Record<string, string>)[inc.severity] ?? inc.severity}
                     </StatusBadge>
                   </td>
                   <td style={{ padding: "10px 12px" }}>{inc.affected}</td>
                   <td style={{ padding: "10px 12px" }}>
                     <StatusBadge status={inc.status === "open" ? "danger" : inc.status === "investigating" ? "warning" : inc.status === "resolved" ? "success" : "default"}>
-                      {{ open: "待处理", investigating: "调查中", mitigated: "已缓解", resolved: "已解决", closed: "已关闭" }[inc.status] ?? inc.status}
+                      {({ open: "待处理", investigating: "调查中", mitigated: "已缓解", resolved: "已解决", closed: "已关闭" } as Record<string, string>)[inc.status] ?? inc.status}
                     </StatusBadge>
                   </td>
                   <td style={{ padding: "10px 12px", color: "#888" }}>{inc.handler ?? "—"}</td>

@@ -1,9 +1,7 @@
-/**
- * 上游服务 — 统一导出
- *
- * @module services/upstream
- */
-export { streamRelay, relayNonStream, UpstreamError } from "./proxy";
-export type { StreamState, TokenUsage } from "./proxy";
-export { SseLineBuffer, parseSseLine } from "./sse-parser";
-export type { ParsedSseLine } from "./sse-parser";
+export { preprocessRequestBody, needsPreprocessing } from './body-preprocessor';
+export { streamRelay, relayNonStream } from './proxy';
+export type { TokenUsage, StreamState, NonStreamResult } from './proxy';
+export { selectKey, countEnabledKeys } from './key-selector';
+export type { SupplierKey, SelectKeyResult } from './key-selector';
+export { selectChannel } from './routing';
+export { recordChannelResult, checkRecovery, isCircuitOpen, forceRecovery } from './circuit-breaker';

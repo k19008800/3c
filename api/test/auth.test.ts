@@ -1,131 +1,116 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { buildApp } from "../src/app";
-import type { FastifyInstance } from "fastify";
-import { pool } from "../src/db/index";
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { buildApp } from '../src/app';
+import type { FastifyInstance } from 'fastify';
 
-/**
- * 认证路由测试（§2）
- * 依赖 seed：admin 用户 (admin@3cloud.io, 密码明文 'seed-admin')
- */
-let app: FastifyInstance;
-let token: string;
-let testUserId: number;
-let createdKeyId: number | undefined;
+const testEnv = {
+  LOG_LEVEL: 'error',
+  DATABASE_URL: 'postgres://postgres:***@localhost:5432/threecloud_v3',
+  JWT_SECRET: 'test-jwt-secret-phase2',
+  PORT: '3032',
+};
 
-beforeAll(async () => {
-  app = buildApp();
-  await app.ready();
-});
+describe('Auth API', () => {
+  let app: FastifyInstance;
+  let accessToken: string;
+  let refreshToken: string;
 
-afterAll(async () => {
-  await app.close();
-  await pool.end();
-});
-
-describe("认证（auth）", () => {
-  it("注册新用户", async () => {
-    const email = `test-auth-${Date.now()}@x.com`;
-    const res = await app.inject({
-      method: "POST",
-      url: "/api/v1/auth/register",
-      payload: { email, password: "secret123", username: "tester" },
-    });
-    expect(res.statusCode).toBe(201);
-    const body = JSON.parse(res.body);
-    expect(body.token).toBeDefined();
-    expect(body.user.email).toBe(email);
-    testUserId = body.user.id;
+  beforeAll(async () => {
+    app = await buildApp({ envOverrides: testEnv });
+    await app.ready();
   });
 
-  it("重复注册同一邮箱 → 409", async () => {
-    const email = `dup-${Date.now()}@x.com`;
-    const payload = { email, password: "secret123", username: "dup" };
-    await app.inject({ method: "POST", url: "/api/v1/auth/register", payload });
-    const res = await app.inject({ method: "POST", url: "/api/v1/auth/register", payload });
+  afterAll(async () => {
+    await app.close();
+  });
+
+  const testEmail = `test-${Date.now()}@example.com`;
+
+  it('POST /api/v1/auth/register creates a new user', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/register',
+      payload: { email: testEmail, password: 'Test1234!', name: 'Test User' },
+    });
+
+    expect(res.statusCode).toBe(201);
+    const body = JSON.parse(res.payload);
+    expect(body.user.email).toBe(testEmail);
+    expect(body.user.role).toBe('customer');
+    expect(body.accessToken).toBeDefined();
+    expect(body.refreshToken).toBeDefined();
+    accessToken = body.accessToken;
+    refreshToken = body.refreshToken;
+  });
+
+  it('POST /api/v1/auth/register rejects duplicate email', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/register',
+      payload: { email: testEmail, password: 'Test1234!', name: 'Dupe' },
+    });
     expect(res.statusCode).toBe(409);
   });
 
-  it("seed admin 登录（明文密码兼容）", async () => {
+  it('POST /api/v1/auth/login returns tokens', async () => {
+    const loginEmail = `login-${Date.now()}@example.com`;
+    // Register first
+    await app.inject({ method: 'POST', url: '/api/v1/auth/register', payload: { email: loginEmail, password: 'Test1234!', name: 'Login Test' } });
     const res = await app.inject({
-      method: "POST",
-      url: "/api/v1/auth/login",
-      payload: { email: "admin@3cloud.io", password: "seed-admin" },
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: { email: testEmail, password: 'Test1234!' },
     });
     expect(res.statusCode).toBe(200);
-    const body = JSON.parse(res.body);
-    expect(body.token).toBeDefined();
-    expect(body.user.email).toBe("admin@3cloud.io");
-    token = body.token;
+    const body = JSON.parse(res.payload);
+    expect(body.accessToken).toBeDefined();
+    accessToken = body.accessToken;
+    refreshToken = body.refreshToken;
   });
 
-  it("错误密码 → 401", async () => {
+  it('POST /api/v1/auth/login rejects wrong password', async () => {
     const res = await app.inject({
-      method: "POST",
-      url: "/api/v1/auth/login",
-      payload: { email: "admin@3cloud.io", password: "wrongpass" },
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: { email: testEmail, password: 'WrongPass1!' },
     });
     expect(res.statusCode).toBe(401);
   });
 
-  it("GET /me 带 token 返回用户信息", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/v1/me", headers: { authorization: `Bearer ${token}` } });
-    expect(res.statusCode).toBe(200);
-    const body = JSON.parse(res.body);
-    expect(body.email).toBe("admin@3cloud.io");
-  });
-
-  it("GET /me 无 token → 401", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/v1/me" });
-    expect(res.statusCode).toBe(401);
-  });
-
-  it("清理：删除测试注册用户", async () => {
-    if (testUserId) await pool.query("DELETE FROM users WHERE id=$1", [testUserId]);
-  });
-
-  // ===== /me 系列（需登录 token）=====
-  it("GET /me/stats 返回仪表盘统计", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/v1/me/stats", headers: { authorization: `Bearer ${token}` } });
-    expect(res.statusCode).toBe(200);
-    const body = JSON.parse(res.body);
-    expect(typeof body.balance).toBe("number");
-    expect(typeof body.totalCalls).toBe("number");
-  });
-
-  it("GET /me/logs 返回调用日志", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/v1/me/logs", headers: { authorization: `Bearer ${token}` } });
-    expect(res.statusCode).toBe(200);
-    const body = JSON.parse(res.body);
-    expect(Array.isArray(body.list)).toBe(true);
-  });
-
-  it("创建 API Key 返回明文", async () => {
+  it('GET /api/v1/auth/me returns user info', async () => {
     const res = await app.inject({
-      method: "POST",
-      url: "/api/v1/me/api-keys",
-      headers: { authorization: `Bearer ${token}` },
-      payload: { name: "test-api-key" },
+      method: 'GET',
+      url: '/api/v1/auth/me',
+      headers: { authorization: `Bearer ${accessToken}` },
     });
     expect(res.statusCode).toBe(200);
-    const body = JSON.parse(res.body);
-    expect(body.key).toMatch(/^sk-/);
-    createdKeyId = body.id;
+    const body = JSON.parse(res.payload);
+    expect(body.user.email).toBe(testEmail);
   });
 
-  it("API Key 列表包含新创建的 key", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/v1/me/api-keys", headers: { authorization: `Bearer ${token}` } });
-    expect(res.statusCode).toBe(200);
-    const body = JSON.parse(res.body);
-    expect(body.list.some((k: any) => k.name === "test-api-key")).toBe(true);
-  });
-
-  it("删除 API Key", async () => {
-    const res = await app.inject({ method: "DELETE", url: `/api/v1/me/api-keys/${createdKeyId}`, headers: { authorization: `Bearer ${token}` } });
-    expect(res.statusCode).toBe(200);
-  });
-
-  it("未登录访问 /me/api-keys → 401", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/v1/me/api-keys" });
+  it('GET /api/v1/auth/me rejects without token', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/v1/auth/me' });
     expect(res.statusCode).toBe(401);
+  });
+
+  it('POST /api/v1/auth/refresh gets new tokens', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/refresh',
+      payload: { refreshToken },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.payload);
+    expect(body.accessToken).toBeDefined();
+    expect(body.refreshToken).toBeDefined();
+    accessToken = body.accessToken;
+  });
+
+  it('POST /api/v1/auth/logout succeeds', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/logout',
+      headers: { authorization: `Bearer ${accessToken}` },
+    });
+    expect(res.statusCode).toBe(200);
   });
 });

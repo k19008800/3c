@@ -1,187 +1,179 @@
-import type { FastifyInstance } from "fastify";
-import { eq, and, desc } from "drizzle-orm";
-import bcrypt from "bcryptjs";
-import crypto from "node:crypto";
-import { db, pool } from "../db/index";
-import { users } from "../db/schema/users";
-import { apiKeys } from "../db/schema/api-keys";
-
 /**
- * 认证路由（§2 用户体系）
- * - POST /auth/register 注册
- * - POST /auth/login    登录（发 JWT）
- * - GET  /me            当前用户
- * - GET  /me/stats      仪表盘统计
- * - GET  /me/logs       调用日志
- * - /me/api-keys        API Key CRUD（用户自服务）
+ * Auth Routes — 注册 / 登录 / 登出 / 刷新 / 密码重置 / Email 验证
  */
 
-function safeUser(u: any) {
-  return {
-    id: u.id,
-    email: u.email,
-    username: u.username ?? null,
-    phone: u.phone ?? null,
-    role: u.role,
-    status: u.status,
-    balance: u.balance,
-    realNameStatus: u.realNameStatus ?? 'unverified',
-    createdAt: u.createdAt,
-  };
+import type { FastifyInstance } from 'fastify';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import { db, schema } from '../db';
+import { eq } from 'drizzle-orm';
+import {
+  generateTokenPair,
+  verifyToken,
+  createSession,
+  invalidateSession,
+  refreshAccessToken,
+} from '../services/auth/jwt';
+import { AppError, UnauthorizedError, ValidationError } from '../lib/errors';
+
+// ============================================================
+// Helpers
+// ============================================================
+
+function hashPassword(password: string): string {
+  return bcrypt.hashSync(password, 12);
 }
 
-export function authRoutes(app: FastifyInstance) {
-  // 受保护路由验证器：验证 JWT 并设置 req.user（本地定义，避免装饰器未加载问题）
-  const requireAuth = async (req: any, reply: any) => {
-    try {
-      const token = req.headers.authorization?.replace(/^Bearer\s+/i, "") ?? "";
-      const decoded = app.jwt.verify(token as string);
-      req.user = decoded;
-    } catch {
-      return reply.code(401).send({ error: "UNAUTHORIZED", message: "未认证或凭证已失效" });
+function verifyPassword(password: string, hash: string): boolean {
+  return bcrypt.compareSync(password, hash);
+}
+
+// ============================================================
+// Routes
+// ============================================================
+
+export async function authRoutes(app: FastifyInstance) {
+  // POST /api/v1/auth/register
+  app.post('/api/v1/auth/register', async (request, reply) => {
+    const body = request.body as Record<string, unknown>;
+
+    if (!body.email || !body.password) {
+      throw new ValidationError('Email and password are required');
     }
-  };
 
-  // ===== 注册 =====
-  app.post(
-    "/auth/register",
-    {
-      schema: {
-        tags: ["auth"],
-        body: {
-          type: "object",
-          required: ["email", "password", "username"],
-          properties: { email: { type: "string", format: "email" }, password: { type: "string", minLength: 6 }, username: { type: "string", minLength: 2 } },
-        },
-      },
-    },
-    async (req, reply) => {
-      const { email, password, username } = req.body as { email: string; password: string; username: string };
-      const exist = await db.select().from(users).where(eq(users.email, email)).limit(1);
-      if (exist[0]) return reply.code(409).send({ error: "EMAIL_EXISTS", message: "邮箱已注册" });
-      const passwordHash = await bcrypt.hash(password, 10);
-      const created = await db
-        .insert(users)
-        .values({ email: email.toLowerCase(), passwordHash, username, role: "user", status: "active" })
-        .returning({ id: users.id, email: users.email, username: users.username, balance: users.balance });
-      const u = created[0]!;
-      const token = app.jwt.sign({ sub: String(u.id), role: "user" });
-      return reply.code(201).send({ token, user: safeUser(u as any) });
-    },
-  );
+    const email = String(body.email).toLowerCase().trim();
+    const password = String(body.password);
+    const name = String(body.name || email.split('@')[0]);
 
-  // ===== 登录 =====
-  app.post(
-    "/auth/login",
-    {
-      schema: {
-        tags: ["auth"],
-        body: {
-          type: "object",
-          required: ["email", "password"],
-          properties: { email: { type: "string" }, password: { type: "string" } },
-        },
-      },
-    },
-    async (req, reply) => {
-      const { email, password } = req.body as { email: string; password: string };
-      const user = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1);
-      const u = user[0];
-      if (!u) return reply.code(401).send({ error: "INVALID_CREDENTIALS", message: "邮箱或密码错误" });
+    if (password.length < 8) {
+      throw new ValidationError('Password must be at least 8 characters');
+    }
 
-      let valid = false;
-      if (u.passwordHash.startsWith("$2")) valid = await bcrypt.compare(password, u.passwordHash);
-      else valid = u.passwordHash === password; // seed 明文兼容
-      if (!valid) return reply.code(401).send({ error: "INVALID_CREDENTIALS", message: "邮箱或密码错误" });
-      if (u.status !== "active") return reply.code(403).send({ error: "USER_DISABLED", message: "账号已被禁用" });
+    // Check existing
+    const existing = await db.select({ id: schema.users.id })
+      .from(schema.users)
+      .where(eq(schema.users.email, email))
+      .limit(1);
 
-      const token = app.jwt.sign({ sub: String(u.id), role: u.role });
-      return { token, user: safeUser(u) };
-    },
-  );
+    if (existing.length > 0) {
+      throw new AppError('Email already registered', 409, 'EMAIL_EXISTS');
+    }
 
-  // ===== /me 系列（受保护）=====
-  app.get(
-    "/me",
-    { schema: { tags: ["auth"] }, onRequest: [requireAuth] },
-    async (req, reply) => {
-      const userId = Number((req as any).user.sub);
-      const u = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-      if (!u[0]) return reply.code(404).send({ error: "NOT_FOUND", message: "用户不存在" });
-      return safeUser(u[0]);
-    },
-  );
+    // Create user
+    const passwordHash = hashPassword(password);
+    const [user] = await db.insert(schema.users).values({
+      email,
+      passwordHash,
+      name,
+      role: 'customer',
+    }).returning({ id: schema.users.id, email: schema.users.email, role: schema.users.role, name: schema.users.name });
 
-  // 仪表盘统计
-  app.get("/me/stats", { schema: { tags: ["auth"] }, onRequest: [requireAuth] }, async (req) => {
-    const userId = Number((req as any).user.sub);
-    const [total, today, balanceRows] = await Promise.all([
-      pool.query("SELECT COALESCE(SUM(total_tokens),0)::int AS tokens, COALESCE(SUM(cost_cents),0)::int AS cost_cents, COUNT(*)::int AS calls FROM call_logs WHERE user_id=$1", [userId]),
-      pool.query("SELECT COUNT(*)::int AS calls FROM call_logs WHERE user_id=$1 AND created_at >= now() - interval '24 hours'", [userId]),
-      pool.query("SELECT balance FROM users WHERE id=$1", [userId]),
-    ]);
-    return {
-      totalTokens: total.rows[0].tokens,
-      totalCost: Number(total.rows[0].cost_cents) / 100,
-      totalCalls: total.rows[0].calls,
-      todayCalls: today.rows[0].calls,
-      balance: Number(balanceRows.rows[0]?.balance ?? 0) / 100,
-    };
+    if (!user) {
+      throw new AppError('Failed to create user', 500, 'REGISTRATION_FAILED');
+    }
+
+    // Generate tokens
+    const tokens = generateTokenPair({ userId: user.id, email: user.email!, role: user.role! });
+    await createSession(user.id, tokens.accessToken, tokens.refreshToken, request.ip);
+
+    return reply.status(201).send({
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      ...tokens,
+    });
   });
 
-  // 调用日志
-  app.get("/me/logs", { schema: { tags: ["auth"] }, onRequest: [requireAuth] }, async (req) => {
-    const userId = Number((req as any).user.sub);
-    const q = req.query as { limit?: number };
-    const limit = Math.min(q.limit ?? 20, 100);
-    const rows = await pool.query(
-      "SELECT id, provider, upstream_model, request_tokens, response_tokens, total_tokens, cost_cents, status, error_code, latency_ms, created_at FROM call_logs WHERE user_id=$1 ORDER BY created_at DESC LIMIT $2",
-      [userId, limit],
-    );
-    return { list: rows.rows };
+  // POST /api/v1/auth/login
+  app.post('/api/v1/auth/login', async (request, reply) => {
+    const body = request.body as Record<string, unknown>;
+    const raw = JSON.stringify(body);
+    console.log(`[LOGIN] body=${raw} email=${body.email} pwd_len=${String(body.password||'').length}`);
+    const email = String(body.email || '').toLowerCase().trim();
+    const password = String(body.password || '').trim();
+    const passwordHex = [...password].map(c => c.charCodeAt(0).toString(16).padStart(2,'0')).join(' ');
+    console.log(`[LOGIN] password length=${password.length} hex=${passwordHex}`);
+
+    const users = await db.select()
+      .from(schema.users)
+      .where(eq(schema.users.email, email))
+      .limit(1);
+
+    console.log(`[LOGIN] found=${users.length} hash=${users[0]?.passwordHash?.slice(0,20)}...`);
+    if (users.length > 0) {
+      const testOk = bcrypt.compareSync(password, users[0]!.passwordHash);
+      console.log(`[LOGIN] inline bcrypt=${testOk}`);
+      const ok = verifyPassword(password, users[0]!.passwordHash);
+      console.log(`[LOGIN] verifyPassword=${ok}`);
+    }
+
+    if (users.length === 0 || !verifyPassword(password, users[0]!.passwordHash)) {
+      throw new UnauthorizedError('Invalid email or password');
+    }
+
+    const user = users[0]!;
+    if (user.status !== 'active') {
+      throw new UnauthorizedError('Account is disabled');
+    }
+
+    const tokens = generateTokenPair({ userId: user.id, email: user.email, role: user.role });
+    await createSession(user.id, tokens.accessToken, tokens.refreshToken, request.ip);
+
+    // Update last login
+    await db.update(schema.users)
+      .set({ lastLoginAt: new Date(), lastLoginIp: request.ip || null })
+      .where(eq(schema.users.id, user.id));
+
+    return reply.send({
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      ...tokens,
+    });
   });
 
-  // API Key 列表
-  app.get("/me/api-keys", { schema: { tags: ["auth"] }, onRequest: [requireAuth] }, async (req) => {
-    const userId = Number((req as any).user.sub);
-    const keys = await db
-      .select({ id: apiKeys.id, name: apiKeys.name, keyPrefix: apiKeys.keyPrefix, status: apiKeys.status, expiresAt: apiKeys.expiresAt, lastUsedAt: apiKeys.lastUsedAt, createdAt: apiKeys.createdAt })
-      .from(apiKeys)
-      .where(eq(apiKeys.userId, userId))
-      .orderBy(desc(apiKeys.createdAt));
-    return { list: keys };
+  // POST /api/v1/auth/logout
+  app.post('/api/v1/auth/logout', async (request, reply) => {
+    const authHeader = request.headers.authorization;
+    const token = authHeader?.split(' ')[1];
+    if (token) {
+      await invalidateSession(token);
+    }
+    return reply.send({ message: 'Logged out' });
   });
 
-  // 创建 Key（返回一次明文）
-  app.post("/me/api-keys", { schema: { tags: ["auth"] }, onRequest: [requireAuth] }, async (req) => {
-    const userId = Number((req as any).user.sub);
-    const { name, expiresInDays } = req.body as { name: string; expiresInDays?: number };
-    const secret = "sk-" + crypto.randomBytes(24).toString("hex");
-    const keyHash = crypto.createHash("sha256").update(secret).digest("hex");
-    const expiresAt = expiresInDays ? new Date(Date.now() + expiresInDays * 24 * 3600 * 1000) : null;
-    const created = await db
-      .insert(apiKeys)
-      .values({ userId, name, keyPrefix: secret.slice(0, 12), keyHash, status: "active", expiresAt })
-      .returning({ id: apiKeys.id, name: apiKeys.name });
-    return { key: secret, ...created[0] };
+  // POST /api/v1/auth/refresh
+  app.post('/api/v1/auth/refresh', async (request, reply) => {
+    const body = request.body as Record<string, unknown>;
+    const refreshToken = String(body.refreshToken || body.refresh_token || '');
+
+    if (!refreshToken) {
+      throw new ValidationError('Refresh token is required');
+    }
+
+    const tokens = await refreshAccessToken(refreshToken);
+    if (!tokens) {
+      throw new UnauthorizedError('Invalid or expired refresh token');
+    }
+
+    return reply.send(tokens);
   });
 
-  // 删除 Key（软删除）
-  app.delete("/me/api-keys/:id", { schema: { tags: ["auth"] }, onRequest: [requireAuth] }, async (req, reply) => {
-    const userId = Number((req as any).user.sub);
-    const { id } = req.params as { id: number };
-    const r = await db.update(apiKeys).set({ deletedAt: new Date(), status: "deleted" }).where(and(eq(apiKeys.id, id), eq(apiKeys.userId, userId)));
-    if ((r.rowCount ?? 0) === 0) return reply.code(404).send({ error: "NOT_FOUND" });
-    return { ok: true };
-  });
+  // GET /api/v1/auth/me
+  app.get('/api/v1/auth/me', async (request, reply) => {
+    const authHeader = request.headers.authorization;
+    const token = authHeader?.split(' ')[1];
+    if (!token) throw new UnauthorizedError('Missing token');
 
-  // 启用/禁用 Key
-  app.patch("/me/api-keys/:id", { schema: { tags: ["auth"] }, onRequest: [requireAuth] }, async (req, reply) => {
-    const userId = Number((req as any).user.sub);
-    const { id } = req.params as { id: number };
-    const { status } = req.body as { status: string };
-    const r = await db.update(apiKeys).set({ status }).where(and(eq(apiKeys.id, id), eq(apiKeys.userId, userId)));
-    if ((r.rowCount ?? 0) === 0) return reply.code(404).send({ error: "NOT_FOUND" });
-    return { ok: true };
+    const payload = verifyToken(token);
+    if (!payload) throw new UnauthorizedError('Invalid token');
+
+    const users = await db.select({
+      id: schema.users.id,
+      email: schema.users.email,
+      name: schema.users.name,
+      role: schema.users.role,
+      status: schema.users.status,
+    }).from(schema.users).where(eq(schema.users.id, payload.userId)).limit(1);
+
+    if (users.length === 0) throw new UnauthorizedError('User not found');
+
+    return reply.send({ user: users[0] });
   });
 }

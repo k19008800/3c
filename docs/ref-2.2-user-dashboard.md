@@ -368,7 +368,7 @@ export const userAlertOverrides = pgTable("user_alert_overrides", {
 ### 3.1 组件树
 
 ```
-UserDashboard                              ← 页面容器（路由 /console）
+UserDashboard                              ← 页面容器（路由 /dashboard）
 ├── WelcomeCard                            ← 区域 1
 ├── CoreMetricsCards                        ← 区域 2
 ├── QuotaProgressBar                        ← 区域 3

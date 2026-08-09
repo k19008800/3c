@@ -27,7 +27,7 @@ export default function AdminSupplierDetailPage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>供应商详情</h2>
-        <HelpIcon helpKey="supplier_detail" />
+        <HelpIcon text="supplier_detail" />
       </div>
 
       <div style={{ ...card, marginBottom: 20 }}>
@@ -60,7 +60,7 @@ export default function AdminSupplierDetailPage() {
 
       {selected && (
         <Modal open onClose={() => setSelected(null)} title={`供应商详情 - ${selected.name}`}>
-          {detailQ.isLoading ? <SkeletonGroup count={5} /> : (
+          {detailQ.isLoading ? <SkeletonGroup lines={5} /> : (
             <div style={{ padding: 10 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, fontSize: 13 }}>
                 <div><strong>名称:</strong> {detailQ.data?.vendor?.name ?? selected.name}</div>

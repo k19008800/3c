@@ -18,7 +18,7 @@ export default function AdminOperationDiffPage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>操作差异</h2>
-        <HelpIcon helpKey="operation_diff" />
+        <HelpIcon text="operation_diff" />
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
@@ -33,8 +33,8 @@ export default function AdminOperationDiffPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>🔄 操作差异记录 <HelpIcon helpKey="operation_diff" /></div>
-        {diffQ.isLoading ? <SkeletonGroup count={5} /> : (
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>🔄 操作差异记录 <HelpIcon text="operation_diff" /></div>
+        {diffQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>时间</th>
@@ -58,7 +58,7 @@ export default function AdminOperationDiffPage() {
                     <span style={{ padding: "4px 10px", borderRadius: 12, fontSize: 11,
                       background: d.status === "resolved" ? "#e8f5e9" : "#fff8e1",
                       color: d.status === "resolved" ? "#2e7d32" : "#e65100" }}>
-                      {{ pending: "待处理", resolved: "已解决", ignored: "已忽略" }[d.status] ?? d.status}
+                      {({ pending: "待处理", resolved: "已解决", ignored: "已忽略" } as Record<string, string>)[d.status] ?? d.status}
                     </span>
                   </td>
                 </tr>

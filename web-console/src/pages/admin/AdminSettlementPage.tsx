@@ -27,7 +27,7 @@ export default function AdminSettlementPage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>结算对账</h2>
-        <HelpIcon helpKey="settlement" />
+        <HelpIcon text="settlement" />
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
@@ -62,8 +62,8 @@ export default function AdminSettlementPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>⚖️ 结算列表 <HelpIcon helpKey="settlement" /></div>
-        {settleQ.isLoading ? <SkeletonGroup count={5} /> : (
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>⚖️ 结算列表 <HelpIcon text="settlement" /></div>
+        {settleQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>供应商</th>
@@ -86,7 +86,7 @@ export default function AdminSettlementPage() {
                   </td>
                   <td style={{ padding: "10px 12px" }}>
                     <StatusBadge status={s.status === "settled" ? "success" : s.status === "pending" ? "warning" : "danger"}>
-                      {{ pending: "待结算", settled: "已结算", disputed: "有争议" }[s.status] ?? s.status}
+                      {({ pending: "待结算", settled: "已结算", disputed: "有争议" } as Record<string, string>)[s.status] ?? s.status}
                     </StatusBadge>
                   </td>
                   <td style={{ padding: "10px 12px" }}>

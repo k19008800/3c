@@ -1,7 +1,7 @@
 // 关于我们 — 公司介绍 + 里程碑 + 联系方式
 import type { Metadata } from "next";
 
-const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3000";
+const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3030";
 
 interface SiteConfig {
   site_name?: string;

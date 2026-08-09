@@ -1,59 +1,72 @@
-/**
- * Pipeline 主执行器（§1.1）
- * 顺序执行 step 数组，失败时逆序回滚已执行 step。
- */
-
-import type { PipelineContext, PipelineResult, PipelineStep } from "./types";
+import { PipelineContext, PipelineStep, PipelineResult } from './types';
 
 /**
- * runPipeline() — 带回滚的顺序执行器
+ * Execute a pipeline of steps with automatic rollback on failure.
  *
- * 规则：
- * 1. 顺序执行 steps[0..N]
- * 2. 某 step 抛异常 → 逆序回滚 steps[i-1..0]（仅调用有 rollback 的 step）
- * 3. noRollbackOn=true 的 step 失败 → 不回滚前置步骤
- * 4. 回滚中某 step 的 rollback 抛异常 → 记录但不吞原错误
+ * Order:
+ * 1. Execute step[0] → step[1] → ... → step[N]
+ * 2. If any step fails, rollback executed steps in reverse order
+ * 3. Steps marked `noRollbackOn: true` are NOT rolled back
  */
-export async function runPipeline<T extends PipelineContext = PipelineContext>(
-  ctx: T,
-  steps: PipelineStep<T>[],
-): Promise<PipelineResult> {
-  const executed: number[] = [];
+export async function runPipeline<T extends unknown[]>(
+  ctx: PipelineContext,
+  steps: { [K in keyof T]: PipelineStep<T[K]> },
+): Promise<PipelineResult<T>> {
+  const results: unknown[] = [];
+  const executedSteps: PipelineStep<unknown>[] = [];
 
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i]!;
     try {
-      await step.execute(ctx);
-      executed.push(i);
+      executedSteps.push(step);
+      const result = await step.execute(ctx);
+      results.push(result);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
 
-      // 不回滚的情况
-      if (step.noRollbackOn) {
-        return { ok: false, failedStep: step.name, error };
-      }
+      // Rollback executed steps in reverse
+      for (let j = executedSteps.length - 2; j >= 0; j--) {
+        const rollbackStep = executedSteps[j]!;
+        if (rollbackStep.noRollbackOn) continue;
 
-      // 逆序回滚
-      const rollbackErrors: Error[] = [];
-      for (let j = executed.length - 1; j >= 0; j--) {
-        const rollbackStep = steps[executed[j]!]!;
-        if (rollbackStep.rollback) {
-          try {
-            await rollbackStep.rollback(ctx);
-          } catch (rbErr) {
-            rollbackErrors.push(rbErr instanceof Error ? rbErr : new Error(String(rbErr)));
-          }
+        try {
+          await rollbackStep.rollback?.(ctx);
+        } catch (rollbackErr) {
+          // Log rollback error but don't swallow the original error
+          console.error(
+            `[Pipeline] Rollback failed for step "${rollbackStep.name}":`,
+            rollbackErr,
+          );
         }
       }
 
       return {
-        ok: false,
-        failedStep: step.name,
+        success: false,
         error,
-        rollbackErrors: rollbackErrors.length > 0 ? rollbackErrors : undefined,
+        failedStep: step.name,
+        results: results as Partial<T>,
       };
     }
   }
 
-  return { ok: true };
+  return {
+    success: true,
+    results: results as T,
+  };
+}
+
+/**
+ * Create a pipeline step helper
+ */
+export function createStep<T>(
+  name: string,
+  execute: (ctx: PipelineContext) => Promise<T>,
+  opts?: { rollback?: (ctx: PipelineContext) => Promise<void>; noRollbackOn?: boolean },
+): PipelineStep<T> {
+  return {
+    name,
+    execute,
+    rollback: opts?.rollback,
+    noRollbackOn: opts?.noRollbackOn,
+  };
 }

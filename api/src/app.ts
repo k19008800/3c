@@ -1,71 +1,73 @@
-import Fastify from "fastify";
-import cors from "@fastify/cors";
-import jwt from "@fastify/jwt";
-import swagger from "@fastify/swagger";
-import swaggerUi from "@fastify/swagger-ui";
-import rateLimit from "@fastify/rate-limit";
-import websocket from "@fastify/websocket";
-import { registerRoutes } from "./routes/index";
-import { errorHandler } from "./lib/error-handler";
-import "dotenv/config";
+import fastify from 'fastify';
+import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
+import { db } from './db';
+import { loadEnv, type Env } from './lib/env';
+import { healthRoutes } from './routes/health';
+import { chatRoutes } from './routes/chat';
+import { authRoutes } from './routes/auth';
+import { apiKeyRoutes } from './routes/apikeys';
+import { supplierRoutes } from './routes/suppliers';
 
-/**
- * Fastify 应用装配
- */
-export function buildApp() {
-  const app = Fastify({
+let env: Env;
+
+export async function buildApp(opts?: { envOverrides?: Record<string, string> }) {
+  env = loadEnv(opts?.envOverrides);
+
+  const app = fastify({
     logger: {
-      level: process.env.NODE_ENV === "production" ? "info" : "debug",
+      level: env.LOG_LEVEL,
+      transport: env.NODE_ENV === 'development'
+        ? { target: 'pino-pretty', options: { colorize: true } }
+        : undefined,
     },
-    trustProxy: true,
   });
 
-  // CORS
-  void app.register(cors, {
-    origin: true,
-    credentials: true,
-  });
+  // Plugins
+  await app.register(cors, { origin: true, credentials: true });
+  await app.register(rateLimit, { max: 600, timeWindow: '1 minute' });
 
-  // JWT
-  void app.register(jwt, {
-    secret: process.env.JWT_SECRET ?? "dev-secret-change-in-production",
-  });
-
-  // 限流（默认：每 IP 100 req/min）
-  void app.register(rateLimit, {
-    max: 100,
-    timeWindow: "1 minute",
-  });
-
-  // WebSocket 支持（在线客服）
-  void app.register(websocket);
-
-  // Swagger（由 route JSON Schema 自动生成）
-  void app.register(swagger, {
+  // Swagger
+  await app.register(swagger, {
     openapi: {
-      info: {
-        title: "3cloud API",
-        description: "3Cloud AI Token 聚合平台 API",
-        version: "0.1.0",
-      },
-      tags: [{ name: "health" }],
+      info: { title: '3cloud API', version: '0.1.0', description: 'AI Token Aggregation Platform' },
+      servers: [{ url: `http://localhost:${env.PORT}` }],
     },
   });
+  await app.register(swaggerUi, { routePrefix: '/docs' });
 
-  // Swagger UI（交互式文档界面，路径 /docs）
-  void app.register(swaggerUi, {
-    routePrefix: "/docs",
-    uiConfig: {
-      docExpansion: "list",
-      deepLinking: true,
-    },
-  });
+  // Decorate with deps
+  app.decorate('db', db);
+  app.decorate('env', env);
 
-  // 统一错误处理
-  app.setErrorHandler(errorHandler);
-
-  // 注册全部路由（唯一入口）
-  registerRoutes(app);
+  // Routes
+  await app.register(healthRoutes);
+  await app.register(chatRoutes);
+  await app.register(authRoutes);
+  await app.register(apiKeyRoutes);
+  await app.register(supplierRoutes);
 
   return app;
+}
+
+export async function startApp(opts?: { envOverrides?: Record<string, string> }) {
+  const app = await buildApp(opts);
+  const port = env.PORT;
+  const host = env.HOST;
+
+  await app.listen({ port, host });
+  app.log.info(`🚀 3cloud API running at http://${host}:${port}`);
+  app.log.info(`📖 Swagger docs at http://${host}:${port}/docs`);
+
+  return app;
+}
+
+// Extend Fastify types
+declare module 'fastify' {
+  interface FastifyInstance {
+    db: typeof db;
+    env: Env;
+  }
 }

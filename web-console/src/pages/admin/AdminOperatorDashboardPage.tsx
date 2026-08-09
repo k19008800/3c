@@ -18,7 +18,7 @@ export default function AdminOperatorDashboardPage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>运营看板</h2>
-        <HelpIcon helpKey="operator_dashboard" />
+        <HelpIcon text="operator_dashboard" />
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
@@ -53,8 +53,8 @@ export default function AdminOperatorDashboardPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>管理员效率统计 <HelpIcon helpKey="operator_dashboard" /></div>
-        {opsQ.isLoading ? <SkeletonGroup count={5} /> : (
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>管理员效率统计 <HelpIcon text="operator_dashboard" /></div>
+        {opsQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>管理员</th>

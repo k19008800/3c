@@ -19,7 +19,7 @@ export default function AdminConsumptionTrackingPage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>消费追踪</h2>
-        <HelpIcon helpKey="consumption_tracking" />
+        <HelpIcon text="consumption_tracking" />
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
@@ -49,8 +49,8 @@ export default function AdminConsumptionTrackingPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>📊 消费明细 <HelpIcon helpKey="consumption_tracking" /></div>
-        {trackQ.isLoading ? <SkeletonGroup count={5} /> : (
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>📊 消费明细 <HelpIcon text="consumption_tracking" /></div>
+        {trackQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>用户</th>

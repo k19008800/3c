@@ -37,7 +37,7 @@ export default function AdminBalanceAlertPage() {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>余额预警</h2>
-        <HelpIcon helpKey="balance_alert" />
+        <HelpIcon text="balance_alert" />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 20 }}>
@@ -56,7 +56,7 @@ export default function AdminBalanceAlertPage() {
 
       <div style={{ ...card, marginBottom: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-          <span style={{ fontWeight: 600 }}>⚙️ 预警配置 <HelpIcon helpKey="balance_alert" /></span>
+          <span style={{ fontWeight: 600 }}>⚙️ 预警配置 <HelpIcon text="balance_alert" /></span>
           <button style={{ ...btnBase, background: "#fff", border: "1px solid #ddd", fontSize: 12 }}
             onClick={() => setEditConfig(configQ.data ?? { warning_threshold: 10, critical_threshold: 0 })}>修改配置</button>
         </div>
@@ -68,8 +68,8 @@ export default function AdminBalanceAlertPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>⚠️ 余额预警列表 <HelpIcon helpKey="balance_alert" /></div>
-        {alertsQ.isLoading ? <SkeletonGroup count={5} /> : (
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>⚠️ 余额预警列表 <HelpIcon text="balance_alert" /></div>
+        {alertsQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>用户</th>
