@@ -192,113 +192,101 @@ export default function App() {
         <Route path="agent/withdraw" element={<AgentWithdrawPage />} />
         <Route path="admin/dashboard" element={<AdminDashboardPage />} />
         <Route path="admin/cockpit" element={<AdminCockpitPage />} />
+        {/* ── 客户管理 ── */}
+        <Route path="admin/customers" element={<AdminCustomersPage />} />
+        <Route path="admin/customers/:userId" element={<AdminCustomerDetailPage />} />
+        <Route path="admin/customers/quotas" element={<AdminCreditPage />} />
+        <Route path="admin/customers/verifications" element={<AdminRealNamePage />} />
+        {/* ── 财务结算 ── */}
+        <Route path="admin/finance/dashboard" element={<AdminFinancePage />} />
+        <Route path="admin/finance/manual-topup" element={<AdminManualRechargePage />} />
+        <Route path="admin/finance/adjust" element={<AdminFinancePage />} />
+        <Route path="admin/finance/orders" element={<AdminRechargeOrdersPage />} />
+        <Route path="admin/finance/commissions" element={<AdminCommissionFlowPage />} />
+        <Route path="admin/finance/refunds" element={<AdminRefundReviewPage />} />
+        <Route path="admin/finance/invoices" element={<AdminInvoicesPage />} />
+        <Route path="admin/finance/withdrawals" element={<AdminWithdrawalsPage />} />
+        <Route path="admin/finance/coupons" element={<AdminRedemptionPage />} />
+        <Route path="admin/finance/reconciliation" element={<AdminReconciliationPage />} />
+        <Route path="admin/finance/cost-dashboard" element={<AdminCostDashboardPage />} />
+        <Route path="admin/finance/cost-prediction" element={<AdminCostPredictionPage />} />
+        <Route path="admin/finance/settlement" element={<AdminSettlementPage />} />
+        <Route path="admin/finance/profit" element={<AdminProfitPage />} />
+        <Route path="admin/finance/pricing" element={<AdminPricingPage />} />
+        {/* ── 供应商管理 ── */}
+        <Route path="admin/suppliers" element={<AdminSupplierListPage />} />
+        <Route path="admin/suppliers/:id" element={<AdminSupplierDetailPage />} />
+        <Route path="admin/suppliers/model-service" element={<AdminModelServicePage />} />
+        <Route path="admin/suppliers/vendor-profiles" element={<AdminVendorProfilesPage />} />
+        <Route path="admin/suppliers/vendor-pricing" element={<AdminVendorPricingPage />} />
+        <Route path="admin/suppliers/vendor-cost" element={<AdminVendorCostPage />} />
+        <Route path="admin/suppliers/vendor-stats" element={<AdminVendorStatsPage />} />
+        <Route path="admin/suppliers/price-change" element={<AdminPriceChangePage />} />
+        <Route path="admin/suppliers/vendor-performance" element={<AdminVendorPerformancePage />} />
+        {/* ── 代理商管理 ── */}
         <Route path="admin/agents" element={<AdminAgentsPage />} />
-        <Route path="admin/withdrawals" element={<AdminWithdrawalsPage />} />
-        <Route path="admin/vendors" element={<AdminVendorsPage />} />
-        <Route path="admin/models" element={<AdminModelsPage />} />
-        <Route path="admin/invoices" element={<AdminInvoicesPage />} />
-        <Route path="admin/real-name" element={<AdminRealNamePage />} />
+        <Route path="admin/agents/:id" element={<AdminAgentsPage />} />
+        <Route path="admin/agents/commission-config" element={<AdminAgentsPage />} />
+        <Route path="admin/agents/withdrawals" element={<AdminWithdrawalsPage />} />
+        {/* ── 模型管理 ── */}
+        <Route path="admin/models/marketplace" element={<AdminModelsPage />} />
+        {/* ── 营销推广 ── */}
+        <Route path="admin/marketing/affiliate" element={<AdminAffiliatePage />} />
+        {/* ── 工单客服 ── */}
+        <Route path="admin/tickets" element={<AdminTicketsPage />} />
+        {/* ── 系统设置 ── */}
+        <Route path="admin/settings/announcements" element={<AdminAnnouncementsPage />} />
+        <Route path="admin/settings/roles" element={<AdminRolesPage />} />
+        <Route path="admin/settings/i18n" element={<AdminI18nPage />} />
+        {/* ── 运维配置 ── */}
+        <Route path="admin/config/system" element={<AdminSettingsPage />} />
+        <Route path="admin/config/monitoring" element={<AdminSettingsPage />} />
+        <Route path="admin/config/performance" element={<AdminPerformancePage />} />
+        <Route path="admin/config/webhook-retry" element={<AdminWebhookRetryPage />} />
+        <Route path="admin/config/undo" element={<AdminUndoPage />} />
+        <Route path="admin/config/smtp" element={<AdminSettingsPage />} />
+        <Route path="admin/config/logs" element={<AdminSysLogsPage />} />
+        <Route path="admin/config/maintenance" element={<AdminSysVersionPage />} />
+        <Route path="admin/config/site" element={<AdminSettingsPage />} />
+        <Route path="admin/config/rate-limit" element={<AdminSettingsPage />} />
+        <Route path="admin/config/email-templates" element={<AdminEmailTemplatesPage />} />
+        <Route path="admin/config/content" element={<AdminContentPage />} />
+        <Route path="admin/config/oauth" element={<AdminSettingsPage />} />
+        {/* ── 审计合规 ── */}
+        <Route path="admin/audit/login-logs" element={<AdminAuditLogPage />} />
+        <Route path="admin/audit/operations" element={<AdminAuditLogPage />} />
+        <Route path="admin/audit/api-logs" element={<AdminAuditLogPage />} />
+        {/* ── 风控合规 ── */}
+        <Route path="admin/risk/dashboard" element={<AdminRiskPage />} />
+        <Route path="admin/risk/rules" element={<AdminRiskRulesPage />} />
+        <Route path="admin/risk/events" element={<AdminRiskEventsPage />} />
+        <Route path="admin/risk/blocks" element={<AdminRiskPage />} />
+        {/* ── 用户门户/Agent/业务员 ── */}
+        <Route path="api-keys" element={<ApiKeysPage />} />
+        <Route path="logs" element={<LogsPage />} />
+        <Route path="recharge" element={<RechargePage />} />
+        <Route path="topup-records" element={<TopupRecordsPage />} />
+        <Route path="billing" element={<BillingPage />} />
+        <Route path="invoices" element={<InvoicesPage />} />
         <Route path="redemption" element={<RedemptionPage />} />
-        <Route path="help" element={<HelpCenterPage />} />
-        <Route path="account-deletion" element={<DeletionPage />} />
         <Route path="announcements" element={<AnnouncementsPage />} />
         <Route path="real-name" element={<RealNamePage />} />
-        <Route path="admin/redemption" element={<AdminRedemptionPage />} />
-        <Route path="admin/announcements" element={<AdminAnnouncementsPage />} />
-        <Route path="admin/email-templates" element={<AdminEmailTemplatesPage />} />
-        <Route path="admin/campaigns" element={<AdminCampaignsPage />} />
-        <Route path="admin/activity" element={<AdminActivityPage />} />
         <Route path="notification" element={<NotificationPage />} />
         <Route path="settings/notifications" element={<NotificationSettingsPage />} />
         <Route path="playground" element={<PlaygroundPage />} />
         <Route path="webhooks" element={<UserWebhooksPage />} />
-        <Route path="admin/vendor-settlements" element={<AdminVendorSettlementsPage />} />
-<Route path="admin/finance" element={<AdminFinancePage />} />
-<Route path="security" element={<SecurityPage />} />
-<Route path="tickets" element={<TicketsPage />} />
-<Route path="admin/tickets" element={<AdminTicketsPage />} />
-<Route path="admin/support" element={<AdminSupportPage />} />
-<Route path="chat" element={<UserChatPage />} />
-<Route path="admin/chat" element={<AdminChatPage />} />
-<Route path="data-export" element={<ConsentPage />} />
-<Route path="admin/consent" element={<AdminConsentPage />} />
-<Route path="admin/roles" element={<AdminRolesPage />} />
-<Route path="admin/users-permission" element={<AdminUsersPermissionPage />} />
-<Route path="admin/permission-audit" element={<AdminPermissionAuditPage />} />
-<Route path="sales/customers" element={<SalesCustomersPage />} />
-<Route path="sales/customers/:userId" element={<SalesCustomerDetailPage />} />
-<Route path="sales/reminders" element={<SalesRemindersPage />} />
-<Route path="sales/performance" element={<SalesPerformancePage />} />
-<Route path="admin/customers" element={<AdminCustomersPage />} />
-<Route path="admin/customers/:userId" element={<AdminCustomerDetailPage />} />
-<Route path="admin/credit" element={<AdminCreditPage />} />
-<Route path="admin/manual-recharge" element={<AdminManualRechargePage />} />
-<Route path="admin/recharge-orders" element={<AdminRechargeOrdersPage />} />
-<Route path="admin/refunds" element={<AdminRefundReviewPage />} />
-<Route path="admin/pricing" element={<AdminPricingPage />} />
-<Route path="admin/coupons" element={<AdminCouponPage />} />
-<Route path="admin/deletion" element={<AdminDeletionPage />} />
-<Route path="admin/knowledge-base" element={<AdminKnowledgeBasePage />} />
-<Route path="admin/webhooks" element={<AdminWebhooksPage />} />
-<Route path="admin/sys/db" element={<AdminSysDbPage />} />
-<Route path="admin/sys/cache" element={<AdminSysCachePage />} />
-<Route path="admin/sys/logs" element={<AdminSysLogsPage />} />
-<Route path="admin/sys/version" element={<AdminSysVersionPage />} />
-        {/* ── 供应商管理 ── */}
-        <Route path="admin/suppliers" element={<AdminSupplierListPage />} />
-        <Route path="admin/suppliers/:id" element={<AdminSupplierDetailPage />} />
-        <Route path="admin/model-services" element={<AdminModelServicePage />} />
-        <Route path="admin/vendor-profiles" element={<AdminVendorProfilesPage />} />
-        <Route path="admin/vendor-pricing" element={<AdminVendorPricingPage />} />
-        <Route path="admin/vendor-costs" element={<AdminVendorCostPage />} />
-        <Route path="admin/vendor-stats" element={<AdminVendorStatsPage />} />
-        <Route path="admin/vendor-performance" element={<AdminVendorPerformancePage />} />
-        <Route path="admin/marketplace" element={<AdminMarketplacePage />} />
-        <Route path="admin/multimodal-models" element={<AdminMultimodalModelsPage />} />
-        <Route path="admin/price-changes" element={<AdminPriceChangePage />} />
-        {/* ── 风控与审计 ── */}
-        <Route path="admin/risk" element={<AdminRiskPage />} />
-        <Route path="admin/risk/rules" element={<AdminRiskRulesPage />} />
-        <Route path="admin/risk/events" element={<AdminRiskEventsPage />} />
-        <Route path="admin/audit-logs" element={<AdminAuditLogPage />} />
-        <Route path="admin/consumption/anomalies" element={<AdminConsumptionAnomalyPage />} />
-        <Route path="admin/consumption/stream" element={<AdminConsumptionStreamPage />} />
-        <Route path="admin/consumption/tracking" element={<AdminConsumptionTrackingPage />} />
-        <Route path="admin/security/incidents" element={<AdminSecurityIncidentPage />} />
-        <Route path="admin/security/ip-blacklist" element={<AdminSecurityIpBlacklistPage />} />
-        <Route path="admin/balance-alerts" element={<AdminBalanceAlertPage />} />
-        {/* ── 运营分析 ── */}
-        <Route path="admin/operator/dashboard" element={<AdminOperatorDashboardPage />} />
-        <Route path="admin/operator/diff" element={<AdminOperationDiffPage />} />
-        <Route path="admin/conversion/funnel" element={<AdminConversionFunnelPage />} />
-        <Route path="admin/competitive/monitor" element={<AdminCompetitiveMonitorPage />} />
-        <Route path="admin/commission/flow" element={<AdminCommissionFlowPage />} />
-        <Route path="admin/settlement" element={<AdminSettlementPage />} />
-        <Route path="admin/reconciliation" element={<AdminReconciliationPage />} />
-        <Route path="admin/reconciliation/diffs" element={<AdminReconciliationDiffPage />} />
-        <Route path="admin/profit" element={<AdminProfitPage />} />
-        <Route path="admin/cost/dashboard" element={<AdminCostDashboardPage />} />
-        <Route path="admin/cost/prediction" element={<AdminCostPredictionPage />} />
-        {/* ── Module F: 系统管理 ── */}
-        <Route path="admin/settings" element={<AdminSettingsPage />} />
-        <Route path="admin/i18n" element={<AdminI18nPage />} />
-        <Route path="admin/undo" element={<AdminUndoPage />} />
-        <Route path="admin/data-requests" element={<AdminDataRequestPage />} />
-        <Route path="admin/subscriptions" element={<AdminSubscriptionPage />} />
-        <Route path="admin/affiliate" element={<AdminAffiliatePage />} />
-        <Route path="admin/content" element={<AdminContentPage />} />
-        <Route path="admin/content-moderation" element={<AdminContentModerationPage />} />
-        <Route path="admin/notification-policies" element={<AdminNotificationPolicyPage />} />
-        <Route path="admin/tax-banking" element={<AdminTaxBankingPage />} />
-        <Route path="admin/discount-rules" element={<AdminDiscountEnginePage />} />
-        <Route path="admin/disputes" element={<AdminDisputePage />} />
-        <Route path="admin/webhook-retry" element={<AdminWebhookRetryPage />} />
-        <Route path="admin/performance" element={<AdminPerformancePage />} />
-        <Route path="admin/apikey-security" element={<AdminApikeySecurityPage />} />
-        {/* ── Module I: 用户门户补齐 ── */}
-        <Route path="topup-records" element={<TopupRecordsPage />} />
+        <Route path="security" element={<SecurityPage />} />
+        <Route path="tickets" element={<TicketsPage />} />
+        <Route path="chat" element={<UserChatPage />} />
+        <Route path="data-export" element={<ConsentPage />} />
+        <Route path="help" element={<HelpCenterPage />} />
+        <Route path="account-deletion" element={<DeletionPage />} />
         <Route path="user-groups" element={<UserGroupsPage />} />
         <Route path="vendor-selector" element={<VendorSelectorPage />} />
+        <Route path="sales/customers" element={<SalesCustomersPage />} />
+        <Route path="sales/customers/:userId" element={<SalesCustomerDetailPage />} />
+        <Route path="sales/reminders" element={<SalesRemindersPage />} />
+        <Route path="sales/performance" element={<SalesPerformancePage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
