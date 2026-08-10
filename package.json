@@ -2,9 +2,10 @@
   "name": "3cloud",
   "private": true,
   "scripts": {
-    "dev": "pnpm --parallel -r dev",
+    "predev": "node scripts/prepare-app.cjs",
+    "dev": "pnpm --parallel --filter @3cloud/api --filter web-portal dev",
     "dev:api": "pnpm --filter @3cloud/api dev",
-    "dev:console": "pnpm --filter web-console dev",
+    "dev:app": "pnpm --filter web-console dev",
     "dev:portal": "pnpm --filter web-portal dev",
     "build": "pnpm --filter @3cloud/shared build && pnpm --filter @3cloud/api build && pnpm --filter web-console build && pnpm --filter web-portal build",
     "db:create": "node api/create-db.cjs",

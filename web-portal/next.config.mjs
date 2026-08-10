@@ -73,36 +73,17 @@ const nextConfig = {
         source: "/v1/:path*",
         destination: "http://localhost:3030/v1/:path*",
       },
-      // 将 /app/* 路由代理到 web-console Vite dev server
-      // 裸 /app 也转发（Vite base=/app/，不带尾斜杠会 404；Next 会把 /app/ 归一化为 /app）
-      {
-        source: "/app",
-        destination: "http://localhost:5175/app/",
-      },
-      {
-        source: "/app/",
-        destination: "http://localhost:5175/app/",
-      },
+      // ── /app/* 控制台：静态托管 web-console 构建产物 ──
+      // web-console `vite build`（base=/app/）产物拷贝到 web-portal/public/app/，
+      // 由 Next 直接静态服务（public/ 里的文件优先于 rewrite 命中）：
+      //   /app/                     → public/app/index.html
+      //   /app/assets/*             → public/app/assets/*（真实静态文件）
+      //   /app/<SPA路由>            → 命中下面 fallback → index.html（SPA 前端路由）
+      // 依赖：`node scripts/prepare-app.cjs`（pnpm dev 的 predev 自动执行）构建并拷贝产物。
+      // 不再依赖 Vite dev server（5175 已停）；改控制台页面需重新 prepare-app。
       {
         source: "/app/:path*",
-        destination: "http://localhost:5175/app/:path*",
-      },
-      // 同时代理 Vite 的 HMR 资源请求
-      {
-        source: "/@vite/:path*",
-        destination: "http://localhost:5175/@vite/:path*",
-      },
-      {
-        source: "/@react-refresh",
-        destination: "http://localhost:5175/@react-refresh",
-      },
-      {
-        source: "/src/:path*",
-        destination: "http://localhost:5175/src/:path*",
-      },
-      {
-        source: "/node_modules/:path*",
-        destination: "http://localhost:5175/node_modules/:path*",
+        destination: "/app/index.html",
       },
     ];
   },
