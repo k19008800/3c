@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
-const API_BASE = "http://127.0.0.1:3030";
+const API_BASE = "http://127.0.0.1:3000";
 
 // ===== 类型 =====
 interface SiteConfig {

@@ -21,7 +21,7 @@
 
 | 服务 | 端口 | 说明 |
 |------|------|------|
-| API 后端 | 3030 | PM2 cluster 模式 |
+| API 后端 | 3000 | PM2 cluster 模式 |
 | Web 前端 | 443 | Nginx 反向代理（HTTPS） |
 | PostgreSQL | 5432 | 数据库 |
 | Redis | 6379 | 缓存 |
@@ -111,7 +111,7 @@ cp -r $WEB_DIR/dist/* /var/www/3cloud/
 # 7. 验证
 echo "--- 验证部署 ---"
 sleep 3
-curl -s http://localhost:3030/health | grep -q "ok" && echo "✅ 健康检查通过" || echo "❌ 健康检查失败"
+curl -s http://localhost:3000/health | grep -q "ok" && echo "✅ 健康检查通过" || echo "❌ 健康检查失败"
 
 echo "=== 部署完成 ==="
 ```
@@ -127,7 +127,7 @@ module.exports = {
     exec_mode: 'cluster',
     env: {
       NODE_ENV: 'production',
-      PORT: 3030,
+      PORT: 3000,
     },
     max_memory_restart: '1G',
     log_date_format: 'YYYY-MM-DD HH:mm:ss',
@@ -150,7 +150,7 @@ server {
     ssl_certificate_key /etc/nginx/ssl/unmisa.com.key;
 
     location / {
-        proxy_pass http://127.0.0.1:3030;
+        proxy_pass http://127.0.0.1:3000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -336,7 +336,7 @@ find "$BACKUP_DIR" -name "*.env-*" -mtime +30 -delete
   2. 重建数据库: dropdb threecloud && createdb threecloud
   3. 恢复数据: pg_restore -U postgres -d threecloud /backup/20260728/threecloud.dump
   4. 重启服务: pm2 start 3cloud-api
-  5. 验证: curl http://localhost:3030/health
+  5. 验证: curl http://localhost:3000/health
 
 文件恢复：
   1. 解压配置: tar -xzf nginx-20260728.tar.gz -C /
@@ -413,7 +413,7 @@ API 服务不可用：
   1. pm2 status  → 查看进程状态
   2. pm2 logs 3cloud-api --lines 50  → 查看最后 50 行日志
   3. pm2 restart 3cloud-api  → 重启服务
-  4. curl http://localhost:3030/health  → 验证恢复
+  4. curl http://localhost:3000/health  → 验证恢复
   5. 如果仍不可用 → 检查数据库和 Redis
 
 数据库连接失败：

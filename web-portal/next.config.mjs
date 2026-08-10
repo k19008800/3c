@@ -8,9 +8,9 @@ const nextConfig = {
   reactStrictMode: true,
   // monorepo 工作区根（消除多 lockfile warning）
   outputFileTracingRoot: path.join(__dirname, "../"),
-  // Portal 前端 dev 端口 5177，API 后端端口 3030
+  // Portal 前端 dev 端口 5177，API 后端端口 3000
   env: {
-    API_BASE_URL: process.env.API_BASE_URL ?? "http://localhost:3030",
+    API_BASE_URL: process.env.API_BASE_URL ?? "http://localhost:3000",
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -61,17 +61,17 @@ const nextConfig = {
       // 将 API 请求代理到后端
       {
         source: "/api/:path*",
-        destination: "http://localhost:3030/api/:path*",
+        destination: "http://localhost:3000/api/:path*",
       },
       // 将 /health 代理到后端
       {
         source: "/health",
-        destination: "http://localhost:3030/health",
+        destination: "http://localhost:3000/health",
       },
       // 将 OpenAI 兼容 /v1/* 代理到后端（SDK / curl 直连统一入口）
       {
         source: "/v1/:path*",
-        destination: "http://localhost:3030/v1/:path*",
+        destination: "http://localhost:3000/v1/:path*",
       },
       // ── /app/* 控制台：静态托管 web-console 构建产物 ──
       // web-console `vite build`（base=/app/）产物拷贝到 web-portal/public/app/，

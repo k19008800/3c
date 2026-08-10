@@ -4,7 +4,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().default('postgres://postgres:postgres@localhost:5432/threecloud_v3'),
   REDIS_URL: z.string().default('redis://localhost:6379'),
   JWT_SECRET: z.string().min(8).default('dev-secret-change-in-production'),
-  PORT: z.coerce.number().default(3030),
+  PORT: z.coerce.number().default(3000),
   HOST: z.string().default('0.0.0.0'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('debug'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),

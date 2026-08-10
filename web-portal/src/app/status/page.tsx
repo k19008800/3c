@@ -17,7 +17,7 @@ interface StatusData {
 
 async function getStatus(): Promise<StatusData> {
   try {
-    // 通过 Next.js rewrite → localhost:3030/health
+    // 通过 Next.js rewrite → localhost:3000/health
     const healthRes = await fetch("/health");
     if (!healthRes.ok) throw new Error("API health check failed");
     const health = await healthRes.json();
@@ -25,7 +25,7 @@ async function getStatus(): Promise<StatusData> {
 
     let vendors: VendorStatus[] = [];
     try {
-      // 通过 Next.js rewrite → localhost:3030/api/v1/public/status
+      // 通过 Next.js rewrite → localhost:3000/api/v1/public/status
       const res = await fetch("/api/v1/public/status");
       if (res.ok) {
         const data = await res.json();

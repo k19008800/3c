@@ -473,7 +473,7 @@ location / {
     # 官网 + API/旧 URL 重定向 → web-portal (Next.js, 端口 3100)
     proxy_pass http://127.0.0.1:3100;
 }
-# /api/、/v1/、/health → 后端 3030
+# /api/、/v1/、/health → 后端 3000
 ```
 
 旧入口 URL（/login、/dashboard、/apikey 等）到达 web-portal 后由 Next `redirects()` 308 → `/app/*`，再被上面的 `location /app/` 命中。若生产需要字面 301，可在 nginx 加 `rewrite ^/login$ /app/login permanent;` 等规则。

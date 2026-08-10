@@ -1,7 +1,7 @@
 // 定价页 — 使用公开标价 API（成本 × 加价率 = 对外标价）
 import PriceCalculator from "./PriceCalculator";
 
-const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3030";
+const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3000";
 
 interface PriceItem {
   name: string;

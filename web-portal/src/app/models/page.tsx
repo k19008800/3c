@@ -1,5 +1,5 @@
 // 模型目录 — 服务端组件（SSR）
-const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3030";
+const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3000";
 
 interface PublicModel {
   name: string;

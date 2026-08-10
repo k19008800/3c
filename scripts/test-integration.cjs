@@ -4,11 +4,11 @@
  * 链路：注册（赠金）→ 登录 → /me → 建 Key → 列表/禁用/启用 → chat（mock 回退）
  *       → 消费记账 + 余额扣减 → 日志/统计/账单可见
  *
- * 依赖：api@3030、web-console@5175、web-portal@5177 已启动
+ * 依赖：api@3000、web-console@5175、web-portal@5177 已启动
  */
 const http = require('http');
 
-const API = 'http://localhost:3030';
+const API = 'http://localhost:3000';
 const EMAIL = `integ-${Date.now()}@test.com`;
 
 function req(method, path, data, token, headers = {}) {
@@ -137,7 +137,7 @@ async function main() {
     checkWeb('http://localhost:5177/app/');
   });
 
-  // 13. OpenAI 兼容经统一入口（5177/v1 → 3030/v1）
+  // 13. OpenAI 兼容经统一入口（5177/v1 → 3000/v1）
   if (rawKey) {
     await new Promise((resolve) => {
       const u = new URL('http://localhost:5177/v1/models');

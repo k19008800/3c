@@ -7,7 +7,7 @@
 
 | 项 | 值 |
 |----|----|
-| 统一入口 | `http://localhost:5177`（web-portal → `/api/*` 代理到 3030，`/app/*` 代理到 5175） |
+| 统一入口 | `http://localhost:5177`（web-portal → `/api/*` 代理到 3000，`/app/*` 代理到 5175） |
 | API baseURL | 前端 `api` 客户端 baseURL = `/api/v1`（web-console [lib/api.ts](../web-console/src/lib/api.ts)） |
 | 后端前缀 | 业务路由一律挂 `/api/v1/...`；OpenAI 兼容路由挂 `/v1/...`（无 `/api` 前缀） |
 | 认证 | JWT `Authorization: Bearer <accessToken>`；OpenAI 兼容用 API Key `Bearer sk-.../3c_...` |
