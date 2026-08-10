@@ -3,8 +3,12 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./store/auth";
 import { ToastProvider } from "@3cloud/shared-ui";
 import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import OAuthPage from "./pages/OAuthPage";
 import ConsoleLayout from "./layouts/ConsoleLayout";
 import DashboardPage from "./pages/DashboardPage";
+import StatisticsPage from "./pages/StatisticsPage";
 import ApiKeysPage from "./pages/ApiKeysPage";
 import LogsPage from "./pages/LogsPage";
 import RechargePage from "./pages/RechargePage";
@@ -167,6 +171,9 @@ export default function App() {
 
       <Route path="/ux-demo" element={<UxDemoPage />} />
       <Route path="/login" element={token ? <Navigate to="/" replace /> : <LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/oauth" element={<OAuthPage />} />
       <Route
         path="/"
         element={
@@ -176,6 +183,7 @@ export default function App() {
         }
       >
         <Route index element={<DashboardRedirect />} />
+        <Route path="statistics" element={<StatisticsPage />} />
         <Route path="api-keys" element={<ApiKeysPage />} />
         <Route path="logs" element={<LogsPage />} />
         <Route path="recharge" element={<RechargePage />} />

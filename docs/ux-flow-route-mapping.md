@@ -3,6 +3,7 @@
 > 来源：`kb/3cloud/ux-flows.md`（16 条跨页面流程）
 > 目标：每条流程在 web-console 中的路由和页面映射
 > 状态：✅=路由就绪 | 🔧=需新建页面 | ⚠️=路由缺失
+> **注意（2026-08-10 收敛后）**：web-console 是唯一业务应用，基路径 `/app/`，下表路由均位于 `/app/` 下（如 `/register` = `/app/register`）。旧 Portal 入口 URL 已由 web-portal `redirects()` 308 → `/app/*`。
 
 ---
 
@@ -12,7 +13,7 @@
 
 | 步骤 | 路由 | 现有页面 | 需要 UX 组件 |
 |------|------|:---:|------|
-| 注册 | `/register` | ⚠️ 缺 | 暂无独立路由 — 当前 /login 含注册逻辑 |
+| 注册 | `/register` | ✅ RegisterPage（已挂载，调 `/auth/register`） | 强度条, FormField, Toast |
 | 控制台 | `/` | ✅ DashboardPage | 引导横幅（需新建 OnboardingBanner） |
 | 实名认证 | `/real-name` | ✅ RealNamePage | FormField, Toast, Modal(审核状态) |
 | API Key | `/api-keys` | ✅ ApiKeysPage | Modal(创建弹窗), CopyButton, Toast |
@@ -22,7 +23,7 @@
 | 步骤 | 路由 | 现有页面 | 需要 UX 组件 |
 |------|------|:---:|------|
 | 登录 | `/login` | ✅ LoginPage | FormField, Toast |
-| 2FA | `/login`（模态） | 🔧 需加 2FA Modal | Modal, FormField |
+| 2FA | `/login`（模态） | 🔧 需加 2FA Modal（已知缺口：console LoginPage 无 totpEnabled 分支；启用 2FA 的用户登录不弹挑战） | Modal, FormField |
 | 安全中心 | `/security` | ✅ SecurityPage | Table(会话列表), ConfirmPopover |
 
 ### F3. 创建&配置 API Key 全流程
@@ -153,7 +154,7 @@
 | 4 | `/agent/withdraw` | F7 提现 | P0 |
 | 5 | `/admin/risk` | F10 风控 | P0 |
 | 6 | `/admin/dashboard`（嵌入页） | F10 数据看板 | P1 |
-| 7 | `/register`（独立注册页） | F1 注册 | P1 |
+| 7 | `/register`（独立注册页） | F1 注册 | ✅ 已完成（/app/register，RegisterPage 已挂载） |
 | 8 | Portal 厂商选择器组件 | F14 | P1 |
 
 ---

@@ -32,6 +32,11 @@ export default function PlaygroundPage() {
   const [selectedKeyId, setSelectedKeyId] = useState<number | null>(null);
   const [selectedModel, setSelectedModel] = useState("deepseek-chat");
   const [customModel, setCustomModel] = useState("");
+  // 完整 API Key（仅本地存储）：列表接口只返回 keyPrefix，真实调用需要完整 Key。
+  // 创建 Key 时后端仅展示一次，已由 ApiKeysPage 写入 localStorage 预填。
+  const [fullKey, setFullKey] = useState<string>(() => {
+    try { return localStorage.getItem("3cloud_last_raw_key") ?? ""; } catch { return ""; }
+  });
   const [messages, setMessages] = useState<Message[]>([
     { role: "system", content: "You are a helpful assistant." },
     { role: "user", content: "请用一句话介绍什么是 AI" },
@@ -71,6 +76,11 @@ export default function PlaygroundPage() {
 
   const handleSend = async () => {
     if (!activeKey || messages.length < 2) return;
+    if (!fullKey.trim()) {
+      setError("请先粘贴完整 API Key——列表只展示前缀，需在「API Key 管理」创建时复制完整 Key（已自动预填最近创建的一条）。");
+      toast.error("缺少完整 API Key");
+      return;
+    }
     setError(null);
     setTokens(null);
     setResponse("");
@@ -85,7 +95,7 @@ export default function PlaygroundPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${activeKey.keyPrefix}`,
+          Authorization: `Bearer ${fullKey.trim()}`,
           "X-Playground": "1",
         },
         body: JSON.stringify({
@@ -172,6 +182,21 @@ export default function PlaygroundPage() {
               </option>
             ))}
           </select>
+          <input
+            value={fullKey}
+            onChange={(e) => setFullKey(e.target.value)}
+            placeholder="粘贴完整 API Key（3c_...）— 列表仅展示前缀，最近创建的一条已自动填入"
+            style={{
+              width: "100%",
+              marginTop: 6,
+              padding: "8px 12px",
+              borderRadius: 6,
+              border: "1px solid var(--color-border)",
+              fontSize: 13,
+              fontFamily: "monospace",
+              boxSizing: "border-box",
+            }}
+          />
         </div>
         <div style={{ flex: 1, minWidth: 200 }}>
           <label

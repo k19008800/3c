@@ -74,7 +74,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <a href="/pricing" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>定价</a>
             <a href="/about" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>关于我们</a>
             <a href="/status" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>系统状态</a>
-            <a href="/login" style={{ background: "#2563eb", color: "#fff", padding: "8px 20px", borderRadius: 6, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>
+            <a href="/app/login" style={{ background: "#2563eb", color: "#fff", padding: "8px 20px", borderRadius: 6, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>
               登录
             </a>
           </nav>
@@ -100,7 +100,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "#0f172a" }}>资源</h4>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <a href="/about" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>关于我们</a>
-                  <a href="/help" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>帮助中心</a>
+                  <a href="/app/help" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>帮助中心</a>
                   {config.site_contact_email && <span style={{ color: "#64748b", fontSize: 13 }}>{config.site_contact_email}</span>}
                 </div>
               </div>

@@ -20,6 +20,7 @@ interface ConsumptionInput {
   streamed: boolean;
   finishReason?: string;
   errorCode?: string;
+  requestId?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -30,7 +31,7 @@ export async function recordConsumption(input: ConsumptionInput) {
   const [record] = await db.insert(schema.consumptionRecords).values({
     userId: input.userId,
     apiKeyId: input.apiKeyId,
-    requestId: crypto.randomUUID(),
+    requestId: input.requestId || crypto.randomUUID(),
     model: input.model,
     supplierId: input.supplierId || null,
     supplierModelId: input.supplierModelId || null,

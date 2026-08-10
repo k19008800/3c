@@ -70,6 +70,10 @@ export default function ApiKeysPage() {
       return (await api.post("/me/api-keys", body)).data;
     },
     onSuccess: (d) => {
+      // 完整 Key 仅此一次返回；存入 localStorage 供 Playground 预填（本地试用便利）
+      if (typeof d?.key === "string") {
+        try { localStorage.setItem("3cloud_last_raw_key", d.key); } catch { /* ignore */ }
+      }
       setCreatedSecret(d.key);
       toast.success("API Key 创建成功");
       queryClient.invalidateQueries({ queryKey: ["api-keys"] });

@@ -157,7 +157,7 @@ export default async function HomePage() {
             <a href="/pricing" style={{ border: "1px solid #cbd5e1", color: "#0f172a", background: "#fff", padding: "14px 32px", borderRadius: 8, textDecoration: "none", fontWeight: 600, fontSize: 16 }}>
               查看定价
             </a>
-            <a href="/login" style={{ border: "1px solid #cbd5e1", color: "#475569", padding: "14px 32px", borderRadius: 8, textDecoration: "none" }}>
+            <a href="/app/login" style={{ border: "1px solid #cbd5e1", color: "#475569", padding: "14px 32px", borderRadius: 8, textDecoration: "none" }}>
               注册 / 登录
             </a>
           </div>
@@ -385,7 +385,7 @@ export default async function HomePage() {
       <section style={{ textAlign: "center", padding: "80px 24px", background: "linear-gradient(180deg, #eff6ff, #dbeafe)" }}>
         <h2 style={{ fontSize: 28, fontWeight: 700, marginBottom: 12 }}>准备好开始了吗？</h2>
         <p style={{ color: "#475569", marginBottom: 28, fontSize: 16 }}>注册即送 ¥5 试用额度，立刻体验</p>
-        <a href="/login" style={{ display: "inline-block", background: "#2563eb", color: "#fff", padding: "14px 40px", borderRadius: 8, textDecoration: "none", fontWeight: 600, fontSize: 16, boxShadow: "0 4px 14px rgba(37,99,235,.35)" }}>
+        <a href="/app/login" style={{ display: "inline-block", background: "#2563eb", color: "#fff", padding: "14px 40px", borderRadius: 8, textDecoration: "none", fontWeight: 600, fontSize: 16, boxShadow: "0 4px 14px rgba(37,99,235,.35)" }}>
           免费注册
         </a>
       </section>

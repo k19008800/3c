@@ -15,10 +15,14 @@ import {
   refreshAccessToken,
 } from '../services/auth/jwt';
 import { AppError, UnauthorizedError, ValidationError } from '../lib/errors';
+import { initBalance, addBalance, getBalance } from '../services/billing/balance';
 
 // ============================================================
 // Helpers
 // ============================================================
+
+/** 新用户注册体验金（无充值渠道下让「余额扣减」可演示） */
+export const WELCOME_BONUS = '10.00';
 
 function hashPassword(password: string): string {
   return bcrypt.hashSync(password, 12);
@@ -75,6 +79,10 @@ export async function authRoutes(app: FastifyInstance) {
     // Generate tokens
     const tokens = generateTokenPair({ userId: user.id, email: user.email!, role: user.role! });
     await createSession(user.id, tokens.accessToken, tokens.refreshToken, request.ip);
+
+    // 创建余额账户 + 赠送体验金
+    await initBalance(user.id);
+    await addBalance(user.id, WELCOME_BONUS, 'adjustment', 'welcome_bonus', String(user.id));
 
     return reply.status(201).send({
       user: { id: user.id, email: user.email, name: user.name, role: user.role },
@@ -175,5 +183,39 @@ export async function authRoutes(app: FastifyInstance) {
     if (users.length === 0) throw new UnauthorizedError('User not found');
 
     return reply.send({ user: users[0] });
+  });
+
+  // GET /api/v1/me — 用户端契约：直接返回 user 对象（web-console store/auth.ts fetchMe 期望）
+  app.get('/api/v1/me', async (request, reply) => {
+    const authHeader = request.headers.authorization;
+    const token = authHeader?.split(' ')[1];
+    if (!token) throw new UnauthorizedError('Missing token');
+
+    const payload = verifyToken(token);
+    if (!payload) throw new UnauthorizedError('Invalid token');
+
+    const users = await db.select({
+      id: schema.users.id,
+      email: schema.users.email,
+      name: schema.users.name,
+      role: schema.users.role,
+      status: schema.users.status,
+    }).from(schema.users).where(eq(schema.users.id, payload.userId)).limit(1);
+
+    if (users.length === 0) throw new UnauthorizedError('User not found');
+
+    const user = users[0]!;
+    const balance = await getBalance(user.id);
+
+    return reply.send({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      username: user.name,
+      role: user.role,
+      status: user.status,
+      balance: Number(balance.availableBalance || 0),
+      realNameStatus: null,
+    });
   });
 }

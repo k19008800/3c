@@ -10,6 +10,7 @@ import { chatRoutes } from './routes/chat';
 import { authRoutes } from './routes/auth';
 import { apiKeyRoutes } from './routes/apikeys';
 import { supplierRoutes } from './routes/suppliers';
+import { meRoutes } from './routes/me';
 
 let env: Env;
 
@@ -48,6 +49,7 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   await app.register(authRoutes);
   await app.register(apiKeyRoutes);
   await app.register(supplierRoutes);
+  await app.register(meRoutes);
 
   return app;
 }

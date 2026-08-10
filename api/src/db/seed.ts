@@ -9,7 +9,7 @@ import { db, schema } from '.';
 import { eq } from 'drizzle-orm';
 
 const ADMIN_EMAIL = 'admin@3cloud.dev';
-const ADMIN_PASSWORD = '***';
+const ADMIN_PASSWORD = 'Admin@2024!';
 
 async function main() {
   console.log('🌱 开始 seed...\n');

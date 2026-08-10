@@ -1,117 +1,119 @@
 # 3cloud 前端页面路由与结构文档
 
-> **最后更新**：2026-08-09
-> **版本**：v2.0
+> **最后更新**：2026-08-10
+> **版本**：v3.0
 > **定位**：前端所有页面路由、布局结构、组件树的可视化参考，面向开发者和产品经理。
-> **架构**：Portal 官网（Next.js, `web-portal/`）+ 控制台（Vite, `web-console/`），统一入口端口 5177
+> **架构**：**单一前端**（web-console，Vite, `web-console/`）+ **官网/入口**（web-portal, Next.js, `web-portal/`），对外唯一入口端口 5177
 
 ---
 
 ## 一、路由总览
 
-> **路由入口规则**：`/` 是官网首页，`/dashboard` 是 Portal 控制台入口。
+> **路由入口规则**：`/` 是官网首页（web-portal），`/app/` 是唯一业务控制台入口（web-console，基路径 `/app/`）。
 > 公开页面（首页/模型/定价等）无需登录；控制台/管理后台需要登录。
+> 收敛前的旧 URL（`/login`、`/dashboard`、`/apikey` 等）由 web-portal 的 Next `redirects()` 308 → `/app/*` 对应页，见 §5.2。
 
 ```
-/                     ← 官网首页（Portal，公开）
+/                     ← 官网首页（web-portal，公开）
 ├── /models           → 模型目录（公开）
 ├── /pricing          → 定价方案（公开）
 ├── /about            → 关于我们（公开）
 │
-├── /login            → 登录
-├── /register         → 注册
-├── /forgot-password  → 忘记密码
-├── /2fa              → 双因素认证
-│
-├── /dashboard        → Portal 控制台入口（已登录）
-├── /api-keys         → API Key 管理
-├── /logs             → 调用日志
-├── /recharge         → 充值
-├── /billing          → 账单
-├── /invoices         → 发票管理
-├── /redemption       → 兑换码
-├── /security         → 安全设置
-├── /tickets          → 工单
-├── /chat             → 在线客服
-├── /playground       → API Playground
-├── /real-name        → 实名认证
-├── /announcements    → 公告列表
-├── /notifications    → 通知列表
-├── /notification-settings → 通知偏好设置
-├── /help             → 帮助中心
-├── /statistics       → 使用统计
-├── /webhooks         → Webhook 配置
-├── /consent          → 数据导出授权
-├── /deletion         → 账号注销
-├── /user-groups      → 用户分组
-├── /vendor-selector  → 供应商选择器
-├── /recharge-records → 充值记录
-│
-├── /admin/*            ← 管理后台（角色 L4+，部署在 web-console Vite，基路径 /app/）
-│   ├── /dashboard      → 运营总览看板
-│   ├── /cockpit        → 运营驾驶舱
-│   ├── /customers      → 客户管理
-│   │   └── /:userId    → 客户详情
-│   ├── /finance        → 财务管理
-│   │   ├── /dashboard  → 财务看板
-│   │   ├── /orders     → 充值订单
-│   │   ├── /refunds    → 退款审核
-│   │   ├── /invoices   → 发票管理
-│   │   ├── /commissions → 佣金流水
-│   │   ├── /pricing    → 价格配置
-│   │   ├── /settlement → 结算管理
-│   │   ├── /reconciliation → 自动对账
-│   │   ├── /cost-dashboard → 成本看板
-│   │   ├── /cost-prediction → 成本预测
-│   │   └── /profit     → 利润分析
-│   ├── /suppliers      → 供应商管理
-│   │   ├── /:id        → 供应商详情
-│   │   ├── /vendor-profiles → 供应商档案
-│   │   ├── /vendor-pricing → 供应商定价
-│   │   └── /price-change → 价格变更
-│   ├── /agents         → 代理商管理
-│   │   └── /withdrawals → 提现审核
-│   ├── /models         → 模型管理
-│   ├── /marketing      → 营销推广
-│   ├── /tickets        → 工单管理
-│   ├── /settings       → 系统设置
-│   │   ├── /announcements → 公告管理
-│   │   ├── /roles      → 角色权限
-│   │   └── /i18n       → 多语言
-│   ├── /config         → 运维配置
-│   │   ├── /system     → 系统配置
-│   │   ├── /logs       → 系统日志
-│   │   ├── /content    → 内容管理
-│   │   └── /email-templates → 邮件模板
-│   ├── /audit          → 审计合规
-│   └── /risk           → 风控管理
-│       ├── /dashboard  → 风控总览
-│       ├── /rules      → 风控规则
-│       └── /events     → 风控事件
-│
-├── /agent/*            ← 代理商端（角色=agent）
-│   ├── /dashboard      → 代理仪表盘
-│   ├── /customers      → 客户管理
-│   ├── /commission     → 佣金明细
-│   ├── /consumption    → 消费统计
-│   ├── /settlements    → 结算管理
-│   ├── /invite         → 邀请裂变
-│   ├── /ranking        → 业绩排行榜
-│   ├── /withdraw       → 提现申请
-│   └── /settings       → 代理设置
-│
-├── /vendor/*           ← 供应商端（独立布局）
-│   ├── /login          → 供应商登录
-│   ├── /register       → 供应商注册
-│   ├── /dashboard      → 供应商仪表盘
-│   ├── /models         → 模型管理
-│   ├── /stats          → 数据统计
-│   └── /settlements    → 结算对账
-│
-└── /sales/*            ← 业务员端
-    ├── /customers      → 客户管理
-    ├── /reminders      → 跟进提醒
-    └── /performance    → 业绩看板
+└── /app/*            ← 唯一业务控制台（web-console，Vite，基路径 /app/）
+    ├── /login        → 登录
+    ├── /register     → 注册
+    ├── /forgot-password → 忘记密码
+    ├── /oauth        → 第三方绑定
+    │
+    ├── /statistics   → 使用统计
+    ├── /dashboard    → 用户仪表盘（按角色跳转）
+    ├── /api-keys     → API Key 管理
+    ├── /logs         → 调用日志
+    ├── /recharge     → 充值
+    ├── /billing      → 账单
+    ├── /invoices     → 发票管理
+    ├── /redemption   → 兑换码
+    ├── /security     → 安全设置
+    ├── /tickets      → 工单
+    ├── /chat         → 在线客服
+    ├── /playground   → API Playground
+    ├── /real-name    → 实名认证
+    ├── /announcements→ 公告列表
+    ├── /notification → 通知列表
+    ├── /settings/notifications → 通知偏好设置
+    ├── /help         → 帮助中心
+    ├── /webhooks     → Webhook 配置
+    ├── /data-export  → 数据导出授权
+    ├── /account-deletion → 账号注销
+    ├── /user-groups  → 用户分组
+    ├── /vendor-selector → 供应商选择器
+    ├── /topup-records→ 充值记录
+    │
+    ├── /admin/*      ← 管理后台（角色 L4+）
+    │   ├── /dashboard → 运营总览看板
+    │   ├── /cockpit   → 运营驾驶舱
+    │   ├── /customers → 客户管理
+    │   │   └── /:userId → 客户详情
+    │   ├── /finance   → 财务管理
+    │   │   ├── /dashboard → 财务看板
+    │   │   ├── /orders → 充值订单
+    │   │   ├── /refunds → 退款审核
+    │   │   ├── /invoices → 发票管理
+    │   │   ├── /commissions → 佣金流水
+    │   │   ├── /pricing → 价格配置
+    │   │   ├── /settlement → 结算管理
+    │   │   ├── /reconciliation → 自动对账
+    │   │   ├── /cost-dashboard → 成本看板
+    │   │   ├── /cost-prediction → 成本预测
+    │   │   └── /profit → 利润分析
+    │   ├── /suppliers → 供应商管理
+    │   │   ├── /:id   → 供应商详情
+    │   │   ├── /vendor-profiles → 供应商档案
+    │   │   ├── /vendor-pricing → 供应商定价
+    │   │   └── /price-change → 价格变更
+    │   ├── /agents    → 代理商管理
+    │   │   └── /withdrawals → 提现审核
+    │   ├── /models    → 模型管理
+    │   ├── /marketing → 营销推广
+    │   ├── /tickets   → 工单管理
+    │   ├── /settings  → 系统设置
+    │   │   ├── /announcements → 公告管理
+    │   │   ├── /roles → 角色权限
+    │   │   └── /i18n  → 多语言
+    │   ├── /config    → 运维配置
+    │   │   ├── /system → 系统配置
+    │   │   ├── /logs  → 系统日志
+    │   │   ├── /content → 内容管理
+    │   │   └── /email-templates → 邮件模板
+    │   ├── /audit     → 审计合规
+    │   └── /risk      → 风控管理
+    │       ├── /dashboard → 风控总览
+    │       ├── /rules → 风控规则
+    │       └── /events → 风控事件
+    │
+    ├── /agent/*      ← 代理商端（角色=agent）
+    │   ├── /dashboard → 代理仪表盘
+    │   ├── /customers → 客户管理
+    │   ├── /commission → 佣金明细
+    │   ├── /consumption → 消费统计
+    │   ├── /settlements → 结算管理
+    │   ├── /invite    → 邀请裂变
+    │   ├── /ranking   → 业绩排行榜
+    │   ├── /withdraw  → 提现申请
+    │   └── /settings  → 代理设置
+    │
+    ├── /vendor/*     ← 供应商端（独立布局）
+    │   ├── /login    → 供应商登录
+    │   ├── /register → 供应商注册
+    │   ├── /dashboard → 供应商仪表盘
+    │   ├── /models   → 模型管理
+    │   ├── /stats    → 数据统计
+    │   └── /settlements → 结算对账
+    │
+    └── /sales/*      ← 业务员端
+        ├── /customers → 客户管理
+        ├── /reminders → 跟进提醒
+        └── /performance → 业绩看板
 ```
 
 ---
@@ -137,34 +139,9 @@ RootLayout (app/layout.tsx)
     └── 实时数据（已接入模型/服务用户/处理 Token）
 ```
 
-### 2.2 Portal 控制台布局（已登录）
+### 2.2 ~~Portal 控制台布局（已登录）~~ — 已下线
 
-> 框架：Next.js App Router，文件：`web-portal/src/app/(portal)/layout.tsx`
-
-```
-PortalLayout ((portal)/layout.tsx)
-├── PortalSidebar（左侧导航）
-│   ├── 用户信息摘要
-│   ├── 导航菜单
-│   │   ├── 仪表盘: /dashboard
-│   │   ├── API Key: /apikey
-│   │   ├── 充值: /recharge
-│   │   ├── 账单: /invoice
-│   │   ├── 调用统计: /statistics
-│   │   ├── 安全设置: /security
-│   │   ├── 工单: /ticket
-│   │   └── 帮助: /help
-│   └── 主题切换
-│
-├── PortalTopbar（顶部栏）
-│   ├── 通知图标
-│   └── 用户菜单
-│
-└── 主内容区
-    └── {children}
-```
-
-**相关文件：** `web-portal/src/app/(portal)/_components/PortalSidebar.tsx`, `PortalTopbar.tsx`
+> 收敛后 web-portal 不再承载任何控制台页面。原 `web-portal/src/app/(portal)/`（17 页 mock 壳）与 `(auth)/`（4 页认证）已于 2026-08-10 删除，对应 URL 由 Next `redirects()` 308 → `/app/*`（见 §5.2）。登录/注册/控制台全部由 web-console 提供。
 
 ### 2.3 Console 控制台布局（web-console，管理后台/代理端等）
 
@@ -399,51 +376,46 @@ AgentDashboard
 
 ## 五、路由架构
 
-### 5.1 双应用架构
+### 5.1 单一入口架构
 
-3cloud 前端分为两个独立应用，统一通过端口 5177 访问：
+3cloud 前端 = **一个业务应用（web-console）+ 一个官网/入口（web-portal）**，对外只暴露端口 5177：
 
-| 应用 | 框架 | 端口 | 路由范围 |
-|------|------|------|---------|
-| **web-portal** | Next.js 15 (App Router) | 5177 | `/` 官网首页、`/dashboard` 控制台、`/login` 认证、所有公开页面 |
-| **web-console** | Vite 6 + React Router 6 | 5175 (开发) | `/app/` 基路径下的管理后台、代理端、供应商端、业务员端 |
+| 应用 | 框架 | 端口 | 角色 | 路由范围 |
+|------|------|------|------|---------|
+| **web-portal** | Next.js 15 (App Router) | 5177 | 官网 + 代理/重定向层 | `/` 官网公开页；`/app/*`、`/api/*`、`/v1/*` rewrites 代理；旧 URL redirects |
+| **web-console** | Vite 6 + React Router 7 | 5175 (仅本机 dev) | **唯一业务应用** | `/app/` 基路径下全部页面（认证、用户端、管理后台、代理、供应商、业务员） |
+
+`5175` 只绑定 loopback（`host: "127.0.0.1"`），仅作为 web-portal 内部代理的 dev 服务，不对用户直连。
 
 ### 5.2 web-portal 路由 (Next.js App Router)
 
 ```
 src/app/
 ├── page.tsx                    → / 官网首页
-├── layout.tsx                  → 全局布局
+├── layout.tsx                  → 全局布局（header「登录」→ /app/login）
 ├── models/page.tsx             → /models 模型目录
 ├── pricing/page.tsx            → /pricing 定价方案
 ├── about/page.tsx              → /about 关于我们
+├── status/page.tsx             → /status 系统状态
 │
-├── (auth)/                     → 认证路由组
-│   ├── login/page.tsx          → /login
-│   ├── register/page.tsx       → /register
-│   ├── forgot-password/page.tsx → /forgot-password
-│   └── 2fa/page.tsx            → /2fa
-│
-└── (portal)/                   → 控制台路由组（需登录）
-    ├── layout.tsx              → 控制台布局（侧边栏+顶栏）
-    ├── dashboard/page.tsx      → /dashboard Portal 控制台
-    ├── apikey/page.tsx         → /apikey API Key 管理
-    ├── recharge/page.tsx       → /recharge
-    ├── invoice/page.tsx        → /invoice
-    ├── redemption/page.tsx     → /redemption
-    ├── security/page.tsx       → /security
-    ├── ticket/page.tsx         → /ticket
-    ├── chat/page.tsx           → /chat
-    ├── notifications/page.tsx  → /notifications
-    ├── notification-settings/page.tsx → /notification-settings
-    ├── announcements/page.tsx  → /announcements
-    ├── help/page.tsx           → /help
-    ├── statistics/page.tsx     → /statistics
-    ├── webhooks/page.tsx       → /webhooks
-    ├── realname/page.tsx       → /realname
-    ├── consent/page.tsx        → /consent
-    └── deletion/page.tsx       → /deletion
+└── next.config.mjs             → rewrites（/app/*→5175、/api、/v1、/health）+ redirects
 ```
+
+**redirects（308 永久重定向，旧入口 URL → `/app/*`）：**
+
+| 旧 URL | → | 旧 URL | → |
+|---|---|---|---|
+| /login | /app/login | /ticket | /app/tickets |
+| /register | /app/register | /chat | /app/chat |
+| /forgot-password | /app/forgot-password | /notifications | /app/notification |
+| /2fa | /app/security | /notification-settings | /app/settings/notifications |
+| /dashboard | /app/ | /announcements | /app/announcements |
+| /apikey | /app/api-keys | /help | /app/help |
+| /recharge | /app/recharge | /webhooks | /app/webhooks |
+| /invoice | /app/invoices | /realname | /app/real-name |
+| /statistics | /app/statistics | /consent | /app/data-export |
+| /security | /app/security | /deletion | /app/account-deletion |
+| /redemption | /app/redemption | /logs、/billing、/playground、/user-groups、/vendor-selector、/recharge-records、/vendor(/*) | /app/ 对应页 |
 
 ### 5.3 web-console 路由 (Vite + React Router)
 
@@ -463,13 +435,17 @@ src/app/
     <Route path="settlements" element={<VendorSettlementsPage />} />
   </Route>
 
-  {/* 登录（公开） */}
+  {/* 登录 / 注册 / 忘记密码 / 第三方绑定（公开） */}
   <Route path="/login" element={<LoginPage />} />
+  <Route path="/register" element={<RegisterPage />} />
+  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+  <Route path="/oauth" element={<OAuthPage />} />
 
   {/* 控制台主路由（Protected） */}
   <Route path="/" element={<Protected><ConsoleLayout /></Protected>}>
     <Route index element={<DashboardRedirect />} />
     {/* 用户端路由 */}
+    <Route path="statistics" element={<StatisticsPage />} />
     <Route path="api-keys" element={<ApiKeysPage />} />
     <Route path="logs" element={<LogsPage />} />
     <Route path="recharge" element={<RechargePage />} />
@@ -486,17 +462,21 @@ src/app/
 ### 5.4 生产环境 Nginx 路由规则
 
 ```nginx
-# 统一入口 localhost:5177 → 内部路由分发
-location / {
-    # 默认走 web-portal (Next.js, 端口 3100)
-    proxy_pass http://127.0.0.1:3100;
+# 统一入口（生产域名）→ 内部路由分发
+location /app/ {
+    # web-console 静态产物（Vite build，base=/app/）
+    alias /www/wwwroot/3c/web-console/;
+    try_files $uri $uri/ /app/index.html;
 }
 
-location /app/ {
-    # web-console 管理后台等 (Vite SPA, 开发端口 5175)
-    proxy_pass http://127.0.0.1:5175;
+location / {
+    # 官网 + API/旧 URL 重定向 → web-portal (Next.js, 端口 3100)
+    proxy_pass http://127.0.0.1:3100;
 }
+# /api/、/v1/、/health → 后端 3030
 ```
+
+旧入口 URL（/login、/dashboard、/apikey 等）到达 web-portal 后由 Next `redirects()` 308 → `/app/*`，再被上面的 `location /app/` 命中。若生产需要字面 301，可在 nginx 加 `rewrite ^/login$ /app/login permanent;` 等规则。
 
 ---
 
@@ -504,15 +484,15 @@ location /app/ {
 
 | 端 | 页面数 | 框架 | 源码目录 |
 |------|:---:|------|---------|
-| Portal 官网 | 4 | Next.js | `web-portal/src/app/` (公开页) |
-| Portal 控制台 | 17 | Next.js | `web-portal/src/app/(portal)/` |
-| 认证 | 4 | Next.js | `web-portal/src/app/(auth)/` |
-| 用户端 | 12 | Vite | `web-console/src/pages/` |
+| 官网 | 5 | Next.js | `web-portal/src/app/` (公开页) |
+| ~~Portal 控制台~~ | ~~17~~ | ~~Next.js~~ | ~~已删除~~（redirects 到 /app/*） |
+| ~~认证~~ | ~~4~~ | ~~Next.js~~ | ~~已删除~~（由 console 承接） |
+| 用户端 | 13 | Vite | `web-console/src/pages/` |
 | 管理后台 | 71 | Vite | `web-console/src/pages/admin/` + `web-console/src/pages/` |
 | 代理端 | 8 | Vite | `web-console/src/pages/Agent*.tsx` |
 | 供应商端 | 6 | Vite | `web-console/src/pages/vendor/` |
 | 业务员端 | 3 | Vite | `web-console/src/pages/Sales*.tsx` |
-| **合计** | **~125** | — | 全栈页面 |
+| **合计** | **~106** | — | 单业务应用 web-console |
 
 ---
 

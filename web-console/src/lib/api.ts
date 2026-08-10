@@ -23,9 +23,10 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401 && !window.location.pathname.startsWith("/login")) {
+    if (err.response?.status === 401 && !window.location.pathname.startsWith("/app/login")) {
       localStorage.removeItem("token");
-      window.location.href = "/login";
+      // basename=/app，登录页在 /app/login；跳到同源绝对路径
+      window.location.href = "/app/login";
     }
     return Promise.reject(err);
   },
