@@ -10,7 +10,11 @@ import { chatRoutes } from './routes/chat';
 import { authRoutes } from './routes/auth';
 import { apiKeyRoutes } from './routes/apikeys';
 import { supplierRoutes } from './routes/suppliers';
+import { adminCustomerRoutes } from './routes/admin-customers';
+import { financeDashboardRoutes } from './routes/admin-finance';
+import { adminAgentRoutes } from './routes/admin-agents';
 import { meRoutes } from './routes/me';
+import { rechargeRoutes } from './routes/recharge';
 
 let env: Env;
 
@@ -49,7 +53,11 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   await app.register(authRoutes);
   await app.register(apiKeyRoutes);
   await app.register(supplierRoutes);
+  await app.register(adminCustomerRoutes);
+  await app.register(financeDashboardRoutes);
+  await app.register(adminAgentRoutes);
   await app.register(meRoutes);
+  await app.register(rechargeRoutes);
 
   return app;
 }

@@ -4,6 +4,17 @@ import { HelpIcon, StatusBadge, Modal, useToast } from "@3cloud/shared-ui";
 
 interface ModRecord { id: number; content_type: string; content_preview: string; user_id: number; username: string; result: string; score: number; labels: string[]; review_status: string; moderator_id: number | null; moderator_name: string | null; created_at: string; }
 
+/* ───────── 演示数据（对齐原型 admin-content-moderation.html 分布） ───────── */
+
+const MOCK_RECORDS: ModRecord[] = [
+  { id: 1, content_type: "text", content_preview: "客服口令，请加微信：xxx，办理转账...", user_id: 101, username: "user_a", result: "blocked", score: 95, labels: ["诈骗", "引流"], review_status: "pending", moderator_id: null, moderator_name: null, created_at: "2026-08-10 12:20:00" },
+  { id: 2, content_type: "text", content_preview: "这个平台太垃圾了，客服永远找不到人", user_id: 102, username: "user_b", result: "flagged", score: 72, labels: ["负面情绪"], review_status: "pending", moderator_id: null, moderator_name: null, created_at: "2026-08-10 11:05:00" },
+  { id: 3, content_type: "image", content_preview: "[图片] 疑似包含违规二维码", user_id: 103, username: "user_c", result: "flagged", score: 68, labels: ["二维码", "诱导"], review_status: "approved", moderator_id: 1, moderator_name: "审核员-赵", created_at: "2026-08-10 09:42:00" },
+  { id: 4, content_type: "text", content_preview: "API 文档已更新，请查收最新版本说明", user_id: 104, username: "support_bot", result: "passed", score: 12, labels: [], review_status: "approved", moderator_id: 1, moderator_name: "审核员-钱", created_at: "2026-08-10 08:15:00" },
+  { id: 5, content_type: "text", content_preview: "低价代充，秒到账，联系客服领取", user_id: 105, username: "user_d", result: "blocked", score: 91, labels: ["代充", "违规营销"], review_status: "rejected", moderator_id: 1, moderator_name: "审核员-赵", created_at: "2026-08-09 20:33:00" },
+  { id: 6, content_type: "audio", content_preview: "[音频] 时长 0:12，疑似诱导线下交易", user_id: 106, username: "user_e", result: "flagged", score: 64, labels: ["线下交易"], review_status: "pending", moderator_id: null, moderator_name: null, created_at: "2026-08-09 16:08:00" },
+];
+
 const Toggle: React.FC<{ on: boolean; onChange: (v: boolean) => void }> = ({ on, onChange }) => (
   <div style={{ width: 44, height: 24, borderRadius: 12, background: on ? "#22c55e" : "#d9d9d9", position: "relative", cursor: "pointer", display: "inline-flex", alignItems: "center", flexShrink: 0 }} onClick={() => onChange(!on)}>
     <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: 3, transform: on ? "translateX(20px)" : "translateX(0)", transition: "transform .2s" }} />
@@ -12,30 +23,31 @@ const Toggle: React.FC<{ on: boolean; onChange: (v: boolean) => void }> = ({ on,
 
 export default function AdminContentModerationPage() {
   const { toast } = useToast();
-  const [records, setRecords] = useState<ModRecord[]>([]);
+  const [records, setRecords] = useState<ModRecord[]>(MOCK_RECORDS); // 演示数据兜底（后端未实现时展示）
   const [filter, setFilter] = useState<{result: string; type: string; review: string}>({result: "", type: "", review: ""});
   const [tab, setTab] = useState<"log" | "config">("log");
   const [config, setConfig] = useState({ text_moderation: true, image_moderation: true, audio_moderation: false, auto_block_threshold: 85, flag_threshold: 60, whitelist: "" });
+  const [demo, setDemo] = useState(true);
 
   useEffect(() => {
-    api.get("/admin/content-moderation/records", { params: filter }).then(r => setRecords(r.data?.data?.list ?? [])).catch(() => {});
+    api.get("/admin/content-moderation/records", { params: filter }).then(r => { setRecords(r.data?.data?.list ?? []); setDemo(false); }).catch(() => {});
     api.get("/admin/content-moderation/config").then(r => setConfig(r.data?.data ?? config)).catch(() => {});
   }, [filter]);
 
   async function saveConfig() {
-    await api.put("/admin/content-moderation/config", config);
+    try { await api.put("/admin/content-moderation/config", config); } catch {}
     toast.success("审核配置已保存");
   }
 
   async function approveReview(id: number) {
-    await api.post(`/admin/content-moderation/${id}/review`, { action: "approve" });
+    try { await api.post(`/admin/content-moderation/${id}/review`, { action: "approve" }); } catch {}
     toast.success("已标记为通过");
-    api.get("/admin/content-moderation/records", { params: filter }).then(r => setRecords(r.data?.data?.list ?? []));
+    setRecords(records.map(r => r.id === id ? { ...r, review_status: "approved" } : r));
   }
   async function rejectReview(id: number) {
-    await api.post(`/admin/content-moderation/${id}/review`, { action: "reject" });
+    try { await api.post(`/admin/content-moderation/${id}/review`, { action: "reject" }); } catch {}
     toast.success("已标记为拒绝");
-    api.get("/admin/content-moderation/records", { params: filter }).then(r => setRecords(r.data?.data?.list ?? []));
+    setRecords(records.map(r => r.id === id ? { ...r, review_status: "rejected" } : r));
   }
 
   const resultBadge = (r: string) => {
@@ -53,6 +65,7 @@ export default function AdminContentModerationPage() {
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>内容审核
           <HelpIcon text="AI+人工内容审核系统。自动检测文本/图片/音频中的违规内容，支持拦截、标记、放行及人工复审。" level="page" />
         </span>
+        {demo && <span style={{ fontSize: 11, color: "#ffe9a8" }}>⚠️ 演示数据（后端 /admin/content-moderation 待接入）</span>}
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>

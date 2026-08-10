@@ -1,28 +1,49 @@
 import { useState, useEffect } from "react";
-import { api } from "../lib/api";
+import { api, extractError } from "../lib/api";
 import { HelpIcon, StatusBadge, useToast } from "@3cloud/shared-ui";
 
 interface Dispute { id: number; dispute_no: string; user_id: number; username: string; amount: number; reason: string; status: string; status_label: string; handler_id: number | null; handler_name: string | null; resolution: string | null; created_at: string; updated_at: string; }
 
+/* ───────── 演示数据（后端 /admin/disputes 待接入） ───────── */
+const MOCK_DISPUTES: Dispute[] = [
+  { id: 1, dispute_no: "DS20260810001", user_id: 1001, username: "用户小王", amount: 5000, reason: "重复扣费，同一请求计费两次", status: "pending", status_label: "待处理", handler_id: null, handler_name: null, resolution: null, created_at: "2026-08-10 09:15:00", updated_at: "2026-08-10 09:15:00" },
+  { id: 2, dispute_no: "DS20260809003", user_id: 1002, username: "用户小李", amount: 12800, reason: "费用不符，账单金额与预估不一致", status: "investigating", status_label: "调查中", handler_id: 1, handler_name: "张明", resolution: null, created_at: "2026-08-09 16:40:00", updated_at: "2026-08-10 08:30:00" },
+  { id: 3, dispute_no: "DS20260808002", user_id: 1003, username: "用户小张", amount: 3000, reason: "误扣费，未使用该模型但产生费用", status: "refunded", status_label: "已退款", handler_id: 1, handler_name: "张明", resolution: "系统日志确认重复计费，已退款", created_at: "2026-08-08 11:00:00", updated_at: "2026-08-08 14:20:00" },
+  { id: 4, dispute_no: "DS20260807001", user_id: 1004, username: "用户小赵", amount: 990, reason: "服务不可用仍计费", status: "dismissed", status_label: "已驳回", handler_id: 2, handler_name: "李芳", resolution: "调用日志正常，无重复计费", created_at: "2026-08-07 10:30:00", updated_at: "2026-08-07 13:00:00" },
+];
+
 export default function AdminDisputePage() {
   const { toast } = useToast();
-  const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [disputes, setDisputes] = useState<Dispute[]>(MOCK_DISPUTES);
   const [filter, setFilter] = useState("");
   const [handling, setHandling] = useState<Dispute | null>(null);
   const [resolution, setResolution] = useState("");
+  const [demo, setDemo] = useState(true);
 
   useEffect(() => {
     api.get("/admin/disputes", { params: { status: filter || undefined } })
-      .then(r => setDisputes(r.data?.data?.list ?? [])).catch(() => {});
+      .then(r => { setDisputes(r.data?.data?.list ?? []); setDemo(false); }).catch(() => { /* 演示模式保持本地数据 */ });
   }, [filter]);
 
   async function handleDispute(action: "refund" | "dismiss") {
     if (!handling) return;
-    await api.post(`/admin/disputes/${handling.id}/resolve`, { action, resolution, refund_amount: action === "refund" ? handling.amount : 0 });
-    toast.success(action === "refund" ? "已退款处理" : "已驳回争议");
+    try {
+      await api.post(`/admin/disputes/${handling.id}/resolve`, { action, resolution, refund_amount: action === "refund" ? handling.amount : 0 });
+      toast.success(action === "refund" ? "已退款处理" : "已驳回争议");
+    } catch (e: any) {
+      // 演示模式：后端未实现时本地生效
+      if (e?.response?.status === 404 && demo) {
+        setDisputes(prev => prev.map(d => d.id === handling.id ? { ...d, status: action === "refund" ? "refunded" : "dismissed", status_label: action === "refund" ? "已退款" : "已驳回", handler_name: "当前管理员", resolution } : d));
+        toast.success(action === "refund" ? "已退款处理（演示）" : "已驳回争议（演示）");
+      } else {
+        toast.error(extractError(e));
+      }
+    }
     setHandling(null); setResolution("");
-    const r = await api.get("/admin/disputes", { params: { status: filter || undefined } });
-    setDisputes(r.data?.data?.list ?? []);
+    if (!demo) {
+      const r = await api.get("/admin/disputes", { params: { status: filter || undefined } });
+      setDisputes(r.data?.data?.list ?? []);
+    }
   }
 
   const statusBadge = (s: string, l: string) => {
@@ -40,6 +61,7 @@ export default function AdminDisputePage() {
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>消费争议处理
           <HelpIcon text="处理用户发起的消费争议（误扣费/费用不符等）。支持调查、退款、驳回全流程。" level="page" />
         </span>
+        {demo && <span style={{ fontSize: 11, color: "#fef08a" }}>⚠️ 演示数据（后端 /admin/disputes 待接入）</span>}
       </div>
 
       <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center" }}>

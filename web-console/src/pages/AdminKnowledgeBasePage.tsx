@@ -11,6 +11,22 @@ import { HelpIcon, StatusBadge, Modal, useToast, ConfirmPopover } from "@3cloud/
 const card: React.CSSProperties = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
 
+/* ───────── 演示数据（后端 /admin/knowledge-base 待接入） ───────── */
+const MOCK_ARTICLES = [
+  { id: 1, title: "如何充值余额", category: "充值", status: "published", view_count: 1200, helpful_count: 45, unhelpful_count: 3, author_name: "客服部", tags: "充值,余额", content: "1. 登录控制台 → 充值中心\n2. 选择金额并完成支付\n3. 1-3 分钟内到账", updated_at: "2026-08-01T10:00:00" },
+  { id: 2, title: "API Key 使用指南", category: "开发", status: "published", view_count: 860, helpful_count: 32, unhelpful_count: 2, author_name: "技术部", tags: "API,Key", content: "创建 API Key 后通过 Authorization: Bearer 头调用。", updated_at: "2026-07-28T15:00:00" },
+  { id: 3, title: "常见报错处理", category: "技术", status: "draft", view_count: 0, helpful_count: 0, unhelpful_count: 0, author_name: "客服部", tags: "报错", content: "rate_limit_exceeded：请求过于频繁，请稍后重试。", updated_at: "2026-08-09T09:30:00" },
+];
+const MOCK_CATS = [
+  { id: 1, name: "充值", slug: "recharge", description: "充值相关", sort_order: 1 },
+  { id: 2, name: "开发", slug: "dev", description: "API 开发", sort_order: 2 },
+  { id: 3, name: "技术", slug: "tech", description: "技术问题", sort_order: 3 },
+];
+const MOCK_TPLS = [
+  { id: 1, name: "欢迎语", category: "greeting", content: "您好，欢迎咨询 3Cloud 客服，请问有什么可以帮您？", created_by_name: "admin@3cloud.dev", sort_order: 1 },
+  { id: 2, name: "余额说明", category: "billing", content: "您的当前余额为 ¥{balance}，如需充值可前往充值中心。", created_by_name: "admin@3cloud.dev", sort_order: 2 },
+];
+
 export default function AdminKnowledgeBasePage() {
   const { toast } = useToast();
   const [tab, setTab] = useState<"articles" | "categories" | "templates">("articles");
@@ -30,23 +46,32 @@ export default function AdminKnowledgeBasePage() {
   const [editTemplate, setEditTemplate] = useState<any>(null);
   const [tplForm, setTplForm] = useState({ name: "", category: "", content: "", sort_order: 0 });
 
+  // 演示兜底：本地可变列表（写操作在演示模式下直接改它）
+  const [localArticles, setLocalArticles] = useState<any[]>(MOCK_ARTICLES);
+  const [localCats, setLocalCats] = useState<any[]>(MOCK_CATS);
+  const [localTpls, setLocalTpls] = useState<any[]>(MOCK_TPLS);
+
   // 查询：文章
   const listQ = useQuery({
     queryKey: ["admin/knowledge-base", statusFilter, search],
     queryFn: () =>
       api.get("/admin/knowledge-base", { params: { status: statusFilter || undefined, search: search || undefined, limit: 50, offset: 0 } }).then((r) => r.data.data),
+    // 后端未实现时立即回退演示数据，避免 404 反复重试导致页面卡加载
+    retry: 0,
   });
 
   // 查询：分类
   const catsQ = useQuery({
     queryKey: ["admin/knowledge-base/categories"],
     queryFn: () => api.get("/admin/knowledge-base/categories").then((r) => r.data.data),
+    retry: 0,
   });
 
   // 查询：快捷回复
   const tplsQ = useQuery({
     queryKey: ["admin/quick-replies"],
     queryFn: () => api.get("/admin/quick-replies").then((r) => r.data.data),
+    retry: 0,
   });
 
   // —— 创建/更新文章 ——
@@ -61,14 +86,35 @@ export default function AdminKnowledgeBasePage() {
       setEditArticle(null);
       qc.invalidateQueries({ queryKey: ["admin/knowledge-base"] });
     },
-    onError: (err) => toast.error(extractError(err)),
+    onError: (err: any) => {
+      // 演示模式：后端未实现时本地生效
+      if (err?.response?.status === 404) {
+        if (editArticle) {
+          setLocalArticles(prev => prev.map(a => a.id === editArticle.id ? { ...a, title: editForm.title, category: editForm.category, content: editForm.content, tags: editForm.tags, status: editForm.status, updated_at: "2026-08-10T12:00:00" } : a));
+        } else {
+          setLocalArticles(prev => [{ id: Date.now(), title: editForm.title, category: editForm.category, status: editForm.status, view_count: 0, helpful_count: 0, unhelpful_count: 0, author_name: "当前管理员", tags: editForm.tags, content: editForm.content, updated_at: "2026-08-10T12:00:00" }, ...prev]);
+        }
+        toast.success(editArticle ? "文章已更新（演示）" : "文章已创建（演示）");
+        setEditArticle(null);
+      } else {
+        toast.error(extractError(err));
+      }
+    },
   });
 
   // —— 删除文章 ——
   const delArticleMut = useMutation({
     mutationFn: (id: number) => api.delete(`/admin/knowledge-base/${id}`),
     onSuccess: () => { toast.success("文章已删除"); qc.invalidateQueries({ queryKey: ["admin/knowledge-base"] }); },
-    onError: (err) => toast.error(extractError(err)),
+    onError: (err: any, id?: number) => {
+      // 演示模式：后端未实现时本地生效
+      if (err?.response?.status === 404 && id != null) {
+        setLocalArticles(prev => prev.filter(a => a.id !== id));
+        toast.success("文章已删除（演示）");
+      } else {
+        toast.error(extractError(err));
+      }
+    },
   });
 
   // —— 创建/更新分类 ——
@@ -78,14 +124,35 @@ export default function AdminKnowledgeBasePage() {
       return api.post("/admin/knowledge-base/categories", catForm);
     },
     onSuccess: () => { toast.success(editCat ? "分类已更新" : "分类已创建"); setEditCat(null); qc.invalidateQueries({ queryKey: ["admin/knowledge-base/categories"] }); },
-    onError: (err) => toast.error(extractError(err)),
+    onError: (err: any) => {
+      // 演示模式：后端未实现时本地生效
+      if (err?.response?.status === 404) {
+        if (editCat) {
+          setLocalCats(prev => prev.map(c => c.id === editCat.id ? { ...c, ...catForm } : c));
+        } else {
+          setLocalCats(prev => [...prev, { id: Date.now(), ...catForm }]);
+        }
+        toast.success(editCat ? "分类已更新（演示）" : "分类已创建（演示）");
+        setEditCat(null);
+      } else {
+        toast.error(extractError(err));
+      }
+    },
   });
 
   // —— 删除分类 ——
   const delCatMut = useMutation({
     mutationFn: (id: number) => api.delete(`/admin/knowledge-base/categories/${id}`),
     onSuccess: () => { toast.success("分类已删除"); qc.invalidateQueries({ queryKey: ["admin/knowledge-base/categories"] }); },
-    onError: (err) => toast.error(extractError(err)),
+    onError: (err: any, id?: number) => {
+      // 演示模式：后端未实现时本地生效
+      if (err?.response?.status === 404 && id != null) {
+        setLocalCats(prev => prev.filter(c => c.id !== id));
+        toast.success("分类已删除（演示）");
+      } else {
+        toast.error(extractError(err));
+      }
+    },
   });
 
   // —— 创建/更新模板 ——
@@ -95,19 +162,42 @@ export default function AdminKnowledgeBasePage() {
       return api.post("/admin/quick-replies", tplForm);
     },
     onSuccess: () => { toast.success(editTemplate ? "模板已更新" : "模板已创建"); setEditTemplate(null); qc.invalidateQueries({ queryKey: ["admin/quick-replies"] }); },
-    onError: (err) => toast.error(extractError(err)),
+    onError: (err: any) => {
+      // 演示模式：后端未实现时本地生效
+      if (err?.response?.status === 404) {
+        if (editTemplate) {
+          setLocalTpls(prev => prev.map(t => t.id === editTemplate.id ? { ...t, ...tplForm } : t));
+        } else {
+          setLocalTpls(prev => [...prev, { id: Date.now(), ...tplForm, created_by_name: "当前管理员" }]);
+        }
+        toast.success(editTemplate ? "模板已更新（演示）" : "模板已创建（演示）");
+        setEditTemplate(null);
+      } else {
+        toast.error(extractError(err));
+      }
+    },
   });
 
   // —— 删除模板 ——
   const delTplMut = useMutation({
     mutationFn: (id: number) => api.delete(`/admin/quick-replies/${id}`),
     onSuccess: () => { toast.success("模板已删除"); qc.invalidateQueries({ queryKey: ["admin/quick-replies"] }); },
-    onError: (err) => toast.error(extractError(err)),
+    onError: (err: any, id?: number) => {
+      // 演示模式：后端未实现时本地生效
+      if (err?.response?.status === 404 && id != null) {
+        setLocalTpls(prev => prev.filter(t => t.id !== id));
+        toast.success("模板已删除（演示）");
+      } else {
+        toast.error(extractError(err));
+      }
+    },
   });
 
-  const articles = listQ.data?.list ?? [];
-  const cats = catsQ.data?.list ?? [];
-  const tpls = tplsQ.data?.list ?? [];
+  // 后端未实现时回退到演示数据（未来接入真实端点后此兜底自动失效）
+  const articles = listQ.data?.list != null ? listQ.data.list : localArticles;
+  const cats = catsQ.data?.list != null ? catsQ.data.list : localCats;
+  const tpls = tplsQ.data?.list != null ? tplsQ.data.list : localTpls;
+  const demo = listQ.data?.list == null || catsQ.data?.list == null || tplsQ.data?.list == null;
 
   const statusLabel = (s: string) => ({ draft: "草稿", published: "已发布", archived: "已归档" }[s] ?? s);
   const articleStatus = (s: string): "success" | "warning" | "danger" | "info" | "default" => {
@@ -121,6 +211,7 @@ export default function AdminKnowledgeBasePage() {
       <h2 style={{ marginBottom: 4 }}>
         客服支撑
         <HelpIcon text="管理端知识库：管理已发布/草稿/归档的文章，可创建编辑和删除。分类管理。快捷回复模板管理。" level="page" />
+        {demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/knowledge-base 待接入）</span>}
       </h2>
       <p style={{ color: "#94a3b8", marginTop: 0, fontSize: 13 }}>知识库 · 分类 · 快捷回复模板管理</p>
 

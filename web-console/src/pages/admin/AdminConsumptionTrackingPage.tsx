@@ -6,6 +6,25 @@ import { HelpIcon, SkeletonGroup } from "@3cloud/shared-ui";
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
 
+/* ───────── 类型与演示数据（对齐原型 admin-consumption.html 分布） ───────── */
+
+interface TrackRow { user_id: number; user_email: string; request_count: number; total_tokens: number; total_cost: number; top_model: string; top_vendor: string; }
+interface TrackData { summary: { active_users: number; model_count: number; total_requests: number; total_cost: number }; list: TrackRow[]; demo?: boolean; }
+
+const MOCK: TrackData = {
+  summary: { active_users: 86, model_count: 12, total_requests: 432500, total_cost: 128600.5 },
+  list: [
+    { user_id: 1, user_email: "techcorp@example.com", request_count: 86500, total_tokens: 18400000, total_cost: 45200, top_model: "deepseek-chat", top_vendor: "DeepSeek" },
+    { user_id: 2, user_email: "ailab@example.com", request_count: 72300, total_tokens: 15200000, total_cost: 38600, top_model: "gpt-4o", top_vendor: "OpenAI" },
+    { user_id: 3, user_email: "startup@example.com", request_count: 45800, total_tokens: 9860000, total_cost: 21400, top_model: "glm-4-plus", top_vendor: "GLM" },
+    { user_id: 4, user_email: "devteam@example.com", request_count: 32100, total_tokens: 7120000, total_cost: 15800, top_model: "deepseek-coder", top_vendor: "DeepSeek" },
+    { user_id: 5, user_email: "enterprise@example.com", request_count: 28400, total_tokens: 6350000, total_cost: 12200, top_model: "gpt-4o", top_vendor: "OpenAI" },
+    { user_id: 6, user_email: "researcher@example.com", request_count: 18900, total_tokens: 4230000, total_cost: 8600, top_model: "claude-3-5-sonnet", top_vendor: "Anthropic" },
+    { user_id: 7, user_email: "student@example.com", request_count: 11200, total_tokens: 2100000, total_cost: 4200, top_model: "deepseek-chat", top_vendor: "DeepSeek" },
+  ],
+  demo: true,
+};
+
 export default function AdminConsumptionTrackingPage() {
   const [keyword, setKeyword] = useState("");
   const [period, setPeriod] = useState("today");
@@ -13,13 +32,19 @@ export default function AdminConsumptionTrackingPage() {
   const trackQ = useQuery({
     queryKey: ["admin-consumption-tracking", keyword, period],
     queryFn: async () => (await api.get(`/admin/consumption/tracking?keyword=${keyword}&period=${period}&page_size=50`)).data.data,
+    // 后端未实现时立即回退占位数据，避免 404 反复重试导致页面卡加载
+    retry: 0,
   });
+
+  // 后端未实现时回退到演示数据（未来接入真实端点后此兜底自动失效）
+  const data: TrackData = trackQ.data?.summary != null ? trackQ.data : MOCK;
 
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>消费追踪</h2>
         <HelpIcon text="consumption_tracking" />
+        {data.demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/consumption/tracking 待接入）</span>}
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
@@ -35,10 +60,10 @@ export default function AdminConsumptionTrackingPage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 20 }}>
-        {[{ icon: "👥", label: "活跃用户数", value: trackQ.data?.summary?.active_users ?? "—" },
-          { icon: "🤖", label: "调用模型数", value: trackQ.data?.summary?.model_count ?? "—" },
-          { icon: "📊", label: "总请求数", value: trackQ.data?.summary?.total_requests?.toLocaleString() ?? "—" },
-          { icon: "💰", label: "总消费", value: trackQ.data?.summary?.total_cost != null ? `¥${trackQ.data.summary.total_cost}` : "—" },
+        {[{ icon: "👥", label: "活跃用户数", value: data.summary.active_users },
+          { icon: "🤖", label: "调用模型数", value: data.summary.model_count },
+          { icon: "📊", label: "总请求数", value: data.summary.total_requests.toLocaleString() },
+          { icon: "💰", label: "总消费", value: `¥${data.summary.total_cost.toLocaleString("zh-CN")}` },
         ].map((s, i) => (
           <div key={i} style={card}>
             <div style={{ fontSize: 24 }}>{s.icon}</div>
@@ -62,7 +87,7 @@ export default function AdminConsumptionTrackingPage() {
               <th style={{ padding: "10px 12px", textAlign: "left" }}>操作</th>
             </tr></thead>
             <tbody>
-              {(trackQ.data?.list ?? []).map((t: any) => (
+              {(data.list ?? []).map((t: TrackRow) => (
                 <tr key={t.user_id} style={{ borderTop: "1px solid #f0f0f0" }}>
                   <td style={{ padding: "10px 12px", fontWeight: 500 }}>{t.user_email}</td>
                   <td style={{ padding: "10px 12px" }}>{t.request_count?.toLocaleString()}</td>

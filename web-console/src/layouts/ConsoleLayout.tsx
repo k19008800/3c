@@ -4,6 +4,8 @@ import { useAuthStore } from "../store/auth";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import ConsentBanner from "../components/ConsentBanner";
+import { PageHeaderProvider, usePageHeader, HelpIcon } from "@3cloud/shared-ui";
+import "@3cloud/shared-ui/src/admin-system.css";
 
 type NavItem = { to: string; label: string; icon: string };
 type NavGroup = { group: string; icon: string; items: NavItem[] };
@@ -11,7 +13,7 @@ type NavGroup = { group: string; icon: string; items: NavItem[] };
 const ADMIN_NAV: NavGroup[] = [
   { group: "客户管理", icon: "👥", items: [
     { to: "/admin/customers", label: "客户列表", icon: "📋" },
-    { to: "/admin/customers", label: "客户详情", icon: "👤" },
+    { to: "/admin/customers/:userId", label: "客户详情", icon: "👤" },
     { to: "/admin/customers/quotas", label: "额度管理", icon: "🪙" },
     { to: "/admin/customers/verifications", label: "实名认证审核", icon: "🆔" },
   ]},
@@ -26,6 +28,10 @@ const ADMIN_NAV: NavGroup[] = [
     { to: "/admin/finance/withdrawals", label: "提现管理", icon: "💳" },
     { to: "/admin/finance/coupons", label: "兑换码管理", icon: "🎟️" },
     { to: "/admin/finance/reconciliation", label: "对账报表", icon: "📊" },
+    { to: "/admin/finance/reconciliation-diff", label: "对账差异", icon: "🔀" },
+    { to: "/admin/finance/discount-engine", label: "折扣规则引擎", icon: "🎫" },
+    { to: "/admin/finance/tax-banking", label: "税负与银行账户", icon: "🏦" },
+    { to: "/admin/finance/supplier-bill-match", label: "供应商账单核对", icon: "🧾" },
     { to: "/admin/finance/cost-dashboard", label: "成本看板", icon: "📉" },
     { to: "/admin/finance/cost-prediction", label: "成本预测", icon: "🔮" },
     { to: "/admin/finance/settlement", label: "结算对账", icon: "⚖️" },
@@ -34,7 +40,7 @@ const ADMIN_NAV: NavGroup[] = [
   ]},
   { group: "供应商管理", icon: "🔌", items: [
     { to: "/admin/suppliers", label: "供应商列表", icon: "📋" },
-    { to: "/admin/suppliers", label: "供应商详情", icon: "🔍" },
+    { to: "/admin/suppliers/:id", label: "供应商详情", icon: "🔍" },
     { to: "/admin/suppliers/model-service", label: "模型服务管理", icon: "🎛️" },
     { to: "/admin/suppliers/vendor-profiles", label: "厂商资料管理", icon: "🏢" },
     { to: "/admin/suppliers/vendor-pricing", label: "厂商定价管理", icon: "💰" },
@@ -42,11 +48,24 @@ const ADMIN_NAV: NavGroup[] = [
     { to: "/admin/suppliers/vendor-stats", label: "用户选购统计", icon: "📊" },
     { to: "/admin/suppliers/price-change", label: "价格变更通知", icon: "📢" },
     { to: "/admin/suppliers/vendor-performance", label: "供应商绩效", icon: "🏆" },
+    { to: "/admin/suppliers/multimodal-models", label: "多模态模型管理", icon: "🎛️" },
+    { to: "/admin/suppliers/competitive-monitor", label: "竞品价格监控", icon: "🔍" },
+  ]},
+  { group: "消费运营", icon: "📊", items: [
+    { to: "/admin/consumption/tracking", label: "消费明细追踪", icon: "🔍" },
+    { to: "/admin/consumption/stream", label: "实时消费流水", icon: "📡" },
+    { to: "/admin/consumption/anomaly", label: "消费异常检测", icon: "🚨" },
+    { to: "/admin/consumption/balance-alert", label: "余额预警管理", icon: "⚠️" },
+  ]},
+  { group: "客户分析", icon: "📈", items: [
+    { to: "/admin/analytics/funnel", label: "转化漏斗分析", icon: "📊" },
+    { to: "/admin/analytics/success", label: "客户成功看板", icon: "🎯" },
   ]},
   { group: "代理商管理", icon: "🤝", items: [
     { to: "/admin/agents", label: "代理商列表", icon: "📋" },
-    { to: "/admin/agents", label: "代理商详情", icon: "🔍" },
+    { to: "/admin/agents/:id", label: "代理商详情", icon: "🔍" },
     { to: "/admin/agents/commission-config", label: "佣金配置", icon: "⚙️" },
+    { to: "/admin/agents/approvals", label: "客户报备审核", icon: "✅" },
     { to: "/admin/agents/withdrawals", label: "提现记录", icon: "💳" },
   ]},
   { group: "模型管理", icon: "🤖", items: [
@@ -54,14 +73,25 @@ const ADMIN_NAV: NavGroup[] = [
   ]},
   { group: "营销推广", icon: "📢", items: [
     { to: "/admin/marketing/affiliate", label: "推荐返利", icon: "💰" },
+    { to: "/admin/marketing/campaigns", label: "营销活动", icon: "🎯" },
   ]},
   { group: "工单客服", icon: "🎫", items: [
     { to: "/admin/tickets", label: "工单列表+处理", icon: "📋" },
+    { to: "/admin/tickets/dispute", label: "消费争议处理", icon: "⚖️" },
+    { to: "/admin/tickets/support", label: "客服效能", icon: "🤖" },
+    { to: "/admin/tickets/chat", label: "在线客服", icon: "💬" },
+    { to: "/admin/tickets/knowledge-base", label: "客服支撑", icon: "📚" },
   ]},
   { group: "系统设置", icon: "⚙️", items: [
     { to: "/admin/settings/announcements", label: "公告管理", icon: "📢" },
     { to: "/admin/settings/roles", label: "角色权限", icon: "🛡️" },
     { to: "/admin/settings/i18n", label: "国际化翻译", icon: "🌐" },
+    { to: "/admin/settings/notification-policy", label: "通知策略", icon: "🔔" },
+    { to: "/admin/settings/operator-dashboard", label: "运营看板", icon: "📊" },
+    { to: "/admin/settings/user-permissions", label: "用户权限一览", icon: "👤" },
+    { to: "/admin/ops/activity", label: "实时活动流", icon: "📡" },
+    { to: "/admin/subscription", label: "订阅计划", icon: "📦" },
+    { to: "/admin/account-deletion", label: "账号注销审核", icon: "🗑️" },
   ]},
   { group: "运维配置", icon: "🛠", items: [
     { to: "/admin/config/system", label: "系统行为", icon: "⚡" },
@@ -77,17 +107,27 @@ const ADMIN_NAV: NavGroup[] = [
     { to: "/admin/config/email-templates", label: "邮件模板", icon: "📰" },
     { to: "/admin/config/content", label: "内容管理", icon: "📄" },
     { to: "/admin/config/oauth", label: "OAuth 配置", icon: "🔑" },
+    { to: "/admin/config/webhooks", label: "全局 Webhook", icon: "🌐" },
+    { to: "/admin/config/database", label: "数据库管理", icon: "🗄️" },
+    { to: "/admin/config/cache", label: "缓存管理", icon: "⚡" },
+    { to: "/admin/config/compliance", label: "合规法务", icon: "📜" },
   ]},
   { group: "审计合规", icon: "🔍", items: [
     { to: "/admin/audit/login-logs", label: "登录日志", icon: "📱" },
     { to: "/admin/audit/operations", label: "操作审计", icon: "📋" },
     { to: "/admin/audit/api-logs", label: "API 调用日志", icon: "🔌" },
+    { to: "/admin/audit/operation-diff", label: "操作差异", icon: "🔄" },
+    { to: "/admin/audit/data-request", label: "数据调取请求", icon: "📦" },
+    { to: "/admin/audit/permissions", label: "权限审计日志", icon: "🛡️" },
   ]},
   { group: "风控合规", icon: "🚨", items: [
     { to: "/admin/risk/dashboard", label: "风控看板", icon: "📊" },
     { to: "/admin/risk/rules", label: "风控规则配置", icon: "📏" },
     { to: "/admin/risk/events", label: "风控事件管理", icon: "📋" },
     { to: "/admin/risk/blocks", label: "冻结/解冻管理", icon: "⛔" },
+    { to: "/admin/risk/incidents", label: "安全事件响应", icon: "🛡️" },
+    { to: "/admin/risk/ip-blacklist", label: "IP 黑名单", icon: "🌐" },
+    { to: "/admin/risk/content-moderation", label: "内容审核", icon: "🛡️" },
   ]},
 ];
 
@@ -155,6 +195,8 @@ export default function ConsoleLayout() {
   const isAgent = user?.role === "agent";
   const roleLabel = isAdmin ? "ADMIN" : isAgent ? "AGENT" : isSales ? "SALES" : "";
 
+  const handleLogout = () => { logout(); navigate("/login"); };
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", fontFamily: "var(--font-family)" }}>
       <aside style={{ position: "fixed", left: 0, top: 0, bottom: 0, width: 220, background: "#13151e", padding: "20px 0", zIndex: 100, display: "flex", flexDirection: "column" }}>
@@ -193,24 +235,71 @@ export default function ConsoleLayout() {
         </nav>
       </aside>
 
-      <div style={{ marginLeft: 220, flex: 1, display: "flex", flexDirection: "column" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px 0" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 13, color: "#888" }}>{user?.email}</span>
-            {roleLabel && <span style={{ background: "#eef2ff", color: "#4f6ef7", padding: "1px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{roleLabel}</span>}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 13, color: "#888" }}>
-            <span style={{ cursor: "pointer", color: "#6a8aff", fontWeight: 500 }} onClick={() => navigate("/recharge")}>余额: ¥{((user?.balance ?? 0) / 100).toFixed(2)}</span>
-            <Link to="/announcements" style={{ position: "relative", fontSize: 18, cursor: "pointer", textDecoration: "none" }}>🔔{unreadQ.data ? <span style={{ position: "absolute", top: -4, right: -8, background: "#e53935", color: "#fff", fontSize: 10, width: 16, height: 16, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>{unreadQ.data > 99 ? "99+" : unreadQ.data}</span> : null}</Link>
-            <button onClick={() => { logout(); navigate("/login"); }} style={{ background: "none", border: "none", color: "#888", fontSize: 13, cursor: "pointer" }}>退出</button>
-          </div>
-        </div>
-        <main style={{ padding: "0 24px 20px", flex: 1, background: "#f0f2f5" }}>
-          <ConsentBanner />
-          <Outlet />
-        </main>
+      <div style={{ marginLeft: 220, flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        <PageHeaderProvider>
+          <TopbarAndOutlet userEmail={user?.email ?? ""} roleLabel={roleLabel} balance={user?.balance ?? 0} unread={unreadQ.data} isAdmin={isAdmin} onLogout={handleLogout} />
+        </PageHeaderProvider>
       </div>
     </div>
+  );
+}
+
+/**
+ * 顶栏 + 内容区 — 对齐原型 admin-design-system.css：
+ *   topbar-left = 页标题 + `?` 帮助 + 角色徽章
+ *   topbar-right = 用户邮箱 + 🔔 + 「管理员▼」下拉菜单
+ */
+function TopbarAndOutlet(props: {
+  userEmail: string;
+  roleLabel: string;
+  balance: number;
+  unread: number | undefined;
+  isAdmin: boolean;
+  onLogout: () => void;
+}) {
+  const { userEmail, roleLabel, balance, unread, isAdmin, onLogout } = props;
+  const info = usePageHeader();
+  const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  return (
+    <>
+      <header className="c3-topbar">
+        <div className="c3-topbar__left">
+          {info?.title && (
+            <h2>
+              {info.title}
+              {info.help && <HelpIcon text={info.help} level="page" />}
+              {roleLabel && <span className="c3-admin-badge">{roleLabel}</span>}
+            </h2>
+          )}
+        </div>
+        <div className="c3-topbar__right">
+          <span className="c3-user-email">{userEmail}</span>
+          <Link to="/announcements" className="c3-bell" aria-label="通知">
+            🔔{unread ? <span className="c3-bell__badge">{unread > 99 ? "99+" : unread}</span> : null}
+          </Link>
+          <div className={`c3-action-dropdown${menuOpen ? " c3-action-dropdown--open" : ""}`}>
+            <button type="button" className="c3-action-trigger" onClick={() => setMenuOpen(o => !o)}>
+              {roleLabel || "账户"} <span style={{ fontSize: 10 }}>▼</span>
+            </button>
+            <div className="c3-dropdown-menu" onMouseLeave={() => setMenuOpen(false)}>
+              <div className="c3-dropdown-menu__item" onClick={() => { setMenuOpen(false); navigate("/security"); }}>个人设置</div>
+              <div className="c3-dropdown-menu__item" onClick={() => { setMenuOpen(false); navigate("/security"); }}>修改密码</div>
+              {!isAdmin && (
+                <div className="c3-dropdown-menu__item" onClick={() => { setMenuOpen(false); navigate("/recharge"); }}>余额: ¥{balance.toLocaleString("zh-CN", { maximumFractionDigits: 2 })}</div>
+              )}
+              <div className="c3-dropdown-menu__divider" />
+              <div className="c3-dropdown-menu__item c3-dropdown-menu__item--danger" onClick={onLogout}>退出登录</div>
+            </div>
+          </div>
+        </div>
+      </header>
+      <main className="c3-content" style={{ flex: 1, background: "#f0f2f5" }}>
+        <ConsentBanner />
+        <Outlet />
+      </main>
+    </>
   );
 }
 

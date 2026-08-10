@@ -93,25 +93,13 @@ export async function authRoutes(app: FastifyInstance) {
   // POST /api/v1/auth/login
   app.post('/api/v1/auth/login', async (request, reply) => {
     const body = request.body as Record<string, unknown>;
-    const raw = JSON.stringify(body);
-    console.log(`[LOGIN] body=${raw} email=${body.email} pwd_len=${String(body.password||'').length}`);
     const email = String(body.email || '').toLowerCase().trim();
     const password = String(body.password || '').trim();
-    const passwordHex = [...password].map(c => c.charCodeAt(0).toString(16).padStart(2,'0')).join(' ');
-    console.log(`[LOGIN] password length=${password.length} hex=${passwordHex}`);
 
     const users = await db.select()
       .from(schema.users)
       .where(eq(schema.users.email, email))
       .limit(1);
-
-    console.log(`[LOGIN] found=${users.length} hash=${users[0]?.passwordHash?.slice(0,20)}...`);
-    if (users.length > 0) {
-      const testOk = bcrypt.compareSync(password, users[0]!.passwordHash);
-      console.log(`[LOGIN] inline bcrypt=${testOk}`);
-      const ok = verifyPassword(password, users[0]!.passwordHash);
-      console.log(`[LOGIN] verifyPassword=${ok}`);
-    }
 
     if (users.length === 0 || !verifyPassword(password, users[0]!.passwordHash)) {
       throw new UnauthorizedError('Invalid email or password');

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { api } from "../lib/api";
-import { HelpIcon, StatusBadge } from "@3cloud/shared-ui";
+import { api, extractError } from "../lib/api";
+import { HelpIcon, StatusBadge, useToast } from "@3cloud/shared-ui";
 
 /**
  * §30 用户权限一览 —— 查看用户角色、权限详情、分配/移除角色
@@ -9,33 +9,91 @@ interface User { id: number; email: string; username: string | null; role: strin
 interface Role { id: number; name: string; label: string; permissions: number; is_system: boolean }
 interface PermGroup { group: string; permissions: { key: string; label: string; granted: boolean }[] }
 
+/* ───────── 演示数据（后端 /admin/users /admin/roles 待接入） ───────── */
+const MOCK_USERS: User[] = [
+  { id: 1, email: "admin@3cloud.dev", username: "管理员", role: "super_admin" },
+  { id: 1001, email: "user1@example.com", username: "用户小王", role: "user" },
+  { id: 1002, email: "user2@example.com", username: "用户小李", role: "user" },
+  { id: 1003, email: "user3@example.com", username: "用户小张", role: "agent" },
+];
+const MOCK_ROLES: Role[] = [
+  { id: 1, name: "super_admin", label: "超级管理员", permissions: 99, is_system: true },
+  { id: 2, name: "admin", label: "管理员", permissions: 40, is_system: true },
+  { id: 3, name: "agent", label: "代理商", permissions: 8, is_system: true },
+  { id: 4, name: "sales", label: "业务员", permissions: 6, is_system: true },
+  { id: 5, name: "finance", label: "财务审核员", permissions: 5, is_system: false },
+];
+const MOCK_PERMS_TREE: PermGroup[] = [
+  { group: "客户管理", permissions: [ { key: "customer.view", label: "查看客户", granted: true }, { key: "customer.edit", label: "编辑客户", granted: true } ] },
+  { group: "财务", permissions: [ { key: "finance.refund", label: "退款审核", granted: true }, { key: "finance.topup", label: "人工上账", granted: true } ] },
+  { group: "系统", permissions: [ { key: "sys.config", label: "系统配置", granted: false } ] },
+];
+
 export default function AdminUsersPermissionPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
+  const { toast } = useToast();
+  const [users, setUsers] = useState<User[]>(MOCK_USERS);
+  const [roles, setRoles] = useState<Role[]>(MOCK_ROLES);
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
   const [userRoles, setUserRoles] = useState<Role[]>([]);
   const [userPerms, setUserPerms] = useState<{ user: User; roles: Role[]; effective: string[]; tree: PermGroup[] } | null>(null);
+  const [demo, setDemo] = useState(true);
 
   useEffect(() => {
-    api.get<{ data: { list: User[] } }>("/admin/users?page_size=500").then(r => setUsers(r.data.data.list)).catch(() => {});
-    api.get<{ data: { list: Role[] } }>("/admin/roles").then(r => setRoles(r.data.data.list));
+    api.get<{ data: { list: User[] } }>("/admin/users?page_size=500").then(r => { setUsers(r.data.data.list); setDemo(false); }).catch(() => {});
+    api.get<{ data: { list: Role[] } }>("/admin/roles").then(r => setRoles(r.data.data.list)).catch(() => {});
   }, []);
 
   function loadUser(id: number) {
     setSelectedUser(id);
-    api.get<{ data: { list: Role[] } }>("/admin/users/" + id + "/roles").then(r => setUserRoles(r.data.data.list));
+    api.get<{ data: { list: Role[] } }>("/admin/users/" + id + "/roles").then(r => setUserRoles(r.data.data.list)).catch(() => {
+      // 演示模式：后端未实现时本地构建
+      if (demo) {
+        const u = MOCK_USERS.find(x => x.id === id);
+        const r = u?.role ? MOCK_ROLES.filter(x => x.name === u.role) : [];
+        setUserRoles(r);
+        setUserPerms({ user: u ?? { id, email: `user${id}@example.com`, username: `用户${id}`, role: "user" }, roles: r, effective: ["customer.view", "customer.edit", "finance.topup"], tree: MOCK_PERMS_TREE });
+      }
+    });
     api.get<{ data: { user: User; roles: Role[]; effective: string[]; tree: PermGroup[] } }>("/admin/users/" + id + "/permissions/detail")
-      .then(r => setUserPerms(r.data.data));
+      .then(r => setUserPerms(r.data.data))
+      .catch(() => { /* 演示模式已在 roles 回调中兜底 */ });
   }
 
   async function assign(userId: number, roleId: number) {
-    await api.post("/admin/users/" + userId + "/roles/assign", { role_id: roleId });
-    loadUser(userId);
+    try {
+      await api.post("/admin/users/" + userId + "/roles/assign", { role_id: roleId });
+      toast.success("已分配角色");
+      loadUser(userId);
+    } catch (e: any) {
+      // 演示模式：后端未实现时本地生效
+      if (e?.response?.status === 404 && demo) {
+        const r = MOCK_ROLES.find(x => x.id === roleId);
+        if (r) {
+          setUserRoles(prev => prev.find(x => x.id === roleId) ? prev : [...prev, r]);
+          setUserPerms(prev => prev ? { ...prev, roles: [...prev.roles.filter(x => x.id !== roleId), r], effective: [...new Set([...prev.effective, `role:${r.name}`])] } : prev);
+        }
+        toast.success("已分配角色（演示）");
+      } else {
+        toast.error(extractError(e));
+      }
+    }
   }
 
   async function remove(userId: number, roleId: number) {
-    await api.post("/admin/users/" + userId + "/roles/remove", { role_id: roleId });
-    loadUser(userId);
+    try {
+      await api.post("/admin/users/" + userId + "/roles/remove", { role_id: roleId });
+      toast.success("已移除角色");
+      loadUser(userId);
+    } catch (e: any) {
+      // 演示模式：后端未实现时本地生效
+      if (e?.response?.status === 404 && demo) {
+        setUserRoles(prev => prev.filter(r => r.id !== roleId));
+        setUserPerms(prev => prev ? { ...prev, roles: prev.roles.filter(r => r.id !== roleId) } : prev);
+        toast.success("已移除角色（演示）");
+      } else {
+        toast.error(extractError(e));
+      }
+    }
   }
 
   return (
@@ -43,6 +101,7 @@ export default function AdminUsersPermissionPage() {
       <h2 style={{ marginBottom: 4 }}>
         用户权限一览
         <HelpIcon text="查看所有用户的角色分配情况。可分配/移除角色（角色合并生效权限），查看用户最终有效权限列表。" level="page" />
+        {demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/users 待接入）</span>}
       </h2>
 
       <div style={{ display: "flex", gap: 16, marginTop: 16 }}>

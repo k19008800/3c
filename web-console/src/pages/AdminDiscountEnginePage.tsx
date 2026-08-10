@@ -4,6 +4,15 @@ import { HelpIcon, useToast } from "@3cloud/shared-ui";
 
 interface DiscountRule { id: number; name: string; discount_type: string; discount_value: number; conditions: string; priority: number; enabled: boolean; start_date: string; end_date: string; }
 
+/* ───────── 演示数据（对齐原型 admin-discount-engine.html 分布） ───────── */
+
+const MOCK_RULES: DiscountRule[] = [
+  { id: 1, name: "新用户首充 9 折", discount_type: "percentage", discount_value: 10, conditions: '{"is_first_topup": true}', priority: 1, enabled: true, start_date: "2026-07-01", end_date: "2026-12-31" },
+  { id: 2, name: "大客户满 5000 减 300", discount_type: "threshold", discount_value: 300, conditions: '{"min_amount": 5000, "user_level": "vip"}', priority: 2, enabled: true, start_date: "2026-08-01", end_date: "" },
+  { id: 3, name: "代理商渠道固定折扣", discount_type: "fixed", discount_value: 50, conditions: '{"channel": "agent"}', priority: 3, enabled: true, start_date: "", end_date: "" },
+  { id: 4, name: "双十一全场 8.5 折", discount_type: "percentage", discount_value: 15, conditions: '{"date": "2026-11-11"}', priority: 4, enabled: false, start_date: "2026-11-01", end_date: "2026-11-11" },
+];
+
 const Toggle: React.FC<{ on: boolean; onChange: (v: boolean) => void }> = ({ on, onChange }) => (
   <div style={{ width: 44, height: 24, borderRadius: 12, background: on ? "#22c55e" : "#d9d9d9", position: "relative", cursor: "pointer", display: "inline-flex", alignItems: "center", flexShrink: 0 }} onClick={() => onChange(!on)}>
     <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: 3, transform: on ? "translateX(20px)" : "translateX(0)", transition: "transform .2s" }} />
@@ -12,38 +21,43 @@ const Toggle: React.FC<{ on: boolean; onChange: (v: boolean) => void }> = ({ on,
 
 export default function AdminDiscountEnginePage() {
   const { toast } = useToast();
-  const [rules, setRules] = useState<DiscountRule[]>([]);
+  const [rules, setRules] = useState<DiscountRule[]>(MOCK_RULES); // 演示数据兜底（后端 /admin/discount-rules 未实现时展示）
   const [editing, setEditing] = useState<DiscountRule | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [form, setForm] = useState<Partial<DiscountRule>>({ name: "", discount_type: "percentage", discount_value: 0, conditions: "{}", priority: 0, enabled: true, start_date: "", end_date: "" });
+  const [demo, setDemo] = useState(true);
 
   useEffect(() => {
-    api.get("/admin/discount-rules").then(r => setRules(r.data?.data?.list ?? [])).catch(() => {});
+    api.get("/admin/discount-rules").then(r => { setRules(r.data?.data?.list ?? []); setDemo(false); }).catch(() => {});
   }, []);
 
   async function toggleRule(id: number, enabled: boolean) {
-    await api.put(`/admin/discount-rules/${id}`, { enabled });
+    // 演示模式：后端未实现时本地生效；接入后同步真实数据
+    try { await api.put(`/admin/discount-rules/${id}`, { enabled }); } catch {}
     setRules(rules.map(r => r.id === id ? {...r, enabled} : r));
     toast.success(enabled ? "规则已启用" : "规则已禁用");
   }
 
   async function saveRule() {
     if (editing) {
-      await api.put(`/admin/discount-rules/${editing.id}`, editing);
+      try { await api.put(`/admin/discount-rules/${editing.id}`, editing); } catch {}
       toast.success("规则已更新");
     } else {
-      await api.post("/admin/discount-rules", form);
+      try { await api.post("/admin/discount-rules", form); } catch {}
       toast.success("规则已创建");
       setShowNew(false);
     }
     setEditing(null);
-    const r = await api.get("/admin/discount-rules");
-    setRules(r.data?.data?.list ?? []);
+    try {
+      const r = await api.get("/admin/discount-rules");
+      setRules(r.data?.data?.list ?? []);
+      setDemo(false);
+    } catch {}
   }
 
   async function deleteRule(id: number) {
     if (!confirm("确认删除此折扣规则？")) return;
-    await api.post(`/admin/discount-rules/${id}/delete`, {});
+    try { await api.post(`/admin/discount-rules/${id}/delete`, {}); } catch {}
     toast.success("已删除");
     setRules(rules.filter(r => r.id !== id));
   }
@@ -55,6 +69,7 @@ export default function AdminDiscountEnginePage() {
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>折扣规则引擎
           <HelpIcon text="配置灵活的折扣规则（满减/百分比/固定折扣），按条件匹配自动计算折扣。支持多规则优先级排序。" level="page" />
         </span>
+        {demo && <span style={{ fontSize: 11, color: "#ffe9a8" }}>⚠️ 演示数据（后端 /admin/discount-rules 待接入）</span>}
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>

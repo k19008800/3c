@@ -22,12 +22,38 @@ const STATUS_TABS = [
   { key: "rejected", label: "已驳回" },
 ] as const;
 
+/* ───────── 演示数据（后端 /admin/deletion 待接入） ───────── */
+const MOCK_REQUESTS = [
+  { id: 1, userId: 1001, username: "用户小王", userEmail: "user1@example.com", status: "pending", reason: "不再使用该平台", coolingDeadline: null, createdAt: "2026-08-08T10:00:00", rejectedReason: null, completedAt: null },
+  { id: 2, userId: 1002, username: "用户小李", userEmail: "user2@example.com", status: "cooling", reason: "账户重复注册", coolingDeadline: "2026-08-15T10:00:00", createdAt: "2026-08-01T09:30:00", rejectedReason: null, completedAt: null },
+  { id: 3, userId: 1003, username: "用户小张", userEmail: "user3@example.com", status: "completed", reason: "数据导出已完成", coolingDeadline: null, createdAt: "2026-07-20T14:00:00", rejectedReason: null, completedAt: "2026-07-21T09:00:00" },
+  { id: 4, userId: 1004, username: "用户小赵", userEmail: "user4@example.com", status: "rejected", reason: "存在未结清订单", coolingDeadline: null, createdAt: "2026-07-15T11:00:00", rejectedReason: "存在未结清订单，请先结清", completedAt: null },
+];
+const MOCK_STATS = { pending: 1, cooling: 1, completed: 1, rejected: 1, todayNew: 1, overdue: 0 };
+
+// 演示模式：由列表行构建详情
+function mockDetail(id: number) {
+  const row = MOCK_REQUESTS.find((r) => r.id === id);
+  if (!row) return null;
+  return {
+    request: { ...row },
+    user: { id: row.userId, email: row.userEmail, username: row.username, status: "active", balance: 12500, realNameStatus: "verified", createdAt: "2025-12-01T00:00:00" },
+    checklist: row.status === "pending" ? [
+      { id: 1, checkItem: "余额结清", passed: "true" },
+      { id: 2, checkItem: "未结订单", passed: "true" },
+      { id: 3, checkItem: "导出个人数据", passed: "false", detail: "待用户确认导出" },
+    ] : [],
+  };
+}
+
 export default function AdminDeletionPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
   const [detailId, setDetailId] = useState<number | null>(null);
   const [rejectId, setRejectId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  // 演示兜底：本地可变列表（写操作在演示模式下直接改它）
+  const [localList, setLocalList] = useState<any[]>(MOCK_REQUESTS);
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -40,20 +66,32 @@ export default function AdminDeletionPage() {
           params: { status: statusFilter || undefined, page, pageSize: 20 },
         })
         .then((r) => r.data.data),
+    // 后端未实现时立即回退演示数据，避免 404 反复重试导致页面卡加载
+    retry: 0,
   });
+
+  // 后端未实现时回退到演示数据（未来接入真实端点后此兜底自动失效）
+  const demo = data == null;
+  const list = data?.list ?? (demo ? localList.filter((r) => !statusFilter || r.status === statusFilter) : []);
+  const total = data?.total ?? (demo ? list.length : 0);
+  const pageSize = data?.pageSize ?? 20;
 
   // 统计
-  const { data: stats } = useQuery({
+  const { data: statsQ } = useQuery({
     queryKey: ["admin/deletion/stats"],
     queryFn: () => api.get("/admin/deletion/stats").then((r) => r.data.data),
+    retry: 0,
   });
+  const stats = statsQ ?? (demo ? MOCK_STATS : null);
 
   // 详情
-  const { data: detail, refetch: refetchDetail } = useQuery({
+  const { data: detailQ, refetch: refetchDetail } = useQuery({
     queryKey: ["admin/deletion/requests", detailId],
     queryFn: () => api.get(`/admin/deletion/requests/${detailId}`).then((r) => r.data.data),
     enabled: detailId !== null,
+    retry: 0,
   });
+  const detail = detailQ ?? (demo && detailId != null ? mockDetail(detailId) : null);
 
   // 驳回
   const rejectMutation = useMutation({
@@ -65,7 +103,17 @@ export default function AdminDeletionPage() {
       setRejectReason("");
       qc.invalidateQueries({ queryKey: ["admin/deletion"] });
     },
-    onError: (err) => toast.error(extractError(err)),
+    onError: (err: any, body?: { id: number; reason: string }) => {
+      // 演示模式：后端未实现时本地生效
+      if (err?.response?.status === 404 && body) {
+        setLocalList((prev) => prev.map((r) => r.id === body.id ? { ...r, status: "rejected", rejectedReason: body.reason } : r));
+        setRejectId(null);
+        setRejectReason("");
+        toast.success("注销请求已驳回（演示）");
+      } else {
+        toast.error(extractError(err));
+      }
+    },
   });
 
   // 强制完成
@@ -76,7 +124,16 @@ export default function AdminDeletionPage() {
       setDetailId(null);
       qc.invalidateQueries({ queryKey: ["admin/deletion"] });
     },
-    onError: (err) => toast.error(extractError(err)),
+    onError: (err: any, id?: number) => {
+      // 演示模式：后端未实现时本地生效
+      if (err?.response?.status === 404 && id != null) {
+        setLocalList((prev) => prev.map((r) => r.id === id ? { ...r, status: "completed", completedAt: new Date().toISOString() } : r));
+        setDetailId(null);
+        toast.success("管理员强制注销完成（演示）");
+      } else {
+        toast.error(extractError(err));
+      }
+    },
   });
 
   const statusLabel = (s: string) => {
@@ -98,6 +155,7 @@ export default function AdminDeletionPage() {
       <h2 style={{ marginBottom: 4 }}>
         账号注销审核
         <HelpIcon text={PAGE_HELP} level="page" />
+        {demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/deletion 待接入）</span>}
       </h2>
       <p style={{ color: "#94a3b8", marginTop: 0, fontSize: 13 }}>查看和管理用户账号注销请求 · Sprint 1</p>
 
@@ -136,7 +194,7 @@ export default function AdminDeletionPage() {
       {/* 列表 */}
       {isLoading ? (
         <SkeletonGroup lines={5} />
-      ) : data?.list?.length === 0 ? (
+      ) : list.length === 0 ? (
         <EmptyState title="暂无数据" description="当前筛选条件无匹配的注销请求" />
       ) : (
         <div style={{ ...card, padding: 0, overflow: "hidden" }}>
@@ -153,7 +211,7 @@ export default function AdminDeletionPage() {
               </tr>
             </thead>
             <tbody>
-              {data.list.map((row: any, i: number) => (
+              {list.map((row: any, i: number) => (
                 <tr key={row.id} style={{ borderBottom: `1px solid var(--color-border)`, background: i % 2 === 0 ? "var(--color-panel)" : "#fafafa" }}>
                   <td style={{ padding: "10px 16px", color: "var(--color-text)" }}>{row.id}</td>
                   <td style={{ padding: "10px 16px", color: "var(--color-text)" }}>
@@ -179,11 +237,11 @@ export default function AdminDeletionPage() {
               ))}
             </tbody>
           </table>
-          {data && (
+          {total > pageSize && (
             <Pagination
               current={page}
-              total={data.total}
-              pageSize={data.pageSize || 20}
+              total={total}
+              pageSize={pageSize}
               onChange={(p) => setPage(p)}
             />
           )}

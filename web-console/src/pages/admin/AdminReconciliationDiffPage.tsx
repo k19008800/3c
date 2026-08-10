@@ -6,6 +6,23 @@ import { HelpIcon, StatusBadge, Modal, SkeletonGroup, useToast } from "@3cloud/s
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
 
+/* ───────── 演示数据（对齐原型 admin-reconciliation-diff.html 分布） ───────── */
+
+interface DiffRow { id: number; created_at: string; vendor_name: string; diff_type: string; platform_amount: number; vendor_amount: number; amount_diff: number; status: string; }
+interface DiffData { list: DiffRow[]; demo?: boolean; }
+
+const MOCK: DiffData = {
+  list: [
+    { id: 1, created_at: "2026-08-10 09:00", vendor_name: "DeepSeek", diff_type: "金额差异", platform_amount: 14328, vendor_amount: 14250, amount_diff: 78, status: "unresolved" },
+    { id: 2, created_at: "2026-08-10 08:45", vendor_name: "OpenAI", diff_type: "用量差异", platform_amount: 9832, vendor_amount: 9856, amount_diff: -24, status: "unresolved" },
+    { id: 3, created_at: "2026-08-09 22:10", vendor_name: "GLM", diff_type: "缺单", platform_amount: 4520, vendor_amount: 0, amount_diff: 4520, status: "unresolved" },
+    { id: 4, created_at: "2026-08-09 18:32", vendor_name: "Anthropic", diff_type: "多单", platform_amount: 0, vendor_amount: 3420, amount_diff: -3420, status: "resolved" },
+    { id: 5, created_at: "2026-08-09 15:20", vendor_name: "阿里云", diff_type: "单价差异", platform_amount: 5680, vendor_amount: 5600, amount_diff: 80, status: "resolved" },
+    { id: 6, created_at: "2026-08-09 11:05", vendor_name: "智谱AI", diff_type: "金额差异", platform_amount: 12050, vendor_amount: 12050, amount_diff: 0, status: "ignored" },
+  ],
+  demo: true,
+};
+
 export default function AdminReconciliationDiffPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -14,7 +31,12 @@ export default function AdminReconciliationDiffPage() {
   const diffQ = useQuery({
     queryKey: ["admin-reconciliation-diffs", status],
     queryFn: async () => (await api.get(`/admin/reconciliation/diffs?status=${status}&page_size=50`)).data.data,
+    // 后端未实现时立即回退演示数据，避免 404 反复重试导致页面卡加载
+    retry: 0,
   });
+
+  // 后端未实现时回退到演示数据（未来接入真实端点后此兜底自动失效）
+  const data: DiffData = diffQ.data?.list != null ? diffQ.data : MOCK;
 
   const resolveMut = useMutation({
     mutationFn: async ({ id, op, reason }: { id: number; op: string; reason?: string }) =>
@@ -28,6 +50,7 @@ export default function AdminReconciliationDiffPage() {
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>对账差异</h2>
         <HelpIcon text="reconciliation_diff" />
+        {data.demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/reconciliation/diffs 待接入）</span>}
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
@@ -56,7 +79,7 @@ export default function AdminReconciliationDiffPage() {
               <th style={{ padding: "10px 12px", textAlign: "left" }}>操作</th>
             </tr></thead>
             <tbody>
-              {(diffQ.data?.list ?? []).map((d: any) => (
+              {(data.list ?? []).map((d: DiffRow) => (
                 <tr key={d.id} style={{ borderTop: "1px solid #f0f0f0" }}>
                   <td style={{ padding: "10px 12px", color: "#888" }}>#{d.id}</td>
                   <td style={{ padding: "10px 12px", color: "#888", fontSize: 12 }}>{d.created_at}</td>

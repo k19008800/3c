@@ -121,8 +121,13 @@ export default function RechargePage() {
       return r.data.data;
     },
     onSuccess: (d) => {
-      if (d.bank_info) setBankOrder(d);
-      else setPaying(d);
+      // 对公转账：提交审核后只展示审核中状态，不弹 bankInfo 弹窗
+      if (method !== "bank_transfer") {
+        if (d.bank_info) setBankOrder(d);
+        else setPaying(d);
+      }
+      // 下单落库成功后刷新记录（对公转账也在此刷新，避免 invalidate 先于 POST 完成）
+      qc.invalidateQueries({ queryKey: ["me-recharge-orders"] });
     },
     onError: (e) => toast.error(extractError(e)),
   });
@@ -148,7 +153,9 @@ export default function RechargePage() {
   const handleSubmitTransfer = () => {
     setBankOrder(null);
     setSubmitStatus("auditing");
-    toast.success("凭证已提交，审核中（预计 1-3 个工作日）");
+    // 对公转账：下单落库（status=pending），财务审核通过后到账
+    rechargeMut.mutate();
+    toast.success("对公转账申请已提交，等待财务审核（预计 1-3 个工作日）");
     qc.invalidateQueries({ queryKey: ["me-recharge-orders"] });
   };
 

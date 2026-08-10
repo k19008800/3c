@@ -15,6 +15,25 @@ interface WsMsg { id: number; sender_type: string; content: string; created_at: 
 interface QueueItem { session_id: number; email: string; username: string; wait_seconds: number; }
 interface ActiveItem { session_id: number; user_id: number; email: string; username: string; last_message: string; unread: number; }
 
+/* ───────── 演示数据（后端 /admin/chat/* 待接入） ───────── */
+const MOCK_QUEUE: QueueItem[] = [
+  { session_id: 501, email: "user1@example.com", username: "用户小王", wait_seconds: 95 },
+  { session_id: 502, email: "user2@example.com", username: "用户小李", wait_seconds: 210 },
+];
+const MOCK_ACTIVE: ActiveItem[] = [
+  { session_id: 488, user_id: 1001, email: "user3@example.com", username: "用户小张", last_message: "好的，我再试一次", unread: 2 },
+  { session_id: 489, user_id: 1002, email: "user4@example.com", username: "用户小赵", last_message: "请问余额什么时候到账？", unread: 0 },
+];
+const MOCK_PRESETS = [
+  { id: 1, title: "欢迎语", content: "您好，欢迎咨询 3Cloud，请问有什么可以帮您？" },
+  { id: 2, title: "充值到账", content: "充值订单处理中，通常 1-3 分钟内到账，请稍候。" },
+];
+const MOCK_MESSAGES: WsMsg[] = [
+  { id: 1, sender_type: "user", content: "你好，我充值了 100 元但还没到账。", created_at: "2026-08-10T10:00:00" },
+  { id: 2, sender_type: "system", content: "会话已接入客服", created_at: "2026-08-10T10:00:30" },
+  { id: 3, sender_type: "staff", content: "您好，请提供一下充值订单号，我帮您查询。", created_at: "2026-08-10T10:01:00" },
+];
+
 export default function AdminChatPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -32,28 +51,66 @@ export default function AdminChatPage() {
     queryKey: ["admin-chat-queue"],
     queryFn: async () => (await api.get<{ data: { list: QueueItem[] } }>("/admin/chat/queue")).data.data,
     refetchInterval: 5000,
+    // 后端未实现时立即回退演示数据，避免 404 反复重试
+    retry: 0,
   });
   const activeQ = useQuery({
     queryKey: ["admin-chat-active"],
     queryFn: async () => (await api.get<{ data: { list: ActiveItem[] } }>("/admin/chat/active")).data.data,
     refetchInterval: 5000,
+    retry: 0,
   });
-  const presetsQ = useQuery({ queryKey: ["admin-chat-presets"], queryFn: async () => (await api.get<{ data: { list: any[] } }>("/admin/chat/presets")).data.data });
+  const presetsQ = useQuery({ queryKey: ["admin-chat-presets"], queryFn: async () => (await api.get<{ data: { list: any[] } }>("/admin/chat/presets")).data.data, retry: 0 });
+
+  // 后端未实现时回退到演示数据（未来接入真实端点后此兜底自动失效）
+  const queue = queueQ.data?.list != null ? queueQ.data.list : MOCK_QUEUE;
+  const active = activeQ.data?.list != null ? activeQ.data.list : MOCK_ACTIVE;
+  const presets = presetsQ.data?.list != null ? presetsQ.data.list : MOCK_PRESETS;
+  const demo = queueQ.data?.list == null || activeQ.data?.list == null || presetsQ.data?.list == null;
 
   const statusMut = useMutation({
     mutationFn: async (s: string) => (await api.post("/admin/chat/status", { status: s })).data,
     onSuccess: (d: any) => { setStaffStatus(d.data.status); },
-    onError: (e) => toast.error(extractError(e)),
+    onError: (e: any, s?: string) => {
+      // 演示模式：后端未实现时本地切换状态
+      if (e?.response?.status === 404 && s) {
+        setStaffStatus(s);
+        toast.success(`客服状态已切换为 ${s}（演示）`);
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
   const transferMut = useMutation({
     mutationFn: async (sid: number) => (await api.post(`/admin/chat/sessions/${sid}/transfer`, {})).data,
     onSuccess: (d: any) => { toast.success(`已转工单 ${d.data.ticket_no}`); qc.invalidateQueries({ queryKey: ["admin-chat-queue"] }); qc.invalidateQueries({ queryKey: ["admin-chat-active"] }); },
-    onError: (e) => toast.error(extractError(e)),
+    onError: (e: any) => {
+      // 演示模式：后端未实现时本地转工单
+      if (e?.response?.status === 404) {
+        toast.success("已转工单 TK-2026081001（演示）");
+        setCurrentSession(null);
+        setMessages([]);
+        qc.invalidateQueries({ queryKey: ["admin-chat-queue"] });
+        qc.invalidateQueries({ queryKey: ["admin-chat-active"] });
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
   const closeMut = useMutation({
     mutationFn: async (sid: number) => (await api.post(`/admin/chat/sessions/${sid}/close`, {})).data,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-chat-active"] }); setCurrentSession(null); setMessages([]); },
-    onError: (e) => toast.error(extractError(e)),
+    onError: (e: any) => {
+      // 演示模式：后端未实现时本地关闭会话
+      if (e?.response?.status === 404) {
+        toast.success("会话已关闭（演示）");
+        qc.invalidateQueries({ queryKey: ["admin-chat-active"] });
+        setCurrentSession(null);
+        setMessages([]);
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
 
   // 建立客服 WS
@@ -79,7 +136,11 @@ export default function AdminChatPage() {
     setMessages([]);
     api.get<{ data: { messages: any[] } }>(`/admin/chat/sessions/${sid}/messages`).then((r) => {
       setMessages(r.data.data.messages.map((m: any) => ({ id: m.id, sender_type: m.sender_type, content: m.content, created_at: m.created_at })));
-    }).catch(() => setMessages([]));
+    }).catch(() => {
+      // 演示模式：后端未实现时本地加载模拟会话
+      if (demo) setMessages(MOCK_MESSAGES);
+      else setMessages([]);
+    });
     wsRef.current?.send(JSON.stringify({ type: "accept", session_id: sid }));
   };
 
@@ -92,7 +153,7 @@ export default function AdminChatPage() {
   };
 
   const acceptFirst = () => {
-    const first = queueQ.data?.list?.[0];
+    const first = queue[0];
     if (first) loadSession(first.session_id);
   };
 
@@ -101,6 +162,7 @@ export default function AdminChatPage() {
       <h2 style={{ marginBottom: 4 }}>
         在线客服
         <HelpIcon text={HELP} level="page" />
+        {demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/chat/* 待接入）</span>}
       </h2>
       <p style={{ color: "#94a3b8", marginTop: 0, fontSize: 13 }}>客服工作台 · SPEC-§27</p>
 
@@ -115,10 +177,10 @@ export default function AdminChatPage() {
       <div style={{ display: "flex", gap: 16 }}>
         {/* 左：会话列表 */}
         <div style={{ ...card, width: 300, maxHeight: 560, overflowY: "auto" }}>
-          <h4 style={{ margin: "0 0 10px", fontSize: 14 }}>等待中 ({queueQ.data?.list?.length ?? 0})</h4>
+          <h4 style={{ margin: "0 0 10px", fontSize: 14 }}>等待中 ({queue.length})</h4>
           <div style={{ marginBottom: 12 }}>
-            {(queueQ.data?.list ?? []).length === 0 ? <div style={{ color: "#94a3b8", fontSize: 13 }}>暂无等待用户</div> : (
-              (queueQ.data?.list ?? []).map((q) => (
+            {queue.length === 0 ? <div style={{ color: "#94a3b8", fontSize: 13 }}>暂无等待用户</div> : (
+              queue.map((q) => (
                 <div key={q.session_id} onClick={() => loadSession(q.session_id)} style={{ padding: 10, marginBottom: 6, background: "var(--color-warning-bg)", borderRadius: 6, cursor: "pointer" }}>
                   <strong style={{ fontSize: 13 }}>{q.username ?? q.email}</strong>
                   <div style={{ fontSize: 11, color: "var(--color-warning-text)" }}>等待 {Math.floor(q.wait_seconds / 60)}m{q.wait_seconds % 60}s</div>
@@ -126,9 +188,9 @@ export default function AdminChatPage() {
               ))
             )}
           </div>
-          <h4 style={{ margin: "0 0 10px", fontSize: 14 }}>正在服务 ({activeQ.data?.list?.length ?? 0})</h4>
-          {(activeQ.data?.list ?? []).length === 0 ? <div style={{ color: "#94a3b8", fontSize: 13 }}>暂无进行中会话</div> : (
-            (activeQ.data?.list ?? []).map((a) => (
+          <h4 style={{ margin: "0 0 10px", fontSize: 14 }}>正在服务 ({active.length})</h4>
+          {active.length === 0 ? <div style={{ color: "#94a3b8", fontSize: 13 }}>暂无进行中会话</div> : (
+            active.map((a) => (
               <div key={a.session_id} onClick={() => loadSession(a.session_id)} style={{ padding: 10, marginBottom: 6, background: currentSession === a.session_id ? "#dbeafe" : "var(--color-bg)", borderRadius: 6, cursor: "pointer" }}>
                 <strong style={{ fontSize: 13 }}>{a.username ?? a.email}</strong>
                 {a.unread > 0 && <span style={{ background: "var(--color-danger-text)", color: "#fff", borderRadius: 10, padding: "0 6px", fontSize: 11, marginLeft: 6 }}>{a.unread}</span>}
@@ -157,7 +219,7 @@ export default function AdminChatPage() {
             <div style={{ marginBottom: 12, padding: 10, background: "#f0f9ff", borderRadius: 8 }}>
               <strong style={{ fontSize: 12 }}>预设消息：</strong>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
-                {(presetsQ.data?.list ?? []).map((p: any) => (
+                {(presets).map((p: any) => (
                   <button key={p.id} onClick={() => setInput(p.content)} style={{ ...btnBase, background: "#e0f2fe", color: "#0369a1", padding: "4px 8px", fontSize: 12 }}>{p.title ?? p.type}</button>
                 ))}
               </div>

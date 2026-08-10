@@ -5,19 +5,42 @@ import { HelpIcon, SkeletonGroup } from "@3cloud/shared-ui";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 
+/* ───────── 演示数据（对齐原型 admin-analytics-funnel.html 分布） ───────── */
+
+interface FunnelStage { name: string; value: number; color: string; }
+interface FunnelData { stages: FunnelStage[]; rates: { visit_to_register: number; register_to_topup: number; topup_to_api: number }; demo?: boolean; }
+
+const MOCK: FunnelData = {
+  stages: [
+    { name: "网站访问", value: 12000, color: "#4f6ef7" },
+    { name: "注册账号", value: 4800, color: "#7c3aed" },
+    { name: "完成实名", value: 2100, color: "#f59e0b" },
+    { name: "首次充值", value: 860, color: "#22c55e" },
+    { name: "首次调用 API", value: 520, color: "#e53935" },
+  ],
+  rates: { visit_to_register: 40, register_to_topup: 18, topup_to_api: 60 },
+  demo: true,
+};
+
 export default function AdminConversionFunnelPage() {
   const [period, setPeriod] = useState("month");
 
   const funnelQ = useQuery({
     queryKey: ["admin-conversion-funnel", period],
     queryFn: async () => (await api.get(`/admin/conversion/funnel?period=${period}`)).data.data,
+    // 后端未实现时立即回退占位数据，避免 404 反复重试导致页面卡加载
+    retry: 0,
   });
+
+  // 后端未实现时回退到演示数据（未来接入真实端点后此兜底自动失效）
+  const data: FunnelData = funnelQ.data?.stages != null ? funnelQ.data : MOCK;
 
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>转化漏斗</h2>
         <HelpIcon text="conversion_funnel" />
+        {data.demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/conversion/funnel 待接入）</span>}
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
@@ -34,16 +57,10 @@ export default function AdminConversionFunnelPage() {
         <div style={{ fontWeight: 600, marginBottom: 12 }}>📊 转化漏斗 <HelpIcon text="conversion_funnel" /></div>
         {funnelQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <div>
-            {(funnelQ.data?.stages ?? [
-              { name: "网站访问", value: 12000, color: "#4f6ef7" },
-              { name: "注册账号", value: 4800, color: "#7c3aed" },
-              { name: "完成实名", value: 2100, color: "#f59e0b" },
-              { name: "首次充值", value: 860, color: "#22c55e" },
-              { name: "首次调用 API", value: 520, color: "#e53935" },
-            ]).map((s: any, i: number) => {
-              const max = funnelQ.data?.stages?.[0]?.value ?? 12000;
+            {data.stages.map((s: FunnelStage, i: number) => {
+              const max = data.stages[0]?.value ?? 1;
               const pct = max ? Math.round(s.value / max * 100) : 0;
-              const prev = i > 0 ? (funnelQ.data?.stages ?? [])[i - 1]?.value : s.value;
+              const prev = i > 0 ? data.stages[i - 1]?.value : s.value;
               const rate = prev ? Math.round(s.value / prev * 100) : 100;
               return (
                 <div key={s.name} style={{ marginBottom: 12 }}>
@@ -65,9 +82,9 @@ export default function AdminConversionFunnelPage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginTop: 20 }}>
-        {[{ icon: "📊", label: "访问到注册", value: funnelQ.data?.rates?.visit_to_register != null ? `${funnelQ.data.rates.visit_to_register}%` : "—" },
-          { icon: "💳", label: "注册到充值", value: funnelQ.data?.rates?.register_to_topup != null ? `${funnelQ.data.rates.register_to_topup}%` : "—" },
-          { icon: "🚀", label: "充值到调用", value: funnelQ.data?.rates?.topup_to_api != null ? `${funnelQ.data.rates.topup_to_api}%` : "—" },
+        {[{ icon: "📊", label: "访问到注册", value: `${data.rates.visit_to_register}%` },
+          { icon: "💳", label: "注册到充值", value: `${data.rates.register_to_topup}%` },
+          { icon: "🚀", label: "充值到调用", value: `${data.rates.topup_to_api}%` },
         ].map((s, i) => (
           <div key={i} style={card}>
             <div style={{ fontSize: 24 }}>{s.icon}</div>

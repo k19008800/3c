@@ -97,7 +97,36 @@ export async function supplierRoutes(app: FastifyInstance) {
       db.select({ count: sql<number>`count(*)` }).from(schema.suppliers).where(whereClause),
     ]);
 
+    // 每行附带模型数（子查询聚合）
+    if (rows.length > 0) {
+      const ids = rows.map(r => r.id);
+      const counts = await db
+        .select({ supplierId: schema.supplierModels.supplierId, count: sql<number>`count(*)::int` })
+        .from(schema.supplierModels)
+        .where(inArray(schema.supplierModels.supplierId, ids))
+        .groupBy(schema.supplierModels.supplierId);
+      const countMap = new Map(counts.map(c => [c.supplierId, c.count]));
+      for (const r of rows) {
+        (r as any).modelCount = countMap.get(r.id) ?? 0;
+      }
+    }
+
     return reply.send(paginatedReply(rows, Number(countResult[0]?.count ?? 0), page, pageSize));
+  });
+
+  /** GET /api/v1/admin/suppliers/:id — 供应商详情（含模型 + 密钥） */
+  app.get('/api/v1/admin/suppliers/:id', { preHandler: [adminAuth] }, async (request, reply) => {
+    const id = intParam(request.params as Record<string, unknown>, 'id');
+    const [supplier] = await db.select().from(schema.suppliers).where(eq(schema.suppliers.id, id)).limit(1);
+    if (!supplier) throw new NotFoundError('Supplier not found');
+
+    const [models, keys, modelCount] = await Promise.all([
+      db.select().from(schema.supplierModels).where(eq(schema.supplierModels.supplierId, id)).orderBy(desc(schema.supplierModels.createdAt)),
+      db.select().from(schema.supplierKeys).where(eq(schema.supplierKeys.supplierId, id)).orderBy(desc(schema.supplierKeys.createdAt)),
+      db.select({ count: sql<number>`count(*)::int` }).from(schema.supplierModels).where(eq(schema.supplierModels.supplierId, id)),
+    ]);
+
+    return reply.send({ supplier: { ...supplier, modelCount: modelCount[0]?.count ?? 0 }, models, keys });
   });
 
   /** POST /api/v1/admin/suppliers — 创建供应商 */
@@ -430,5 +459,31 @@ export async function supplierRoutes(app: FastifyInstance) {
       .where(eq(schema.vendorPricing.status, 'active' as any));
 
     return reply.send({ pricing });
+  });
+
+  /** GET /api/v1/public/stats — 公开统计（无需认证） */
+  app.get('/api/v1/public/stats', async (request, reply) => {
+    const [models, vendors, users, totalTokens] = await Promise.all([
+      // 接入模型数 = 供应商模型总数（与公开定价口径一致，不按 status 过滤）
+      db.select({ value: sql<number>`count(*)` })
+        .from(schema.supplierModels),
+      // 供应商数 = 供应商总数
+      db.select({ value: sql<number>`count(*)` })
+        .from(schema.suppliers),
+      // 平台用户数 = 有效客户数
+      db.select({ value: sql<number>`count(*)` })
+        .from(schema.users)
+        .where(and(eq(schema.users.role, 'customer'), eq(schema.users.status, 'active'))),
+      // 累计 Tokens = 全部消费记录 Token 总和
+      db.select({ value: sql<number>`coalesce(sum(${schema.consumptionRecords.totalTokens}), 0)` })
+        .from(schema.consumptionRecords),
+    ]);
+
+    return reply.send({
+      models: Number(models[0]?.value ?? 0),
+      vendors: Number(vendors[0]?.value ?? 0),
+      users: Number(users[0]?.value ?? 0),
+      totalTokens: Number(totalTokens[0]?.value ?? 0),
+    });
   });
 }

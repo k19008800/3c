@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "../lib/api";
-import { HelpIcon, StatusBadge, SkeletonGroup, EmptyState, Pagination, SearchBar } from "@3cloud/shared-ui";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api, extractError } from "../lib/api";
+import { HelpIcon, StatusBadge, SkeletonGroup, EmptyState, Pagination, SearchBar, useToast } from "@3cloud/shared-ui";
 
 interface RechargeOrder {
   id: number; order_no: string; user_id: number; username: string; email: string;
@@ -31,6 +31,8 @@ export default function AdminRechargeOrdersPage() {
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 20;
+  const qc = useQueryClient();
+  const { toast } = useToast();
 
   const q = useQuery({
     queryKey: ["admin-recharge-orders", status, search, page],
@@ -40,6 +42,16 @@ export default function AdminRechargeOrdersPage() {
       if (search) params.set("search", search);
       return (await api.get<{ data: { list: RechargeOrder[]; pagination: { total: number } } }>(`/admin/recharge-orders?${params}`)).data.data;
     },
+  });
+
+  const auditMut = useMutation({
+    mutationFn: async ({ id, action }: { id: number; action: "audit" | "reject" }) =>
+      (await api.post(`/admin/recharge-orders/${id}/${action}`)).data,
+    onSuccess: () => {
+      toast.success("操作成功，余额已更新");
+      qc.invalidateQueries({ queryKey: ["admin-recharge-orders"] });
+    },
+    onError: (e) => toast.error(extractError(e)),
   });
 
   const total = q.data?.pagination?.total ?? 0;
@@ -76,6 +88,7 @@ export default function AdminRechargeOrdersPage() {
                   <th style={{ padding: "8px" }}>状态</th>
                   <th style={{ padding: "8px" }}>创建时间</th>
                   <th style={{ padding: "8px" }}>完成时间</th>
+                  <th style={{ padding: "8px" }}>操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -91,6 +104,28 @@ export default function AdminRechargeOrdersPage() {
                     <td style={{ padding: "8px" }}><StatusBadge status={STATUS_MAP[r.status] ?? "default"}>{r.status_label}</StatusBadge></td>
                     <td style={{ padding: "8px", color: "var(--color-text-secondary)", fontSize: 13 }}>{r.created_at ? new Date(r.created_at).toLocaleString() : "-"}</td>
                     <td style={{ padding: "8px", color: "var(--color-text-secondary)", fontSize: 13 }}>{r.completed_at ? new Date(r.completed_at).toLocaleString() : "—"}</td>
+                    <td style={{ padding: "8px" }}>
+                      {r.status === "pending" ? (
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button
+                            onClick={() => auditMut.mutate({ id: r.id, action: "audit" })}
+                            disabled={auditMut.isPending}
+                            style={{ ...btnBase, background: "#22c55e", color: "#fff" }}
+                          >
+                            审核通过
+                          </button>
+                          <button
+                            onClick={() => auditMut.mutate({ id: r.id, action: "reject" })}
+                            disabled={auditMut.isPending}
+                            style={{ ...btnBase, background: "#ef4444", color: "#fff" }}
+                          >
+                            驳回
+                          </button>
+                        </div>
+                      ) : (
+                        <span style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>—</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

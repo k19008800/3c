@@ -1,8 +1,21 @@
 import { useState, useEffect } from "react";
-import { api } from "../lib/api";
+import { api, extractError } from "../lib/api";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
 
 interface NotifPolicy { id: number; channel: string; channel_label: string; event_type: string; event_label: string; template_id: number | null; template_name: string | null; enabled: boolean; throttle_seconds: number; }
+
+/* ───────── 演示数据（后端 /admin/notification-policies 待接入） ───────── */
+const MOCK_POLICIES: NotifPolicy[] = [
+  { id: 1, channel: "email", channel_label: "邮件", event_type: "recharge.success", event_label: "充值成功", template_id: 1, template_name: "充值到账通知", enabled: true, throttle_seconds: 60 },
+  { id: 2, channel: "in_app", channel_label: "站内信", event_type: "balance.low", event_label: "余额不足", template_id: null, template_name: null, enabled: true, throttle_seconds: 300 },
+  { id: 3, channel: "email", channel_label: "邮件", event_type: "withdraw.success", event_label: "提现成功", template_id: 2, template_name: "提现成功通知", enabled: false, throttle_seconds: 60 },
+  { id: 4, channel: "webhook", channel_label: "Webhook", event_type: "system.announcement", event_label: "系统公告", template_id: null, template_name: null, enabled: true, throttle_seconds: 0 },
+];
+const MOCK_TEMPLATES = [
+  { id: 1, name: "充值到账通知" },
+  { id: 2, name: "提现成功通知" },
+  { id: 3, name: "余额预警通知" },
+];
 
 const CHANNELS = ["email", "sms", "in_app", "webhook", "wechat"];
 const EVENTS = [
@@ -21,8 +34,9 @@ const Toggle: React.FC<{ on: boolean; onChange: (v: boolean) => void }> = ({ on,
 
 export default function AdminNotificationPolicyPage() {
   const { toast } = useToast();
-  const [policies, setPolicies] = useState<NotifPolicy[]>([]);
-  const [templates, setTemplates] = useState<any[]>([]);
+  const [policies, setPolicies] = useState<NotifPolicy[]>(MOCK_POLICIES);
+  const [templates, setTemplates] = useState<any[]>(MOCK_TEMPLATES);
+  const [demo, setDemo] = useState(true);
   const [editing, setEditing] = useState<NotifPolicy | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [newChannel, setNewChannel] = useState("email");
@@ -31,38 +45,83 @@ export default function AdminNotificationPolicyPage() {
   const [newThrottle, setNewThrottle] = useState(0);
 
   useEffect(() => {
-    api.get("/admin/notification-policies").then(r => setPolicies(r.data?.data?.list ?? [])).catch(() => {});
+    api.get("/admin/notification-policies").then(r => { setPolicies(r.data?.data?.list ?? []); setDemo(false); }).catch(() => {});
     api.get("/admin/email-templates").then(r => setTemplates(r.data?.data?.list ?? [])).catch(() => {});
   }, []);
 
   async function togglePolicy(id: number, enabled: boolean) {
-    await api.put(`/admin/notification-policies/${id}`, { enabled });
-    setPolicies(policies.map(p => p.id === id ? {...p, enabled} : p));
-    toast.success(enabled ? "已启用" : "已禁用");
+    try {
+      await api.put(`/admin/notification-policies/${id}`, { enabled });
+      setPolicies(policies.map(p => p.id === id ? {...p, enabled} : p));
+      toast.success(enabled ? "已启用" : "已禁用");
+    } catch (e: any) {
+      // 演示模式：后端未实现时本地生效
+      if (e?.response?.status === 404 && demo) {
+        setPolicies(prev => prev.map(p => p.id === id ? {...p, enabled} : p));
+        toast.success(enabled ? "已启用（演示）" : "已禁用（演示）");
+      } else {
+        toast.error(extractError(e));
+      }
+    }
   }
 
   async function savePolicy(p: NotifPolicy) {
-    await api.put(`/admin/notification-policies/${p.id}`, { template_id: p.template_id, throttle_seconds: p.throttle_seconds });
-    toast.success("策略已更新");
-    const r = await api.get("/admin/notification-policies");
-    setPolicies(r.data?.data?.list ?? []);
-    setEditing(null);
+    try {
+      await api.put(`/admin/notification-policies/${p.id}`, { template_id: p.template_id, throttle_seconds: p.throttle_seconds });
+      toast.success("策略已更新");
+      const r = await api.get("/admin/notification-policies");
+      setPolicies(r.data?.data?.list ?? []);
+      setEditing(null);
+    } catch (e: any) {
+      // 演示模式：后端未实现时本地生效
+      if (e?.response?.status === 404 && demo) {
+        setPolicies(prev => prev.map(x => x.id === p.id ? { ...x, template_id: p.template_id, template_name: templates.find(t => t.id === p.template_id)?.name ?? null, throttle_seconds: p.throttle_seconds } : x));
+        toast.success("策略已更新（演示）");
+        setEditing(null);
+      } else {
+        toast.error(extractError(e));
+      }
+    }
   }
 
   async function createPolicy() {
     if (!newEvent) { toast.error("请选择事件类型"); return; }
-    await api.post("/admin/notification-policies", { channel: newChannel, event_type: newEvent, template_id: newTemplateId || null, throttle_seconds: newThrottle });
-    toast.success("策略已创建");
-    setShowNew(false);
-    const r = await api.get("/admin/notification-policies");
-    setPolicies(r.data?.data?.list ?? []);
+    try {
+      await api.post("/admin/notification-policies", { channel: newChannel, event_type: newEvent, template_id: newTemplateId || null, throttle_seconds: newThrottle });
+      toast.success("策略已创建");
+      setShowNew(false);
+      const r = await api.get("/admin/notification-policies");
+      setPolicies(r.data?.data?.list ?? []);
+    } catch (e: any) {
+      // 演示模式：后端未实现时本地生效
+      if (e?.response?.status === 404 && demo) {
+        const ev = EVENTS.find(x => x.key === newEvent);
+        const tpl = templates.find(t => t.id === Number(newTemplateId));
+        const np: NotifPolicy = { id: Date.now(), channel: newChannel, channel_label: newChannel, event_type: newEvent, event_label: ev?.label ?? newEvent, template_id: newTemplateId ? Number(newTemplateId) : null, template_name: tpl?.name ?? null, enabled: true, throttle_seconds: newThrottle };
+        setPolicies(prev => [...prev, np]);
+        toast.success("策略已创建（演示）");
+        setShowNew(false);
+      } else {
+        toast.error(extractError(e));
+      }
+    }
   }
 
   async function deletePolicy(id: number) {
     if (!confirm("确认删除此通知策略？")) return;
-    await api.post(`/admin/notification-policies/${id}/delete`, {});
-    toast.success("已删除");
-    setPolicies(policies.filter(p => p.id !== id));
+    try {
+      await api.post(`/admin/notification-policies/${id}/delete`, {});
+      toast.success("已删除");
+      setPolicies(policies.filter(p => p.id !== id));
+    } catch (e: any) {
+      // 演示模式：后端未实现时本地生效
+      if (e?.response?.status === 404 && demo) {
+        setPolicies(prev => prev.filter(p => p.id !== id));
+        toast.success("已删除（演示）");
+      } else {
+        toast.error(extractError(e));
+      }
+    }
   }
 
   return (
@@ -72,6 +131,7 @@ export default function AdminNotificationPolicyPage() {
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>通知策略管理
           <HelpIcon text="配置各个事件类型的通知渠道、模板和节流策略。支持邮件/SMS/站内信/Webhook/微信等多种渠道。" level="page" />
         </span>
+        {demo && <span style={{ fontSize: 11, color: "#fef08a" }}>⚠️ 演示数据（后端 /admin/notification-policies 待接入）</span>}
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>

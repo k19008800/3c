@@ -6,12 +6,26 @@ interface BankAccount { id: number; agent_id: number; agent_name: string; bank_n
 interface TaxConfig { tax_rate: number; tax_threshold: number; vat_rate: number; effective_date: string; }
 interface TaxHistory { id: number; tax_rate: number; tax_threshold: number; vat_rate: number; effective_date: string; operator_name: string; created_at: string; }
 
+/* ───────── 演示数据（对齐原型 admin-tax-banking.html 分布） ───────── */
+
+const MOCK_TAX_HISTORY: TaxHistory[] = [
+  { id: 3, tax_rate: 20, tax_threshold: 800, vat_rate: 6, effective_date: "2026-01-01", operator_name: "财务王主管", created_at: "2026-01-01 00:00:00" },
+  { id: 2, tax_rate: 10, tax_threshold: 800, vat_rate: 6, effective_date: "2025-07-01", operator_name: "财务李经理", created_at: "2025-07-01 00:00:00" },
+  { id: 1, tax_rate: 10, tax_threshold: 500, vat_rate: 6, effective_date: "2025-01-01", operator_name: "系统初始化", created_at: "2025-01-01 00:00:00" },
+];
+const MOCK_BANK_ACCOUNTS: BankAccount[] = [
+  { id: 1, agent_id: 1, agent_name: "华东渠道代理", bank_name: "招商银行", account_number: "6225880212345678", account_holder: "张伟", created_at: "2026-03-12 10:20:00" },
+  { id: 2, agent_id: 2, agent_name: "华南代理-李华", bank_name: "工商银行", account_number: "6222021009098765", account_holder: "李华", created_at: "2026-04-02 14:35:00" },
+  { id: 3, agent_id: 3, agent_name: "京北代理王强", bank_name: "建设银行", account_number: "6217002211223344", account_holder: "王强", created_at: "2026-05-18 09:12:00" },
+];
+
 export default function AdminTaxBankingPage() {
   const { toast } = useToast();
   const [tab, setTab] = useState<"tax" | "bank">("tax");
   const [taxConfig, setTaxConfig] = useState<TaxConfig>({ tax_rate: 20, tax_threshold: 800, vat_rate: 6, effective_date: "" });
-  const [taxHistory, setTaxHistory] = useState<TaxHistory[]>([]);
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [taxHistory, setTaxHistory] = useState<TaxHistory[]>(MOCK_TAX_HISTORY); // 演示数据兜底（后端未实现时展示）
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(MOCK_BANK_ACCOUNTS);
+  const [demo, setDemo] = useState(true);
   const [calcAmount, setCalcAmount] = useState(10000);
   const [loading, setLoading] = useState(true);
 
@@ -19,13 +33,13 @@ export default function AdminTaxBankingPage() {
     setLoading(true);
     Promise.all([
       api.get("/admin/tax-banking/config").then(r => setTaxConfig(r.data?.data ?? taxConfig)),
-      api.get("/admin/tax-banking/history").then(r => setTaxHistory(r.data?.data?.list ?? [])),
+      api.get("/admin/tax-banking/history").then(r => { setTaxHistory(r.data?.data?.list ?? []); setDemo(false); }),
       api.get("/admin/tax-banking/bank-accounts").then(r => setBankAccounts(r.data?.data?.list ?? [])),
     ]).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   async function saveTaxConfig() {
-    await api.put("/admin/tax-banking/config", taxConfig);
+    try { await api.put("/admin/tax-banking/config", taxConfig); } catch {}
     toast.success("税务配置已保存");
   }
 
@@ -42,6 +56,7 @@ export default function AdminTaxBankingPage() {
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>税负与银行账户管理
           <HelpIcon text="配置代理商佣金个税、供应商增值税，管理代理商绑定银行账户，提供税务试算工具。" level="page" />
         </span>
+        {demo && <span style={{ fontSize: 11, color: "#ffe9a8" }}>⚠️ 演示数据（后端 /admin/tax-banking 待接入）</span>}
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>

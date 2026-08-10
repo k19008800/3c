@@ -18,6 +18,24 @@ const HELP: Record<string, string> = {
   audit: "客服敏感操作审计留痕（余额调整/Key操作/模拟调用等），可追溯。",
 };
 
+/* ───────── 演示数据（后端 /admin/support/* 待接入） ───────── */
+const MOCK_KEYS = [
+  { id: 1, key_prefix: "sk-test-3x9f", name: "排查用", used_tokens: 120, token_limit: 10000, status: "active", expires_at: "2026-08-11T00:00:00" },
+  { id: 2, key_prefix: "sk-test-7ab2", name: "", used_tokens: 0, token_limit: 10000, status: "revoked", expires_at: "2026-08-01T00:00:00" },
+];
+const MOCK_STATS = {
+  team_overview: { tickets: 128, chat_sessions: 342, avg_response_seconds: 5400, satisfaction: 4.6 },
+  staff_ranking: [
+    { username: "张明", tickets: 42, chat_messages: 156, satisfaction: 4.8 },
+    { username: "李芳", tickets: 36, chat_messages: 121, satisfaction: 4.7 },
+    { username: "王强", tickets: 29, chat_messages: 98, satisfaction: 4.5 },
+  ],
+};
+const MOCK_AUDIT = [
+  { id: 1, created_at: "2026-08-10T10:12:00", username: "admin@3cloud.dev", action: "余额调整", detail: "用户 1001 调整 +¥50" },
+  { id: 2, created_at: "2026-08-10T09:40:00", username: "admin@3cloud.dev", action: "测试Key生成", detail: "sk-test-3x9f" },
+];
+
 export default function AdminSupportPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -34,29 +52,81 @@ export default function AdminSupportPage() {
   const [testUserId, setTestUserId] = useState("");
   const [genKey, setGenKey] = useState<any>(null);
 
-  const keysQ = useQuery({ queryKey: ["support-test-keys"], queryFn: async () => (await api.get<{ data: { list: any[] } }>("/admin/support/test-keys")).data.data });
-  const statsQ = useQuery({ queryKey: ["support-stats"], queryFn: async () => (await api.get<{ data: any }>("/admin/support/stats?period=month")).data.data });
-  const auditQ = useQuery({ queryKey: ["support-audit"], queryFn: async () => (await api.get<{ data: { list: any[] } }>("/admin/support/audit-logs")).data.data });
+  // 演示兜底：本地可变列表（写操作在演示模式下直接改它）
+  const [localKeys, setLocalKeys] = useState<any[]>(MOCK_KEYS);
+
+  const keysQ = useQuery({ queryKey: ["support-test-keys"], queryFn: async () => (await api.get<{ data: { list: any[] } }>("/admin/support/test-keys")).data.data, retry: 0 });
+  const statsQ = useQuery({ queryKey: ["support-stats"], queryFn: async () => (await api.get<{ data: any }>("/admin/support/stats?period=month")).data.data, retry: 0 });
+  const auditQ = useQuery({ queryKey: ["support-audit"], queryFn: async () => (await api.get<{ data: { list: any[] } }>("/admin/support/audit-logs")).data.data, retry: 0 });
+
+  // 后端未实现时回退到演示数据（未来接入真实端点后此兜底自动失效）
+  const keys = keysQ.data?.list != null ? keysQ.data.list : localKeys;
+  const stats = statsQ.data != null ? statsQ.data : MOCK_STATS;
+  const audit = auditQ.data?.list != null ? auditQ.data.list : MOCK_AUDIT;
+  const demo = keysQ.data?.list == null || statsQ.data == null || auditQ.data?.list == null;
 
   const intentMut = useMutation({
     mutationFn: async () => (await api.post("/admin/support/assist/intent", { text: intentText })).data,
     onSuccess: (d: any) => setIntentResult(d.data),
-    onError: (e) => toast.error(extractError(e)),
+    onError: (e: any) => {
+      // 演示模式：后端未实现时本地识别
+      if (e?.response?.status === 404) {
+        setIntentResult({ intent: "充值", confidence: 0.92, matched_keywords: ["充值", "到账"], reply: "您好，充值通常会在 1-3 分钟内到账。请提供充值单号，我帮您核查。", suggested_actions: [{ label: "查询充值订单", action: "query_recharge_order" }, { label: "转人工", action: "transfer_human" }] });
+        toast.success("识别完成（演示）");
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
   const diagMut = useMutation({
     mutationFn: async () => (await api.get(`/admin/support/assist/diagnose/${Number(uid)}`)).data,
     onSuccess: (d: any) => setDiagResult(d.data),
-    onError: (e) => toast.error(extractError(e)),
+    onError: (e: any) => {
+      // 演示模式：后端未实现时本地诊断
+      if (e?.response?.status === 404) {
+        setDiagResult({
+          user: { id: Number(uid), username: `用户${uid}`, email: `user${uid}@example.com`, balance: 128.5, status: "active" },
+          balance_warning: { note: "余额低于预警阈值 ¥200" },
+          analysis: { total_calls: 154, success_count: 149, failed_count: 5, success_rate: 96.8, avg_latency_ms: 812, suggestion: "近期有 2 次限流触发，建议提升速率上限或增加余额。" },
+          recent_calls: [
+            { model_name: "GPT-4o", status: "success", latency_ms: 742, error_code: "" },
+            { model_name: "Claude 3.5 Sonnet", status: "error", latency_ms: 2100, error_code: "rate_limit_exceeded" },
+            { model_name: "GPT-4o mini", status: "success", latency_ms: 388, error_code: "" },
+          ],
+        });
+        toast.success("诊断完成（演示）");
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
   const keyGenMut = useMutation({
     mutationFn: async () => (await api.post("/admin/support/test-key", { associated_user_id: testUserId ? Number(testUserId) : undefined, name: testName })).data,
     onSuccess: (d: any) => { setGenKey(d.data); qc.invalidateQueries({ queryKey: ["support-test-keys"] }); },
-    onError: (e) => toast.error(extractError(e)),
+    onError: (e: any) => {
+      // 演示模式：后端未实现时本地生成
+      if (e?.response?.status === 404) {
+        const nk = { id: Date.now(), key: `sk-test-${Math.random().toString(36).slice(2, 8)}`, expires_at: new Date(Date.now() + 24 * 3600 * 1000).toISOString(), token_limit: 10000, cost_limit: 10 };
+        setGenKey(nk);
+        setLocalKeys(prev => [...prev, { ...nk, key_prefix: nk.key.slice(0, 10), name: testName, used_tokens: 0, status: "active" }]);
+        toast.success("已生成测试 Key（演示）");
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
   const keyRevokeMut = useMutation({
     mutationFn: async (id: number) => (await api.post(`/admin/support/test-key/${id}/revoke`, {})).data,
     onSuccess: () => { toast.success("测试 Key 已撤销"); qc.invalidateQueries({ queryKey: ["support-test-keys"] }); },
-    onError: (e) => toast.error(extractError(e)),
+    onError: (e: any, id?: number) => {
+      // 演示模式：后端未实现时本地撤销
+      if (e?.response?.status === 404 && id != null) {
+        setLocalKeys(prev => prev.map(k => k.id === id ? { ...k, status: "revoked" } : k));
+        toast.success("测试 Key 已撤销（演示）");
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
 
   const TABS = [["intent", "意图识别"], ["diagnose", "自动诊断"], ["testkey", "测试Key"], ["stats", "绩效统计"], ["audit", "操作审计"]] as const;
@@ -68,6 +138,7 @@ export default function AdminSupportPage() {
       <h2 style={{ marginBottom: 4 }}>
         客服效能
         <HelpIcon text={activeHelp} level="page" />
+        {demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/support/* 待接入）</span>}
       </h2>
       <p style={{ color: "#94a3b8", marginTop: 0, fontSize: 13 }}>智能客服辅助与测试工具 · SPEC-§28</p>
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
@@ -172,13 +243,13 @@ export default function AdminSupportPage() {
           </div>
           <div style={card}>
             <h4 style={{ margin: "0 0 12px" }}>我的测试 Key</h4>
-            {(keysQ.data?.list ?? []).length === 0 ? <div style={{ color: "#94a3b8" }}>暂无测试 Key</div> : (
+            {(keys).length === 0 ? <div style={{ color: "#94a3b8" }}>暂无测试 Key</div> : (
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead><tr style={{ color: "var(--color-text-secondary)", textAlign: "left" }}>
                   <th style={{ padding: "8px" }}>前缀</th><th style={{ padding: "8px" }}>名称</th><th style={{ padding: "8px" }}>已用</th><th style={{ padding: "8px" }}>状态</th><th style={{ padding: "8px" }}>过期</th><th style={{ padding: "8px" }}>操作</th>
                 </tr></thead>
                 <tbody>
-                  {(keysQ.data?.list ?? []).map((k) => (
+                  {(keys).map((k) => (
                     <tr key={k.id} style={{ borderTop: `1px solid var(--color-border)` }}>
                       <td style={{ padding: "8px", fontFamily: "monospace" }}>{k.key_prefix}...</td>
                       <td style={{ padding: "8px" }}>{k.name}</td>
@@ -201,10 +272,10 @@ export default function AdminSupportPage() {
       {tab === "stats" && (
         <div style={card}>
           <h4 style={{ margin: "0 0 16px" }}>客服团队绩效</h4>
-          {!statsQ.data ? <div style={{ color: "#94a3b8" }}>加载中...</div> : (
+          {statsQ.isLoading ? <div style={{ color: "#94a3b8" }}>加载中...</div> : (
             <>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
-                {[["工单处理", statsQ.data.team_overview.tickets], ["在线会话", statsQ.data.team_overview.chat_sessions], ["平均响应", `${Math.floor(statsQ.data.team_overview.avg_response_seconds / 3600)}h`], ["满意度", `${(statsQ.data.team_overview.satisfaction || 0).toFixed(1)}/5`]].map(([l, v]) => (
+                {[["工单处理", stats.team_overview.tickets], ["在线会话", stats.team_overview.chat_sessions], ["平均响应", `${Math.floor(stats.team_overview.avg_response_seconds / 3600)}h`], ["满意度", `${(stats.team_overview.satisfaction || 0).toFixed(1)}/5`]].map(([l, v]) => (
                   <div key={l as string} style={{ padding: "12px 18px", background: "var(--color-bg)", borderRadius: 8 }}>
                     <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{l}</div><div style={{ fontSize: 20, fontWeight: 700 }}>{v}</div>
                   </div>
@@ -214,7 +285,7 @@ export default function AdminSupportPage() {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginTop: 8 }}>
                 <thead><tr style={{ color: "var(--color-text-secondary)", textAlign: "left" }}><th style={{ padding: "6px" }}>客服</th><th style={{ padding: "6px" }}>工单</th><th style={{ padding: "6px" }}>会话数</th><th style={{ padding: "6px" }}>满意度</th></tr></thead>
                 <tbody>
-                  {(statsQ.data.staff_ranking ?? []).map((s: any) => (
+                  {(stats.staff_ranking ?? []).map((s: any) => (
                     <tr key={s.username} style={{ borderTop: `1px solid var(--color-border)` }}>
                       <td style={{ padding: "6px", fontWeight: 600 }}>{s.username}</td>
                       <td style={{ padding: "6px" }}>{s.tickets}</td>
@@ -233,13 +304,13 @@ export default function AdminSupportPage() {
       {tab === "audit" && (
         <div style={card}>
           <h4 style={{ margin: "0 0 12px" }}>客服操作审计</h4>
-          {(auditQ.data?.list ?? []).length === 0 ? <div style={{ color: "#94a3b8" }}>暂无操作记录</div> : (
+          {(audit).length === 0 ? <div style={{ color: "#94a3b8" }}>暂无操作记录</div> : (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead><tr style={{ color: "var(--color-text-secondary)", textAlign: "left" }}>
                 <th style={{ padding: "8px" }}>时间</th><th style={{ padding: "8px" }}>操作者</th><th style={{ padding: "8px" }}>操作类型</th><th style={{ padding: "8px" }}>详情</th>
               </tr></thead>
               <tbody>
-                {(auditQ.data?.list ?? []).map((o: any) => (
+                {(audit).map((o: any) => (
                   <tr key={o.id} style={{ borderTop: `1px solid var(--color-border)` }}>
                     <td style={{ padding: "8px", color: "var(--color-text-secondary)" }}>{o.created_at ? new Date(o.created_at).toLocaleString() : "—"}</td>
                     <td style={{ padding: "8px" }}>{o.username ?? o.user_id}</td>

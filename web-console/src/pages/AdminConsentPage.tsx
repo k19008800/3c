@@ -56,6 +56,19 @@ const HELP: Record<string, { title: string; body: string }> = {
   export: { title: "数据导出管理", body: "审核用户的数据导出请求（GDPR 数据可携带权）。审核通过后生成 ZIP 并通知用户，处理期限 30 天，超期自动标记并升级通知。" },
 };
 
+/* ───────── 演示数据（后端 /admin/settings/*、/admin/data-export 待接入） ───────── */
+const MOCK_VERSIONS: VersionRow[] = [
+  { id: 1, version: "v2.1", title: null, status: "published", published_at: "2026-06-01T10:00:00", revoked_at: null, summary: "更新数据共享说明，明确第三方供应商范围", consent_count: 8234, pending_count: 156, consent_rate: 98 },
+  { id: 2, version: "v2.2", title: null, status: "draft", published_at: null, revoked_at: null, summary: "新增「儿童信息保护」章节", consent_count: 0, pending_count: 0, consent_rate: 0 },
+  { id: 3, version: "v1.9", title: null, status: "revoked", published_at: "2026-03-15T09:00:00", revoked_at: "2026-06-01T10:00:00", summary: null, consent_count: 7210, pending_count: 0, consent_rate: 97 },
+];
+const MOCK_EXPORTS: ExportRow[] = [
+  { id: 1, user_id: 1001, email: "user1@example.com", username: "用户小王", requested_at: "2026-08-05T10:30:00", status: "pending", priority: false, processed_by: null, processed_at: null, file_size_bytes: null, file_count: null, part_count: 0, reject_reason: null, error_message: null, deadline: "2026-09-04T10:30:00", notification_sent: false },
+  { id: 2, user_id: 1002, email: "user2@example.com", username: "用户小李", requested_at: "2026-08-02T14:00:00", status: "completed", priority: true, processed_by: 1, processed_at: "2026-08-02T14:30:00", file_size_bytes: 245760, file_count: 12, part_count: 1, reject_reason: null, error_message: null, deadline: "2026-09-01T14:00:00", notification_sent: true },
+  { id: 3, user_id: 1003, email: "user3@example.com", username: "用户小张", requested_at: "2026-07-30T09:00:00", status: "failed", priority: false, processed_by: null, processed_at: null, file_size_bytes: null, file_count: null, part_count: 0, reject_reason: null, error_message: "存储服务超时", deadline: "2026-08-29T09:00:00", notification_sent: false },
+];
+const MOCK_EXPORT_STATS = { pending: 1, processing: 0, completed: 1, failed: 1, rejected: 0, overdue: 0 };
+
 export default function AdminConsentPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -95,6 +108,9 @@ function PolicySection({ kind, toast, qc, help }: { kind: "privacy" | "tos"; toa
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ version: "", title: "", content: "", summary: "" });
   const [viewId, setViewId] = useState<number | null>(null);
+  // 演示兜底：本地可变版本列表（写操作在演示模式下直接改它）
+  const [localVersions, setLocalVersions] = useState<VersionRow[]>(MOCK_VERSIONS);
+  const [demo, setDemo] = useState(true);
 
   const endpoint = kind === "privacy" ? "privacy-policy" : "terms-of-service";
   const label = kind === "privacy" ? "隐私政策" : "服务条款";
@@ -102,15 +118,20 @@ function PolicySection({ kind, toast, qc, help }: { kind: "privacy" | "tos"; toa
   const versionsQ = useQuery({
     queryKey: [`admin-${endpoint}`],
     queryFn: async () => (await api.get<{ data: { list: VersionRow[] } }>(`/admin/settings/${endpoint}/versions`)).data.data.list,
+    // 后端未实现时立即回退演示数据，避免 404 反复重试导致页面卡加载
+    retry: 0,
   });
+
+  // 后端未实现时回退到演示数据（未来接入真实端点后此兜底自动失效）
+  const versions = versionsQ.data != null ? versionsQ.data : (demo ? localVersions : []);
 
   const viewQ = useQuery({
     queryKey: [`admin-${endpoint}-view`, viewId],
     queryFn: async () => {
-      const list = versionsQ.data ?? [];
+      const list = versions ?? [];
       return list.find((v) => v.id === viewId) ?? null;
     },
-    enabled: !!viewId && !!versionsQ.data,
+    enabled: !!viewId && versions.length > 0,
   });
 
   const createMut = useMutation({
@@ -120,7 +141,17 @@ function PolicySection({ kind, toast, qc, help }: { kind: "privacy" | "tos"; toa
       toast.success(`已创建${label}草稿`);
       qc.invalidateQueries({ queryKey: [`admin-${endpoint}`] });
     },
-    onError: (e: any) => toast.error(extractError(e)),
+    onError: (e: any) => {
+      // 演示模式：后端未实现时本地新增草稿版本
+      if (e?.response?.status === 404) {
+        const nv: VersionRow = { id: Date.now(), version: form.version || "v-draft", title: form.title || null, status: "draft", published_at: null, revoked_at: null, summary: form.summary || null, consent_count: 0, pending_count: 0, consent_rate: 0 };
+        setLocalVersions((prev) => [nv, ...prev]);
+        setShowForm(false); setForm({ version: "", title: "", content: "", summary: "" });
+        toast.success(`已创建${label}草稿（演示）`);
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
 
   const publishMut = useMutation({
@@ -129,7 +160,15 @@ function PolicySection({ kind, toast, qc, help }: { kind: "privacy" | "tos"; toa
       toast.success(d.message || "已发布");
       qc.invalidateQueries({ queryKey: [`admin-${endpoint}`] });
     },
-    onError: (e: any) => toast.error(extractError(e)),
+    onError: (e: any, id?: number) => {
+      // 演示模式：后端未实现时本地改为已发布
+      if (e?.response?.status === 404 && id != null) {
+        setLocalVersions((prev) => prev.map((v) => v.id === id ? { ...v, status: "published", published_at: new Date().toISOString() } : v));
+        toast.success(`已发布${label}（演示）`);
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
 
   const rollbackMut = useMutation({
@@ -138,7 +177,19 @@ function PolicySection({ kind, toast, qc, help }: { kind: "privacy" | "tos"; toa
       toast.success(d.message || "已回滚");
       qc.invalidateQueries({ queryKey: [`admin-${endpoint}`] });
     },
-    onError: (e: any) => toast.error(extractError(e)),
+    onError: (e: any, id?: number) => {
+      // 演示模式：后端未实现时本地回滚（目标设为已发布，其余已发布版本撤销）
+      if (e?.response?.status === 404 && id != null) {
+        setLocalVersions((prev) => prev.map((v) => {
+          if (v.id === id) return { ...v, status: "published", published_at: v.published_at ?? new Date().toISOString() };
+          if (v.status === "published") return { ...v, status: "revoked", revoked_at: new Date().toISOString() };
+          return v;
+        }));
+        toast.success("已回滚到此版本（演示）");
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
 
   const getVersionStatus = (s: string): "success" | "warning" | "danger" | "info" | "default" => {
@@ -153,6 +204,7 @@ function PolicySection({ kind, toast, qc, help }: { kind: "privacy" | "tos"; toa
         <h3 style={{ marginTop: 0, display: "flex", alignItems: "center" }}>
           {label}版本管理
           <HelpIcon text={help.body} level="page" />
+          {demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/settings 待接入）</span>}
         </h3>
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
           <button onClick={() => setShowForm(!showForm)} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff" }}>
@@ -183,7 +235,7 @@ function PolicySection({ kind, toast, qc, help }: { kind: "privacy" | "tos"; toa
 
         {versionsQ.isLoading ? (
           <div style={{ color: "var(--color-text-secondary)" }}>加载中...</div>
-        ) : versionsQ.data?.length === 0 ? (
+        ) : versions.length === 0 ? (
           <div style={{ color: "#94a3b8" }}>暂无版本记录</div>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
@@ -199,7 +251,7 @@ function PolicySection({ kind, toast, qc, help }: { kind: "privacy" | "tos"; toa
               </tr>
             </thead>
             <tbody>
-              {versionsQ.data?.map((v) => (
+              {versions.map((v) => (
                 <tr key={v.id} style={{ borderBottom: `1px solid var(--color-border)` }}>
                   <td style={{ padding: "8px", fontWeight: 600 }}>{v.version}</td>
                   <td style={{ padding: "8px" }}>
@@ -216,7 +268,7 @@ function PolicySection({ kind, toast, qc, help }: { kind: "privacy" | "tos"; toa
                     {v.status === "draft" && (
                       <button onClick={() => publishMut.mutate(v.id)} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", marginRight: 6 }}>发布</button>
                     )}
-                    {(v.status === "published" || v.status === "revoked") && versionsQ.data!.some((x) => x.status === "published" && x.id !== v.id) && (
+                    {(v.status === "published" || v.status === "revoked") && versions.some((x) => x.status === "published" && x.id !== v.id) && (
                       <button onClick={() => rollbackMut.mutate(v.id)} style={{ ...btnBase, background: "#f59e0b", color: "#fff" }}>回滚到此</button>
                     )}
                   </td>
@@ -250,6 +302,9 @@ function PolicySection({ kind, toast, qc, help }: { kind: "privacy" | "tos"; toa
 /* ============ 数据导出 ============ */
 function ExportSection({ toast, qc, help }: { toast: ReturnType<typeof useToast>["toast"]; qc: ReturnType<typeof useQueryClient>; help: { title: string; body: string } }) {
   const [statusFilter, setStatusFilter] = useState("");
+  // 演示兜底：本地可变导出列表（写操作在演示模式下直接改它）
+  const [localExports, setLocalExports] = useState<ExportRow[]>(MOCK_EXPORTS);
+  const [demo, setDemo] = useState(true);
 
   const listQ = useQuery({
     queryKey: ["admin-data-export", statusFilter],
@@ -257,11 +312,18 @@ function ExportSection({ toast, qc, help }: { toast: ReturnType<typeof useToast>
       const p = statusFilter ? `?status=${statusFilter}` : "";
       return (await api.get<{ data: { list: ExportRow[] } }>(`/admin/data-export/requests${p}`)).data.data.list;
     },
+    // 后端未实现时立即回退演示数据，避免 404 反复重试导致页面卡加载
+    retry: 0,
   });
   const statsQ = useQuery({
     queryKey: ["admin-data-export-stats"],
     queryFn: async () => (await api.get<{ data: Record<string, number> }>("/admin/data-export/stats")).data.data,
+    retry: 0,
   });
+
+  // 后端未实现时回退到演示数据（未来接入真实端点后此兜底自动失效）
+  const exports = listQ.data != null ? listQ.data : (demo ? (statusFilter ? localExports.filter((r) => r.status === statusFilter) : localExports) : []);
+  const stats = statsQ.data != null ? statsQ.data : (demo ? MOCK_EXPORT_STATS : null);
 
   const processMut = useMutation({
     mutationFn: async (id: number) => (await api.post(`/admin/data-export/${id}/process`, {})).data,
@@ -270,7 +332,15 @@ function ExportSection({ toast, qc, help }: { toast: ReturnType<typeof useToast>
       qc.invalidateQueries({ queryKey: ["admin-data-export"] });
       qc.invalidateQueries({ queryKey: ["admin-data-export-stats"] });
     },
-    onError: (e: any) => toast.error(extractError(e)),
+    onError: (e: any, id?: number) => {
+      // 演示模式：后端未实现时本地标记完成
+      if (e?.response?.status === 404 && id != null) {
+        setLocalExports((prev) => prev.map((r) => r.id === id ? { ...r, status: "completed", processed_by: 1, processed_at: new Date().toISOString(), file_size_bytes: 245760, file_count: 12, notification_sent: true } : r));
+        toast.success("已处理（演示）");
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
 
   const rejectMut = useMutation({
@@ -280,20 +350,37 @@ function ExportSection({ toast, qc, help }: { toast: ReturnType<typeof useToast>
       qc.invalidateQueries({ queryKey: ["admin-data-export"] });
       qc.invalidateQueries({ queryKey: ["admin-data-export-stats"] });
     },
-    onError: (e: any) => toast.error(extractError(e)),
+    onError: (e: any, vars?: { id: number; reason: string }) => {
+      // 演示模式：后端未实现时本地标记拒绝
+      if (e?.response?.status === 404 && vars) {
+        setLocalExports((prev) => prev.map((r) => r.id === vars.id ? { ...r, status: "rejected", reject_reason: vars.reason, notification_sent: true } : r));
+        toast.success("已拒绝（演示）");
+        setRejectId(null); setRejectReason("");
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
 
   const resendMut = useMutation({
     mutationFn: async (id: number) => (await api.post(`/admin/data-export/${id}/resend`, {})).data,
     onSuccess: (d: any) => toast.success(d.message || (d.data?.notification_sent ? "已发送" : "SMTP 未配置")),
-    onError: (e: any) => toast.error(extractError(e)),
+    onError: (e: any, id?: number) => {
+      // 演示模式：后端未实现时本地模拟发送
+      if (e?.response?.status === 404 && id != null) {
+        setLocalExports((prev) => prev.map((r) => r.id === id ? { ...r, notification_sent: true } : r));
+        toast.success("已发送（演示）");
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
 
   const [rejectId, setRejectId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
-  if (rejectId && listQ.data) {
-    const row = listQ.data.find((r) => r.id === rejectId);
+  if (rejectId && exports.length > 0) {
+    const row = exports.find((r) => r.id === rejectId);
     return (
       <div style={card}>
         <h3 style={{ marginTop: 0 }}>拒绝导出请求 #{rejectId}</h3>
@@ -324,11 +411,12 @@ function ExportSection({ toast, qc, help }: { toast: ReturnType<typeof useToast>
         <h3 style={{ marginTop: 0, display: "flex", alignItems: "center" }}>
           数据导出请求管理
           <HelpIcon text={help.body} level="page" />
+          {demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/data-export 待接入）</span>}
         </h3>
 
-        {statsQ.data && (
+        {stats && (
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
-            {Object.entries(statsQ.data).map(([k, v]) => (
+            {Object.entries(stats).map(([k, v]) => (
               <StatusBadge key={k} status={EXPORT_STATUS_MAP[k] ?? "default"} variant="pill">
                 {EXPORT_LABEL[k] ?? k} {v}
               </StatusBadge>
@@ -348,7 +436,7 @@ function ExportSection({ toast, qc, help }: { toast: ReturnType<typeof useToast>
 
         {listQ.isLoading ? (
           <div style={{ color: "var(--color-text-secondary)" }}>加载中...</div>
-        ) : listQ.data?.length === 0 ? (
+        ) : exports.length === 0 ? (
           <div style={{ color: "#94a3b8" }}>暂无导出请求</div>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
@@ -364,7 +452,7 @@ function ExportSection({ toast, qc, help }: { toast: ReturnType<typeof useToast>
               </tr>
             </thead>
             <tbody>
-              {listQ.data?.map((r) => {
+              {exports.map((r) => {
                 const st = EXPORT_STATUS_MAP[r.status] ?? "default";
                 return (
                   <tr key={r.id} style={{ borderBottom: `1px solid var(--color-border)` }}>

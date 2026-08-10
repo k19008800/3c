@@ -5,9 +5,9 @@ import { users } from './users';
 export const customerBalances = pgTable('customer_balances', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
-  totalBalance: numeric('total_balance', { precision: 18, scale: 4 }).notNull().default('0'),
-  availableBalance: numeric('available_balance', { precision: 18, scale: 4 }).notNull().default('0'),
-  frozenBalance: numeric('frozen_balance', { precision: 18, scale: 4 }).notNull().default('0'),
+  totalBalance: numeric('total_balance', { precision: 18, scale: 8 }).notNull().default('0'),
+  availableBalance: numeric('available_balance', { precision: 18, scale: 8 }).notNull().default('0'),
+  frozenBalance: numeric('frozen_balance', { precision: 18, scale: 8 }).notNull().default('0'),
   currency: varchar('currency', { length: 10 }).default('CNY'),
   version: integer('version').notNull().default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),

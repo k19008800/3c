@@ -27,7 +27,6 @@ import AdminAffiliatePage from "./pages/AdminAffiliatePage";
 import AdminAgentsPage from "./pages/AdminAgentsPage";
 import AdminApikeySecurityPage from "./pages/AdminApikeySecurityPage";
 import AdminWithdrawalsPage from "./pages/AdminWithdrawalsPage";
-import AdminVendorsPage from "./pages/AdminVendorsPage";
 import AdminI18nPage from "./pages/AdminI18nPage";
 import AdminModelsPage from "./pages/AdminModelsPage";
 import AdminNotificationPolicyPage from "./pages/AdminNotificationPolicyPage";
@@ -72,7 +71,6 @@ import AdminManualRechargePage from "./pages/AdminManualRechargePage";
 import AdminRechargeOrdersPage from "./pages/AdminRechargeOrdersPage";
 import AdminRefundReviewPage from "./pages/AdminRefundReviewPage";
 import AdminPricingPage from "./pages/AdminPricingPage";
-import AdminCouponPage from "./pages/AdminCouponPage";
 import AdminKnowledgeBasePage from "./pages/AdminKnowledgeBasePage";
 import AdminWebhooksPage from "./pages/AdminWebhooksPage";
 import HelpCenterPage from "./pages/HelpCenterPage";
@@ -104,7 +102,6 @@ import AdminVendorPricingPage from "./pages/admin/AdminVendorPricingPage";
 import AdminVendorCostPage from "./pages/admin/AdminVendorCostPage";
 import AdminVendorStatsPage from "./pages/admin/AdminVendorStatsPage";
 import AdminVendorPerformancePage from "./pages/admin/AdminVendorPerformancePage";
-import AdminMarketplacePage from "./pages/admin/AdminMarketplacePage";
 import AdminMultimodalModelsPage from "./pages/admin/AdminMultimodalModelsPage";
 import AdminPriceChangePage from "./pages/admin/AdminPriceChangePage";
 import AdminRiskPage from "./pages/admin/AdminRiskPage";
@@ -120,11 +117,14 @@ import AdminBalanceAlertPage from "./pages/admin/AdminBalanceAlertPage";
 import AdminOperatorDashboardPage from "./pages/admin/AdminOperatorDashboardPage";
 import AdminOperationDiffPage from "./pages/admin/AdminOperationDiffPage";
 import AdminConversionFunnelPage from "./pages/admin/AdminConversionFunnelPage";
+import AdminCustomerSuccessPage from "./pages/admin/AdminCustomerSuccessPage";
 import AdminCompetitiveMonitorPage from "./pages/admin/AdminCompetitiveMonitorPage";
+import AdminAgentApprovalsPage from "./pages/admin/AdminAgentApprovalsPage";
 import AdminCommissionFlowPage from "./pages/admin/AdminCommissionFlowPage";
 import AdminSettlementPage from "./pages/admin/AdminSettlementPage";
 import AdminReconciliationPage from "./pages/admin/AdminReconciliationPage";
 import AdminReconciliationDiffPage from "./pages/admin/AdminReconciliationDiffPage";
+import AdminSupplierBillMatchPage from "./pages/admin/AdminSupplierBillMatchPage";
 import AdminProfitPage from "./pages/admin/AdminProfitPage";
 import AdminCostDashboardPage from "./pages/admin/AdminCostDashboardPage";
 import AdminCostPredictionPage from "./pages/admin/AdminCostPredictionPage";
@@ -205,6 +205,7 @@ export default function App() {
         <Route path="admin/customers/:userId" element={<AdminCustomerDetailPage />} />
         <Route path="admin/customers/quotas" element={<AdminCreditPage />} />
         <Route path="admin/customers/verifications" element={<AdminRealNamePage />} />
+        <Route path="admin/account-deletion" element={<AdminDeletionPage />} />
         {/* ── 财务结算 ── */}
         <Route path="admin/finance/dashboard" element={<AdminFinancePage />} />
         <Route path="admin/finance/manual-topup" element={<AdminManualRechargePage />} />
@@ -216,6 +217,10 @@ export default function App() {
         <Route path="admin/finance/withdrawals" element={<AdminWithdrawalsPage />} />
         <Route path="admin/finance/coupons" element={<AdminRedemptionPage />} />
         <Route path="admin/finance/reconciliation" element={<AdminReconciliationPage />} />
+        <Route path="admin/finance/reconciliation-diff" element={<AdminReconciliationDiffPage />} />
+        <Route path="admin/finance/discount-engine" element={<AdminDiscountEnginePage />} />
+        <Route path="admin/finance/tax-banking" element={<AdminTaxBankingPage />} />
+        <Route path="admin/finance/supplier-bill-match" element={<AdminSupplierBillMatchPage />} />
         <Route path="admin/finance/cost-dashboard" element={<AdminCostDashboardPage />} />
         <Route path="admin/finance/cost-prediction" element={<AdminCostPredictionPage />} />
         <Route path="admin/finance/settlement" element={<AdminSettlementPage />} />
@@ -231,21 +236,34 @@ export default function App() {
         <Route path="admin/suppliers/vendor-stats" element={<AdminVendorStatsPage />} />
         <Route path="admin/suppliers/price-change" element={<AdminPriceChangePage />} />
         <Route path="admin/suppliers/vendor-performance" element={<AdminVendorPerformancePage />} />
+        <Route path="admin/suppliers/multimodal-models" element={<AdminMultimodalModelsPage />} />
+        <Route path="admin/suppliers/competitive-monitor" element={<AdminCompetitiveMonitorPage />} />
         {/* ── 代理商管理 ── */}
         <Route path="admin/agents" element={<AdminAgentsPage />} />
         <Route path="admin/agents/:id" element={<AdminAgentsPage />} />
         <Route path="admin/agents/commission-config" element={<AdminAgentsPage />} />
+        <Route path="admin/agents/approvals" element={<AdminAgentApprovalsPage />} />
         <Route path="admin/agents/withdrawals" element={<AdminWithdrawalsPage />} />
         {/* ── 模型管理 ── */}
         <Route path="admin/models/marketplace" element={<AdminModelsPage />} />
         {/* ── 营销推广 ── */}
         <Route path="admin/marketing/affiliate" element={<AdminAffiliatePage />} />
+        <Route path="admin/marketing/campaigns" element={<AdminCampaignsPage />} />
         {/* ── 工单客服 ── */}
         <Route path="admin/tickets" element={<AdminTicketsPage />} />
+        <Route path="admin/tickets/dispute" element={<AdminDisputePage />} />
+        <Route path="admin/tickets/support" element={<AdminSupportPage />} />
+        <Route path="admin/tickets/chat" element={<AdminChatPage />} />
+        <Route path="admin/tickets/knowledge-base" element={<AdminKnowledgeBasePage />} />
         {/* ── 系统设置 ── */}
         <Route path="admin/settings/announcements" element={<AdminAnnouncementsPage />} />
         <Route path="admin/settings/roles" element={<AdminRolesPage />} />
         <Route path="admin/settings/i18n" element={<AdminI18nPage />} />
+        <Route path="admin/settings/notification-policy" element={<AdminNotificationPolicyPage />} />
+        <Route path="admin/settings/operator-dashboard" element={<AdminOperatorDashboardPage />} />
+        <Route path="admin/settings/user-permissions" element={<AdminUsersPermissionPage />} />
+        <Route path="admin/ops/activity" element={<AdminActivityPage />} />
+        <Route path="admin/subscription" element={<AdminSubscriptionPage />} />
         {/* ── 运维配置 ── */}
         <Route path="admin/config/system" element={<AdminSettingsPage />} />
         <Route path="admin/config/monitoring" element={<AdminSettingsPage />} />
@@ -260,15 +278,33 @@ export default function App() {
         <Route path="admin/config/email-templates" element={<AdminEmailTemplatesPage />} />
         <Route path="admin/config/content" element={<AdminContentPage />} />
         <Route path="admin/config/oauth" element={<AdminSettingsPage />} />
+        <Route path="admin/config/webhooks" element={<AdminWebhooksPage />} />
+        <Route path="admin/config/database" element={<AdminSysDbPage />} />
+        <Route path="admin/config/cache" element={<AdminSysCachePage />} />
+        <Route path="admin/config/compliance" element={<AdminConsentPage />} />
         {/* ── 审计合规 ── */}
         <Route path="admin/audit/login-logs" element={<AdminAuditLogPage />} />
         <Route path="admin/audit/operations" element={<AdminAuditLogPage />} />
         <Route path="admin/audit/api-logs" element={<AdminAuditLogPage />} />
+        <Route path="admin/audit/operation-diff" element={<AdminOperationDiffPage />} />
+        <Route path="admin/audit/data-request" element={<AdminDataRequestPage />} />
+        <Route path="admin/audit/permissions" element={<AdminPermissionAuditPage />} />
         {/* ── 风控合规 ── */}
         <Route path="admin/risk/dashboard" element={<AdminRiskPage />} />
         <Route path="admin/risk/rules" element={<AdminRiskRulesPage />} />
         <Route path="admin/risk/events" element={<AdminRiskEventsPage />} />
         <Route path="admin/risk/blocks" element={<AdminRiskPage />} />
+        <Route path="admin/risk/incidents" element={<AdminSecurityIncidentPage />} />
+        <Route path="admin/risk/ip-blacklist" element={<AdminSecurityIpBlacklistPage />} />
+        <Route path="admin/risk/content-moderation" element={<AdminContentModerationPage />} />
+        {/* ── 消费运营 ── */}
+        <Route path="admin/consumption/tracking" element={<AdminConsumptionTrackingPage />} />
+        <Route path="admin/consumption/stream" element={<AdminConsumptionStreamPage />} />
+        <Route path="admin/consumption/anomaly" element={<AdminConsumptionAnomalyPage />} />
+        <Route path="admin/consumption/balance-alert" element={<AdminBalanceAlertPage />} />
+        {/* ── 客户分析 ── */}
+        <Route path="admin/analytics/funnel" element={<AdminConversionFunnelPage />} />
+        <Route path="admin/analytics/success" element={<AdminCustomerSuccessPage />} />
         {/* ── 用户门户/Agent/业务员 ── */}
         <Route path="api-keys" element={<ApiKeysPage />} />
         <Route path="logs" element={<LogsPage />} />

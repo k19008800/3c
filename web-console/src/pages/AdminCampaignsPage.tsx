@@ -21,6 +21,22 @@ const STATUS_MAP: Record<string, "success" | "warning" | "danger" | "info" | "de
   archived: "info",
 };
 const FILTERS = [{ value: "", label: "全部" }, { value: "draft", label: "草稿" }, { value: "active", label: "进行中" }, { value: "ended", label: "已结束" }, { value: "archived", label: "已归档" }];
+const STATUS_LABEL: Record<string, string> = { draft: "草稿", active: "进行中", ended: "已结束", archived: "已归档" };
+const TYPE_LABEL: Record<string, string> = { recharge_gift: "充值赠送", new_user: "新用户礼", discount: "折扣活动" };
+
+/* ───────── 演示数据（对齐原型 admin-campaign.html 分布） ───────── */
+const MOCK_CAMPAIGNS: Campaign[] = [
+  { id: 1, name: "新用户充值礼", description: "新用户首充返 10%", status: "active", status_label: "进行中", type: "new_user", type_label: "新用户礼", budget_amount: 50000, issued_amount: 12340, participant_count: 341, start_at: "2026-08-01T00:00", end_at: "2026-08-31T23:59", created_by_email: "admin@3cloud.dev" },
+  { id: 2, name: "暑期充值赠送", description: "满 1000 赠 100", status: "active", status_label: "进行中", type: "recharge_gift", type_label: "充值赠送", budget_amount: 30000, issued_amount: 8900, participant_count: 203, start_at: "2026-07-01T00:00", end_at: "2026-08-31T23:59", created_by_email: "admin@3cloud.dev" },
+  { id: 3, name: "618 大促折扣", description: "全场模型 8 折", status: "ended", status_label: "已结束", type: "discount", type_label: "折扣活动", budget_amount: 80000, issued_amount: 76500, participant_count: 1280, start_at: "2026-06-01T00:00", end_at: "2026-06-18T23:59", created_by_email: "ops@3cloud.dev" },
+  { id: 4, name: "Q3 拉新计划", description: "邀请新用户各得 50 元", status: "draft", status_label: "草稿", type: "new_user", type_label: "新用户礼", budget_amount: 20000, issued_amount: 0, participant_count: 0, start_at: null, end_at: null, created_by_email: "admin@3cloud.dev" },
+];
+const MOCK_PARTICIPANTS: Record<number, Participant[]> = {
+  1: [
+    { user_id: 1001, email: "user1@example.com", username: "user1", amount: 100, trigger_type: "新用户首充", created_at: "2026-08-10 10:30:00" },
+    { user_id: 1002, email: "user2@example.com", username: "user2", amount: 200, trigger_type: "新用户首充", created_at: "2026-08-09 15:20:00" },
+  ],
+};
 
 export default function AdminCampaignsPage() {
   const qc = useQueryClient();
@@ -29,36 +45,97 @@ export default function AdminCampaignsPage() {
   const [detail, setDetail] = useState<{ campaign: Campaign; participants: Participant[] } | null>(null);
   const [grantForm, setGrantForm] = useState({ user_id: "", amount: "" });
   const { toast } = useToast();
+  // 演示兜底：本地可变列表（写操作在演示模式下直接改它）
+  const [localList, setLocalList] = useState<Campaign[]>(MOCK_CAMPAIGNS);
+  const [localParticipants, setLocalParticipants] = useState<Record<number, Participant[]>>(MOCK_PARTICIPANTS);
 
   const listQ = useQuery({
     queryKey: ["admin-campaigns", status],
     queryFn: async () => (await api.get<{ data: { list: Campaign[] } }>(`/admin/campaigns?status=${status}&page_size=50`)).data.data,
+    // 后端未实现时立即回退演示数据，避免 404 反复重试导致页面卡加载
+    retry: 0,
   });
+
+  // 后端未实现时回退到演示数据（未来接入真实端点后此兜底自动失效）
+  const list = listQ.data?.list != null ? listQ.data.list : localList;
+  const demo = listQ.data?.list == null;
   const saveMut = useMutation({
     mutationFn: async () => {
       const body = { name: editor!.name, type: editor!.type, budget_amount: Number(editor!.budget_amount), description: editor!.description, start_at: editor!.start_at || undefined, end_at: editor!.end_at || undefined };
       return editor!.id ? (await api.put(`/admin/campaigns/${editor!.id}`, body)).data : (await api.post("/admin/campaigns", body)).data;
     },
     onSuccess: (d: { data?: { message?: string } }) => { toast.success(d?.data?.message ?? "已保存"); setEditor(null); qc.invalidateQueries({ queryKey: ["admin-campaigns"] }); },
-    onError: (e) => toast.error(extractError(e)),
+    onError: (e: any) => {
+      // 演示模式：后端未实现时本地生效
+      if (e?.response?.status === 404 && editor) {
+        if (editor.id) {
+          setLocalList(prev => prev.map(c => c.id === editor.id ? { ...c, name: editor.name, type: editor.type, type_label: TYPE_LABEL[editor.type] ?? editor.type, budget_amount: Number(editor.budget_amount), description: editor.description, start_at: editor.start_at || null, end_at: editor.end_at || null } : c));
+        } else {
+          const next: Campaign = { id: Date.now(), name: editor.name, description: editor.description, status: "draft", status_label: "草稿", type: editor.type, type_label: TYPE_LABEL[editor.type] ?? editor.type, budget_amount: Number(editor.budget_amount), issued_amount: 0, participant_count: 0, start_at: editor.start_at || null, end_at: editor.end_at || null, created_by_email: "当前管理员" };
+          setLocalList(prev => [next, ...prev]);
+        }
+        toast.success("已保存（演示）");
+        setEditor(null);
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
   const statusMut = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => (await api.post(`/admin/campaigns/${id}/status`, { status })).data,
     onSuccess: (d: { data?: { message?: string } }) => { toast.success(d?.data?.message ?? "已切换"); qc.invalidateQueries({ queryKey: ["admin-campaigns"] }); },
-    onError: (e) => toast.error(extractError(e)),
+    onError: (e: any, vars?: { id: number; status: string }) => {
+      // 演示模式：后端未实现时本地生效
+      if (e?.response?.status === 404 && vars) {
+        setLocalList(prev => prev.map(c => c.id === vars.id ? { ...c, status: vars.status, status_label: STATUS_LABEL[vars.status] ?? vars.status } : c));
+        toast.success("已切换（演示）");
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
   const delMut = useMutation({
     mutationFn: async (id: number) => (await api.delete(`/admin/campaigns/${id}`)).data,
     onSuccess: () => { toast.success("已删除"); qc.invalidateQueries({ queryKey: ["admin-campaigns"] }); },
-    onError: (e) => toast.error(extractError(e)),
+    onError: (e: any, id?: number) => {
+      // 演示模式：后端未实现时本地生效
+      if (e?.response?.status === 404 && id != null) {
+        setLocalList(prev => prev.filter(c => c.id !== id));
+        toast.success("已删除（演示）");
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
   const grantMut = useMutation({
     mutationFn: async ({ userId, amount }: { userId: number; amount: number }) => (await api.post(`/admin/campaigns/${detail!.campaign.id}/grant`, { user_id: userId, amount })).data,
     onSuccess: (d: { data?: { message?: string } }) => { toast.success(d?.data?.message ?? "已发放"); setGrantForm({ user_id: "", amount: "" }); qc.invalidateQueries({ queryKey: ["admin-campaign-detail"] }); },
-    onError: (e) => toast.error(extractError(e)),
+    onError: (e: any, vars?: { userId: number; amount: number }) => {
+      // 演示模式：后端未实现时本地生效
+      if (e?.response?.status === 404 && vars && detail) {
+        const p: Participant = { user_id: vars.userId, email: `用户 ${vars.userId}`, username: `用户${vars.userId}`, amount: vars.amount, trigger_type: "手动发放", created_at: "2026-08-10T12:00:00" };
+        setLocalParticipants(prev => ({ ...prev, [detail.campaign.id]: [...(prev[detail.campaign.id] ?? []), p] }));
+        setDetail(prev => prev ? { ...prev, participants: [...prev.participants, p] } : prev);
+        toast.success("已发放（演示）");
+        setGrantForm({ user_id: "", amount: "" });
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
   const openDetail = async (id: number) => {
-    try { const d = (await api.get<{ data: { campaign: Campaign; participants: Participant[] } }>(`/admin/campaigns/${id}`)).data.data; setDetail(d); } catch (e) { toast.error(extractError(e)); }
+    try {
+      const d = (await api.get<{ data: { campaign: Campaign; participants: Participant[] } }>(`/admin/campaigns/${id}`)).data.data;
+      setDetail(d);
+    } catch (e: any) {
+      // 演示模式：后端未实现时本地展示
+      if (e?.response?.status === 404) {
+        const c = list.find(x => x.id === id);
+        if (c) setDetail({ campaign: c, participants: localParticipants[id] ?? [] });
+      } else {
+        toast.error(extractError(e));
+      }
+    }
   };
 
   return (
@@ -66,6 +143,7 @@ export default function AdminCampaignsPage() {
       <h2 style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
         营销活动
         <HelpIcon text="管理平台营销活动。创建充值赠送、新用户礼、折扣活动等，支持发布/结束/归档生命周期管理，可向指定用户发放奖励。" level="page" />
+        {demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/campaigns 待接入）</span>}
       </h2>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
@@ -74,11 +152,11 @@ export default function AdminCampaignsPage() {
       </div>
 
       <div style={card}>
-        {listQ.isLoading ? <SkeletonGroup lines={5} /> : (listQ.data?.list?.length ?? 0) === 0 ? <EmptyState title="暂无活动" /> : (
+        {listQ.isLoading ? <SkeletonGroup lines={5} /> : list.length === 0 ? <EmptyState title="暂无活动" /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead><tr style={{ color: "var(--color-text-secondary)", textAlign: "left" }}><th style={{ padding: "8px" }}>活动名</th><th style={{ padding: "8px" }}>类型</th><th style={{ padding: "8px" }}>状态</th><th style={{ padding: "8px" }}>预算</th><th style={{ padding: "8px" }}>已发放</th><th style={{ padding: "8px" }}>参与</th><th style={{ padding: "8px" }}>操作</th></tr></thead>
             <tbody>
-              {listQ.data?.list.map(c => (
+              {list.map(c => (
                 <tr key={c.id} style={{ borderTop: "1px solid var(--color-border)" }}>
                   <td style={{ padding: "8px", fontWeight: 600 }}>{c.name}</td>
                   <td style={{ padding: "8px" }}>{c.type_label}</td>

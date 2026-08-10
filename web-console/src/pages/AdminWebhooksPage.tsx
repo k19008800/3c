@@ -21,6 +21,18 @@ const WEBHOOK_EVENTS = [
   "model.price_changed",
 ] as const;
 
+/* ───────── 演示数据（后端 /admin/webhooks 待接入） ───────── */
+const MOCK_WEBHOOKS = [
+  { id: 1, name: "充值回调", url: "https://callback.example.com/recharge", events: JSON.stringify(["recharge.completed", "recharge.refunded"]), isActive: true, retryCount: 3, timeoutMs: 5000, lastTriggeredAt: "2026-08-10T09:00:00" },
+  { id: 2, name: "用户注册通知", url: "https://ops.example.com/user-created", events: JSON.stringify(["user.created", "user.deleted"]), isActive: true, retryCount: 5, timeoutMs: 8000, lastTriggeredAt: "2026-08-09T22:15:00" },
+  { id: 3, name: "告警推送", url: "https://monitor.example.com/alert", events: JSON.stringify(["alert.triggered", "model.price_changed"]), isActive: false, retryCount: 3, timeoutMs: 5000, lastTriggeredAt: null },
+];
+const MOCK_LOGS = [
+  { id: 1, event: "recharge.completed", status: "success", responseCode: 200, latencyMs: 340, attempt: 1, created_at: "2026-08-10T09:00:05" },
+  { id: 2, event: "user.created", status: "success", responseCode: 200, latencyMs: 220, attempt: 1, created_at: "2026-08-09T22:15:30" },
+  { id: 3, event: "alert.triggered", status: "failed", responseCode: 500, latencyMs: 1200, attempt: 2, created_at: "2026-08-08T14:00:00" },
+];
+
 export default function AdminWebhooksPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -30,17 +42,27 @@ export default function AdminWebhooksPage() {
   const [testResult, setTestResult] = useState<any>(null);
   const [testModal, setTestModal] = useState(false);
   const [page, setPage] = useState(1);
+  // 演示兜底：本地可变列表（写操作在演示模式下直接改它）
+  const [localList, setLocalList] = useState<any[]>(MOCK_WEBHOOKS);
 
   const listQ = useQuery({
     queryKey: ["admin/webhooks"],
     queryFn: () => api.get("/admin/webhooks").then((r) => r.data.data),
+    // 后端未实现时立即回退演示数据，避免 404 反复重试导致页面卡加载
+    retry: 0,
   });
 
   const logsQ = useQuery({
     queryKey: ["admin/webhooks/logs", logWebhookId],
     queryFn: () => api.get(`/admin/webhooks/${logWebhookId}/logs`).then((r) => r.data.data),
     enabled: !!logWebhookId,
+    retry: 0,
   });
+
+  // 后端未实现时回退到演示数据（未来接入真实端点后此兜底自动失效）
+  const webhooks = listQ.data?.list != null ? listQ.data.list : localList;
+  const demo = listQ.data?.list == null;
+  const logs = logsQ.data?.list != null ? logsQ.data.list : (demo && logWebhookId ? MOCK_LOGS : []);
 
   const saveMut = useMutation({
     mutationFn: () => {
@@ -53,25 +75,62 @@ export default function AdminWebhooksPage() {
       setEditId(null); setForm({ name: "", url: "", events: [], secret: "", retryCount: 3, timeoutMs: 5000 });
       qc.invalidateQueries({ queryKey: ["admin/webhooks"] });
     },
-    onError: (e) => toast.error(extractError(e)),
+    onError: (e: any) => {
+      // 演示模式：后端未实现时本地生效
+      if (e?.response?.status === 404) {
+        if (editId) {
+          setLocalList(prev => prev.map(w => w.id === editId ? { ...w, name: form.name, url: form.url, events: JSON.stringify(form.events), retryCount: form.retryCount, timeoutMs: form.timeoutMs } : w));
+        } else {
+          setLocalList(prev => [{ id: Date.now(), name: form.name, url: form.url, events: JSON.stringify(form.events), isActive: true, retryCount: form.retryCount, timeoutMs: form.timeoutMs, lastTriggeredAt: null }, ...prev]);
+        }
+        toast.success(editId ? "Webhook 已更新（演示）" : "Webhook 已创建（演示）");
+        setEditId(null); setForm({ name: "", url: "", events: [], secret: "", retryCount: 3, timeoutMs: 5000 });
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
 
   const delMut = useMutation({
     mutationFn: (id: number) => api.delete(`/admin/webhooks/${id}`),
     onSuccess: () => { toast.success("Webhook 已删除"); qc.invalidateQueries({ queryKey: ["admin/webhooks"] }); },
-    onError: (e) => toast.error(extractError(e)),
+    onError: (e: any, id?: number) => {
+      // 演示模式：后端未实现时本地生效
+      if (e?.response?.status === 404 && id != null) {
+        setLocalList(prev => prev.filter(w => w.id !== id));
+        toast.success("Webhook 已删除（演示）");
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
 
   const toggleMut = useMutation({
     mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) => api.put(`/admin/webhooks/${id}/toggle`, { isActive }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin/webhooks"] }),
-    onError: (e) => toast.error(extractError(e)),
+    onError: (e: any, vars?: { id: number; isActive: boolean }) => {
+      // 演示模式：后端未实现时本地生效
+      if (e?.response?.status === 404 && vars) {
+        setLocalList(prev => prev.map(w => w.id === vars.id ? { ...w, isActive: vars.isActive } : w));
+        toast.success(vars.isActive ? "已启用（演示）" : "已禁用（演示）");
+      } else {
+        toast.error(extractError(e));
+      }
+    },
   });
 
   const testMut = useMutation({
     mutationFn: (id: number) => api.post(`/admin/webhooks/${id}/test`),
     onSuccess: (r) => { setTestResult(r.data.data); setTestModal(true); },
-    onError: (e) => { setTestResult({ status: "error", body: extractError(e) }); setTestModal(true); },
+    onError: (e: any) => {
+      // 演示模式：后端未实现时本地模拟测试成功
+      if (e?.response?.status === 404) {
+        setTestResult({ status: "success", statusCode: 200, latencyMs: 180, body: '{"ok":true,"received":true}' });
+      } else {
+        setTestResult({ status: "error", body: extractError(e) });
+      }
+      setTestModal(true);
+    },
   });
 
   const toggleEvent = (evt: string) => {
@@ -80,8 +139,6 @@ export default function AdminWebhooksPage() {
       events: f.events.includes(evt) ? f.events.filter((e) => e !== evt) : [...f.events, evt],
     }));
   };
-
-  const webhooks = listQ.data?.list ?? [];
 
   const columns: ColumnDef[] = [
     { key: "name", title: "名称", dataIndex: "name" },
@@ -110,6 +167,7 @@ export default function AdminWebhooksPage() {
       <h2 style={{ marginBottom: 4 }}>
         全局 Webhook
         <HelpIcon text="全局 Webhook 管理：创建配置后可接收平台事件推送（如用户注册/充值成功/告警触发等）。支持 HMAC 签名验证和自动重试。" level="page" />
+        {demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/webhooks 待接入）</span>}
       </h2>
       <p style={{ color: "#94a3b8", marginTop: 0, fontSize: 13 }}>§32.1 事件推送 · HMAC 签名 · 自动重试</p>
 
@@ -196,7 +254,7 @@ export default function AdminWebhooksPage() {
           <h4 style={{ margin: "0 0 12px", fontSize: 14 }}>投递日志</h4>
           {logsQ.isLoading ? (
             <p style={{ color: "#94a3b8" }}>加载中...</p>
-          ) : (logsQ.data?.list ?? []).length === 0 ? (
+          ) : logs.length === 0 ? (
             <p style={{ color: "#94a3b8" }}>暂无投递记录。</p>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
@@ -211,7 +269,7 @@ export default function AdminWebhooksPage() {
                 </tr>
               </thead>
               <tbody>
-                {(logsQ.data?.list ?? []).map((l: any, i: number) => (
+                {logs.map((l: any, i: number) => (
                   <tr key={l.id} style={{ borderBottom: `1px solid var(--color-border)`, background: i % 2 === 0 ? "var(--color-panel)" : "#fafafa" }}>
                     <td style={{ padding: "8px 12px", color: "var(--color-text)" }}>{l.event}</td>
                     <td style={{ padding: "8px 12px" }}>

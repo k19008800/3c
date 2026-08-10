@@ -10,11 +10,21 @@ interface AuditLog {
   detail: string | null; diff: string | null; operator_email: string | null; target_email: string | null; created_at: string;
 }
 
+/* ───────── 演示数据（后端 /admin/permission-audit-logs 待接入） ───────── */
+const MOCK_LOGS: AuditLog[] = [
+  { id: 1, action: "role_created", operator_id: 1, target_user_id: null, target_role_id: 5, detail: "创建角色「财务审核员」", diff: null, operator_email: "admin@3cloud.dev", target_email: null, created_at: "2026-08-10T10:00:00" },
+  { id: 2, action: "user_role_assigned", operator_id: 1, target_user_id: 1003, target_role_id: 5, detail: "为用户 用户小张 分配角色「财务审核员」", diff: null, operator_email: "admin@3cloud.dev", target_email: "user3@example.com", created_at: "2026-08-10T09:30:00" },
+  { id: 3, action: "role_updated", operator_id: 1, target_user_id: null, target_role_id: 2, detail: "编辑角色「客服主管」权限", diff: "+billing:refund", operator_email: "admin@3cloud.dev", target_email: null, created_at: "2026-08-09T16:00:00" },
+  { id: 4, action: "user_role_removed", operator_id: 2, target_user_id: 1004, target_role_id: 3, detail: "移除用户 用户小赵 的角色「业务员」", diff: null, operator_email: "ops@3cloud.dev", target_email: "user4@example.com", created_at: "2026-08-08T11:20:00" },
+  { id: 5, action: "role_deleted", operator_id: 1, target_user_id: null, target_role_id: 9, detail: "删除角色「临时账号」", diff: null, operator_email: "admin@3cloud.dev", target_email: null, created_at: "2026-08-07T15:45:00" },
+];
+
 export default function AdminPermissionAuditPage() {
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [total, setTotal] = useState(0);
+  const [logs, setLogs] = useState<AuditLog[]>(MOCK_LOGS);
+  const [total, setTotal] = useState(MOCK_LOGS.length);
   const [page, setPage] = useState(1);
   const [actionFilter, setActionFilter] = useState("");
+  const [demo, setDemo] = useState(true);
   const pageSize = 20;
 
   useEffect(() => {
@@ -24,14 +34,21 @@ export default function AdminPermissionAuditPage() {
       .then(r => {
         setLogs(r.data.data.list);
         setTotal(r.data.data.pagination.total);
-      });
+        setDemo(false);
+      })
+      .catch(() => { /* 演示模式保持本地数据 */ });
   }, [page, actionFilter]);
+
+  // 演示模式：本地按操作类型筛选
+  const shownLogs = demo ? (actionFilter ? logs.filter(l => l.action === actionFilter) : logs) : logs;
+  const shownTotal = demo ? shownLogs.length : total;
 
   return (
     <div>
       <h2 style={{ marginBottom: 4 }}>
         权限审计日志
         <HelpIcon text="记录所有角色创建/编辑/删除操作、用户角色分配和移除操作。可按操作类型筛选，查看操作详情。" level="page" />
+        {demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/permission-audit-logs 待接入）</span>}
       </h2>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, marginTop: 16 }}>
@@ -44,7 +61,7 @@ export default function AdminPermissionAuditPage() {
           <option value="user_role_assigned">分配角色</option>
           <option value="user_role_removed">移除角色</option>
         </select>
-        <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>共 {total} 条</span>
+        <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>共 {shownTotal} 条</span>
       </div>
 
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
@@ -58,7 +75,7 @@ export default function AdminPermissionAuditPage() {
           </tr>
         </thead>
         <tbody>
-          {logs.map(l => (
+          {shownLogs.map(l => (
             <tr key={l.id} style={{ borderBottom: `1px solid var(--color-border)` }}>
               <td style={{ padding: "8px 12px" }}>
                 <StatusBadge status={actionStatus(l.action)}>{actionLabel(l.action)}</StatusBadge>
@@ -73,10 +90,10 @@ export default function AdminPermissionAuditPage() {
       </table>
 
       {/* 分页 */}
-      {total > pageSize && (
+      {shownTotal > pageSize && (
         <Pagination
           current={page}
-          total={total}
+          total={shownTotal}
           pageSize={pageSize}
           onChange={(p) => setPage(p)}
         />

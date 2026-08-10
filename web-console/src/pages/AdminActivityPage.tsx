@@ -10,12 +10,21 @@ interface Activity {
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 
+/* ───────── 演示数据（后端 /admin/activity 待接入） ───────── */
+const MOCK_EVENTS: Activity[] = [
+  { id: "evt-1", timestamp: Date.now() - 10000, model: "GPT-4o", status: "success", inputTokens: 1200, outputTokens: 340, cost: 0.012, provider: "OpenAI", userId: 1001 },
+  { id: "evt-2", timestamp: Date.now() - 20000, model: "Claude 3.5 Sonnet", status: "error", inputTokens: 400, outputTokens: 0, cost: 0.001, provider: "Anthropic", userId: 1002 },
+  { id: "evt-3", timestamp: Date.now() - 30000, model: "GPT-4o mini", status: "success", inputTokens: 900, outputTokens: 150, cost: 0.003, provider: "OpenAI", userId: 1001 },
+  { id: "evt-4", timestamp: Date.now() - 45000, model: "Qwen-Max", status: "success", inputTokens: 2100, outputTokens: 480, cost: 0.018, provider: "Alibaba", userId: 1003 },
+];
+
 export default function AdminActivityPage() {
   const token = useAuthStore((s) => s.token);
-  const [events, setEvents] = useState<Activity[]>([]);
+  const [events, setEvents] = useState<Activity[]>(MOCK_EVENTS);
   const [autoScroll, setAutoScroll] = useState(true);
   const [filter, setFilter] = useState("");
   const [conn, setConn] = useState<"connecting" | "connected" | "closed">("connecting");
+  const [demo, setDemo] = useState(true);
   const listRef = useRef<HTMLDivElement>(null);
 
   // 初始历史
@@ -24,13 +33,18 @@ export default function AdminActivityPage() {
     queryFn: async () => {
       const res = await fetch("/api/v1/admin/activity/history", { headers: { Authorization: `Bearer ${token}` } });
       const d = await res.json();
-      if (d?.data?.list?.length) setEvents((prev) => {
-        const seen = new Set(prev.map((x) => x.id));
-        return [...d.data.list.filter((x: Activity) => !seen.has(x.id)), ...prev];
-      });
+      if (d?.data?.list?.length) {
+        setEvents((prev) => {
+          const seen = new Set(prev.map((x) => x.id));
+          return [...d.data.list.filter((x: Activity) => !seen.has(x.id)), ...prev];
+        });
+        setDemo(false);
+      }
       return d;
     },
     enabled: !!token,
+    // 后端未实现时立即保持演示数据
+    retry: 0,
   });
 
   // SSE 订阅
@@ -61,6 +75,7 @@ export default function AdminActivityPage() {
       <h2 style={{ marginBottom: 20 }}>
         实时活动流
         <HelpIcon text="实时 API 活动监控 — 通过 SSE 订阅全平台 API 调用事件流。查看模型、供应商、Token 消耗和消费金额。支持按成功/失败筛选。" level="page" />
+        {demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/activity 待接入）</span>}
       </h2>
 
       <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>

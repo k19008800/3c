@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { api } from "../lib/api";
+import { api, extractError } from "../lib/api";
 import { HelpIcon, StatusBadge, Modal, useToast } from "@3cloud/shared-ui";
 
 interface Plan { id: number; name: string; description: string; price: number; billing_cycle: string; features: string[]; status: string; sort_order: number; created_at: string; }
@@ -12,11 +12,27 @@ const Toggle: React.FC<{ on: boolean; onChange: (v: boolean) => void }> = ({ on,
   </div>
 );
 
+/* ───────── 演示数据（后端 /admin/subscription 待接入） ───────── */
+const MOCK_PLANS: Plan[] = [
+  { id: 1, name: "免费版", description: "基础功能，适合个人体验", price: 0, billing_cycle: "monthly", features: [], status: "active", sort_order: 1, created_at: "2026-01-01T00:00:00" },
+  { id: 2, name: "基础版", description: "每月 100 万 Token + 标准支持", price: 9900, billing_cycle: "monthly", features: [], status: "active", sort_order: 2, created_at: "2026-01-01T00:00:00" },
+  { id: 3, name: "专业版", description: "每月 1000 万 Token + 优先支持", price: 99000, billing_cycle: "monthly", features: [], status: "active", sort_order: 3, created_at: "2026-01-01T00:00:00" },
+  { id: 4, name: "高级版", description: "每月 5000 万 Token + 专属客户经理", price: 29900, billing_cycle: "monthly", features: [], status: "inactive", sort_order: 4, created_at: "2026-01-01T00:00:00" },
+  { id: 5, name: "企业版", description: "定制化方案 + SLA 保障", price: 99900, billing_cycle: "yearly", features: [], status: "active", sort_order: 5, created_at: "2026-01-01T00:00:00" },
+];
+const MOCK_SUBS: Subscriber[] = [
+  { id: 1, user_id: 1001, username: "用户小王", plan_id: 2, plan_name: "基础版", status: "active", started_at: "2026-07-01T00:00:00", expires_at: "2026-08-01T00:00:00" },
+  { id: 2, user_id: 1002, username: "用户小李", plan_id: 3, plan_name: "专业版", status: "active", started_at: "2026-06-15T00:00:00", expires_at: "2026-09-15T00:00:00" },
+  { id: 3, user_id: 1003, username: "用户小张", plan_id: 1, plan_name: "免费版", status: "expired", started_at: "2026-01-01T00:00:00", expires_at: "2026-02-01T00:00:00" },
+];
+
 export default function AdminSubscriptionPage() {
   const { toast } = useToast();
   const [tab, setTab] = useState<"plans" | "subscribers">("plans");
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [subs, setSubs] = useState<Subscriber[]>([]);
+  // 演示兜底：本地可变列表（写操作在演示模式下直接改它）
+  const [plans, setPlans] = useState<Plan[]>(MOCK_PLANS);
+  const [subs, setSubs] = useState<Subscriber[]>(MOCK_SUBS);
+  const [demo, setDemo] = useState(true);
   const [editing, setEditing] = useState<Plan | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [form, setForm] = useState<Partial<Plan>>({ name: "", description: "", price: 0, billing_cycle: "monthly", features: [], status: "active", sort_order: 0 });
@@ -31,25 +47,61 @@ export default function AdminSubscriptionPage() {
       ]);
       setPlans(p.data?.data?.list ?? []);
       setSubs(s.data?.data?.list ?? []);
-    } catch {}
+      setDemo(false);
+    } catch (e: any) {
+      // 演示模式：后端未实现时保持本地演示数据
+      if (e?.response?.status === 404) {
+        setPlans(MOCK_PLANS);
+        setSubs(MOCK_SUBS);
+      }
+    }
   }
 
   async function savePlan() {
-    if (editing) {
-      await api.put(`/admin/subscription/plans/${editing.id}`, editing);
-      toast.success("计划已更新");
-    } else {
-      await api.post("/admin/subscription/plans", form);
-      toast.success("计划已创建");
-      setShowNew(false);
+    try {
+      if (editing) {
+        await api.put(`/admin/subscription/plans/${editing.id}`, editing);
+        toast.success("计划已更新");
+      } else {
+        await api.post("/admin/subscription/plans", form);
+        toast.success("计划已创建");
+        setShowNew(false);
+      }
+      setEditing(null); loadData();
+    } catch (e: any) {
+      // 演示模式：后端未实现时本地生效
+      if (e?.response?.status === 404) {
+        if (editing) {
+          setPlans(prev => prev.map(p => p.id === editing.id ? { ...p, ...editing } : p));
+          toast.success("计划已更新（演示）");
+        } else {
+          const np: Plan = { id: Date.now(), name: form.name ?? "", description: form.description ?? "", price: form.price ?? 0, billing_cycle: form.billing_cycle ?? "monthly", features: form.features ?? [], status: "active", sort_order: form.sort_order ?? 0, created_at: new Date().toISOString() };
+          setPlans(prev => [...prev, np]);
+          toast.success("计划已创建（演示）");
+          setShowNew(false);
+        }
+        setEditing(null);
+      } else {
+        toast.error(extractError(e));
+      }
     }
-    setEditing(null); loadData();
   }
 
   async function togglePlanStatus(id: number, status: string) {
-    await api.put(`/admin/subscription/plans/${id}`, { status: status === "active" ? "inactive" : "active" });
-    toast.success("状态已切换");
-    loadData();
+    try {
+      await api.put(`/admin/subscription/plans/${id}`, { status: status === "active" ? "inactive" : "active" });
+      toast.success("状态已切换");
+      loadData();
+    } catch (e: any) {
+      // 演示模式：后端未实现时本地生效
+      if (e?.response?.status === 404) {
+        const ns = status === "active" ? "inactive" : "active";
+        setPlans(prev => prev.map(p => p.id === id ? { ...p, status: ns } : p));
+        toast.success(ns === "active" ? "已启用（演示）" : "已停用（演示）");
+      } else {
+        toast.error(extractError(e));
+      }
+    }
   }
 
   return (
@@ -59,6 +111,7 @@ export default function AdminSubscriptionPage() {
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>订阅计划管理
           <HelpIcon text="管理平台订阅计划（月付/年付），查看订阅用户列表。支持创建、编辑、启停计划。" level="page" />
         </span>
+        {demo && <span style={{ fontSize: 11, color: "#fef08a" }}>⚠️ 演示数据（后端 /admin/subscription 待接入）</span>}
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
