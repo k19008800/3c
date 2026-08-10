@@ -13,3 +13,11 @@ tsconfig.tsbuildinfo
 
 # web-console 构建产物（prepare-app 生成，勿提交）
 web-portal/public/app/
+
+# Claude Code 会话/worktree 数据（含嵌套 .git，勿提交）
+.claude/
+
+# E2E 调试临时产物
+e2e/*.png
+e2e/.tmp-screenshot.mjs
+
