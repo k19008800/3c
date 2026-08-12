@@ -19,6 +19,8 @@ const ADMIN_NAV: NavGroup[] = [
   ]},
   { group: "财务结算", icon: "💰", items: [
     { to: "/admin/finance/dashboard", label: "财务工作台", icon: "🏦" },
+    { to: "/admin/finance/accounts", label: "资金账户", icon: "💰" },
+    { to: "/admin/finance/close", label: "结账管理", icon: "🔒" },
     { to: "/admin/finance/manual-topup", label: "人工上账", icon: "✋" },
     { to: "/admin/finance/adjust", label: "手动调账", icon: "⚖️" },
     { to: "/admin/finance/orders", label: "充值订单", icon: "🧾" },
@@ -116,6 +118,7 @@ const ADMIN_NAV: NavGroup[] = [
     { to: "/admin/audit/login-logs", label: "登录日志", icon: "📱" },
     { to: "/admin/audit/operations", label: "操作审计", icon: "📋" },
     { to: "/admin/audit/api-logs", label: "API 调用日志", icon: "🔌" },
+    { to: "/admin/audit/conversation-records", label: "对话留痕", icon: "💬" },
     { to: "/admin/audit/operation-diff", label: "操作差异", icon: "🔄" },
     { to: "/admin/audit/data-request", label: "数据调取请求", icon: "📦" },
     { to: "/admin/audit/permissions", label: "权限审计日志", icon: "🛡️" },

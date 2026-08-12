@@ -288,6 +288,110 @@
 .c3-dropdown-menu__item--danger:hover { background: #fff1f0; }
 .c3-dropdown-menu__divider { height: 1px; background: #f0f0f0; margin: 4px 0; }
 
+/* ==== 返回按钮（详情页等）==== */
+.c3-back-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--color-primary);
+  padding: 0;
+  margin-bottom: 16px;
+  font-family: var(--font-family);
+}
+.c3-back-btn:hover { color: var(--color-primary-hover); }
+
+/* ==== 额度管理（限流配额例外，对齐 admin-credit.html）==== */
+/* 全局默认值摘要条 */
+.c3-default-strip { display: flex; align-items: center; gap: 18px; padding: 12px 20px; flex-wrap: wrap; }
+.c3-ds-title { font-size: 13px; color: var(--color-text-secondary); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.c3-ds-chip { display: inline-flex; flex-direction: column; padding: 6px 12px; background: #fafafa; border: 1px solid #eee; border-radius: 8px; line-height: 1.4; }
+.c3-ds-chip b { font-family: var(--font-family-mono); font-size: 14px; color: var(--color-text); font-weight: 600; }
+.c3-ds-chip span { font-size: 11px; color: var(--color-text-muted); }
+.c3-ds-note { font-size: 12px; color: var(--color-text-muted); }
+.c3-ds-link { margin-left: auto; white-space: nowrap; }
+
+/* 搜索定位区 */
+.c3-search-panel { padding: 20px; }
+.c3-search-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.c3-search-input {
+  width: 300px; height: 36px; border: 1px solid #d9d9d9; border-radius: var(--radius-sm);
+  padding: 0 12px; font-size: 13px; font-family: var(--font-family); background: var(--color-panel);
+  box-sizing: border-box; color: var(--color-text); outline: none;
+}
+.c3-search-input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(79, 110, 247, .1); }
+.c3-search-type { width: 110px; height: 36px; border: 1px solid #d9d9d9; border-radius: var(--radius-sm); padding: 0 8px; font-size: 13px; font-family: var(--font-family); background: var(--color-panel); box-sizing: border-box; color: var(--color-text); }
+.c3-quick-hint { font-size: 12px; color: var(--color-text-muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.c3-quick-tag {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 10px;
+  background: #fff; border: 1px solid #d9d9d9; color: var(--color-text-secondary);
+  font-size: 12px; cursor: pointer; transition: all .15s; font-family: var(--font-family);
+}
+.c3-quick-tag:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.c3-quick-tag b { color: var(--color-primary); font-weight: 600; }
+
+/* 搜索结果列表 */
+.c3-sr-panel { margin-top: 16px; }
+.c3-sr-item {
+  display: flex; align-items: center; gap: 14px; padding: 12px 20px; border: 1px solid #f0f0f0;
+  border-radius: 8px; cursor: pointer; transition: border-color .15s, box-shadow .15s; margin-bottom: 8px;
+}
+.c3-sr-item:hover { border-color: var(--color-primary); box-shadow: var(--shadow-panel); }
+.c3-sr-main { flex: 1; }
+.c3-sr-email { font-size: 14px; font-weight: 500; color: var(--color-text); }
+.c3-sr-sub { font-size: 12px; color: var(--color-text-muted); margin-top: 2px; }
+.c3-sr-right { display: flex; align-items: center; gap: 8px; }
+.c3-sr-empty { text-align: center; padding: 40px 0; color: var(--color-text-muted); font-size: 13px; }
+.c3-sr-empty .c3-sr-ico { font-size: 34px; display: block; margin-bottom: 8px; opacity: .4; }
+
+/* 客户额度视图 */
+.c3-cust-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 16px 20px; border-bottom: 1px solid var(--color-border); }
+.c3-cust-head .c3-ch-title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.c3-cust-head .c3-ch-meta { font-size: 12px; color: var(--color-text-muted); }
+
+/* 配额值单元格 */
+.c3-qval { font-family: var(--font-family-mono); font-weight: 600; display: flex; align-items: center; gap: 5px; }
+.c3-cell-sub { font-size: 11px; color: #aaa; margin-top: 2px; }
+.c3-cap-mark {
+  display: inline-flex; width: 16px; height: 16px; border-radius: 50%; background: #fff7e6; color: #fa8c16;
+  border: 1px solid #ffd591; align-items: center; justify-content: center; font-size: 10px;
+  cursor: help; font-weight: 700; line-height: 1;
+}
+.c3-cell-em { color: var(--color-text-secondary); }
+
+/* 模型多选网格 */
+.c3-model-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+.c3-model-opt {
+  display: flex; align-items: center; gap: 8px; border: 1px solid #e8e8e8; border-radius: 6px;
+  padding: 8px 10px; cursor: pointer; transition: border-color .15s, background .15s;
+}
+.c3-model-opt:hover { border-color: #c9d4ff; }
+.c3-model-opt.c3-sel { border-color: var(--color-primary); background: var(--color-primary-light); }
+.c3-model-opt input { margin: 0; cursor: pointer; }
+.c3-model-opt .c3-mo-name { font-size: 13px; font-weight: 500; }
+.c3-model-opt .c3-mo-cap { font-size: 11px; color: var(--color-text-muted); font-family: var(--font-family-mono); }
+
+/* 弹窗小布局 */
+.c3-form-row { display: flex; gap: 12px; }
+.c3-form-row .c3-form-group { flex: 1; }
+.c3-base-line { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.c3-hint-inline { font-size: 12px; color: var(--color-text-muted); margin-left: 8px; }
+.c3-radio-line { display: flex; align-items: center; gap: 14px; font-size: 13px; margin-top: 2px; }
+.c3-radio-line label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+.c3-range-picker { display: none; gap: 6px; align-items: center; }
+.c3-range-picker.c3-show { display: inline-flex; }
+.c3-range-picker input[type="date"] { height: 32px; width: 132px; font-size: 12px; padding: 0 8px; border: 1px solid #d9d9d9; border-radius: var(--radius-sm); font-family: var(--font-family); box-sizing: border-box; }
+.c3-cap-note {
+  display: none; background: #fff7e6; border: 1px solid #ffd591; border-radius: 6px; padding: 10px 12px;
+  font-size: 12px; color: #ad6800; margin-bottom: 14px; line-height: 1.7;
+}
+.c3-cap-note.c3-show { display: block; }
+.c3-cap-note b { color: #d46b08; }
+
+/* 视图区块切换（额度管理：空态/搜索/客户视图） */
+.c3-view-section { display: none; }
+.c3-view-section.c3-active { display: block; }
+
 /* ==== 待办事项卡片网格（财务工作台等）==== */
 .c3-todo-grid {
   display: grid;

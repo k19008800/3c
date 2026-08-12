@@ -12,12 +12,33 @@ const TODOS = [
   { label: "余额预警", count: 0, unit: "个", to: "/admin/consumption/balance-alert", color: "#f59e0b", icon: "⚠️" },
 ];
 
+interface Recharger {
+  rank: number;
+  userId: number;
+  email: string;
+  name: string;
+  amount: number;
+  count: number;
+  lastPaidAt: string;
+}
+
+/** 排名徽章配色（1金/2银/3铜/其余灰，对齐原型 rank-badge） */
+const RANK_COLORS = ["#f44336", "#ff9800", "#ffc107", "#c8c8c8"];
+
+/** 上次充值时间 → YYYY-MM-DD（PG 返回字符串或 Date） */
+function dateStr(v: string | Date): string {
+  return typeof v === "string" ? v.slice(0, 10) : new Date(v).toISOString().slice(0, 10);
+}
+
 export default function AdminDashboardPage() {
   const user = useAuthStore((s) => s.user);
   const [stats, setStats] = useState({ dau: 0, dauTrend: 0, revenue: 0, revenueTrend: 0, newUsers: 0, newUsersTrend: 0, profit: 0, profitTrend: 0, mau: 0, churnRate: 0, alertCount: 0 });
+  const [topRechargers, setTopRechargers] = useState<Recharger[]>([]);
 
   useEffect(() => {
-    api.get("/admin/dashboard").then(r => setStats(s => ({ ...s, ...r.data }))).catch(() => {});
+    api.get<{ data: { topRechargers?: Recharger[] } }>("/admin/dashboard").then(r => {
+      setTopRechargers(Array.isArray(r.data?.data?.topRechargers) ? r.data.data.topRechargers : []);
+    }).catch(() => {});
     api.get("/public/stats").then(r => setStats(s => ({ ...s, ...r.data, dauTrend: 12.5, revenueTrend: 8.3, newUsersTrend: 15.2, profitTrend: 5.8, mau: (r.data.users ?? 0), churnRate: 3.2 }))).catch(() => {});
   }, []);
 
@@ -64,6 +85,14 @@ export default function AdminDashboardPage() {
         <StatCard icon="💰" label="月消费总额" val="¥0" color="#22c55e" />
       </div>
 
+      {/* 充值排行榜 Top 10 */}
+      <Panel
+        title="🏆 充值排行榜 Top 10"
+        help="按已支付充值累计金额排名前 10 的客户"
+        extra={<button className="btn-text" style={{ border: "none", background: "none", cursor: "pointer", color: "#4f6ef7", fontSize: 13 }} onClick={() => exportLeaderboardCsv(topRechargers)}>📥 导出</button>}
+        body={<RechargeLeaderboard data={topRechargers} />}
+      />
+
       {/* Charts placeholder */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
         <Panel title="📊 供应商调用量分布" help="供应商调用占比" body={<div style={{ textAlign: "center", padding: "40px 0", color: "#888" }}>图表接入中 — 数据源已就绪</div>} />
@@ -92,12 +121,63 @@ function StatCard({ icon, label, val, color }: { icon: string; label: string; va
   </div>;
 }
 
-function Panel({ title, help, body }: { title: string; help?: string; body?: React.ReactNode }) {
-  return <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+function Panel({ title, help, extra, body }: { title: string; help?: string; extra?: React.ReactNode; body?: React.ReactNode }) {
+  return <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #e2e8f0", marginBottom: 20 }}>
     <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <h3 style={{ fontSize: 15, fontWeight: 600 }}>{title}</h3>
-      {help && <HelpIcon text={help} />}
+      <h3 style={{ fontSize: 15, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+        {title}
+        {help && <HelpIcon text={help} />}
+      </h3>
+      {extra}
     </div>
     <div style={{ padding: 16 }}>{body || <div style={{ textAlign: "center", padding: 40, color: "#888" }}>数据对接中</div>}</div>
   </div>;
+}
+
+/** 充值排行榜表格（对齐原型 rank-table：排名徽章 / 客户 / 金额 / 次数 / 上次充值） */
+function RechargeLeaderboard({ data }: { data: Recharger[] }) {
+  if (data.length === 0) {
+    return <div style={{ textAlign: "center", padding: "32px 0", color: "#888", fontSize: 13 }}>暂无充值数据</div>;
+  }
+  const cell = { padding: "10px 14px", borderBottom: "1px solid #f5f5f5", fontSize: 13 };
+  return (
+    <div style={{ maxHeight: 400, overflowY: "auto", margin: -16 }}>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>
+            {["排名", "客户", "充值金额", "充值次数", "上次充值"].map(h => (
+              <th key={h} style={{ background: "#fafafa", textAlign: "left", padding: "10px 14px", fontSize: 13, fontWeight: 500, color: "#64748b", borderBottom: "1px solid #e2e8f0", position: "sticky", top: 0 }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map(r => (
+            <tr key={r.userId}>
+              <td style={cell}>
+                <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: "50%", fontSize: 10, fontWeight: 700, color: "#fff", background: RANK_COLORS[Math.min(r.rank, 4) - 1] }}>{r.rank}</span>
+              </td>
+              <td style={{ ...cell, color: "#4f6ef7" }}>{r.email}</td>
+              <td style={{ ...cell, fontFamily: "var(--font-mono, ui-monospace, monospace)", fontWeight: 500 }}>¥{r.amount.toLocaleString()}</td>
+              <td style={cell}>{r.count}</td>
+              <td style={cell}>{dateStr(r.lastPaidAt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** 导出充值排行榜 CSV（带 BOM，Excel 可直接打开） */
+function exportLeaderboardCsv(data: Recharger[]) {
+  const header = ["排名", "客户", "充值金额", "充值次数", "上次充值"];
+  const lines = data.map(r => [r.rank, r.email, r.amount, r.count, dateStr(r.lastPaidAt)].join(","));
+  const csv = "﻿" + [header.join(","), ...lines].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "充值排行榜.csv";
+  a.click();
+  URL.revokeObjectURL(url);
 }

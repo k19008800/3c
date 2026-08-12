@@ -9,10 +9,10 @@
 
 import type { FastifyInstance } from 'fastify';
 import { db, schema } from '../db';
-import { eq, and, sql, count } from 'drizzle-orm';
+import { eq, and, sql, count, desc, inArray } from 'drizzle-orm';
 import { verifyToken } from '../services/auth/jwt';
 import { getBalance } from '../services/billing/balance';
-import { UnauthorizedError, ValidationError } from '../lib/errors';
+import { UnauthorizedError, ValidationError, NotFoundError } from '../lib/errors';
 
 // ── JWT auth ─────────────────────────────────────────────
 async function jwtAuth(request: any, reply: any) {
@@ -28,17 +28,33 @@ function userId(request: any): number {
   return (request as any).userContext.userId;
 }
 
+// ── 实名认证状态文案 ─────────────────────────────────────
+const REAL_NAME_STATUS_LABEL: Record<string, string> = {
+  unverified: '未认证',
+  pending_review: '待审核',
+  approved: '已认证',
+  rejected: '已驳回',
+};
+const REAL_NAME_TYPE_LABEL: Record<string, string> = { individual: '个人', enterprise: '企业' };
+
 // ── Playground 默认模型目录（mock 回退接受的模型集）──────
+// context: 上下文窗口（单位 tokens），随模型信息一并返回供前端展示
 const DEFAULT_MODELS = [
-  { id: 1, name: 'deepseek-chat', provider: 'DeepSeek', inputPrice: 0.002, outputPrice: 0.008 },
-  { id: 2, name: 'deepseek-r1', provider: 'DeepSeek', inputPrice: 0.002, outputPrice: 0.008 },
-  { id: 3, name: 'gpt-4o', provider: 'OpenAI', inputPrice: 0.0025, outputPrice: 0.01 },
-  { id: 4, name: 'gpt-4o-mini', provider: 'OpenAI', inputPrice: 0.00015, outputPrice: 0.0006 },
-  { id: 5, name: 'qwen-plus', provider: 'Alibaba', inputPrice: 0.0008, outputPrice: 0.002 },
-  { id: 6, name: 'qwen3-max', provider: 'Alibaba', inputPrice: 0.0012, outputPrice: 0.002 },
-  { id: 7, name: 'glm-5-pro', provider: 'Zhipu', inputPrice: 0.001, outputPrice: 0.002 },
-  { id: 8, name: 'kimi-k2', provider: 'Moonshot', inputPrice: 0.001, outputPrice: 0.002 },
-  { id: 9, name: 'claude-3-5-sonnet', provider: 'Anthropic', inputPrice: 0.003, outputPrice: 0.015 },
+  { id: 1, name: 'deepseek-chat', provider: 'DeepSeek', context: 128_000, inputPrice: 0.5, outputPrice: 1.3 },
+  { id: 2, name: 'deepseek-r1', provider: 'DeepSeek', context: 128_000, inputPrice: 0.5, outputPrice: 1.3 },
+  { id: 3, name: 'deepseek-v4-pro', provider: 'DeepSeek', context: 256_000, inputPrice: 2.0, outputPrice: 5.0 },
+  { id: 4, name: 'deepseek-v4-flash', provider: 'DeepSeek', context: 256_000, inputPrice: 0.8, outputPrice: 2.4 },
+  { id: 5, name: 'gpt-5.4', provider: 'OpenAI', context: 400_000, inputPrice: 4.0, outputPrice: 12.0 },
+  { id: 6, name: 'gpt-5.4-mini', provider: 'OpenAI', context: 400_000, inputPrice: 0.4, outputPrice: 1.2 },
+  { id: 7, name: 'claude-sonnet-4.6', provider: 'Anthropic', context: 200_000, inputPrice: 3.0, outputPrice: 15.0 },
+  { id: 8, name: 'claude-opus-4.5', provider: 'Anthropic', context: 200_000, inputPrice: 15.0, outputPrice: 75.0 },
+  { id: 9, name: 'glm-5.2', provider: 'Zhipu', context: 256_000, inputPrice: 0.6, outputPrice: 2.0 },
+  { id: 10, name: 'glm-4v-flash', provider: 'Zhipu', context: 128_000, inputPrice: 0.001, outputPrice: 0.005 },
+  { id: 11, name: 'qwen3.7-max', provider: 'Alibaba', context: 256_000, inputPrice: 2.0, outputPrice: 6.0 },
+  { id: 12, name: 'qwen3.6-plus', provider: 'Alibaba', context: 256_000, inputPrice: 0.8, outputPrice: 2.0 },
+  { id: 13, name: 'qwen3.5-9b', provider: 'Alibaba', context: 128_000, inputPrice: 0.2, outputPrice: 0.6 },
+  { id: 14, name: 'kimi-k3', provider: 'Moonshot', context: 256_000, inputPrice: 1.0, outputPrice: 4.0 },
+  { id: 15, name: 'minimax-m2.7', provider: 'MiniMax', context: 256_000, inputPrice: 0.6, outputPrice: 2.0 },
 ];
 
 /** 本月第一天 00:00 */
@@ -269,6 +285,139 @@ export async function meRoutes(app: FastifyInstance) {
     });
   });
 
+  // ═══ /me/real-name — 我的实名认证状态 ═══
+  app.get('/api/v1/me/real-name', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const [u] = await db
+      .select({
+        id: schema.users.id,
+        email: schema.users.email,
+        name: schema.users.name,
+        realNameStatus: schema.users.realNameStatus,
+        customerType: schema.users.customerType,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.id, uid));
+    if (!u) throw new UnauthorizedError('User not found');
+
+    const [rec] = await db
+      .select()
+      .from(schema.realNameRecords)
+      .where(eq(schema.realNameRecords.userId, uid))
+      .orderBy(desc(schema.realNameRecords.createdAt))
+      .limit(1);
+
+    const status = rec?.status ?? u.realNameStatus ?? 'unverified';
+    return reply.send({
+      data: {
+        status,
+        status_label: REAL_NAME_STATUS_LABEL[status] ?? '未认证',
+        type: rec?.type ?? null,
+        type_label: rec?.type ? (REAL_NAME_TYPE_LABEL[rec.type] ?? rec.type) : null,
+        real_name: rec?.realName ? schema.maskIdSmart(rec.realName, rec.type) : null,
+        id_number: rec?.idNumber ? schema.maskIdSmart(rec.idNumber, rec.type) : null,
+        phone: rec?.phone ?? null,
+        company: rec?.type === 'enterprise'
+          ? { legal_person: rec.legalPerson, company_address: rec.companyAddress }
+          : null,
+        reject_reason: rec?.rejectReason ?? null,
+        reviewed_at: rec?.reviewedAt ?? null,
+        user_real_name_status: u.realNameStatus,
+      },
+    });
+  });
+
+  // ═══ /me/real-name — 提交 / 重新提交实名申请 ═══
+  app.post('/api/v1/me/real-name', { preHandler: [jwtAuth] }, async (request: any, reply) => {
+    const uid = userId(request);
+    const b = (request.body || {}) as {
+      type?: string;
+      real_name: string;
+      id_number: string;
+      phone?: string;
+      legal_person?: string;
+      company_address?: string;
+    };
+
+    if (!b.real_name?.trim()) throw new ValidationError('请填写真实姓名 / 企业名称');
+    if (!b.id_number?.trim()) throw new ValidationError('请填写证件号');
+    const type = b.type === 'enterprise' ? 'enterprise' : 'individual';
+    if (type === 'enterprise' && !b.legal_person?.trim()) throw new ValidationError('企业认证需填写法人代表');
+
+    const idNum = b.id_number.trim();
+    if (type === 'individual' && !/^\d{17}[\dXx]$/.test(idNum)) {
+      throw new ValidationError('身份证号格式有误（需 18 位）');
+    }
+    if (type === 'enterprise' && (idNum.length < 8 || idNum.length > 20)) {
+      throw new ValidationError('统一社会信用代码格式有误');
+    }
+
+    // 已有审核中 / 已通过的实名，拒绝重复提交
+    const [cur] = await db
+      .select()
+      .from(schema.realNameRecords)
+      .where(eq(schema.realNameRecords.userId, uid))
+      .orderBy(desc(schema.realNameRecords.createdAt))
+      .limit(1);
+    if (cur && (cur.status === 'pending_review' || cur.status === 'approved')) {
+      return reply.code(400).send({
+        code: 400,
+        error: 'EXISTS',
+        message: cur.status === 'approved' ? '已完成实名认证，无需重复提交' : '已有进行中的实名认证，请等待审核',
+      });
+    }
+
+    let recordId: number;
+    const now = new Date();
+    if (cur) {
+      // 驳回后重新提交：覆盖原记录为 pending_review
+      const [upd] = await db
+        .update(schema.realNameRecords)
+        .set({
+          type,
+          realName: b.real_name.trim(),
+          idNumber: idNum,
+          phone: b.phone ?? null,
+          legalPerson: type === 'enterprise' ? (b.legal_person ?? null) : null,
+          companyAddress: type === 'enterprise' ? (b.company_address ?? null) : null,
+          status: 'pending_review',
+          reviewerId: null,
+          rejectReason: null,
+          reviewedAt: null,
+          updatedAt: now,
+        })
+        .where(eq(schema.realNameRecords.id, cur.id))
+        .returning({ id: schema.realNameRecords.id });
+      if (!upd) throw new Error('Failed to update real-name record');
+      recordId = upd.id;
+    } else {
+      const [created] = await db
+        .insert(schema.realNameRecords)
+        .values({
+          userId: uid,
+          type,
+          realName: b.real_name.trim(),
+          idNumber: idNum,
+          phone: b.phone ?? null,
+          legalPerson: type === 'enterprise' ? (b.legal_person ?? null) : null,
+          companyAddress: type === 'enterprise' ? (b.company_address ?? null) : null,
+          status: 'pending_review',
+        })
+        .returning({ id: schema.realNameRecords.id });
+      if (!created) throw new Error('Failed to create real-name record');
+      recordId = created.id;
+    }
+
+    // 同步 users.real_name_status
+    await db.update(schema.users).set({ realNameStatus: 'pending_review' }).where(eq(schema.users.id, uid));
+
+    return reply.send({
+      data: { id: recordId, status: 'pending_review', status_label: '待审核' },
+      message: '实名认证申请已提交，等待审核',
+    });
+  });
+
+
   // ═══ /me/billing/history/:month/download — 账单 CSV ═══
   app.get('/api/v1/me/billing/history/:month/download', { preHandler: [jwtAuth] }, async (request, reply) => {
     const uid = userId(request);
@@ -291,5 +440,103 @@ export async function meRoutes(app: FastifyInstance) {
     reply.header('Content-Type', 'text/csv; charset=utf-8');
     reply.header('Content-Disposition', `attachment; filename="billing-${month}.csv"`);
     return reply.send(csv);
+  });
+
+  // ═══ /me/notifications — 通知中心（价格变更 / 系统公告 / 安全 / 工单） ═══
+  // 前端契约对齐 NotificationPage.tsx：category 分组、未读数、全部已读
+
+  const NOTIFICATION_CATEGORY: Record<string, { category: string; label: string; icon: string }> = {
+    price_change: { category: 'consume', label: '价格变更', icon: '📈' },
+    announcement: { category: 'system', label: '系统公告', icon: '📢' },
+    system: { category: 'system', label: '系统公告', icon: '📢' },
+    maintenance: { category: 'system', label: '系统公告', icon: '🛠️' },
+    security: { category: 'security', label: '安全', icon: '🔒' },
+    login: { category: 'security', label: '安全', icon: '🔒' },
+    password: { category: 'security', label: '安全', icon: '🔒' },
+    ticket: { category: 'ticket', label: '工单', icon: '🎫' },
+  };
+
+  const categoryOf = (type: string) => NOTIFICATION_CATEGORY[type] ?? { category: 'system', label: '系统公告', icon: '📢' };
+  const htmlEscape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const toBodyHtml = (content: string) => htmlEscape(content).replace(/\n/g, '<br/>');
+
+  app.get('/api/v1/me/notifications', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const q = (request.query || {}) as { category?: string; page?: string; page_size?: string };
+    const category = String(q.category || 'all');
+    const page = Math.max(1, parseInt(q.page || '1', 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(q.page_size || '50', 10) || 50));
+    const offset = (page - 1) * pageSize;
+
+    const rows = await db.select().from(schema.notifications)
+      .where(eq(schema.notifications.userId, uid))
+      .orderBy(desc(schema.notifications.createdAt))
+      .limit(pageSize).offset(offset);
+
+    const list = rows
+      .filter((n) => category === 'all' || categoryOf(n.type).category === category)
+      .map((n) => {
+        const cat = categoryOf(n.type);
+        return {
+          id: n.id,
+          category: cat.category,
+          category_label: cat.label,
+          icon: cat.icon,
+          title: n.title,
+          desc: n.content.replace(/\s+/g, ' ').slice(0, 80),
+          body_html: toBodyHtml(n.content),
+          created_at: n.createdAt.toISOString(),
+          is_read: n.read,
+        };
+      });
+
+    // 未读数（同分类口径，供顶部「X 条未读」展示）
+    const unreadCond = category !== 'all'
+      ? and(
+          eq(schema.notifications.userId, uid),
+          eq(schema.notifications.read, false),
+          inArray(schema.notifications.type, Object.keys(NOTIFICATION_CATEGORY).filter((t) => categoryOf(t).category === category)),
+        )
+      : and(eq(schema.notifications.userId, uid), eq(schema.notifications.read, false));
+    const [totalResult, unreadResult] = await Promise.all([
+      db.select({ v: sql<number>`count(*)` }).from(schema.notifications).where(eq(schema.notifications.userId, uid)),
+      db.select({ v: sql<number>`count(*)` }).from(schema.notifications).where(unreadCond),
+    ]);
+
+    return reply.send({
+      data: {
+        list,
+        total: Number(totalResult[0]?.v ?? 0),
+        unread: Number(unreadResult[0]?.v ?? 0),
+        page,
+        page_size: pageSize,
+      },
+    });
+  });
+
+  app.post('/api/v1/me/notifications/:id/read', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const id = parseInt(String((request.params as Record<string, unknown>).id), 10);
+    if (isNaN(id)) throw new ValidationError('Invalid notification id');
+    const [row] = await db.update(schema.notifications)
+      .set({ read: true, readAt: new Date() })
+      .where(and(eq(schema.notifications.id, id), eq(schema.notifications.userId, uid)))
+      .returning({ id: schema.notifications.id });
+    if (!row) throw new NotFoundError('Notification', id);
+    return reply.send({ data: { ok: true, id } });
+  });
+
+  app.post('/api/v1/me/notifications/read-all', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const r = await db.update(schema.notifications)
+      .set({ read: true, readAt: new Date() })
+      .where(and(eq(schema.notifications.userId, uid), eq(schema.notifications.read, false)))
+      .returning({ id: schema.notifications.id });
+    return reply.send({ data: { ok: true, updated: r.length } });
+  });
+
+  // 通知设置（本期返回空结构，设置页展示空态；按类型邮件开关后续迭代）
+  app.get('/api/v1/me/notification-settings', { preHandler: [jwtAuth] }, async (_request, reply) => {
+    return reply.send({ data: { types: {}, prefs: {} } });
   });
 }

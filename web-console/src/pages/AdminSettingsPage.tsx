@@ -26,13 +26,28 @@ export default function AdminSettingsPage() {
   const [siteName, setSiteName] = useState("3Cloud");
   const [siteDesc, setSiteDesc] = useState("AI模型聚合平台");
   const [logoUrl, setLogoUrl] = useState("");
+  const [faviconUrl, setFaviconUrl] = useState("");
+  const [companyName, setCompanyName] = useState("3Cloud Technology");
   const [icpNo, setIcpNo] = useState("");
+  const [icpLink, setIcpLink] = useState("");
+  const [policeIcp, setPoliceIcp] = useState("");
+  const [contactEmail, setContactEmail] = useState("support@unmisa.com");
+  const [contactPhone, setContactPhone] = useState("");
+  const [copyright, setCopyright] = useState("");
+  const [wechatQrUrl, setWechatQrUrl] = useState("");
+  const [footerHtml, setFooterHtml] = useState("");
   const [maintenanceMode, setMaintenanceMode] = useState(false);
 
   // Rate limits
   const [globalRpm, setGlobalRpm] = useState(10000);
   const [globalTpm, setGlobalTpm] = useState(10000000);
   const [rateLimitEnabled, setRateLimitEnabled] = useState(true);
+
+  // 客户基线限流（额度管理页 /admin/customers/quotas 读取）
+  const [enterpriseRpm, setEnterpriseRpm] = useState(300);
+  const [enterpriseTpm, setEnterpriseTpm] = useState(1000000);
+  const [personalRpm, setPersonalRpm] = useState(60);
+  const [personalTpm, setPersonalTpm] = useState(200000);
 
   // Security
   const [sessionTimeout, setSessionTimeout] = useState(1440);
@@ -52,12 +67,25 @@ export default function AdminSettingsPage() {
       const d = r.data?.data ?? {};
       setSiteName(d.site_name ?? "3Cloud");
       setSiteDesc(d.site_desc ?? "");
-      setLogoUrl(d.logo_url ?? "");
-      setIcpNo(d.icp_no ?? "");
+      setLogoUrl(d.site_logo_url ?? "");
+      setFaviconUrl(d.site_favicon_url ?? "");
+      setCompanyName(d.site_company_name ?? "3Cloud Technology");
+      setIcpNo(d.site_icp ?? "");
+      setIcpLink(d.site_icp_link ?? "");
+      setPoliceIcp(d.site_police_icp ?? "");
+      setContactEmail(d.site_contact_email ?? "support@unmisa.com");
+      setContactPhone(d.site_contact_phone ?? "");
+      setCopyright(d.site_copyright ?? "");
+      setWechatQrUrl(d.site_wechat_qr_url ?? "");
+      setFooterHtml(d.site_footer_html ?? "");
       setMaintenanceMode(d.maintenance_mode ?? false);
       setGlobalRpm(d.global_rpm ?? 10000);
       setGlobalTpm(d.global_tpm ?? 10000000);
       setRateLimitEnabled(d.rate_limit_enabled ?? true);
+      setEnterpriseRpm(d.enterprise_rpm ?? 300);
+      setEnterpriseTpm(d.enterprise_tpm ?? 1000000);
+      setPersonalRpm(d.personal_rpm ?? 60);
+      setPersonalTpm(d.personal_tpm ?? 200000);
       setSessionTimeout(d.session_timeout ?? 1440);
       setMaxLoginAttempts(d.max_login_attempts ?? 5);
       setMfaRequired(d.mfa_required ?? false);
@@ -70,11 +98,17 @@ export default function AdminSettingsPage() {
   }, []);
 
   async function saveSite() {
-    await api.put("/admin/settings/site", { site_name: siteName, site_desc: siteDesc, logo_url: logoUrl, icp_no: icpNo, maintenance_mode: maintenanceMode });
+    await api.put("/admin/settings/site", {
+      site_name: siteName, site_desc: siteDesc, site_logo_url: logoUrl, site_favicon_url: faviconUrl,
+      site_company_name: companyName, site_icp: icpNo, site_icp_link: icpLink, site_police_icp: policeIcp,
+      site_contact_email: contactEmail, site_contact_phone: contactPhone,
+      site_copyright: copyright, site_wechat_qr_url: wechatQrUrl, site_footer_html: footerHtml,
+      maintenance_mode: maintenanceMode,
+    });
     toast.success("站点设置已保存");
   }
   async function saveRate() {
-    await api.put("/admin/settings/rate-limit", { rate_limit_enabled: rateLimitEnabled, global_rpm: globalRpm, global_tpm: globalTpm });
+    await api.put("/admin/settings/rate-limit", { rate_limit_enabled: rateLimitEnabled, global_rpm: globalRpm, global_tpm: globalTpm, enterprise_rpm: enterpriseRpm, enterprise_tpm: enterpriseTpm, personal_rpm: personalRpm, personal_tpm: personalTpm });
     toast.success("限流设置已保存");
   }
   async function saveSecurity() {
@@ -111,11 +145,23 @@ export default function AdminSettingsPage() {
 
       {tab === "site" && (
         <div style={cfgSection}>
-          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}>🌐 站点基本信息 <HelpIcon text="配置平台对外展示的名称、描述、LOGO、ICP备案号及维护模式。" /></h3>
+          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}>🌐 站点基本信息 <HelpIcon text="配置平台对外展示的名称、描述、LOGO、ICP备案号及维护模式。保存后 Portal 门户实时生效。" /></h3>
           <div style={cfgRow}><span style={cfgLabel}>站点名称</span><input style={cfgInput} value={siteName} onChange={e => setSiteName(e.target.value)} /></div>
           <div style={cfgRow}><span style={cfgLabel}>站点描述</span><input style={{...cfgInput, width: 400}} value={siteDesc} onChange={e => setSiteDesc(e.target.value)} /></div>
+          <div style={cfgRow}><span style={cfgLabel}>公司名称</span><input style={{...cfgInput, width: 400}} value={companyName} onChange={e => setCompanyName(e.target.value)} /></div>
           <div style={cfgRow}><span style={cfgLabel}>LOGO URL</span><input style={{...cfgInput, width: 400}} value={logoUrl} onChange={e => setLogoUrl(e.target.value)} placeholder="https://..." /></div>
+          <div style={cfgRow}><span style={cfgLabel}>Favicon URL</span><input style={{...cfgInput, width: 400}} value={faviconUrl} onChange={e => setFaviconUrl(e.target.value)} placeholder="https://.../favicon.ico" /></div>
           <div style={cfgRow}><span style={cfgLabel}>ICP备案号</span><input style={cfgInput} value={icpNo} onChange={e => setIcpNo(e.target.value)} placeholder="京ICP备XXXXXXXX号" /></div>
+          <div style={cfgRow}><span style={cfgLabel}>ICP备案链接</span><input style={{...cfgInput, width: 300}} value={icpLink} onChange={e => setIcpLink(e.target.value)} placeholder="https://beian.miit.gov.cn/" /></div>
+          <div style={cfgRow}><span style={cfgLabel}>公安备案号</span><input style={cfgInput} value={policeIcp} onChange={e => setPoliceIcp(e.target.value)} placeholder="京公网安备XXXXXXXX号" /></div>
+          <div style={cfgRow}><span style={cfgLabel}>联系邮箱</span><input style={cfgInput} value={contactEmail} onChange={e => setContactEmail(e.target.value)} /></div>
+          <div style={cfgRow}><span style={cfgLabel}>联系电话</span><input style={cfgInput} value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="如 400-xxx-xxxx" /></div>
+          <div style={cfgRow}><span style={cfgLabel}>公众号二维码 URL</span><input style={{...cfgInput, width: 300}} value={wechatQrUrl} onChange={e => setWechatQrUrl(e.target.value)} placeholder="https://..." /></div>
+          <div style={cfgRow}><span style={cfgLabel}>版权信息</span><input style={{...cfgInput, width: 300}} value={copyright} onChange={e => setCopyright(e.target.value)} placeholder="如 © 2026 3Cloud" /></div>
+          <div style={cfgRow}>
+            <span style={cfgLabel}>自定义 Footer HTML</span>
+            <textarea style={{ ...cfgInput, width: 400, height: 60 }} value={footerHtml} onChange={e => setFooterHtml(e.target.value)} placeholder="留空则使用默认版权+备案渲染" />
+          </div>
           <div style={cfgRow}>
             <span style={cfgLabel}>维护模式 <HelpIcon text="开启后仅管理员可访问，普通用户看到维护页面。" /></span>
             <Toggle on={maintenanceMode} onChange={setMaintenanceMode} />
@@ -141,6 +187,31 @@ export default function AdminSettingsPage() {
             <span style={cfgLabel}>全局 TPM 上限</span>
             <input style={cfgInput} type="number" value={globalTpm} onChange={e => setGlobalTpm(Number(e.target.value))} disabled={!rateLimitEnabled} />
             <span style={{ fontSize: 12, color: "#888" }}>Token/分钟</span>
+          </div>
+
+          <div style={{ margin: "20px 0 6px", fontSize: 13, fontWeight: 600, color: "#333" }}>
+            🧮 客户基线限流 <HelpIcon text="企业/个人客户的默认 RPM/TPM 基线。未设例外的客户按此生效，最终受模型全局限流硬顶约束。此配置由「客户管理 → 额度管理」页读取。" />
+          </div>
+          <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>额度管理页生效值 = min(客户例外 ?? 客户类型默认, 模型全局限流硬顶)。</div>
+          <div style={{...cfgRow, opacity: rateLimitEnabled ? 1 : 0.5}}>
+            <span style={cfgLabel}>企业 RPM 上限</span>
+            <input style={cfgInput} type="number" value={enterpriseRpm} onChange={e => setEnterpriseRpm(Number(e.target.value))} disabled={!rateLimitEnabled} />
+            <span style={{ fontSize: 12, color: "#888" }}>请求/分钟 · 企业客户默认</span>
+          </div>
+          <div style={{...cfgRow, opacity: rateLimitEnabled ? 1 : 0.5}}>
+            <span style={cfgLabel}>企业 TPM 上限</span>
+            <input style={cfgInput} type="number" value={enterpriseTpm} onChange={e => setEnterpriseTpm(Number(e.target.value))} disabled={!rateLimitEnabled} />
+            <span style={{ fontSize: 12, color: "#888" }}>Token/分钟 · 企业客户默认</span>
+          </div>
+          <div style={{...cfgRow, opacity: rateLimitEnabled ? 1 : 0.5}}>
+            <span style={cfgLabel}>个人 RPM 上限</span>
+            <input style={cfgInput} type="number" value={personalRpm} onChange={e => setPersonalRpm(Number(e.target.value))} disabled={!rateLimitEnabled} />
+            <span style={{ fontSize: 12, color: "#888" }}>请求/分钟 · 个人客户默认</span>
+          </div>
+          <div style={{...cfgRow, opacity: rateLimitEnabled ? 1 : 0.5}}>
+            <span style={cfgLabel}>个人 TPM 上限</span>
+            <input style={cfgInput} type="number" value={personalTpm} onChange={e => setPersonalTpm(Number(e.target.value))} disabled={!rateLimitEnabled} />
+            <span style={{ fontSize: 12, color: "#888" }}>Token/分钟 · 个人客户默认</span>
           </div>
           <button onClick={saveRate} style={{ marginTop: 16, padding: "8px 24px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存限流设置</button>
         </div>

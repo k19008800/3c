@@ -21,7 +21,9 @@ import { countTokens } from '../services/billing/token-counter';
 import { determineStreamBilling } from '../services/billing/settle-stream';
 import { getBalance, deductBalance } from '../services/billing/balance';
 import { recordConsumption } from '../services/billing/consumption-log';
+import { generateCommissionForConsumption } from '../services/agent/commission';
 import { recordChannelResult } from '../services/upstream/circuit-breaker';
+import { recordConversationContext, fingerprintKey } from '../services/audit/conversation-context';
 import { AppError, InsufficientBalanceError } from '../lib/errors';
 import type { PipelineContext } from '../services/pipeline/types';
 import type { SelectedChannel } from '../services/upstream/routing';
@@ -42,6 +44,31 @@ interface ChatRequest {
   stop?: string | string[];
   user?: string;
   [key: string]: unknown;
+}
+
+/** 对话上下文留痕累加器 — finally 统一落库（成功/失败/402 都记） */
+interface ConversationTrace {
+  requestId: string;
+  userId: number;
+  apiKeyId: number | null;
+  clientKeyHash: string;
+  requestedModel: string;
+  routedModel: string | null;
+  supplierId: number | null;
+  supplierModelId: number | null;
+  supplierKeyFp: string | null;
+  messages: unknown[];
+  responseText: string | null;
+  finishReason: string | null;
+  status: string;
+  errorCode: string | null;
+  inputTokens: number;
+  outputTokens: number;
+  cost: string | null;
+  clientIp: string | null;
+  userAgent: string | null;
+  occurredAt: Date;
+  completedAt: Date | null;
 }
 
 // ============================================================
@@ -152,7 +179,7 @@ async function settleBilling(
 ): Promise<void> {
   await deductBalance(ctx.userId, cost.toFixed(8), 'consumption', ctx.requestId);
 
-  await recordConsumption({
+  const record = await recordConsumption({
     userId: ctx.userId,
     apiKeyId: ctx.apiKeyId,
     model: ctx.model,
@@ -168,6 +195,18 @@ async function settleBilling(
     errorCode: opts.errorCode,
     requestId: ctx.requestId,
   });
+
+  // 实时佣金结算（异步，不阻塞响应）：消费产生即结算；无代理绑定则内部跳过。
+  // 幂等由 agent_commissions.consumption_record_id 唯一索引保证；进程崩溃由回填调度器自愈。
+  if (record?.id) {
+    void generateCommissionForConsumption({
+      userId: ctx.userId,
+      consumptionRecordId: record.id,
+      cost: cost.toFixed(8),
+    }).catch((e) => {
+      console.error(`[chat] commission generation failed for consumption ${record.id}:`, e);
+    });
+  }
 
   // 更新 key 最后调用时间
   if (ctx.apiKeyId) {
@@ -217,12 +256,41 @@ export async function chatRoutes(app: FastifyInstance) {
       metadata: {},
     };
 
+    // 对话上下文留痕累加器：各分支填充字段，finally 统一落库（旁路，不阻断主链路）
+    const bodyAny = body as Record<string, unknown>;
+    const trace: ConversationTrace = {
+      requestId: pipelineCtx.requestId,
+      userId: ctx?.userId ?? 0,
+      apiKeyId: ctx?.apiKeyId ?? null,
+      clientKeyHash: ctx?.keyHash ?? '',
+      requestedModel: typeof bodyAny.model === 'string' ? bodyAny.model : '',
+      routedModel: null,
+      supplierId: null,
+      supplierModelId: null,
+      supplierKeyFp: null,
+      messages: Array.isArray(bodyAny.messages) ? bodyAny.messages as unknown[] : [],
+      responseText: null,
+      finishReason: null,
+      status: 'succeeded',
+      errorCode: null,
+      inputTokens: 0,
+      outputTokens: 0,
+      cost: null,
+      clientIp: request.ip ?? null,
+      userAgent: (request.headers?.['user-agent'] as string | undefined) ?? null,
+      occurredAt: new Date(),
+      completedAt: null,
+    };
+
     try {
+      try {
       // 1. Validate
       const req = validateChatRequest(body);
       const isStream = req.stream === true;
       pipelineCtx.model = req.model;
       pipelineCtx.stream = isStream;
+      trace.requestedModel = req.model;
+      trace.messages = req.messages as unknown[];
 
       // 2. Count input tokens
       const estimatedInputTokens = estimateInputTokens(req.messages as any, req.model);
@@ -248,6 +316,14 @@ export async function chatRoutes(app: FastifyInstance) {
           fallback: true,
           finishReason: 'stop',
         });
+
+        trace.routedModel = req.model;
+        trace.responseText = mock.content;
+        trace.finishReason = 'stop';
+        trace.inputTokens = mock.usage.prompt_tokens;
+        trace.outputTokens = mock.usage.completion_tokens;
+        trace.cost = cost.toFixed(8);
+        trace.status = 'succeeded';
 
         const payload = {
           id: `chatcmpl-${pipelineCtx.requestId}`,
@@ -276,6 +352,11 @@ export async function chatRoutes(app: FastifyInstance) {
       }
 
       // 5. 真实上游路径
+      trace.routedModel = channel.modelMapping.platformModel;
+      trace.supplierId = channel.supplier.id;
+      trace.supplierModelId = channel.modelMapping.id;
+      trace.supplierKeyFp = fingerprintKey(channel.key.keyValue);
+
       const upstreamUrl = `${channel.supplier.baseUrl}/v1/chat/completions`;
       const upstreamBody = buildUpstreamBody(req, channel.modelMapping.platformModel);
 
@@ -294,6 +375,9 @@ export async function chatRoutes(app: FastifyInstance) {
         await recordChannelResult(cbKey, false);
         let errorBody = '';
         try { errorBody = await upstreamResp.text(); } catch { /* ignore */ }
+        trace.status = 'failed';
+        trace.errorCode = String(upstreamResp.status);
+        trace.responseText = errorBody.slice(0, 20000);
         reply.status(upstreamResp.status || 502);
         reply.header('Content-Type', 'application/json');
         try {
@@ -325,6 +409,13 @@ export async function chatRoutes(app: FastifyInstance) {
           // 流式已开始，无法改状态码；记账失败仅记录（余额不足属罕见竞态）
           console.error(`[Chat] stream settle failed for ${pipelineCtx.requestId}:`, err);
         }
+
+        trace.responseText = state.generatedText || null;
+        trace.inputTokens = billing.promptTokens;
+        trace.outputTokens = billing.completionTokens;
+        trace.cost = cost.toFixed(8);
+        trace.finishReason = state.finishReason ?? null;
+        trace.status = 'succeeded';
         return;
       }
 
@@ -358,15 +449,34 @@ export async function chatRoutes(app: FastifyInstance) {
 
       await recordChannelResult(cbKey, true);
       reply.header('X-Request-Id', pipelineCtx.requestId);
+
+      // 非流式：从响应体提取助手回复原文
+      const choiceMsg = (parsedBody.choices as Array<{ message?: { content?: unknown } }> | undefined)?.[0]?.message;
+      const respText = typeof choiceMsg?.content === 'string' ? choiceMsg.content : null;
+      trace.responseText = respText;
+      trace.inputTokens = hasUsage ? promptTokens : estimatedInputTokens;
+      trace.outputTokens = hasUsage ? completionTokens : 0;
+      trace.cost = cost.toFixed(8);
+      trace.finishReason = finishReason;
+      trace.status = 'succeeded';
       return reply.send(parsedBody);
-    } catch (err) {
-      if (err instanceof InsufficientBalanceError) {
-        return sendOpenAIError(reply, 402, err.message, 'insufficient_balance', 402);
+      } catch (err) {
+        trace.completedAt = new Date();
+        trace.status = 'failed';
+        if (err instanceof InsufficientBalanceError) {
+          trace.errorCode = 'INSUFFICIENT_BALANCE';
+          return sendOpenAIError(reply, 402, err.message, 'insufficient_balance', 402);
+        }
+        if (err instanceof AppError) {
+          trace.errorCode = err.code.toLowerCase();
+          return sendOpenAIError(reply, err.statusCode, err.message, err.code.toLowerCase(), err.statusCode);
+        }
+        throw err;
       }
-      if (err instanceof AppError) {
-        return sendOpenAIError(reply, err.statusCode, err.message, err.code.toLowerCase(), err.statusCode);
-      }
-      throw err;
+    } finally {
+      trace.completedAt = new Date();
+      // 旁路写入：记录失败只打日志，不改变请求结果
+      await recordConversationContext(trace).catch(() => { /* 已由服务内部兜底 */ });
     }
   };
 

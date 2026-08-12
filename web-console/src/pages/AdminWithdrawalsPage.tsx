@@ -3,31 +3,27 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { HelpIcon, StatusBadge, Modal, EmptyState, SkeletonGroup, useToast } from "@3cloud/shared-ui";
 
-/* ============ 类型 ============ */
+/* ============ 类型（对齐后端 /api/v1/admin/agent-withdrawals 契约） ============ */
 interface WdItem {
   id: number;
-  user_id: number;
-  withdrawal_no: string;
+  withdraw_no: string;
+  agent_id: number;
+  agent_name: string;
+  agent_email: string;
   amount: number;
+  method: string;
+  bank: string | null;
+  account: string | null;
+  account_name: string | null;
   status: string;
   status_label: string;
-  account: string;
-  bank: string | null;
-  account_name: string | null;
-  reject_reason: string | null;
+  review_note: string | null;
   created_at: string;
-  email: string;
-  username: string;
+  updated_at: string;
 }
 interface WdDetail extends WdItem {
-  first_reviewer_id: number | null;
-  first_review_at: string | null;
-  first_review_note: string | null;
-  second_reviewer_id: number | null;
-  second_review_at: string | null;
-  second_review_note: string | null;
-  transfer_no: string | null;
-  completed_at: string | null;
+  processed_by: number | null;
+  processed_at: string | null;
 }
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
@@ -36,16 +32,14 @@ const inp: React.CSSProperties = { padding: "8px 12px", borderRadius: 8, border:
 
 const STATUS_FILTERS = [
   { value: "", label: "全部" },
-  { value: "pending_first_review", label: "待初审" },
-  { value: "pending_second_review", label: "待复审" },
-  { value: "processing", label: "打款中" },
-  { value: "completed", label: "已完成" },
+  { value: "pending", label: "待审核" },
+  { value: "processing", label: "处理中" },
+  { value: "completed", label: "已到账" },
   { value: "rejected", label: "已驳回" },
 ];
 
 const STATUS_MAP: Record<string, "success" | "warning" | "danger" | "info" | "default"> = {
-  pending_first_review: "warning",
-  pending_second_review: "info",
+  pending: "warning",
   processing: "info",
   completed: "success",
   rejected: "danger",
@@ -56,6 +50,7 @@ export default function AdminWithdrawalsPage() {
   const [status, setStatus] = useState("");
   const [detail, setDetail] = useState<WdDetail | null>(null);
   const [reviewNote, setReviewNote] = useState("");
+  const [transferNo, setTransferNo] = useState("");
   const { toast } = useToast();
 
   const listQ = useQuery({
@@ -65,8 +60,8 @@ export default function AdminWithdrawalsPage() {
   });
 
   const reviewMut = useMutation({
-    mutationFn: async ({ id, action, stage }: { id: number; action: "approve" | "reject"; stage: "first" | "second" }) =>
-      (await api.post(`/admin/agent-withdrawals/${id}/review`, { action, stage, note: reviewNote })).data,
+    mutationFn: async ({ id, action }: { id: number; action: "approve" | "reject" }) =>
+      (await api.post(`/admin/agent-withdrawals/${id}/review`, { action, note: action === "reject" ? reviewNote : reviewNote || undefined })).data,
     onSuccess: (d: { data: { message?: string } }) => {
       toast.success(d?.data?.message ?? "操作成功");
       setReviewNote("");
@@ -77,10 +72,16 @@ export default function AdminWithdrawalsPage() {
   });
 
   const transferMut = useMutation({
-    mutationFn: async ({ id, result }: { id: number; result: "success" | "failed" }) =>
-      (await api.post(`/admin/agent-withdrawals/${id}/transfer`, { result, transfer_no: result === "success" ? `TF${Date.now()}` : undefined })).data,
+    mutationFn: async ({ id, result }: { id: number; result: "success" | "fail" }) =>
+      (await api.post(`/admin/agent-withdrawals/${id}/transfer`, {
+        result,
+        transfer_no: result === "success" ? transferNo || `TF${Date.now()}` : undefined,
+        note: result === "fail" ? reviewNote || "打款失败" : undefined,
+      })).data,
     onSuccess: (d: { data: { message?: string } }) => {
       toast.success(d?.data?.message ?? "打款处理完成");
+      setReviewNote("");
+      setTransferNo("");
       setDetail(null);
       qc.invalidateQueries({ queryKey: ["admin-withdrawals"] });
     },
@@ -90,6 +91,7 @@ export default function AdminWithdrawalsPage() {
   const openDetail = async (id: number) => {
     try {
       const d = (await api.get<{ data: WdDetail }>(`/admin/agent-withdrawals/${id}`)).data.data;
+      setTransferNo("");
       setDetail(d);
     } catch (e) {
       toast.error(extractError(e));
@@ -100,7 +102,7 @@ export default function AdminWithdrawalsPage() {
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <h2 style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
         提现审核
-        <HelpIcon text="管理代理商的提现申请。支持初审和复审两级审核，审核通过后进入打款流程。可标记打款成功或失败退回。" level="page" />
+        <HelpIcon text="管理代理商的提现申请。审核通过后进入打款流程，可标记打款成功或失败退回（退回自动解冻代理余额）。" level="page" />
       </h2>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
@@ -133,10 +135,10 @@ export default function AdminWithdrawalsPage() {
             <tbody>
               {listQ.data?.list.map((w) => (
                 <tr key={w.id} style={{ borderTop: "1px solid var(--color-border)" }}>
-                  <td style={{ padding: "8px", fontFamily: "monospace", fontSize: 12 }}>{w.withdrawal_no}</td>
+                  <td style={{ padding: "8px", fontFamily: "monospace", fontSize: 12 }}>{w.withdraw_no}</td>
                   <td style={{ padding: "8px" }}>
-                    <div style={{ fontWeight: 600 }}>{w.username || w.email}</div>
-                    <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{w.email}</div>
+                    <div style={{ fontWeight: 600 }}>{w.agent_name}</div>
+                    <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{w.agent_email}</div>
                   </td>
                   <td style={{ padding: "8px", fontWeight: 600 }}>¥{w.amount.toFixed(2)}</td>
                   <td style={{ padding: "8px", fontSize: 13, color: "var(--color-text-secondary)" }}>{w.bank ? `${w.bank} ` : ""}{w.account}</td>
@@ -146,7 +148,7 @@ export default function AdminWithdrawalsPage() {
                   <td style={{ padding: "8px", color: "var(--color-text-secondary)", fontSize: 13 }}>{new Date(w.created_at).toLocaleString()}</td>
                   <td style={{ padding: "8px" }}>
                     <button onClick={() => openDetail(w.id)} style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-text)" }}>
-                      审核
+                      {w.status === "pending" ? "审核" : w.status === "processing" ? "打款" : "详情"}
                     </button>
                   </td>
                 </tr>
@@ -157,41 +159,36 @@ export default function AdminWithdrawalsPage() {
       </div>
 
       {/* 审核弹窗 */}
-      <Modal open={!!detail} onClose={() => setDetail(null)} title={`提现审核 #${detail?.withdrawal_no ?? ""}`} width={520}>
+      <Modal open={!!detail} onClose={() => setDetail(null)} title={`提现处理 #${detail?.withdraw_no ?? ""}`} width={520}>
         {detail && (
           <>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, fontSize: 13, marginBottom: 16 }}>
-              <div>代理: <strong>{detail.username || detail.email}</strong></div>
+              <div>代理: <strong>{detail.agent_name}</strong></div>
               <div>金额: <strong style={{ color: "var(--color-success-text)" }}>¥{detail.amount.toFixed(2)}</strong></div>
-              <div>收款账户: <strong>{detail.account}</strong></div>
               <div>开户行: <strong>{detail.bank ?? "-"}</strong></div>
+              <div>收款账户: <strong>{detail.account}</strong></div>
               <div>收款人: <strong>{detail.account_name ?? "-"}</strong></div>
               <div>当前状态: <StatusBadge status={STATUS_MAP[detail.status] ?? "default"}>{detail.status_label}</StatusBadge></div>
-              {detail.first_review_note && <div style={{ gridColumn: "1/-1" }}>初审意见: <span style={{ color: "var(--color-text-secondary)" }}>{detail.first_review_note}</span></div>}
-              {detail.second_review_note && <div style={{ gridColumn: "1/-1" }}>复审意见: <span style={{ color: "var(--color-text-secondary)" }}>{detail.second_review_note}</span></div>}
-              {detail.reject_reason && <div style={{ gridColumn: "1/-1" }}>驳回原因: <span style={{ color: "var(--color-danger-text)" }}>{detail.reject_reason}</span></div>}
-              {detail.transfer_no && <div style={{ gridColumn: "1/-1" }}>打款流水号: <strong style={{ fontFamily: "monospace", fontSize: 12 }}>{detail.transfer_no}</strong></div>}
+              {detail.review_note && <div style={{ gridColumn: "1/-1" }}>备注/驳回原因: <span style={{ color: detail.status === "rejected" ? "var(--color-danger-text)" : "var(--color-text-secondary)" }}>{detail.review_note}</span></div>}
+              {detail.processed_at && <div style={{ gridColumn: "1/-1" }}>处理时间: <span style={{ color: "var(--color-text-secondary)" }}>{new Date(detail.processed_at).toLocaleString()}</span></div>}
             </div>
 
-            <textarea value={reviewNote} onChange={(e) => setReviewNote(e.target.value)} placeholder="审核意见（拒绝时必填原因）" rows={3} style={inp} />
+            <textarea value={reviewNote} onChange={(e) => setReviewNote(e.target.value)} placeholder="审核意见 / 备注（驳回或打款失败时必填原因）" rows={3} style={inp} />
 
-            {detail.status === "pending_first_review" && (
+            {detail.status === "pending" && (
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                <button onClick={() => reviewMut.mutate({ id: detail.id, action: "reject", stage: "first" })} disabled={reviewMut.isPending} style={{ ...btnBase, background: "var(--color-danger-bg)", color: "var(--color-danger-text)" }}>初审驳回</button>
-                <button onClick={() => reviewMut.mutate({ id: detail.id, action: "approve", stage: "first" })} disabled={reviewMut.isPending} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff" }}>初审通过</button>
-              </div>
-            )}
-            {detail.status === "pending_second_review" && (
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                <button onClick={() => reviewMut.mutate({ id: detail.id, action: "reject", stage: "second" })} disabled={reviewMut.isPending} style={{ ...btnBase, background: "var(--color-danger-bg)", color: "var(--color-danger-text)" }}>复审驳回</button>
-                <button onClick={() => reviewMut.mutate({ id: detail.id, action: "approve", stage: "second" })} disabled={reviewMut.isPending} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff" }}>复审通过</button>
+                <button onClick={() => reviewMut.mutate({ id: detail.id, action: "reject" })} disabled={reviewMut.isPending} style={{ ...btnBase, background: "var(--color-danger-bg)", color: "var(--color-danger-text)" }}>驳回（解冻余额）</button>
+                <button onClick={() => reviewMut.mutate({ id: detail.id, action: "approve" })} disabled={reviewMut.isPending} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff" }}>通过，进入打款</button>
               </div>
             )}
             {detail.status === "processing" && (
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                <button onClick={() => transferMut.mutate({ id: detail.id, result: "failed" })} disabled={transferMut.isPending} style={{ ...btnBase, background: "var(--color-danger-bg)", color: "var(--color-danger-text)" }}>打款失败退回</button>
-                <button onClick={() => transferMut.mutate({ id: detail.id, result: "success" })} disabled={transferMut.isPending} style={{ ...btnBase, background: "var(--color-success-text)", color: "#fff" }}>标记打款成功</button>
-              </div>
+              <>
+                <input value={transferNo} onChange={(e) => setTransferNo(e.target.value)} placeholder="银行打款流水号（可选）" style={inp} />
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  <button onClick={() => transferMut.mutate({ id: detail.id, result: "fail" })} disabled={transferMut.isPending} style={{ ...btnBase, background: "var(--color-danger-bg)", color: "var(--color-danger-text)" }}>打款失败退回</button>
+                  <button onClick={() => transferMut.mutate({ id: detail.id, result: "success" })} disabled={transferMut.isPending} style={{ ...btnBase, background: "var(--color-success-text)", color: "#fff" }}>标记打款成功</button>
+                </div>
+              </>
             )}
             {(detail.status === "completed" || detail.status === "rejected") && (
               <div style={{ textAlign: "right", color: "var(--color-text-secondary)", fontSize: 13 }}>该提现已终态</div>

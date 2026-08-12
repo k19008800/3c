@@ -411,10 +411,29 @@ export async function supplierRoutes(app: FastifyInstance) {
     return reply.status(201).send({ pricing });
   });
 
-  /** PUT /api/v1/admin/pricing/:id — 更新定价 */
+  /** PUT /api/v1/admin/pricing/:id — 更新定价（销售价变更时写入价格变更日志） */
   app.put('/api/v1/admin/pricing/:id', { preHandler: [adminAuth] }, async (request, reply) => {
     const id = intParam(request.params as Record<string, unknown>, 'id');
     const body = request.body as Record<string, unknown>;
+
+    // 变更前读取旧价 + 关联模型/供应商
+    const [existing] = await db.select({
+      inputPrice: schema.vendorPricing.inputPrice,
+      outputPrice: schema.vendorPricing.outputPrice,
+      supplierModelId: schema.vendorPricing.supplierModelId,
+    })
+      .from(schema.vendorPricing)
+      .where(eq(schema.vendorPricing.id, id))
+      .limit(1);
+    if (!existing) throw new NotFoundError('Pricing', id);
+
+    const [modelInfo] = await db.select({
+      supplierId: schema.supplierModels.supplierId,
+      modelName: schema.supplierModels.modelName,
+    })
+      .from(schema.supplierModels)
+      .where(eq(schema.supplierModels.id, existing.supplierModelId))
+      .limit(1);
 
     const setData: Record<string, unknown> = { updatedAt: new Date() };
     if (body.inputPrice !== undefined) setData.inputPrice = String(body.inputPrice);
@@ -434,6 +453,35 @@ export async function supplierRoutes(app: FastifyInstance) {
       .returning();
 
     if (!pricing) throw new NotFoundError('Pricing', id);
+
+    // ── 价格变更捕获（销售价为准）──
+    const oldInput = Number(existing.inputPrice);
+    const oldOutput = Number(existing.outputPrice);
+    const newInput = body.inputPrice !== undefined ? Number(body.inputPrice) : oldInput;
+    const newOutput = body.outputPrice !== undefined ? Number(body.outputPrice) : oldOutput;
+    const priceChanged = newInput !== oldInput || newOutput !== oldOutput;
+
+    if (priceChanged && modelInfo) {
+      // 代表销售价：输出价优先，未变则用输入价
+      const oldSale = newOutput === oldOutput ? oldInput : oldOutput;
+      const newSale = newOutput === oldOutput ? newInput : newOutput;
+      const changeRate = oldSale !== 0 ? Number((((newSale - oldSale) / oldSale) * 100).toFixed(3)) : 0;
+
+      await db.insert(schema.priceChangeLogs).values({
+        supplierModelId: existing.supplierModelId,
+        vendorId: modelInfo.supplierId,
+        oldInputPrice: String(oldInput),
+        newInputPrice: String(newInput),
+        oldOutputPrice: String(oldOutput),
+        newOutputPrice: String(newOutput),
+        oldSalePrice: String(oldSale),
+        newSalePrice: String(newSale),
+        changeRate: String(changeRate),
+        effectiveAt: new Date(),
+        reason: body.reason != null ? String(body.reason).slice(0, 500) : `平台调整 ${modelInfo.modelName} 销售价`,
+        operatorId: (request as any).userContext?.userId ?? null,
+      });
+    }
 
     return reply.send({ pricing });
   });

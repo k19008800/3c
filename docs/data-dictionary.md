@@ -1,6 +1,6 @@
 # 3cloud 数据字典（Data Dictionary）
 
-> **最后更新**：2026-07-28
+> **最后更新**：2026-08-12
 > **版本**：v1.0
 > **定位**：面向产品/运营/开发的字段定义文档，涵盖核心表结构的**业务含义**、**枚举值**、**业务规则**和**关联关系**。
 > 技术实现细节（数据类型、索引、外键）请参考 Drizzle schema 文件（`api/src/db/schema/`）。
@@ -206,6 +206,15 @@
 | `redemption_fraud` | 兑换码异常 | 管理员 |
 | `redemption_revoked` | 兑换码被撤销 | 兑换码持有者 |
 | `api_key_event` | API Key 事件 | 用户 |
+
+### 1.19 留痕状态（conversation_context_records）
+
+| 枚举值 | 含义 | 说明 |
+|-------|------|------|
+| `succeeded` | 成功 | 请求正常完成，有响应 |
+| `failed` | 失败 | 上游错误 / 超时 / 余额不足，error_code 记录具体原因 |
+
+> 留痕覆盖 6 个请求出口：mock 流式 / mock 非流式 / 上游错误 / 流式 / 非流式 / 402，失败也落一条（供纠纷举证）。详情见 [`ref-12.9-conversation-records.md`](ref-12.9-conversation-records.md)。
 
 ---
 
@@ -415,6 +424,34 @@
 | `result` | 操作结果 | success / failed | 审计 |
 | `created_at` | 操作时间 | 自动设置，分区键 | 时间序列 |
 
+### 2.14 conversation_context_records（对话上下文留痕表）
+
+> 每笔 `/v1/chat/completions` 请求落一条**完整上下文**（上文 messages + 响应原文 + 路由/Key/计费明细），后台查询/回放/导出，供交易纠纷举证与政府调证。内容全量原样存储、不脱敏；供应商 Key 只存 sha256 指纹。详见 [`ref-12.9-conversation-records.md`](ref-12.9-conversation-records.md)。
+
+| 字段 | 业务含义 | 约束/规则 | 关联 |
+|------|---------|----------|------|
+| `id` | 记录唯一标识 | 自增 | — |
+| `request_id` | 请求 ID | NOT NULL，唯一索引 | 对应 consumption_records.request_id |
+| `user_id` | 调用用户 | NOT NULL，**无 ON DELETE CASCADE**（删用户留孤儿行） | users.id |
+| `api_key_id` | 客户端 Key | 可空 | api_keys.id |
+| `client_key_hash` | 客户端 Key 指纹 | NOT NULL，复用 api_keys.key_hash | 溯源用哪个 Key |
+| `requested_model` | 用户请求模型 | NOT NULL | 如 gpt-4o |
+| `routed_model` | 实际路由模型 | 可空（未路由则空） | 供应商侧模型名 |
+| `supplier_id` | 实际供应商 | 可空 | suppliers.id |
+| `supplier_model_id` | 供应商模型 | 可空 | supplier_models.id |
+| `supplier_key_fp` | 供应商 Key 指纹 | 可空，sha256 前 32 位 | 不存明文 |
+| `messages` | 请求上文 | NOT NULL，jsonb，**全量不脱敏** | 调证核心 |
+| `response_text` | 响应原文 | 可空（失败无响应） | 流式聚合全文 |
+| `finish_reason` | 结束原因 | stop / length / ... | 正常终止判断 |
+| `status` | 留痕状态 | 见 §1.19 枚举 | succeeded / failed |
+| `error_code` | 错误码 | 可空 | 失败原因 |
+| `input_tokens` / `output_tokens` | 计费 token | 默认 0 | 与账单对质 |
+| `cost` | 费用 | numeric(18,8) | 扣费金额 |
+| `client_ip` / `user_agent` | 来源 | 可空 | 政府调证 |
+| `occurred_at` | 请求发生时间 | NOT NULL，索引 | 时间序列 |
+| `completed_at` | 完成时间 | 可空 | 耗时 |
+| `created_at` | 落库时间 | NOT NULL 自动 | — |
+
 ---
 
 ## 三、业务规则与约束
@@ -473,4 +510,7 @@ L4 模型：模型级 2000 QPS（管理员可调整）
 | 安全事件 | 365 天 | 定时 DELETE |
 | 审计日志 | 永久 | 不删除 |
 | 余额流水 | 永久 | 不删除 |
+| 对话上下文留痕 | 后台可配置（默认永久） | 保留策略调度器（system_config `conv_retention`），按 日/周/月/季度/半年/全年 配置清理 |
+
+> 对话留痕保留策略见 [`ref-12.9-conversation-records.md`](ref-12.9-conversation-records.md)：`enabled=false` 时全量永久保留；启用后按「保留期 + 轮询计划（UTC+8）」每分钟检查、命中周期执行清理，周期 key 存 `conv_retention_last_poll` 防重复。
 | 通知记录 | 90 天 | 定时 DELETE |

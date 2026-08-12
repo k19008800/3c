@@ -38,11 +38,14 @@ import AdminRedemptionPage from "./pages/AdminRedemptionPage";
 import AdminAnnouncementsPage from "./pages/AdminAnnouncementsPage";
 import RealNamePage from "./pages/RealNamePage";
 import AdminEmailTemplatesPage from "./pages/AdminEmailTemplatesPage";
+import AdminSmtpSettingsPage from "./pages/admin/AdminSmtpSettingsPage";
 import AdminCampaignsPage from "./pages/AdminCampaignsPage";
 import AdminActivityPage from "./pages/AdminActivityPage";
 import NotificationPage from "./pages/NotificationPage";
 import AdminVendorSettlementsPage from "./pages/AdminVendorSettlementsPage";
 import AdminFinancePage from "./pages/AdminFinancePage";
+import AdminFundsAccountsPage from "./pages/AdminFundsAccountsPage";
+import AdminClosePage from "./pages/AdminClosePage";
 import SecurityPage from "./pages/SecurityPage";
 import TicketsPage from "./pages/TicketsPage";
 import AdminTicketsPage from "./pages/AdminTicketsPage";
@@ -63,6 +66,7 @@ import SalesRemindersPage from "./pages/SalesRemindersPage";
 import SalesPerformancePage from "./pages/SalesPerformancePage";
 import AdminCustomersPage from "./pages/AdminCustomersPage";
 import AdminDataRequestPage from "./pages/AdminDataRequestPage";
+import AdminConversationRecordsPage from "./pages/AdminConversationRecordsPage";
 import AdminDiscountEnginePage from "./pages/AdminDiscountEnginePage";
 import AdminDisputePage from "./pages/AdminDisputePage";
 import AdminCustomerDetailPage from "./pages/AdminCustomerDetailPage";
@@ -208,6 +212,8 @@ export default function App() {
         <Route path="admin/account-deletion" element={<AdminDeletionPage />} />
         {/* ── 财务结算 ── */}
         <Route path="admin/finance/dashboard" element={<AdminFinancePage />} />
+        <Route path="admin/finance/accounts" element={<AdminFundsAccountsPage />} />
+        <Route path="admin/finance/close" element={<AdminClosePage />} />
         <Route path="admin/finance/manual-topup" element={<AdminManualRechargePage />} />
         <Route path="admin/finance/adjust" element={<AdminFinancePage />} />
         <Route path="admin/finance/orders" element={<AdminRechargeOrdersPage />} />
@@ -270,7 +276,7 @@ export default function App() {
         <Route path="admin/config/performance" element={<AdminPerformancePage />} />
         <Route path="admin/config/webhook-retry" element={<AdminWebhookRetryPage />} />
         <Route path="admin/config/undo" element={<AdminUndoPage />} />
-        <Route path="admin/config/smtp" element={<AdminSettingsPage />} />
+        <Route path="admin/config/smtp" element={<AdminSmtpSettingsPage />} />
         <Route path="admin/config/logs" element={<AdminSysLogsPage />} />
         <Route path="admin/config/maintenance" element={<AdminSysVersionPage />} />
         <Route path="admin/config/site" element={<AdminSettingsPage />} />
@@ -286,6 +292,7 @@ export default function App() {
         <Route path="admin/audit/login-logs" element={<AdminAuditLogPage />} />
         <Route path="admin/audit/operations" element={<AdminAuditLogPage />} />
         <Route path="admin/audit/api-logs" element={<AdminAuditLogPage />} />
+        <Route path="admin/audit/conversation-records" element={<AdminConversationRecordsPage />} />
         <Route path="admin/audit/operation-diff" element={<AdminOperationDiffPage />} />
         <Route path="admin/audit/data-request" element={<AdminDataRequestPage />} />
         <Route path="admin/audit/permissions" element={<AdminPermissionAuditPage />} />

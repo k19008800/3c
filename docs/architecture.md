@@ -1,6 +1,6 @@
 # 3cloud 系统架构概览
 
-> **最后更新**：2026-07-28
+> **最后更新**：2026-08-12
 > **版本**：v1.0
 > **定位**：系统架构、部署架构、数据流、模块依赖关系的可视化参考
 
@@ -280,6 +280,8 @@ sequenceDiagram
         R->>P: 转发到备用
     end
 ```
+
+> **旁路：对话上下文留痕** — `/v1/chat/completions` 每笔请求（成功/失败/超时/402）在外层 `try/finally` 结束时异步落一条**完整上下文**到 `conversation_context_records`（上文 messages + 响应原文 + 路由/Key 指纹/计费明细，内容不脱敏）。写入为旁路（失败吞错、不影响主链路），供交易纠纷举证与政府调证；保留策略由调度器按 `system_config` 配置清理。详见 [`ref-12.9-conversation-records.md`](ref-12.9-conversation-records.md)。
 
 ### 4.2 充值数据流
 

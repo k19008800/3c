@@ -101,7 +101,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <a href="/about" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>关于我们</a>
                   <a href="/app/help" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>帮助中心</a>
+                  {config.site_company_name && <span style={{ color: "#64748b", fontSize: 13 }}>{config.site_company_name}</span>}
                   {config.site_contact_email && <span style={{ color: "#64748b", fontSize: 13 }}>{config.site_contact_email}</span>}
+                  {config.site_contact_phone && <span style={{ color: "#64748b", fontSize: 13 }}>{config.site_contact_phone}</span>}
                 </div>
               </div>
               {/* 法律 */}

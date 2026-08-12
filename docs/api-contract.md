@@ -115,6 +115,7 @@
 - **客户/工单/客服**：/admin/customers、/admin/agents·/:id·/assign·/level、/admin/tickets/:id/status·/reply·/note·/assign、/admin/chat/sessions/:id/transfer·/close、/admin/chat/status、/admin/support/*、/admin/quick-replies、/admin/knowledge-base·/:id·/categories — **⬜**
 - **运营/营销**：/admin/campaigns·/:id·/status·/grant、/admin/coupons/generate、/admin/discount-rules·/:id、/admin/affiliate/config·/records、/admin/announcements·/:id、/admin/redemption/batches·/:id/toggle — **⬜**
 - **风控/安全**：/admin/risk/dashboard·/rules·/events、/admin/security/incidents·/ip-blacklist、/admin/balance-alerts·/:id/notify、/admin/balance-alert-config、/admin/audit-logs — **⬜**
+- **对话留痕（审计合规）**：/admin/conversation-records、/admin/conversation-records/:requestId、/admin/conversation-records/export、/admin/conversation-records/retention(GET/PUT)、/admin/conversation-records/retention/run — **✅ 全部已实现**（后端 `admin-conversation-records.ts`，前端页面 `admin/audit/conversation-records`）
 - **数据/合规**：/admin/data-requests·/:id(approve|reject|export)、/admin/data-export/:id(process|reject|resend)、/admin/deletion/*、/admin/content·/:id、/admin/content-moderation/* — **⬜**
 - **系统**：/admin/settings·/:id/versions、/admin/sys/cache·/logs·/db·/version·/migrations、/admin/i18n/entries、/admin/undo/records·/:id/execute、/admin/email-templates、/admin/subscription/plans·/subscribers、/admin/tax-banking/config·/history·/bank-accounts、/admin/notification-policies·/:id、/admin/webhooks·/:id·/logs·/test、/admin/webhook-retry·/:id、/admin/roles — **⬜**
 - **看板/洞察**：/admin/dashboard、/admin/cockpit（前端页面在但调用集中在以上端点）、/admin/consumption/anomalies·/stream·/tracking、/admin/commission/flow、/admin/competitive/monitor、/admin/conversion/funnel、/admin/operation/diff、/admin/operator/dashboard、/admin/performance、/admin/price-changes — **⬜**
@@ -132,6 +133,7 @@
 | API Key | `api_keys` | user_id,key_hash,key_prefix,name,status,last_used_at,expires_at |
 | 消费记录 | `consumption_records` | user_id,api_key_id,request_id,model,input/output/total_tokens,cost,status 派生 |
 | 模型/定价 | `supplier_models` + `vendor_pricing` + `suppliers` + `supplier_keys` | 供应商路由链 |
+| 对话留痕（新） | `conversation_context_records` | request_id,user_id,client_key_hash,requested_model,routed_model,supplier_id,supplier_key_fp,messages(jsonb),response_text,status,tokens,cost,occurred_at（保留策略存 `system_config` conv_retention） |
 
 其余 23 张表（agent_*, risk_*, tickets, coupons, invoices…）已有 schema，等待对应端点实现。
 

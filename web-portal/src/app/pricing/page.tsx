@@ -17,7 +17,23 @@ interface PriceItem {
 async function fetchPricing(): Promise<{ list: PriceItem[] }> {
   try {
     const res = await fetch(`${API_BASE}/api/v1/public/pricing`, { cache: "no-store" });
-    if (res.ok) return await res.json();
+    if (res.ok) {
+      const data = await res.json();
+      // 后端返回 { pricing: [{ modelName, supplierName, inputPrice(str), outputPrice(str), ... }] }
+      // 映射到页面使用的字段名（与首页 page.tsx 的 fetchPricing 同源）
+      return {
+        list: (data.pricing ?? []).map((m: any) => ({
+          name: m.modelName ?? "",
+          display_name: m.modelName ?? "",
+          category: "对话",
+          context_length: 0,
+          description: null,
+          vendor: m.supplierName ?? "",
+          input_price: parseFloat(m.inputPrice) || 0,
+          output_price: parseFloat(m.outputPrice) || 0,
+        })),
+      };
+    }
   } catch {}
   return { list: [] };
 }

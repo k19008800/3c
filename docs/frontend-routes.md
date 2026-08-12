@@ -1,6 +1,6 @@
 # 3cloud 前端页面路由与结构文档
 
-> **最后更新**：2026-08-10
+> **最后更新**：2026-08-12
 > **版本**：v3.0
 > **定位**：前端所有页面路由、布局结构、组件树的可视化参考，面向开发者和产品经理。
 > **架构**：**单一前端**（web-console，Vite, `web-console/`）+ **官网/入口**（web-portal, Next.js, `web-portal/`），对外唯一入口端口 5177
@@ -86,6 +86,7 @@
     │   │   ├── /content → 内容管理
     │   │   └── /email-templates → 邮件模板
     │   ├── /audit     → 审计合规
+    │   │   └── /conversation-records → 对话上下文留痕
     │   └── /risk      → 风控管理
     │       ├── /dashboard → 风控总览
     │       ├── /rules → 风控规则
@@ -488,7 +489,7 @@ location / {
 | ~~Portal 控制台~~ | ~~17~~ | ~~Next.js~~ | ~~已删除~~（redirects 到 /app/*） |
 | ~~认证~~ | ~~4~~ | ~~Next.js~~ | ~~已删除~~（由 console 承接） |
 | 用户端 | 13 | Vite | `web-console/src/pages/` |
-| 管理后台 | 71 | Vite | `web-console/src/pages/admin/` + `web-console/src/pages/` |
+| 管理后台 | 72 | Vite | `web-console/src/pages/admin/` + `web-console/src/pages/` |
 | 代理端 | 8 | Vite | `web-console/src/pages/Agent*.tsx` |
 | 供应商端 | 6 | Vite | `web-console/src/pages/vendor/` |
 | 业务员端 | 3 | Vite | `web-console/src/pages/Sales*.tsx` |

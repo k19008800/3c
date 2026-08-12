@@ -37,7 +37,7 @@
 | **§9** 财务模块增强 | [`PRD-财务模块增强.md`](PRD-财务模块增强.md) → **⚠️ 拆分迁移：§9.1-9.4 合并至 §29，§9.5/§9.6 保留独立模块** | [`SPEC-§9-财务模块增强（拆分迁移中）.md`](SPEC-§9-财务模块增强（拆分迁移中）.md) |
 | **§10** 客服支撑模块 | [`PRD-客服支撑模块.md`](PRD-客服支撑模块.md) | [`ref-10.1-support-workbench.md`](ref-10.1-support-workbench.md) + [`ref-10.2-knowledge-base.md`](ref-10.2-knowledge-base.md) + [`ref-10.3-help-center.md`](ref-10.3-help-center.md) + [`ref-10.4-quick-reply.md`](ref-10.4-quick-reply.md) + [`ref-10.5-user-timeline.md`](ref-10.5-user-timeline.md) |
 | **§11** 业务员支撑 | [`PRD-业务员支撑.md`](PRD-业务员支撑.md) | [`ref-11.1-crm.md`](ref-11.1-crm.md) + [`ref-11.2-leads.md`](ref-11.2-leads.md) + [`ref-11.3-follow-up.md`](ref-11.3-follow-up.md) + [`ref-11.4-opportunity.md`](ref-11.4-opportunity.md) + [`ref-11.5-performance.md`](ref-11.5-performance.md) + [`ref-11.6-quote-contract.md`](ref-11.6-quote-contract.md) + [`ref-11.7-sales-knowledge.md`](ref-11.7-sales-knowledge.md) + [`ref-11.8-team-collaboration.md`](ref-11.8-team-collaboration.md) |
-| **§12** 系统管理员支撑 | [`PRD-系统管理员支撑.md`](PRD-系统管理员支撑.md) | [`ref-12.1-audit-console.md`](ref-12.1-audit-console.md) + [`ref-12.2-db-panel.md`](ref-12.2-db-panel.md) + [`ref-12.3-cache-manager.md`](ref-12.3-cache-manager.md) + [`ref-12.4-task-scheduler.md`](ref-12.4-task-scheduler.md) + [`ref-12.5-log-viewer.md`](ref-12.5-log-viewer.md) + [`ref-12.6-health-dashboard.md`](ref-12.6-health-dashboard.md) + [`ref-12.7-change-plan.md`](ref-12.7-change-plan.md) + [`ref-12.8-version-manager.md`](ref-12.8-version-manager.md) |
+| **§12** 系统管理员支撑 | [`PRD-系统管理员支撑.md`](PRD-系统管理员支撑.md) | [`ref-12.1-audit-console.md`](ref-12.1-audit-console.md) + [`ref-12.2-db-panel.md`](ref-12.2-db-panel.md) + [`ref-12.3-cache-manager.md`](ref-12.3-cache-manager.md) + [`ref-12.4-task-scheduler.md`](ref-12.4-task-scheduler.md) + [`ref-12.5-log-viewer.md`](ref-12.5-log-viewer.md) + [`ref-12.6-health-dashboard.md`](ref-12.6-health-dashboard.md) + [`ref-12.7-change-plan.md`](ref-12.7-change-plan.md) + [`ref-12.8-version-manager.md`](ref-12.8-version-manager.md) + [`ref-12.9-conversation-records.md`](ref-12.9-conversation-records.md) |
 | **§13** 数据迁移方案 | [`PRD-数据迁移方案.md`](PRD-数据迁移方案.md) | — |
 | **§14** 错误码与异常处理规范 | [`PRD-错误码规范.md`](PRD-错误码规范.md) | — |
 | **§15** 前端组件库规范 | [`PRD-组件库规范.md`](PRD-组件库规范.md) | — |
@@ -119,7 +119,7 @@
 |------|--------------|---------|---------|
 | §10 客服支撑 | 客服工作台、知识库、帮助中心、快捷回复模板、用户时间线 | ✅ 5 份全部完成 | — |
 | §11 业务员支撑 | CRM、线索管理、跟进提醒、商机、业绩看板、报价合同、销售知识库、团队协作 | ✅ 8 份全部完成 | — |
-| §12 系统管理 | 审计控制台、数据库面板、缓存管理、任务调度、日志查看器、健康检查、变更计划、版本管理 | ✅ 8 份全部完成 | — |
+| §12 系统管理 | 审计控制台、数据库面板、缓存管理、任务调度、日志查看器、健康检查、变更计划、版本管理、**对话上下文留痕** | ✅ 9 份全部完成 | — |
 
 今次已补 6 份（P0 级），标注 ✅。
 

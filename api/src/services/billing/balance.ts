@@ -8,7 +8,6 @@
 import { db, schema } from '../../db';
 import { eq, sql } from 'drizzle-orm';
 import { AppError, InsufficientBalanceError } from '../../lib/errors';
-
 /**
  * Deduct balance atomically
  * Uses optimistic locking via version field
@@ -104,6 +103,19 @@ export async function addBalance(
     referenceType: referenceType || null,
     referenceId: referenceId || null,
   });
+
+  // 退款冲销钩子：客户退款（冲回消费）时，同步冲销该笔消费对应的代理佣金。
+  // addBalance 是余额变更唯一咽喉，未来任何退款路径走这里即自动触发冲销。
+  if (type === 'refund' && referenceType === 'consumption' && referenceId) {
+    const { cancelCommissionsForConsumption, resolveConsumptionRecordId } = await import('../agent/commission');
+    const consumptionRecordId = await resolveConsumptionRecordId(referenceId);
+    if (consumptionRecordId) {
+      await cancelCommissionsForConsumption({ consumptionRecordId }).catch((e) => {
+        // 冲销失败不应阻断退款落账，记录告警便于对账兜底
+        console.error(`[balance] refund commission write-off failed for consumption ${referenceId}:`, e);
+      });
+    }
+  }
 
   return { balanceAfter: row.balanceAfter };
 }

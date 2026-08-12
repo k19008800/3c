@@ -19,6 +19,7 @@ interface Model {
   id: number;
   name: string;
   provider: string;
+  context?: number;
   inputPrice: number;
   outputPrice: number;
 }
@@ -232,7 +233,8 @@ export default function PlaygroundPage() {
                 <option value="gpt-4o-mini">GPT-4o Mini</option>
                 {models?.slice(0, 20).map((m) => (
                   <option key={m.id} value={m.name}>
-                    {m.name}
+                    {m.name} · {m.provider}
+                    {m.context ? ` · 上下文 ${(m.context / 1000).toLocaleString()}K` : ""}
                   </option>
                 ))}
               </optgroup>

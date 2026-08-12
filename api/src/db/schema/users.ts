@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, pgEnum, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, pgEnum, timestamp, boolean } from 'drizzle-orm/pg-core';
 
 export const userRoleEnum = pgEnum('user_role', [
   'customer',
@@ -14,6 +14,9 @@ export const users = pgTable('users', {
   name: varchar('name', { length: 100 }).notNull(),
   role: userRoleEnum('role').notNull().default('customer'),
   status: varchar('status', { length: 20 }).notNull().default('active'),
+  customerType: varchar('customer_type', { length: 20 }).notNull().default('personal'),
+  realNameStatus: varchar('real_name_status', { length: 20 }).notNull().default('unverified'),
+  isContract: boolean('is_contract').notNull().default(false),
   avatarUrl: varchar('avatar_url', { length: 500 }),
   phone: varchar('phone', { length: 30 }),
   emailVerified: timestamp('email_verified'),
