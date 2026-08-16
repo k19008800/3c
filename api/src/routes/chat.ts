@@ -18,6 +18,7 @@ import { apiKeyAuth } from '../services/auth/apikey';
 import { selectChannel } from '../services/upstream/routing';
 import { streamRelay, type StreamState } from '../services/upstream/proxy';
 import { countTokens } from '../services/billing/token-counter';
+import { estimateMultimodalContentTokens } from '../services/billing/multimodal-counter';
 import { determineStreamBilling } from '../services/billing/settle-stream';
 import { parseAndDiscount } from '../services/billing/cache-billing';
 import { getBalance, deductBalance } from '../services/billing/balance';
@@ -132,19 +133,38 @@ function validateChatRequest(body: unknown): ChatRequest {
   return req as unknown as ChatRequest;
 }
 
-function estimateInputTokens(messages: Array<{ role: string; content: unknown }>, model: string): number {
+/**
+ * 估算输入 token 数（含多模态 content 数组的细粒度估算）
+ *
+ * 纯文本行为与旧实现完全一致（回归安全）：
+ * - content 为 string → tiktoken 计数
+ * - content 为数组 → estimateMultimodalContentTokens（注入 tiktoken countText）
+ *   - 全字符串数组：逐段 tiktoken 计数，与旧实现逐段计数结果一致
+ *   - 含 image_url / input_audio / 未知对象：按多模态细粒度规则估算
+ * - msg.tool_calls：JSON 序列化后计入（工具调用参数属于输入的一部分，
+ *   见 newapi-gap-analysis.md Batch 4 任务 4.3 多模态细粒度计费）
+ * - 每条 message 附加 4 token 格式开销
+ *
+ * @param messages - 消息数组
+ * @param model - 模型名称
+ * @returns 估算的输入 token 数
+ */
+export function estimateInputTokens(messages: Array<{ role: string; content: unknown; tool_calls?: unknown }>, model: string): number {
   let total = 0;
   for (const msg of messages) {
     if (typeof msg.content === 'string') {
       total += countTokens(msg.content, model);
     } else if (Array.isArray(msg.content)) {
-      for (const part of msg.content) {
-        if (typeof part === 'string') {
-          total += countTokens(part, model);
-        } else if (part && typeof part === 'object') {
-          total += countTokens(JSON.stringify(part), model);
-        }
-      }
+      // 多模态 content 数组：文本部分走 tiktoken，图片/音频走多模态估算
+      const est = estimateMultimodalContentTokens(msg.content, model, {
+        countText: (text) => countTokens(text, model),
+      });
+      total += est.totalTokens;
+    }
+
+    // 工具调用参数：JSON 序列化后计入输入 token（仅含 tool_calls 的消息触发）
+    if (msg.tool_calls) {
+      total += countTokens(JSON.stringify(msg.tool_calls), model);
     }
   }
   total += messages.length * 4;

@@ -276,6 +276,88 @@ export async function supplierRoutes(app: FastifyInstance) {
   });
 
   // ═══════════════════════════════════════════
+  // 2.5 模型状态开关（禁用/启用，Batch 4 任务 4.5）
+  // ═══════════════════════════════════════════
+
+  /**
+   * PATCH /api/v1/admin/models/:id/status — 单个模型禁用/启用
+   *
+   * body: { status: 'active' | 'inactive' }
+   *
+   * 禁用（inactive）后，selectChannel 的查询条件
+   * `supplierModels.status = 'active'`（services/upstream/routing.ts）
+   * 会自然跳过该模型，无需改动路由逻辑；本端点只负责把 status 落到 DB。
+   *
+   * NOTE: 不联动 vendor_pricing.status —— pricing_status 枚举只有
+   * draft/active/archived，没有 'inactive'；且 selectChannel 同时要求
+   * supplierModels.status='active'，模型级禁用已足以把该渠道排除出路由。
+   * 若未来需要"禁用模型时连带归档定价"，应加独立追踪字段（如
+   * disabled_by_model boolean）再联动 archived，避免误恢复手动归档的定价。
+   *
+   * @see newapi-gap-analysis.md Batch 4 任务 4.5
+   */
+  app.patch('/api/v1/admin/models/:id/status', { preHandler: [adminAuth] }, async (request, reply) => {
+    const id = intParam(request.params as Record<string, unknown>, 'id');
+    const body = request.body as Record<string, unknown>;
+    const status = String(body.status || '');
+
+    if (status !== 'active' && status !== 'inactive') {
+      throw new ValidationError('status must be either "active" or "inactive"');
+    }
+
+    const [model] = await db.update(schema.supplierModels)
+      .set({ status: status as any, updatedAt: new Date() })
+      .where(eq(schema.supplierModels.id, id))
+      .returning();
+
+    if (!model) throw new NotFoundError('Supplier model', id);
+
+    return reply.send({ model });
+  });
+
+  /**
+   * POST /api/v1/admin/suppliers/:id/models/batch-status — 批量禁用/启用模型
+   *
+   * body: { modelNames: string[], status: 'active' | 'inactive' }
+   *
+   * 按供应商 + 模型名批量更新状态（一次禁用/恢复同一渠道的多个模型），
+   * 与 New API 渠道"忽略模型"批量操作对齐。返回实际更新的模型数。
+   */
+  app.post('/api/v1/admin/suppliers/:id/models/batch-status', { preHandler: [adminAuth] }, async (request, reply) => {
+    const supplierId = intParam(request.params as Record<string, unknown>, 'id');
+    const body = request.body as Record<string, unknown>;
+
+    const modelNames = Array.isArray(body.modelNames)
+      ? body.modelNames.map((n) => String(n).trim()).filter(Boolean)
+      : [];
+    const status = String(body.status || '');
+
+    if (modelNames.length === 0) {
+      throw new ValidationError('modelNames must be a non-empty array');
+    }
+    if (status !== 'active' && status !== 'inactive') {
+      throw new ValidationError('status must be either "active" or "inactive"');
+    }
+
+    // 供应商必须存在（与现有 POST /suppliers/:id/models 行为一致）
+    const suppliers = await db.select({ id: schema.suppliers.id })
+      .from(schema.suppliers)
+      .where(eq(schema.suppliers.id, supplierId))
+      .limit(1);
+    if (suppliers.length === 0) throw new NotFoundError('Supplier', supplierId);
+
+    const updated = await db.update(schema.supplierModels)
+      .set({ status: status as any, updatedAt: new Date() })
+      .where(and(
+        eq(schema.supplierModels.supplierId, supplierId),
+        inArray(schema.supplierModels.modelName, modelNames),
+      ))
+      .returning();
+
+    return reply.send({ updated: updated.length, modelNames, status });
+  });
+
+  // ═══════════════════════════════════════════
   // 3. 供应商 Key 管理（admin only）
   // ═══════════════════════════════════════════
 
