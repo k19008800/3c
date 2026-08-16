@@ -256,7 +256,7 @@ export function chatToResponses(
  * @param finishReason - OpenAI finish_reason
  * @returns Responses status + incomplete_details（completed 时为 null）
  */
-function mapResponsesStatus(finishReason: string): { status: string; incompleteDetails: { reason: string } | null } {
+export function mapResponsesStatus(finishReason: string): { status: string; incompleteDetails: { reason: string } | null } {
   switch (finishReason) {
     case 'length':
       return { status: 'incomplete', incompleteDetails: { reason: 'max_output_tokens' } };

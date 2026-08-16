@@ -348,7 +348,8 @@ export async function messagesRoutes(app: FastifyInstance) {
       }
 
       // 5. Select channel（无可用 → mock 回退）
-      const channel = await selectChannel(req.model);
+      //    传入 userId：渠道分组供给过滤（supplier.allowed_groups），见 newapi-gap-analysis.md Batch 4 遗留
+      const channel = await selectChannel(req.model, ctx?.userId ? { userId: ctx.userId } : undefined);
 
       if (!channel) {
         // ── mock 回退路径：返回 Claude 格式占位响应，同样记账扣费 ──

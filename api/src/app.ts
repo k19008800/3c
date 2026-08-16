@@ -12,6 +12,7 @@ import { openaiCompatRoutes } from './routes/openai-compat';
 import { rerankRoutes } from './routes/rerank';
 import { messagesRoutes } from './routes/messages';
 import { responsesRoutes } from './routes/responses';
+import { taskRelayRoutes } from './routes/task-relay';
 import { authRoutes } from './routes/auth';
 import { oauthRoutes } from './routes/oauth';
 import { twoFactorRoutes } from './routes/2fa';
@@ -82,6 +83,7 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   await app.register(rerankRoutes);
   await app.register(messagesRoutes);
   await app.register(responsesRoutes);
+  await app.register(taskRelayRoutes);
   await app.register(authRoutes);
   await app.register(oauthRoutes);
   await app.register(twoFactorRoutes);

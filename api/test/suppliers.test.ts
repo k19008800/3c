@@ -157,6 +157,94 @@ describe('Supplier Management API', () => {
   });
 
   // ═══════════════════════════════════════
+  // 1.5 渠道分组供给（allowedGroups，Batch 4 遗留）
+  // ═══════════════════════════════════════
+
+  describe('Supplier Allowed Groups（渠道分组供给）', () => {
+    const groupsTs = Date.now();
+    let groupSupplierId = 0;
+
+    it('POST /api/v1/admin/suppliers — 创建时带 allowedGroups → 落库并返回', async () => {
+      const res = await app.inject({
+        method: 'POST', url: '/api/v1/admin/suppliers',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {
+          name: `GroupSup-${groupsTs}`, code: `grp-${groupsTs}`,
+          baseUrl: 'https://group.test.com', apiType: 'openai',
+          allowedGroups: ['vip', 'internal'],
+        },
+      });
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res.payload);
+      expect(body.supplier.allowedGroups).toEqual(['vip', 'internal']);
+      groupSupplierId = body.supplier.id as number;
+    });
+
+    it('POST 不带 allowedGroups → 默认空数组（不限分组）', async () => {
+      const res = await app.inject({
+        method: 'POST', url: '/api/v1/admin/suppliers',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { name: `GroupSupDef-${groupsTs}`, code: `gdef-${groupsTs}`, baseUrl: 'https://group.test.com' },
+      });
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res.payload);
+      expect(body.supplier.allowedGroups).toEqual([]);
+      // 清理
+      await app.inject({
+        method: 'DELETE', url: `/api/v1/admin/suppliers/${body.supplier.id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+    });
+
+    it('POST 含非法 allowedGroups（非数组/含空串）→ 归一化为清洗后数组', async () => {
+      const res = await app.inject({
+        method: 'POST', url: '/api/v1/admin/suppliers',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {
+          name: `GroupSupRaw-${groupsTs}`, code: `graw-${groupsTs}`, baseUrl: 'https://group.test.com',
+          allowedGroups: 'vip', // 非数组 → 回退空数组
+        },
+      });
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res.payload);
+      expect(body.supplier.allowedGroups).toEqual([]);
+      await app.inject({
+        method: 'DELETE', url: `/api/v1/admin/suppliers/${body.supplier.id}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+    });
+
+    it('GET /api/v1/admin/suppliers/:id — 详情返回 allowedGroups', async () => {
+      const res = await app.inject({
+        method: 'GET', url: `/api/v1/admin/suppliers/${groupSupplierId}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.payload);
+      expect(body.supplier.allowedGroups).toEqual(['vip', 'internal']);
+    });
+
+    it('PUT /api/v1/admin/suppliers/:id — 更新 allowedGroups', async () => {
+      const res = await app.inject({
+        method: 'PUT', url: `/api/v1/admin/suppliers/${groupSupplierId}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { allowedGroups: ['gold'] },
+      });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.payload);
+      expect(body.supplier.allowedGroups).toEqual(['gold']);
+    });
+
+    it('清理分组供给测试供应商', async () => {
+      const res = await app.inject({
+        method: 'DELETE', url: `/api/v1/admin/suppliers/${groupSupplierId}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+      expect(res.statusCode).toBe(200);
+    });
+  });
+
+  // ═══════════════════════════════════════
   // 2. SUPPLIER MODELS
   // ═══════════════════════════════════════
 

@@ -9,16 +9,19 @@
  *   → Select Channel（无可用 → mock 回退）
  *   → proxy upstream（上游统一走 OpenAI 格式 /v1/chat/completions）
  *   → 非流式：读响应 → parseAndDiscount 计费（含缓存打折）→ chatToResponses 转换返回
+ *   → 流式：relayResponsesStream（chat SSE → Responses SSE 事件）→ determineStreamBilling 结算
  *
  * 与 messages.ts 的差异：
  * - 请求/响应为 OpenAI Responses 格式，由 responses-adapter.ts 纯函数做格式转换
- * - 本期仅支持非流式：stream:true 直接 400 明确提示（流式后续 Batch 实现）
+ * - 流式（stream:true）由 responses-stream.ts 把上游 chat SSE 转换为 Responses 事件序列
+ *   （response.created → output_item.added → output_text.delta × N → response.completed），
+ *   结算逻辑与 chat.ts 流式路径一致（采信上游 usage，缺失本地 tiktoken 兜底）
  * - 错误响应为 OpenAI error 格式（{ error: { message, type, code } }）
  *
  * 说明：chat.ts / messages.ts 内的私有 helper（settleBilling / getPricingForModel 等）
  * 在本文件按等价逻辑重新实现，不改动既有路由行为；后续可提取到共享 service 层统一维护。
  *
- * @see newapi-gap-analysis.md Batch 4 任务 4.4
+ * @see newapi-gap-analysis.md Batch 4 任务 4.4 + 遗留「responses 流式」
  * @see coding-standards-api-db-test.md（API/DB/测试规范）
  * @see coding-standards-control-logic.md（计费/回滚控制逻辑）
  * @module routes/responses
@@ -30,7 +33,9 @@ import { eq } from 'drizzle-orm';
 import { apiKeyAuth } from '../services/auth/apikey';
 import { selectChannel, type SelectedChannel } from '../services/upstream/routing';
 import { responsesToChat, chatToResponses, type ResponsesRequest, type ResponsesInputItem } from '../services/upstream/responses-adapter';
+import { relayResponsesStream } from '../services/upstream/responses-stream';
 import { countTokens } from '../services/billing/token-counter';
+import { determineStreamBilling } from '../services/billing/settle-stream';
 import { parseAndDiscount } from '../services/billing/cache-billing';
 import { getBalance, deductBalance } from '../services/billing/balance';
 import { recordConsumption } from '../services/billing/consumption-log';
@@ -339,12 +344,8 @@ export async function responsesRoutes(app: FastifyInstance) {
       // 1. 校验请求体
       const req = validateResponsesRequest(request.body);
       pipelineCtx.model = req.model;
-
-      // 本期仅支持非流式：stream:true 明确 400（流式后续 Batch 实现），
-      // 避免静默降级为非流式导致客户端按 SSE 解析 JSON 而报错
-      if (req.stream === true) {
-        throw new AppError('Streaming is not supported for /v1/responses yet', 400, 'INVALID_REQUEST');
-      }
+      const isStream = req.stream === true;
+      pipelineCtx.stream = isStream;
 
       // 2. Responses → OpenAI Chat 格式转换（上游统一走 OpenAI 格式）
       const openAIBody = responsesToChat(req);
@@ -359,7 +360,8 @@ export async function responsesRoutes(app: FastifyInstance) {
       }
 
       // 5. Select channel（无可用 → mock 回退）
-      const channel = await selectChannel(req.model);
+      //    传入 userId：渠道分组供给过滤（supplier.allowed_groups），见 newapi-gap-analysis.md Batch 4 遗留
+      const channel = await selectChannel(req.model, ctx?.userId ? { userId: ctx.userId } : undefined);
 
       if (!channel) {
         // ── mock 回退路径：返回 Responses 格式占位响应，同样记账扣费 ──
@@ -368,18 +370,48 @@ export async function responsesRoutes(app: FastifyInstance) {
         const cost = computeCost(req.model, mock.usage.input_tokens, mock.usage.output_tokens, pricing);
 
         await settleBilling(pipelineCtx, mock.usage.input_tokens, mock.usage.output_tokens, cost, null, {
-          streamed: false,
+          streamed: isStream,
           trustUpstream: false,
           fallback: true,
           finishReason: 'stop',
         });
+
+        if (isStream) {
+          // 流式 mock：复用 relayResponsesStream，把 mock 内容包装成单个 chat chunk 的 SSE 流，
+          // 走与真实路径完全一致的事件序列（response.created → … → response.completed）
+          const mockOutput = mock.output[0] as { content?: Array<{ text?: string }> } | undefined;
+          const mockText = mockOutput?.content?.[0]?.text ?? '';
+          const mockSse = [
+            `data: ${JSON.stringify({
+              id: `chatcmpl-${pipelineCtx.requestId}`,
+              object: 'chat.completion.chunk',
+              choices: [{ index: 0, delta: { content: mockText }, finish_reason: 'stop' }],
+              usage: { prompt_tokens: mock.usage.input_tokens, completion_tokens: mock.usage.output_tokens, total_tokens: mock.usage.total_tokens },
+            })}\n\n`,
+            'data: [DONE]\n\n',
+          ].join('');
+          const mockResp = new Response(
+            new ReadableStream({
+              start(controller) {
+                controller.enqueue(new TextEncoder().encode(mockSse));
+                controller.close();
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'text/event-stream' } },
+          );
+          await relayResponsesStream(pipelineCtx, reply, mockResp, req.model);
+          return;
+        }
 
         return reply.send(mock);
       }
 
       // 6. 真实上游路径（OpenAI 格式，model 映射为供应商平台模型名）
       const upstreamUrl = `${channel.supplier.baseUrl}/v1/chat/completions`;
-      const upstreamBody = { ...openAIBody, model: channel.modelMapping.platformModel };
+      const upstreamBody: Record<string, unknown> = { ...openAIBody, model: channel.modelMapping.platformModel };
+      // 流式请求带上 stream_options.include_usage：多数上游（OpenAI/DeepSeek 等）会在最后帧
+      // 返回完整 usage，流式结算可采信，避免本地 tiktoken 兜底
+      if (isStream) upstreamBody.stream_options = { include_usage: true };
 
       const upstreamResp = await fetch(upstreamUrl, {
         method: 'POST',
@@ -403,6 +435,31 @@ export async function responsesRoutes(app: FastifyInstance) {
         } catch {
           return sendOpenAIError(reply, upstreamResp.status || 502, `Upstream error: ${upstreamResp.status}`);
         }
+      }
+
+      if (isStream) {
+        // ── SSE 流式：chat SSE → Responses 事件转发后结算（与 chat.ts 流式链路一致）──
+        const state = await relayResponsesStream(pipelineCtx, reply, upstreamResp, req.model);
+        await recordChannelResult(cbKey, true);
+
+        const billing = determineStreamBilling(state, false, estimatedInputTokens, req.model);
+        const pricing = await getPricingForModel(req.model);
+        const cost = computeCost(req.model, billing.promptTokens, billing.completionTokens, pricing);
+
+        try {
+          await settleBilling(
+            pipelineCtx,
+            billing.promptTokens,
+            billing.completionTokens,
+            cost,
+            channel,
+            { streamed: true, trustUpstream: billing.trustUpstream, fallback: billing.fallback, finishReason: state.finishReason ?? undefined },
+          );
+        } catch (err) {
+          // 流式已开始，无法改状态码；记账失败仅记录（余额不足属罕见竞态）
+          console.error(`[responses] stream settle failed for ${pipelineCtx.requestId}:`, err);
+        }
+        return;
       }
 
       // ── 非流式：先读 body → 结算 → 转换 → 返回（保证扣费失败能返回 402）──

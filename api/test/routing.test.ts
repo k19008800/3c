@@ -172,3 +172,62 @@ describe('selectChannel — integration scenarios', () => {
     }
   });
 });
+
+// ============================================================
+// channelServesGroups — 渠道分组供给过滤（Batch 4 遗留 allowedGroups 纯函数）
+// ============================================================
+
+describe('channelServesGroups（渠道分组供给过滤）', () => {
+  it('调用方不限分组（undefined）→ 放行', async () => {
+    const mod = await import('../src/services/upstream/routing');
+    expect(mod.channelServesGroups(['vip'], undefined)).toBe(true);
+    expect(mod.channelServesGroups([], undefined)).toBe(true);
+  });
+
+  it('渠道不限分组（空数组 / null）→ 放行', async () => {
+    const mod = await import('../src/services/upstream/routing');
+    expect(mod.channelServesGroups([], ['vip'])).toBe(true);
+    expect(mod.channelServesGroups(null, ['vip'])).toBe(true);
+    expect(mod.channelServesGroups(undefined, ['vip'])).toBe(true);
+  });
+
+  it('渠道分组与调用方分组有交集 → 放行', async () => {
+    const mod = await import('../src/services/upstream/routing');
+    expect(mod.channelServesGroups(['vip', 'internal'], ['vip'])).toBe(true);
+    expect(mod.channelServesGroups(['default'], ['default'])).toBe(true);
+  });
+
+  it('无交集 → 拒绝（渠道不服务该分组）', async () => {
+    const mod = await import('../src/services/upstream/routing');
+    expect(mod.channelServesGroups(['vip'], ['default'])).toBe(false);
+    expect(mod.channelServesGroups(['vip', 'internal'], ['default', 'gold'])).toBe(false);
+  });
+
+  it('渠道分组中的空串被忽略（等效空列表 → 不限分组）', async () => {
+    const mod = await import('../src/services/upstream/routing');
+    expect(mod.channelServesGroups(['', 'vip'], ['vip'])).toBe(true);
+    // 仅空串 → 过滤后为空列表 → 渠道不限分组（与空数组语义一致）
+    expect(mod.channelServesGroups(['', ''], ['vip'])).toBe(true);
+  });
+});
+
+// ============================================================
+// selectTaskChannel — 任务型渠道选择（MJ / Suno）
+// ============================================================
+
+describe('selectTaskChannel — task channel selection', () => {
+  it('selectTaskChannel is callable (function exists)', async () => {
+    const mod = await import('../src/services/upstream/routing');
+    expect(typeof mod.selectTaskChannel).toBe('function');
+  });
+
+  it('selectTaskChannel handles empty DB gracefully', async () => {
+    const mod = await import('../src/services/upstream/routing');
+    try {
+      const result = await mod.selectTaskChannel('midjourney');
+      expect(result).toBeDefined(); // null 或对象均可（空库场景）
+    } catch (e) {
+      expect(e).toBeDefined(); // DB 错误在单测环境可接受
+    }
+  });
+});

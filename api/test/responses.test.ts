@@ -15,6 +15,8 @@
  *   /v1/chat/completions 结尾、响应经 chatToResponses 转换后透传
  * - /v1/responses 余额 0 → 402
  * - /v1/responses 无可用 channel → mock 回退（Responses 格式占位响应 + 记账）
+ * - /v1/responses 流式：上游 chat SSE → Responses SSE 事件序列 + 流式结算
+ * - /v1/responses 流式 + 无可用 channel → mock 回退（SSE 事件序列 + streamed 记账）
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -326,16 +328,169 @@ describe('POST /v1/responses 校验', () => {
     });
     expect(res.statusCode).toBe(400);
   });
+});
 
-  it('stream=true → 400（本期仅非流式）', async () => {
+// ============================================================
+// POST /v1/responses — 流式路径
+// ============================================================
+
+describe('POST /v1/responses 流式路径', () => {
+  /** 解析 SSE body → 事件数组（event: + data: 成对） */
+  function parseSseEvents(body: string): Array<{ event: string; data: Record<string, unknown> }> {
+    const events: Array<{ event: string; data: Record<string, unknown> }> = [];
+    for (const block of body.split('\n\n')) {
+      const eventLine = block.split('\n').find((l) => l.startsWith('event: '));
+      const dataLine = block.split('\n').find((l) => l.startsWith('data: '));
+      if (eventLine && dataLine) {
+        events.push({ event: eventLine.slice(7), data: JSON.parse(dataLine.slice(6)) });
+      }
+    }
+    return events;
+  }
+
+  it('上游 chat SSE → Responses SSE 事件序列（created → deltas → completed），流式结算采信上游 usage', async () => {
+    mocks.routing.selectChannel.mockResolvedValue(makeChannel());
+    const sse = [
+      'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"role":"assistant","content":"Hello"},"finish_reason":null}]}\n\n',
+      'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":" world"},"finish_reason":null}]}\n\n',
+      'data: {"id":"chatcmpl-1","object":"chat.completion.chunk","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":5,"completion_tokens":2,"total_tokens":7}}\n\n',
+      'data: [DONE]\n\n',
+    ].join('');
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(sse));
+        controller.close();
+      },
+    });
+    mocks.fetch.mockResolvedValue(new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } }));
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/responses',
+      payload: { model: 'gpt-5', input: 'Say hi', stream: true },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(String(res.headers['content-type'])).toContain('text/event-stream');
+
+    const events = parseSseEvents(res.body);
+    expect(events.map((e) => e.event)).toEqual([
+      'response.created',
+      'response.in_progress',
+      'response.output_item.added',
+      'response.content_part.added',
+      'response.output_text.delta',
+      'response.output_text.delta',
+      'response.output_text.done',
+      'response.content_part.done',
+      'response.output_item.done',
+      'response.completed',
+    ]);
+
+    // delta 内容按序累积
+    const deltas = events.filter((e) => e.event === 'response.output_text.delta').map((e) => e.data.delta);
+    expect(deltas).toEqual(['Hello', ' world']);
+
+    // 首个事件：response.created 的 id/object/status
+    const created = events[0]!.data as { response: { id: string; object: string; status: string } };
+    expect(created.response.id).toMatch(/^resp_/);
+    expect(created.response.object).toBe('response');
+    expect(created.response.status).toBe('in_progress');
+
+    // 收尾事件：response.completed 含完整 output + usage（采信上游）
+    const completed = events.at(-1)!.data as {
+      response: {
+        status: string;
+        usage: Record<string, unknown>;
+        output: Array<{ type: string; role: string; content: Array<{ type: string; text: string }> }>;
+      };
+    };
+    expect(completed.response.status).toBe('completed');
+    expect(completed.response.usage).toEqual({
+      input_tokens: 5,
+      input_tokens_details: { cached_tokens: 0 },
+      output_tokens: 2,
+      output_tokens_details: { reasoning_tokens: 0 },
+      total_tokens: 7,
+    });
+    expect(completed.response.output[0]!.type).toBe('message');
+    expect(completed.response.output[0]!.content[0]!.text).toBe('Hello world');
+
+    // 流式结算：streamed=true，采信上游 usage（5 输入 + 2 输出）
+    await vi.waitFor(() => {
+      expect(mocks.consumption.recordConsumption).toHaveBeenCalledWith(expect.objectContaining({
+        streamed: true,
+        trustUpstream: true,
+        fallback: false,
+        inputTokens: 5,
+        outputTokens: 2,
+      }));
+    });
+  });
+
+  it('流式 + 无可用 channel → mock 回退（SSE 事件序列 + streamed 记账）', async () => {
+    mocks.routing.selectChannel.mockResolvedValue(null);
     const res = await app.inject({
       method: 'POST',
       url: '/v1/responses',
       payload: { model: 'gpt-5', input: 'hi', stream: true },
     });
-    expect(res.statusCode).toBe(400);
-    expect(res.json().error.message).toContain('Streaming is not supported');
-    expect(mocks.fetch).not.toHaveBeenCalled();
+
+    expect(res.statusCode).toBe(200);
+    expect(String(res.headers['content-type'])).toContain('text/event-stream');
+    const events = parseSseEvents(res.body);
+    expect(events.map((e) => e.event)).toEqual([
+      'response.created',
+      'response.in_progress',
+      'response.output_item.added',
+      'response.content_part.added',
+      'response.output_text.delta',
+      'response.output_text.done',
+      'response.content_part.done',
+      'response.output_item.done',
+      'response.completed',
+    ]);
+    // mock 记账标记：streamed=true + fallback=true
+    expect(mocks.consumption.recordConsumption).toHaveBeenCalledWith(expect.objectContaining({
+      streamed: true,
+      fallback: true,
+      finishReason: 'stop',
+    }));
+  });
+
+  it('流式上游中断（读取抛错）→ error 事件 + completed(failed)，仍按已累积文本结算', async () => {
+    mocks.routing.selectChannel.mockResolvedValue(makeChannel());
+    // 只发一个 delta 后抛错的流
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('data: {"choices":[{"index":0,"delta":{"content":"partial"},"finish_reason":null}]}\n\n'));
+        controller.error(new Error('connection reset'));
+      },
+    });
+    mocks.fetch.mockResolvedValue(new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } }));
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/responses',
+      payload: { model: 'gpt-5', input: 'hi', stream: true },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const events = parseSseEvents(res.body);
+    const names = events.map((e) => e.event);
+    expect(names).toContain('error');
+    expect(names).toContain('response.completed');
+    const completed = events.at(-1)!.data as { response: { status: string; error: { code: string } | null } };
+    expect(completed.response.status).toBe('failed');
+    expect(completed.response.error?.code).toBe('upstream_error');
+    // 无 usage → 本地 tiktoken 兜底（fallback=true），文本累积为 partial
+    await vi.waitFor(() => {
+      expect(mocks.consumption.recordConsumption).toHaveBeenCalledWith(expect.objectContaining({
+        streamed: true,
+        trustUpstream: false,
+        fallback: true,
+      }));
+    });
   });
 });
 

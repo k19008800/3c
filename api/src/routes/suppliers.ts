@@ -142,6 +142,10 @@ export async function supplierRoutes(app: FastifyInstance) {
     const baseUrl = String(body.baseUrl || '').trim();
     const apiType = String(body.apiType || 'openai').trim();
     const description = body.description != null ? String(body.description) : null;
+    // 渠道分组供给：允许的分组名数组；非法值回退空数组（不限分组）
+    const allowedGroups = Array.isArray(body.allowedGroups)
+      ? body.allowedGroups.map((g) => String(g).trim()).filter(Boolean)
+      : [];
 
     if (!name || !code || !baseUrl) {
       throw new ValidationError('name, code, and baseUrl are required');
@@ -153,6 +157,7 @@ export async function supplierRoutes(app: FastifyInstance) {
       baseUrl,
       apiType,
       description: description as any,
+      allowedGroups,
       status: 'active',
     }).returning();
 
@@ -171,6 +176,11 @@ export async function supplierRoutes(app: FastifyInstance) {
     if (body.apiType !== undefined) setData.apiType = String(body.apiType).trim();
     if (body.status !== undefined) setData.status = String(body.status);
     if (body.description !== undefined) setData.description = body.description !== null ? String(body.description) : null;
+    if (body.allowedGroups !== undefined) {
+      setData.allowedGroups = Array.isArray(body.allowedGroups)
+        ? body.allowedGroups.map((g) => String(g).trim()).filter(Boolean)
+        : [];
+    }
 
     if (Object.keys(setData).length <= 1) {
       throw new ValidationError('No fields to update');
