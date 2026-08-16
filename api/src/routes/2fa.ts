@@ -7,6 +7,7 @@
  *   3. login 检测启用 2FA → 返回 { twoFactorRequired, tempToken }（5 分钟，第二步确认用）
  *   4. POST /2fa/verify  — tempToken + TOTP/备用码 → 签发正式 JWT（备用码一次性，用后移除）
  *   5. POST /2fa/disable — TOTP/备用码验证后关闭（totpEnabled=false + two_factor_enabled='0'）
+ *   6. GET  /2fa/status   — 查询当前用户 2FA 启用状态（安全中心状态徽标）
  *
  * 兼容性：未启用 2FA 的用户 login 行为完全不变（直接发 JWT）。
  * 错误码：token 错误 → 400（enable/disable）/ 401（verify）；未启用 2FA 调 verify → 400。
@@ -284,5 +285,21 @@ export async function twoFactorRoutes(app: FastifyInstance) {
       user: { id: user.id, email: user.email, name: user.name, role: user.role },
       ...tokens,
     });
+  });
+
+  // GET /api/v1/auth/2fa/status — 查询当前用户 2FA 启用状态（安全中心状态徽标用）
+  // 状态以 user_2fa.totp_enabled 为权威（与 users.two_factor_enabled 同步维护，见 schema/user-2fa.ts）。
+  // 未写入 user_2fa 行的用户视为未启用（enabled=false），不报错。
+  app.get('/api/v1/auth/2fa/status', { preHandler: [jwtAuth] }, async (request: any, reply) => {
+    const { userId } = request.userContext;
+    const rows = await db.select({
+      totpEnabled: schema.user2fa.totpEnabled,
+    })
+      .from(schema.user2fa)
+      .where(eq(schema.user2fa.userId, userId))
+      .limit(1);
+
+    const enabled = rows.length > 0 && rows[0]!.totpEnabled === true;
+    return reply.send({ enabled });
   });
 }

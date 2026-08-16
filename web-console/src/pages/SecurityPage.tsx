@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { HelpIcon, StatusBadge, useToast } from "@3cloud/shared-ui";
+import OtpInput from "../components/OtpInput";
 
 /**
  * 账号安全页 — 对齐原型 portal-security.html
@@ -277,41 +278,73 @@ function TwoFactorPanel() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [showSetup, setShowSetup] = useState(false);
-  const [code, setCode] = useState("");
-  const [setupData, setSetupData] = useState<any>(null);
+  const [setupData, setSetupData] = useState<{ secret: string; otpauthUrl: string; backupCodes: string[] } | null>(null);
+  const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
+  const [disableMode, setDisableMode] = useState<"totp" | "backup">("totp");
+  const [backupCode, setBackupCode] = useState("");
 
+  // 2FA 启用状态：GET /auth/2fa/status（需登录，后端 2fa.ts 追加端点），返回 { enabled }
   const statusQ = useQuery({
     queryKey: ["me-2fa"],
-    queryFn: async () => (await api.get<{ data: any }>("/auth/2fa/status")).data.data,
+    queryFn: async () => (await api.get<{ enabled: boolean }>("/auth/2fa/status")).data,
   });
+  const enabled = statusQ.data?.enabled;
 
+  // 启用流程第 1 步：setup 生成 secret + otpauthUrl + 一次性备用码（暂存态，10 分钟有效）
   const setupMut = useMutation({
-    mutationFn: async () => (await api.post("/auth/2fa/setup", {})).data,
-    onSuccess: (d: any) => { setSetupData(d.data); setShowSetup(true); },
+    mutationFn: async () =>
+      (await api.post<{ secret: string; otpauthUrl: string; backupCodes: string[] }>("/auth/2fa/setup", {})).data,
+    onSuccess: (d) => {
+      setSetupData(d);
+      setShowSetup(true);
+      setOtp(Array(6).fill(""));
+    },
     onError: (e) => toast.error(extractError(e)),
   });
 
-  const verifyMut = useMutation({
-    mutationFn: async () => (await api.post("/auth/2fa/verify", { code })).data,
+  // 启用流程第 2 步：输入 6 位 TOTP → enable { token } 落库启用
+  const enableMut = useMutation({
+    mutationFn: async () => (await api.post("/auth/2fa/enable", { token: otp.join("") })).data,
     onSuccess: () => {
       toast.success("TOTP 两步验证已启用！");
-      setShowSetup(false); setCode("");
+      setShowSetup(false);
+      setSetupData(null);
+      setOtp(Array(6).fill(""));
       qc.invalidateQueries({ queryKey: ["me-2fa"] });
     },
-    onError: (e) => { toast.error(extractError(e)); setCode(""); },
+    onError: (e) => { toast.error(extractError(e)); setOtp(Array(6).fill("")); },
   });
 
+  // 禁用流程：TOTP（token）或备用码（backupCode）二选一 → disable
   const disableMut = useMutation({
-    mutationFn: async () => (await api.post("/auth/2fa/disable", { code })).data,
+    mutationFn: async () => {
+      const body = disableMode === "backup" ? { backupCode } : { token: otp.join("") };
+      return (await api.post("/auth/2fa/disable", body)).data;
+    },
     onSuccess: () => {
-      toast.success("2FA 已禁用"); setCode("");
+      toast.success("2FA 已禁用");
+      setOtp(Array(6).fill(""));
+      setBackupCode("");
       qc.invalidateQueries({ queryKey: ["me-2fa"] });
     },
-    onError: (e) => toast.error(extractError(e)),
+    onError: (e) => { toast.error(extractError(e)); setOtp(Array(6).fill("")); },
   });
 
-  const st = statusQ.data;
-  const enabled = st?.enabled;
+  /** 复制到剪贴板（otpauth 链接 / 密钥 / 备用码） */
+  const handleCopy = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${label}已复制`);
+    } catch {
+      toast.error("复制失败，请手动选择复制");
+    }
+  };
+
+  const tabBase: React.CSSProperties = {
+    padding: "6px 14px", borderRadius: 6, fontSize: 13, cursor: "pointer",
+    fontFamily: "inherit", border: "1px solid var(--color-border)", background: "var(--color-panel)",
+    color: "var(--color-text-secondary)",
+  };
 
   return (
     <div style={card}>
@@ -340,14 +373,73 @@ function TwoFactorPanel() {
         </div>
 
         {enabled ? (
-          <div style={{ display: "flex", gap: 8 }}>
-            <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="输入当前6位验证码后禁用" maxLength={6} style={{ ...inp, width: 240, marginBottom: 0 }} />
-            <button onClick={() => disableMut.mutate()} style={btnDanger} disabled={code.length !== 6}>禁用 2FA</button>
+          <div>
+            {/* 禁用方式切换：验证器验证码 / 备用恢复码 */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <button
+                onClick={() => setDisableMode("totp")}
+                style={{ ...tabBase, ...(disableMode === "totp" ? { color: "var(--color-primary)", borderColor: "rgba(79,110,247,0.4)" } : {}) }}
+              >
+                验证器验证码
+              </button>
+              <button
+                onClick={() => setDisableMode("backup")}
+                style={{ ...tabBase, ...(disableMode === "backup" ? { color: "var(--color-primary)", borderColor: "rgba(79,110,247,0.4)" } : {}) }}
+              >
+                备用恢复码
+              </button>
+            </div>
+
+            {disableMode === "totp" ? (
+              <>
+                <OtpInput value={otp} onChange={setOtp} />
+                <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 12 }}>
+                  输入验证器当前显示的 6 位动态验证码
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <button
+                    onClick={() => disableMut.mutate()}
+                    disabled={otp.join("").length !== 6 || disableMut.isPending}
+                    style={btnDanger}
+                  >
+                    {disableMut.isPending ? "提交中…" : "禁用 2FA"}
+                  </button>
+                  <HelpIcon text="输入当前验证码后关闭两步验证，关闭后登录不再需要验证码" />
+                </div>
+              </>
+            ) : (
+              <>
+                <input
+                  value={backupCode}
+                  onChange={(e) => setBackupCode(e.target.value.toUpperCase())}
+                  placeholder="XXXX-XXXX-XXXX"
+                  maxLength={14}
+                  style={{ ...inp, width: 240, marginBottom: 8 }}
+                />
+                <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 12 }}>
+                  输入启用 2FA 时保存的备用恢复码（大写，可省略分隔符）
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <button
+                    onClick={() => disableMut.mutate()}
+                    disabled={!backupCode || disableMut.isPending}
+                    style={btnDanger}
+                  >
+                    {disableMut.isPending ? "提交中…" : "禁用 2FA"}
+                  </button>
+                  <HelpIcon text="备用恢复码在启用 2FA 时生成，每个备用码仅可使用一次" />
+                </div>
+              </>
+            )}
           </div>
         ) : (
-          <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={() => setupMut.mutate()} style={btnPrimary}>启用 TOTP</button>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <button onClick={() => setupMut.mutate()} disabled={setupMut.isPending} style={btnPrimary}>
+              {setupMut.isPending ? "生成中…" : "启用 TOTP"}
+            </button>
+            <HelpIcon text="启用后每次登录需输入验证器生成的 6 位动态验证码，可显著提升账户安全性" />
             <button onClick={() => toast.info("Passkey 管理功能开发中")} style={btn}>管理 Passkey</button>
+            <HelpIcon text="Passkey（生物识别密钥）管理功能开发中" />
           </div>
         )}
 
@@ -355,18 +447,44 @@ function TwoFactorPanel() {
           <div style={{ marginTop: 20, padding: 16, background: "var(--color-bg)", borderRadius: 8 }}>
             <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 12 }}>配置 TOTP 验证器</div>
             <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 8 }}>
-              打开 Google Authenticator 或 Authy，扫描二维码或手动输入密钥：
+              打开 Google Authenticator 或 Authy，扫描下方 otpauth 链接或手动输入密钥：
             </div>
-            <div style={{ fontFamily: "monospace", background: "var(--color-panel)", padding: 10, borderRadius: 6, marginBottom: 12, wordBreak: "break-all", border: "1px solid var(--color-border)" }}>
-              {setupData.manual_key ?? setupData.secret}
+            {/* 零依赖方案：展示 otpauthUrl 文本链接 + secret，不引入 qrcode 库 */}
+            <div style={{ fontFamily: "monospace", background: "var(--color-panel)", padding: 10, borderRadius: 6, marginBottom: 8, wordBreak: "break-all", border: "1px solid var(--color-border)", fontSize: 12 }}>
+              {setupData.otpauthUrl}
             </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
-              <div>
-                <div style={{ ...label, marginBottom: 6 }}>输入验证码</div>
-                <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="6位验证码" maxLength={6} style={{ ...inp, width: 200, marginBottom: 0 }} />
-              </div>
-              <button onClick={() => verifyMut.mutate()} disabled={code.length !== 6} style={{ ...btnPrimary, height: 42 }}>验证并启用</button>
-              <button onClick={() => { setShowSetup(false); setCode(""); }} style={{ ...btn, height: 42 }}>取消</button>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
+              <span style={{ fontFamily: "monospace", fontSize: 13, wordBreak: "break-all" }}>密钥：{setupData.secret}</span>
+              <button onClick={() => handleCopy(setupData.secret, "密钥")} style={{ ...btn, padding: "2px 10px", fontSize: 12 }}>复制</button>
+              <HelpIcon text="复制 base32 密钥，可在不支持扫码的验证器中手动录入" />
+            </div>
+
+            {/* 备用码：一次性显示 */}
+            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 6 }}>备用恢复码（仅此一次显示）</div>
+            <div style={{ fontSize: 12, color: "var(--color-danger-text)", marginBottom: 8 }}>
+              ⚠️ 请立即保存到安全的地方；遗失后无法找回，只能关闭后重新启用
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6, marginBottom: 12 }}>
+              {setupData.backupCodes.map((c) => (
+                <div key={c} style={{ fontFamily: "monospace", fontSize: 13, background: "var(--color-panel)", border: "1px solid var(--color-border)", borderRadius: 6, padding: "6px 10px", textAlign: "center" }}>
+                  {c}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ fontSize: 13, marginBottom: 8 }}>在验证器中输入 6 位验证码完成启用：</div>
+            <OtpInput value={otp} onChange={setOtp} />
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
+              <button
+                onClick={() => enableMut.mutate()}
+                disabled={otp.join("").length !== 6 || enableMut.isPending}
+                style={{ ...btnPrimary, height: 42 }}
+              >
+                {enableMut.isPending ? "验证中…" : "验证并启用"}
+              </button>
+              <HelpIcon text="输入验证器当前显示的 6 位验证码，验证通过后正式启用两步验证" />
+              <button onClick={() => { setShowSetup(false); setSetupData(null); setOtp(Array(6).fill("")); }} style={{ ...btn, height: 42 }}>取消</button>
+              <HelpIcon text="取消本次配置，已生成的密钥与备用码将失效，需要时重新开始" />
             </div>
           </div>
         )}
@@ -378,83 +496,86 @@ function TwoFactorPanel() {
 /* ==================== 4. 第三方登录绑定 ==================== */
 function ThirdPartyBindPanel() {
   const { toast } = useToast();
-  const [binds, setBinds] = useState<Record<string, { bound: boolean; info: string }>>({
-    github: { bound: false, info: "" },
-    wechat: { bound: false, info: "" },
-    telegram: { bound: false, info: "" },
-    google: { bound: false, info: "" },
-  });
+  const [githubLoading, setGithubLoading] = useState(false);
 
-  const providers: Array<{ key: string; name: string; icon: string }> = [
-    { key: "github", name: "GitHub", icon: "🐙" },
-    { key: "wechat", name: "微信", icon: "💬" },
-    { key: "telegram", name: "Telegram", icon: "✈️" },
-    { key: "google", name: "Google", icon: "🔵" },
-  ];
-
-  const handleToggle = (key: string) => {
-    const b = binds[key];
-    if (!b) return;
-    if (b.bound) {
-      // 解绑
-      // 后端缺失：/auth/oauth/unbind 接口
-      setBinds({ ...binds, [key]: { bound: false, info: "" } });
-      toast.success(`${providers.find((p) => p.key === key)?.name ?? key} 已解绑`);
-    } else {
-      // 绑定
-      // 后端缺失：/auth/oauth/bind 跳转
-      // window.location.href = `/api/v1/auth/oauth/${key}/bind`;
-      setBinds({ ...binds, [key]: { bound: true, info: `${key}_user_${Math.floor(Math.random() * 9000 + 1000)}` } });
-      toast.success(`${providers.find((p) => p.key === key)?.name ?? key} 绑定成功`);
+  // 后端已实现：仅 GitHub 登录入口（GET /auth/oauth/github/url → 跳转 GitHub 授权页）。
+  // 绑定管理端点（GET /auth/oauth/bindings 列表、POST /auth/oauth/{provider}/bind、POST /auth/oauth/unbind）
+  // 尚未实现，因此本面板不查询绑定状态、不提供解绑；GitHub 走"快捷登录"，
+  // 微信 / Telegram / Google 标注"即将上线"（不调用不存在的 API）。
+  const handleGitHubLogin = async () => {
+    setGithubLoading(true);
+    try {
+      const res = await api.get<{ url: string }>("/auth/oauth/github/url");
+      window.location.href = res.data.url;
+    } catch (e) {
+      toast.error(extractError(e));
+      setGithubLoading(false);
     }
   };
+
+  const providers: Array<{ key: string; name: string; icon: string; available: boolean }> = [
+    { key: "github", name: "GitHub", icon: "🐙", available: true },
+    { key: "wechat", name: "微信", icon: "💬", available: false },
+    { key: "telegram", name: "Telegram", icon: "✈️", available: false },
+    { key: "google", name: "Google", icon: "🔵", available: false },
+  ];
 
   return (
     <div style={card}>
       <div style={panelHeader}>
         <h3 style={{ fontSize: 14, fontWeight: 500, margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
           第三方登录绑定
-          <HelpIcon text="绑定第三方账号后可使用对应平台快捷登录，解绑后将无法使用该方式登录" level="button" />
+          <HelpIcon text="绑定第三方账号后可使用对应平台快捷登录；当前支持 GitHub，其余平台即将上线" level="button" />
         </h3>
       </div>
       <div style={panelBody}>
-        {providers.map((p) => {
-          const b = binds[p.key] ?? { bound: false, info: "" };
-          return (
-            <div key={p.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: "1px solid var(--color-divider)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, background: "var(--color-divider-light)" }}>
-                  {p.icon}
-                </div>
-                <div>
-                  <div style={{ fontSize: 14, color: "var(--color-text)" }}>{p.name}</div>
-                  <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
-                    {b.bound ? `已绑定 — ${p.name} 用户 ${b.info}` : `未绑定 — 使用 ${p.name} 账号快捷登录`}
-                  </div>
-                </div>
+        {providers.map((p) => (
+          <div key={p.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: "1px solid var(--color-divider)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, background: "var(--color-divider-light)" }}>
+                {p.icon}
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                {b.bound ? (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 12, fontSize: 12, background: "rgba(102,187,106,0.1)", color: "#66bb6a", border: "1px solid rgba(102,187,106,0.3)" }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#66bb6a" }} />
-                    已绑定
-                  </span>
-                ) : (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 12, fontSize: 12, background: "var(--color-divider-light)", color: "var(--color-text-secondary)", border: "1px solid var(--color-border)" }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ccc" }} />
-                    未绑定
-                  </span>
-                )}
-                <button
-                  onClick={() => handleToggle(p.key)}
-                  style={{ ...(b.bound ? btnDanger : btnPrimary), padding: "4px 12px", fontSize: 12, borderRadius: 6 }}
-                >
-                  {b.bound ? "解绑" : "绑定"}
-                </button>
+              <div>
+                <div style={{ fontSize: 14, color: "var(--color-text)" }}>{p.name}</div>
+                <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+                  {p.available
+                    ? "未绑定 — 使用 GitHub 账号快捷登录（授权后自动绑定当前账号或注册新账号）"
+                    : "即将上线 — 敬请期待"}
+                </div>
               </div>
             </div>
-          );
-        })}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 12, fontSize: 12,
+                background: p.available ? "rgba(102,187,106,0.1)" : "var(--color-divider-light)",
+                color: p.available ? "#66bb6a" : "var(--color-text-secondary)",
+                border: `1px solid ${p.available ? "rgba(102,187,106,0.3)" : "var(--color-border)"}`,
+              }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: p.available ? "#66bb6a" : "#ccc" }} />
+                {p.available ? "支持" : "即将上线"}
+              </span>
+              {p.available ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <button
+                    onClick={handleGitHubLogin}
+                    disabled={githubLoading}
+                    style={{ ...btnPrimary, padding: "4px 12px", fontSize: 12, borderRadius: 6 }}
+                  >
+                    {githubLoading ? "跳转中…" : "GitHub 登录"}
+                  </button>
+                  <HelpIcon text="跳转到 GitHub 授权页，授权后自动绑定当前邮箱账号或注册新账号" />
+                </div>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <button disabled style={{ ...btn, padding: "4px 12px", fontSize: 12, borderRadius: 6, opacity: 0.5, cursor: "not-allowed" }}>
+                    即将上线
+                  </button>
+                  <HelpIcon text={`${p.name} 快捷登录正在开发中，敬请期待`} />
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

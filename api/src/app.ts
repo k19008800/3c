@@ -7,7 +7,9 @@ import { db } from './db';
 import { loadEnv, type Env } from './lib/env';
 import { healthRoutes } from './routes/health';
 import { chatRoutes } from './routes/chat';
+import { wsRoutes } from './routes/ws';
 import { openaiCompatRoutes } from './routes/openai-compat';
+import { messagesRoutes } from './routes/messages';
 import { authRoutes } from './routes/auth';
 import { oauthRoutes } from './routes/oauth';
 import { twoFactorRoutes } from './routes/2fa';
@@ -72,7 +74,9 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   // Routes
   await app.register(healthRoutes);
   await app.register(chatRoutes);
+  await app.register(wsRoutes);
   await app.register(openaiCompatRoutes);
+  await app.register(messagesRoutes);
   await app.register(authRoutes);
   await app.register(oauthRoutes);
   await app.register(twoFactorRoutes);

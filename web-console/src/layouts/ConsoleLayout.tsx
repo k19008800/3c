@@ -97,6 +97,7 @@ const ADMIN_NAV: NavGroup[] = [
   ]},
   { group: "运维配置", icon: "🛠", items: [
     // 注：system/monitoring/oauth 原为 AdminSettingsPage 占位（无独立实现），database 为演示假查询，已从菜单摘除，待后端落地后再挂回
+    { to: "/admin/config/groups", label: "用户分组", icon: "👥" },
     { to: "/admin/config/performance", label: "性能配置", icon: "🐌" },
     { to: "/admin/config/webhook-retry", label: "Webhook 重试", icon: "🔄" },
     { to: "/admin/config/undo", label: "撤销操作日志", icon: "↩️" },

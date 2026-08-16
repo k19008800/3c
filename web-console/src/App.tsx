@@ -66,6 +66,7 @@ import SalesCustomerDetailPage from "./pages/SalesCustomerDetailPage";
 import SalesRemindersPage from "./pages/SalesRemindersPage";
 import SalesPerformancePage from "./pages/SalesPerformancePage";
 import AdminCustomersPage from "./pages/AdminCustomersPage";
+import AdminGroupsPage from "./pages/AdminGroupsPage";
 import AdminDataRequestPage from "./pages/AdminDataRequestPage";
 import AdminConversationRecordsPage from "./pages/AdminConversationRecordsPage";
 import AdminDiscountEnginePage from "./pages/AdminDiscountEnginePage";
@@ -272,6 +273,7 @@ export default function App() {
         <Route path="admin/ops/activity" element={<AdminActivityPage />} />
         <Route path="admin/subscription" element={<AdminSubscriptionPage />} />
         {/* ── 运维配置 ── */}
+        <Route path="admin/config/groups" element={<AdminGroupsPage />} />
         <Route path="admin/config/performance" element={<AdminPerformancePage />} />
         <Route path="admin/config/webhook-retry" element={<AdminWebhookRetryPage />} />
         <Route path="admin/config/undo" element={<AdminUndoPage />} />
