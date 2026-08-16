@@ -3,6 +3,7 @@
  */
 
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { db, schema } from '../../db';
 import { eq } from 'drizzle-orm';
 
@@ -12,6 +13,9 @@ export interface TokenPayload {
   userId: number;
   email: string;
   role: string;
+  /** 令牌唯一 ID：同秒内同 payload 的重复签发（如注册后立即登录）会产生相同 JWT，
+   *  而 user_sessions.token 有唯一约束 → 500 重复键。jti 保证每次签发唯一。 */
+  jti?: string;
 }
 
 export interface TokenPair {
@@ -30,16 +34,20 @@ export interface TwoFactorTempPayload {
 
 /**
  * Generate an access token (short-lived, 15 min)
+ *
+ * 带 jti（随机 UUID）保证同秒内同 payload 多次签发 token 唯一：
+ * user_sessions.token 唯一约束下，注册后立即登录（同秒）会因 iat 秒级精度
+ * 产生完全相同 JWT → 重复键 500。jti 消除该竞态。
  */
 export function generateAccessToken(payload: TokenPayload, secret?: string): string {
-  return jwt.sign(payload, secret || process.env.JWT_SECRET || DEFAULT_SECRET, { expiresIn: '15m' });
+  return jwt.sign({ ...payload, jti: crypto.randomUUID() }, secret || process.env.JWT_SECRET || DEFAULT_SECRET, { expiresIn: '15m' });
 }
 
 /**
  * Generate a refresh token (long-lived, 7 days)
  */
 export function generateRefreshToken(payload: TokenPayload, secret?: string): string {
-  return jwt.sign(payload, secret || process.env.JWT_SECRET || DEFAULT_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ ...payload, jti: crypto.randomUUID() }, secret || process.env.JWT_SECRET || DEFAULT_SECRET, { expiresIn: '7d' });
 }
 
 /**
