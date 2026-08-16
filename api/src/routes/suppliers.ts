@@ -19,6 +19,10 @@ import {
   NotFoundError,
   ValidationError,
 } from '../lib/errors';
+import {
+  testSupplierConnection,
+  querySupplierBalances,
+} from '../services/supplier-ops';
 
 /* ───────── helpers ───────── */
 
@@ -357,6 +361,82 @@ export async function supplierRoutes(app: FastifyInstance) {
     if (!key) throw new NotFoundError('Supplier key', id);
 
     return reply.send({ message: 'Key deleted', id: key.id });
+  });
+
+  // ═══════════════════════════════════════════
+  // 3.5 渠道连通性测试 & 余额查询（admin only）
+  // ═══════════════════════════════════════════
+
+  /** POST /api/v1/admin/suppliers/:id/test — 渠道连通性测试 */
+  app.post('/api/v1/admin/suppliers/:id/test', { preHandler: [adminAuth] }, async (request, reply) => {
+    const id = intParam(request.params as Record<string, unknown>, 'id');
+
+    const [supplier] = await db.select().from(schema.suppliers).where(eq(schema.suppliers.id, id)).limit(1);
+    if (!supplier) throw new NotFoundError('Supplier', id);
+
+    // 取该供应商第一条 active 状态的 Key 做探测
+    const [key] = await db.select()
+      .from(schema.supplierKeys)
+      .where(and(eq(schema.supplierKeys.supplierId, id), eq(schema.supplierKeys.status, 'active')))
+      .orderBy(asc(schema.supplierKeys.id))
+      .limit(1);
+
+    // 没有可用 Key：返回业务结果（ok:false），不是服务端错误
+    if (!key) {
+      return reply.send({ ok: false, reason: 'no active key' });
+    }
+
+    const result = await testSupplierConnection(supplier, key.keyValue);
+
+    // 尽力而为回写健康状态：失败只记日志，不阻断响应
+    try {
+      await db.update(schema.suppliers)
+        .set({
+          healthStatus: result.ok ? 'healthy' : 'unhealthy',
+          healthLastCheck: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.suppliers.id, id));
+    } catch (err) {
+      request.log.warn({ err, supplierId: id }, 'Failed to persist supplier health status');
+    }
+
+    return reply.send(result);
+  });
+
+  /** GET /api/v1/admin/suppliers/:id/balance — 上游 API Key 余额查询（Redis 缓存 10min） */
+  app.get('/api/v1/admin/suppliers/:id/balance', { preHandler: [adminAuth] }, async (request, reply) => {
+    const id = intParam(request.params as Record<string, unknown>, 'id');
+
+    const [supplier] = await db.select().from(schema.suppliers).where(eq(schema.suppliers.id, id)).limit(1);
+    if (!supplier) throw new NotFoundError('Supplier', id);
+
+    const keys = await db.select()
+      .from(schema.supplierKeys)
+      .where(eq(schema.supplierKeys.supplierId, id))
+      .orderBy(asc(schema.supplierKeys.id));
+
+    const result = await querySupplierBalances(supplier, keys);
+
+    // 尽力而为回写 currentBalance：失败只记日志，不阻断响应
+    if (result.ok && result.keys) {
+      for (const k of result.keys) {
+        if (k.balance == null) continue;
+        try {
+          await db.update(schema.supplierKeys)
+            .set({
+              currentBalance: String(k.balance),
+              balanceCheckedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(schema.supplierKeys.id, k.keyId));
+        } catch (err) {
+          request.log.warn({ err, keyId: k.keyId }, 'Failed to persist key balance');
+        }
+      }
+    }
+
+    return reply.send(result);
   });
 
   // ═══════════════════════════════════════════

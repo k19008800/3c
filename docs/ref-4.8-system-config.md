@@ -3,6 +3,7 @@
 > **对应章节**：[PRD-README.md §4.8 系统配置精化](../PRD-README.md#48-系统配置精化)
 > **状态**：基于现有后端代码（`api/src/db/schema/system.ts`（`systemConfigs`）、`api/src/db/schema/config-versions.ts`（`configVersions`/`configSnapshots`/`configChangeRequests`）、`api/src/services/config-version/`（10 子文件）、`api/src/routes/admin/system.ts`、`api/src/routes/admin/site-settings.ts`）生成
 > **粒度**：Schema 字段定义 → API 接口 → 前端组件 Props → 配置审计追踪 → 导入导出 → 交叉引用
+> **⚠️ 注记（2026-08-14）**：本文档依据的代码结构（`system_configs` 表、`config-versions` 配置版本体系、`routes/admin/system.ts` 等）已在重构中替换，**整体过时**。当前实际实现：`system_config` 单表（`api/src/db/schema/system-config.ts`）、drizzle-kit push 建表、无迁移跟踪表；配置键由 `api/src/routes/admin-settings.ts`（`SETTING_DEFAULTS`）+ `api/src/routes/admin-ops.ts` + `api/src/db/seed.ts` 维护。运维配置新增键：`perf_*`（性能，10 键，线协议去 `perf_` 前缀）、`undo_timeout_seconds`/`undo_enabled_types`（撤销）。下文 Schema/API/前端字段定义仅供参考。
 
 ---
 

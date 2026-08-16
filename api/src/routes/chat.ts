@@ -495,20 +495,4 @@ export async function chatRoutes(app: FastifyInstance) {
   app.post('/v1/chat/completions', routeOptions, handler);
   // web-console Playground 内部路径（契约对齐）
   app.post('/api/v1/v1/chat/completions', routeOptions, handler);
-
-  // /v1/models
-  app.get('/v1/models', {
-    preHandler: [apiKeyAuth],
-  }, async (_request, reply) => {
-    return reply.send({
-      object: 'list',
-      data: [
-        { id: 'deepseek-v3', object: 'model', owned_by: '3cloud' },
-        { id: 'deepseek-r1', object: 'model', owned_by: '3cloud' },
-        { id: 'gpt-4o', object: 'model', owned_by: '3cloud' },
-        { id: 'glm-5-pro', object: 'model', owned_by: '3cloud' },
-        { id: 'qwen3-max', object: 'model', owned_by: '3cloud' },
-      ],
-    });
-  });
 }

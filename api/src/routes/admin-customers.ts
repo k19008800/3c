@@ -333,12 +333,40 @@ export async function adminCustomerRoutes(app: FastifyInstance) {
       throw new ValidationError('status must be active | disabled');
     }
 
+    // 先取改前状态，作为撤销记录快照
+    const [prev] = await db
+      .select({ id: schema.users.id, name: schema.users.name, status: schema.users.status })
+      .from(schema.users)
+      .where(eq(schema.users.id, id))
+      .limit(1);
+    if (!prev) throw new NotFoundError('Customer');
+
     const [row] = await db
       .update(schema.users)
       .set({ status, updatedAt: sql`NOW()` })
       .where(eq(schema.users.id, id))
       .returning({ id: schema.users.id, email: schema.users.email, name: schema.users.name, status: schema.users.status });
-    if (!row) throw new NotFoundError('Customer');
+
+    // 写撤销记录（运维后台 undo 可一键恢复快照；窗口期由 undo_timeout_seconds 决定，默认 300s）
+    try {
+      const [cfg] = await db
+        .select({ value: schema.systemConfig.value })
+        .from(schema.systemConfig)
+        .where(eq(schema.systemConfig.key, 'undo_timeout_seconds'))
+        .limit(1);
+      const timeoutSeconds = Number(cfg?.value);
+      await db.insert(schema.undoRecords).values({
+        operationType: 'user_status_change',
+        operationLabel: `${status === 'disabled' ? '禁用' : '启用'}客户 ${prev.name}`,
+        targetType: 'customer',
+        targetId: String(id),
+        snapshot: prev.status, // 快照 = 改前状态
+        operatorId: request.userContext?.userId ?? null,
+        expiresAt: new Date(Date.now() + (Number.isNaN(timeoutSeconds) ? 300 : timeoutSeconds) * 1000),
+      });
+    } catch (err) {
+      request.log.warn({ err }, '写入撤销记录失败（不影响状态切换）');
+    }
 
     return reply.send({ data: row });
   });

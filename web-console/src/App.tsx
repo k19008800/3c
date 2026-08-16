@@ -29,6 +29,7 @@ import AdminApikeySecurityPage from "./pages/AdminApikeySecurityPage";
 import AdminWithdrawalsPage from "./pages/AdminWithdrawalsPage";
 import AdminI18nPage from "./pages/AdminI18nPage";
 import AdminModelsPage from "./pages/AdminModelsPage";
+import AdminMarketplaceHealthPage from "./pages/admin/AdminMarketplaceHealthPage";
 import AdminNotificationPolicyPage from "./pages/AdminNotificationPolicyPage";
 import AdminInvoicesPage from "./pages/AdminInvoicesPage";
 import AdminRealNamePage from "./pages/AdminRealNamePage";
@@ -89,7 +90,6 @@ import UserWebhooksPage from "./pages/UserWebhooksPage";
 import AdminDeletionPage from "./pages/AdminDeletionPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import AdminCockpitPage from "./pages/AdminCockpitPage";
-import AdminSysDbPage from "./pages/AdminSysDbPage";
 import AdminSysCachePage from "./pages/AdminSysCachePage";
 import AdminSysLogsPage from "./pages/AdminSysLogsPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
@@ -251,7 +251,8 @@ export default function App() {
         <Route path="admin/agents/approvals" element={<AdminAgentApprovalsPage />} />
         <Route path="admin/agents/withdrawals" element={<AdminWithdrawalsPage />} />
         {/* ── 模型管理 ── */}
-        <Route path="admin/models/marketplace" element={<AdminModelsPage />} />
+        <Route path="admin/models" element={<AdminModelsPage />} />
+        <Route path="admin/models/marketplace" element={<AdminMarketplaceHealthPage />} />
         {/* ── 营销推广 ── */}
         <Route path="admin/marketing/affiliate" element={<AdminAffiliatePage />} />
         <Route path="admin/marketing/campaigns" element={<AdminCampaignsPage />} />
@@ -271,8 +272,6 @@ export default function App() {
         <Route path="admin/ops/activity" element={<AdminActivityPage />} />
         <Route path="admin/subscription" element={<AdminSubscriptionPage />} />
         {/* ── 运维配置 ── */}
-        <Route path="admin/config/system" element={<AdminSettingsPage />} />
-        <Route path="admin/config/monitoring" element={<AdminSettingsPage />} />
         <Route path="admin/config/performance" element={<AdminPerformancePage />} />
         <Route path="admin/config/webhook-retry" element={<AdminWebhookRetryPage />} />
         <Route path="admin/config/undo" element={<AdminUndoPage />} />
@@ -283,9 +282,7 @@ export default function App() {
         <Route path="admin/config/rate-limit" element={<AdminSettingsPage />} />
         <Route path="admin/config/email-templates" element={<AdminEmailTemplatesPage />} />
         <Route path="admin/config/content" element={<AdminContentPage />} />
-        <Route path="admin/config/oauth" element={<AdminSettingsPage />} />
         <Route path="admin/config/webhooks" element={<AdminWebhooksPage />} />
-        <Route path="admin/config/database" element={<AdminSysDbPage />} />
         <Route path="admin/config/cache" element={<AdminSysCachePage />} />
         <Route path="admin/config/compliance" element={<AdminConsentPage />} />
         {/* ── 审计合规 ── */}

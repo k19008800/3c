@@ -15,19 +15,24 @@ export default function AdminSysLogsPage() {
   const filesQ = useQuery({
     queryKey: ["admin-sys-logs"],
     queryFn: async () => (await api.get("/admin/sys/logs")).data.data,
+    retry: 0,
   });
 
   const contentQ = useQuery({
     queryKey: ["admin-sys-logs-read", file, search, lines],
     queryFn: async () => (await api.get(`/admin/sys/logs/read?file=${encodeURIComponent(file)}&search=${encodeURIComponent(search)}&lines=${lines}`)).data.data,
     enabled: !!file,
+    retry: 0,
   });
+
+  const backendMissing = filesQ.isError;
 
   return (
     <div>
       <h2>
         在线日志查看器
         <HelpIcon text="在线日志查看器 — 浏览服务器日志文件、按关键词搜索、控制显示行数。支持查看 PM2 日志和应用日志。" level="page" />
+        {backendMissing && <span style={{ fontSize: 11, color: "#f59e0b", marginLeft: 8 }}>⚠️ 后端未接入（/admin/sys/logs 待实现）</span>}
       </h2>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>

@@ -95,7 +95,7 @@ export default function AdminConsumptionStreamPage() {
                   <td style={{ padding: "10px 12px", color: "#888" }}>{s.vendor}</td>
                   <td style={{ padding: "10px 12px" }}>{s.tokens?.toLocaleString()}</td>
                   <td style={{ padding: "10px 12px", fontWeight: 500 }}>¥{s.cost}</td>
-                  <td style={{ padding: "10px 12px" }}>{s.latency}ms</td>
+                  <td style={{ padding: "10px 12px" }}>{s.latency != null ? `${s.latency}ms` : "-"}</td>
                   <td style={{ padding: "10px 12px" }}>
                     <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%",
                       background: s.status === "success" ? "#22c55e" : "#e53935", marginRight: 4 }} />

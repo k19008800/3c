@@ -42,3 +42,8 @@ export { userNotifications } from './user-notifications';
 export { priceChangeDispatchLog } from './price-change-dispatch-log';
 export { emailLogs } from './email-logs';
 export { conversationContextRecords, conversationContextRecordsRelations } from './conversation-context';
+export { modelHealthStats, modelHealthStatsRelations } from './model-health-stats';
+export { consumptionAnomalies, consumptionAnomaliesRelations } from './consumption-anomalies';
+export { siteContents } from './site-content';
+export { undoRecords } from './undo-record';
+export { webhookRetryConfigs } from './webhook-retry-config';

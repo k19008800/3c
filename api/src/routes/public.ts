@@ -16,6 +16,8 @@
 import type { FastifyInstance } from 'fastify';
 import { db, schema } from '../db';
 import { eq, and, desc, sql, inArray } from 'drizzle-orm';
+import { isWindowParam, foldModelStats, activeModelCatalog, buildModelStat } from '../services/marketplace/health-queries';
+import { HEALTH_ORDER } from '../lib/latency';
 
 /** 公开暴露的 site_* keys（见 3cloud-portal-ref §1.3，12 个） */
 const SITE_CONFIG_WHITELIST = [
@@ -77,6 +79,47 @@ export async function publicRoutes(app: FastifyInstance) {
       .orderBy(schema.supplierModels.modelName);
 
     return reply.send({ list: models });
+  });
+
+  /**
+   * GET /api/v1/public/models/health — 公开模型健康度（Portal /models 页面）
+   *
+   * 只暴露健康状态与价格，不暴露供应商名、错误率等内部信息。
+   * 与 admin marketplace 同源（预聚合桶表）。
+   */
+  app.get('/api/v1/public/models/health', async (request, reply) => {
+    const q = request.query as { window?: string };
+    const window = q.window && isWindowParam(q.window) ? q.window : '24h';
+
+    const [stats, catalog] = await Promise.all([
+      foldModelStats(window),
+      activeModelCatalog(),
+    ]);
+
+    const modelNames = new Set<string>([...stats.keys(), ...catalog.keys()]);
+    const items = [];
+    for (const model of modelNames) {
+      const stat = buildModelStat(model, stats.get(model), catalog.get(model));
+      items.push({
+        model,
+        success_rate: stat.successRate,
+        p50_ms: stat.p50Ms,
+        status: stat.status,
+        min_price: stat.minPrice,
+      });
+    }
+    items.sort((a, b) =>
+      HEALTH_ORDER[a.status as keyof typeof HEALTH_ORDER] - HEALTH_ORDER[b.status as keyof typeof HEALTH_ORDER]
+      || a.model.localeCompare(b.model, 'zh-CN'),
+    );
+
+    return reply.send({
+      data: {
+        window,
+        generated_at: new Date().toISOString(),
+        items,
+      },
+    });
   });
 
   /** GET /api/v1/public/status — 系统状态概览（API 健康 + 供应商健康） */

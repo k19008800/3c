@@ -9,9 +9,12 @@ export default function AdminContentPage() {
   const [items, setItems] = useState<ContentItem[]>([]);
   const [editing, setEditing] = useState<ContentItem | null>(null);
   const [editContent, setEditContent] = useState("");
+  // 后端加载失败标记：GET 404 视为未接入
+  const [backendMissing, setBackendMissing] = useState(false);
 
   useEffect(() => {
-    api.get("/admin/content").then(r => setItems(r.data?.data?.list ?? [])).catch(() => {});
+    api.get("/admin/content").then(r => setItems(r.data?.data?.list ?? []))
+      .catch((e: any) => { if (e?.response?.status === 404) setBackendMissing(true); });
   }, []);
 
   function openEdit(item: ContentItem) {
@@ -21,11 +24,15 @@ export default function AdminContentPage() {
 
   async function saveContent() {
     if (!editing) return;
-    await api.put(`/admin/content/${editing.id}`, { content: editContent });
-    toast.success(`${editing.title} 已更新`);
-    setEditing(null);
-    const r = await api.get("/admin/content");
-    setItems(r.data?.data?.list ?? []);
+    try {
+      await api.put(`/admin/content/${editing.id}`, { content: editContent });
+      toast.success(`${editing.title} 已更新`);
+      setEditing(null);
+      const r = await api.get("/admin/content");
+      setItems(r.data?.data?.list ?? []);
+    } catch (e: any) {
+      toast.error(e?.response?.status === 404 ? "内容管理后端未接入（/admin/content 待实现），保存不生效" : (e?.response?.data?.message ?? e?.message ?? "保存失败"));
+    }
   }
 
   const typeLabels: Record<string, string> = {
@@ -39,6 +46,7 @@ export default function AdminContentPage() {
         <span style={{ fontSize: 24 }}>📄</span>
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>内容管理
           <HelpIcon text="管理平台公开页面内容：服务条款、隐私政策、关于我们、FAQ 等。支持富文本编辑（Markdown）。" level="page" />
+          {backendMissing && <span style={{ fontSize: 11, color: "#f59e0b", marginLeft: 8 }}>⚠️ 后端未接入（/admin/content 待实现）</span>}
         </span>
       </div>
 

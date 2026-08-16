@@ -1,6 +1,7 @@
 # API 契约对齐（前端 253 端点 ↔ 后端 v3）
 
 > 状态：`2026-08-09` 统一单前端+单后端后，前端 131 页共调用 **253 个 API 端点**，后端当时只注册 ~18 个。
+> `2026-08-14` 补「消费运营」整块后端接口（tracking/stream/anomaly/balance-alert），见 §2.4 消费运营行。
 > 本文档把契约一次性拉平：**前端路径即事实标准**，后端按此实现，不再出现"同一功能两套命名"。
 
 ## 0. 契约基线
@@ -114,11 +115,13 @@
 - **财务/资金**：/admin/finance/*、/admin/settlements、/admin/reconciliation·/diffs、/admin/cost/dashboard、/admin/cost/prediction、/admin/profit、/admin/manual-topup、/admin/finance/ledger/adjust — **⬜**
 - **客户/工单/客服**：/admin/customers、/admin/agents·/:id·/assign·/level、/admin/tickets/:id/status·/reply·/note·/assign、/admin/chat/sessions/:id/transfer·/close、/admin/chat/status、/admin/support/*、/admin/quick-replies、/admin/knowledge-base·/:id·/categories — **⬜**
 - **运营/营销**：/admin/campaigns·/:id·/status·/grant、/admin/coupons/generate、/admin/discount-rules·/:id、/admin/affiliate/config·/records、/admin/announcements·/:id、/admin/redemption/batches·/:id/toggle — **⬜**
-- **风控/安全**：/admin/risk/dashboard·/rules·/events、/admin/security/incidents·/ip-blacklist、/admin/balance-alerts·/:id/notify、/admin/balance-alert-config、/admin/audit-logs — **⬜**
+- **风控/安全**：/admin/risk/dashboard·/rules·/events、/admin/security/incidents·/ip-blacklist、/admin/audit-logs — **⬜**（/admin/balance-alerts 已实现，见下方消费运营行）
 - **对话留痕（审计合规）**：/admin/conversation-records、/admin/conversation-records/:requestId、/admin/conversation-records/export、/admin/conversation-records/retention(GET/PUT)、/admin/conversation-records/retention/run — **✅ 全部已实现**（后端 `admin-conversation-records.ts`，前端页面 `admin/audit/conversation-records`）
-- **数据/合规**：/admin/data-requests·/:id(approve|reject|export)、/admin/data-export/:id(process|reject|resend)、/admin/deletion/*、/admin/content·/:id、/admin/content-moderation/* — **⬜**
-- **系统**：/admin/settings·/:id/versions、/admin/sys/cache·/logs·/db·/version·/migrations、/admin/i18n/entries、/admin/undo/records·/:id/execute、/admin/email-templates、/admin/subscription/plans·/subscribers、/admin/tax-banking/config·/history·/bank-accounts、/admin/notification-policies·/:id、/admin/webhooks·/:id·/logs·/test、/admin/webhook-retry·/:id、/admin/roles — **⬜**
-- **看板/洞察**：/admin/dashboard、/admin/cockpit（前端页面在但调用集中在以上端点）、/admin/consumption/anomalies·/stream·/tracking、/admin/commission/flow、/admin/competitive/monitor、/admin/conversion/funnel、/admin/operation/diff、/admin/operator/dashboard、/admin/performance、/admin/price-changes — **⬜**
+- **消费运营（消费明细/实时流水/异常/余额预警）**：/admin/consumption/tracking、/admin/consumption/stream、/admin/consumption/anomalies、/admin/consumption/anomalies/:id/:op(resolve|ignore)、/admin/balance-alerts、/admin/balance-alerts/:userId/notify、/admin/balance-alert-config(GET/PUT) — **✅ 全部已实现**（后端 `admin-consumption.ts`，前端页面 `admin/consumption/tracking·stream·anomaly·balance-alert`；异常检测即时扫描 `services/consumption/anomaly.ts`，阈值代码常量）
+- **数据/合规**：/admin/content·/:id — **✅ 已实现**（后端 `admin-ops.ts`，前端 `admin/config/content`）；/admin/data-requests·/:id(approve|reject|export)、/admin/data-export/:id(process|reject|resend)、/admin/deletion/*、/admin/content-moderation/* — **⬜**
+- **系统·已实现**：/admin/sys/logs·/logs/read、/admin/sys/version·/migrations、/admin/undo/records·/:id/execute(+config GET/PUT)、/admin/webhook-retry·/:id — **✅**（后端 `admin-ops.ts`，前端 `admin/config/logs·maintenance·undo·webhook-retry`）；/admin/email-templates(+/:name CRUD·/test)、/admin/email-logs — **✅ 已实现**（后端 `admin-email.ts`）
+- **系统·待实现**：/admin/sys/cache·/db、/admin/settings·/:id/versions、/admin/i18n/entries、/admin/subscription/plans·/subscribers、/admin/tax-banking/config·/history·/bank-accounts、/admin/notification-policies·/:id、/admin/webhooks·/:id·/logs·/test、/admin/roles — **⬜**
+- **看板/洞察**：/admin/performance — **✅ 已实现**（后端 `admin-ops.ts`，前端 `admin/config/performance`）；/admin/dashboard、/admin/cockpit（前端页面在但调用集中在以上端点）、/admin/commission/flow、/admin/competitive/monitor、/admin/conversion/funnel、/admin/operation/diff、/admin/operator/dashboard、/admin/price-changes — **⬜**（/admin/consumption/* 已实现，见上方消费运营行）
 - **公开**：/public/pricing ✅（后端已有）、/public/status · /public/stats ⬜、/health ✅
 
 ---
@@ -134,6 +137,7 @@
 | 消费记录 | `consumption_records` | user_id,api_key_id,request_id,model,input/output/total_tokens,cost,status 派生 |
 | 模型/定价 | `supplier_models` + `vendor_pricing` + `suppliers` + `supplier_keys` | 供应商路由链 |
 | 对话留痕（新） | `conversation_context_records` | request_id,user_id,client_key_hash,requested_model,routed_model,supplier_id,supplier_key_fp,messages(jsonb),response_text,status,tokens,cost,occurred_at（保留策略存 `system_config` conv_retention） |
+| 消费异常（新） | `consumption_anomalies` | user_id,anomaly_type,amount,severity,status(pending/resolved/ignored),period_key,detail(jsonb)，unique(user_id,anomaly_type,period_key) |
 
 其余 23 张表（agent_*, risk_*, tickets, coupons, invoices…）已有 schema，等待对应端点实现。
 

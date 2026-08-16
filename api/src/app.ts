@@ -7,6 +7,7 @@ import { db } from './db';
 import { loadEnv, type Env } from './lib/env';
 import { healthRoutes } from './routes/health';
 import { chatRoutes } from './routes/chat';
+import { openaiCompatRoutes } from './routes/openai-compat';
 import { authRoutes } from './routes/auth';
 import { apiKeyRoutes } from './routes/apikeys';
 import { supplierRoutes } from './routes/suppliers';
@@ -14,6 +15,7 @@ import { adminCustomerRoutes } from './routes/admin-customers';
 import { adminCreditRoutes } from './routes/admin-credit';
 import { adminRealNameRoutes } from './routes/admin-real-name';
 import { adminSettingsRoutes } from './routes/admin-settings';
+import { adminOpsRoutes } from './routes/admin-ops';
 import { financeDashboardRoutes } from './routes/admin-finance';
 import { adminDashboardRoutes } from './routes/admin-dashboard';
 import { adminAgentRoutes } from './routes/admin-agents';
@@ -25,9 +27,12 @@ import { publicRoutes } from './routes/public';
 import { agentRoutes } from './routes/agent';
 import { adminWithdrawalRoutes } from './routes/admin-withdrawals';
 import { adminConversationRecordsRoutes } from './routes/admin-conversation-records';
+import { adminMarketplaceRoutes } from './routes/admin-marketplace';
+import { adminConsumptionRoutes } from './routes/admin-consumption';
 import { startPriceNotificationScheduler } from './services/price-notification';
 import { startCommissionBackfillScheduler } from './services/agent/commission-backfill';
 import { startRetentionScheduler } from './services/audit/retention';
+import { startModelHealthAggregator } from './services/marketplace/model-health-aggregator';
 
 let env: Env;
 
@@ -63,6 +68,7 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   // Routes
   await app.register(healthRoutes);
   await app.register(chatRoutes);
+  await app.register(openaiCompatRoutes);
   await app.register(authRoutes);
   await app.register(apiKeyRoutes);
   await app.register(supplierRoutes);
@@ -70,6 +76,7 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   await app.register(adminCreditRoutes);
   await app.register(adminRealNameRoutes);
   await app.register(adminSettingsRoutes);
+  await app.register(adminOpsRoutes);
   await app.register(financeDashboardRoutes);
   await app.register(adminDashboardRoutes);
   await app.register(adminAgentRoutes);
@@ -81,6 +88,8 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   await app.register(agentRoutes);
   await app.register(adminWithdrawalRoutes);
   await app.register(adminConversationRecordsRoutes);
+  await app.register(adminMarketplaceRoutes);
+  await app.register(adminConsumptionRoutes);
 
   return app;
 }
@@ -100,6 +109,8 @@ export async function startApp(opts?: { envOverrides?: Record<string, string> })
   startCommissionBackfillScheduler(app.log);
   // 对话留痕保留策略调度器：按轮询计划清理超期留痕（UTC+8）
   startRetentionScheduler(app.log);
+  // 模型健康度聚合 Worker：conversation_context_records → model_health_stats 5min 桶
+  startModelHealthAggregator(app.log);
 
   return app;
 }

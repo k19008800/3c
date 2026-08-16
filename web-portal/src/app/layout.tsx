@@ -12,6 +12,8 @@ interface SiteConfig {
   site_copyright?: string;
   site_footer_html?: string;
   site_contact_email?: string;
+  site_company_name?: string;
+  site_contact_phone?: string;
 }
 
 async function fetchSiteConfig(): Promise<SiteConfig> {

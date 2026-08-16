@@ -96,8 +96,7 @@ const ADMIN_NAV: NavGroup[] = [
     { to: "/admin/account-deletion", label: "账号注销审核", icon: "🗑️" },
   ]},
   { group: "运维配置", icon: "🛠", items: [
-    { to: "/admin/config/system", label: "系统行为", icon: "⚡" },
-    { to: "/admin/config/monitoring", label: "监控与警报", icon: "🔔" },
+    // 注：system/monitoring/oauth 原为 AdminSettingsPage 占位（无独立实现），database 为演示假查询，已从菜单摘除，待后端落地后再挂回
     { to: "/admin/config/performance", label: "性能配置", icon: "🐌" },
     { to: "/admin/config/webhook-retry", label: "Webhook 重试", icon: "🔄" },
     { to: "/admin/config/undo", label: "撤销操作日志", icon: "↩️" },
@@ -108,9 +107,7 @@ const ADMIN_NAV: NavGroup[] = [
     { to: "/admin/config/rate-limit", label: "限流设置", icon: "🚦" },
     { to: "/admin/config/email-templates", label: "邮件模板", icon: "📰" },
     { to: "/admin/config/content", label: "内容管理", icon: "📄" },
-    { to: "/admin/config/oauth", label: "OAuth 配置", icon: "🔑" },
     { to: "/admin/config/webhooks", label: "全局 Webhook", icon: "🌐" },
-    { to: "/admin/config/database", label: "数据库管理", icon: "🗄️" },
     { to: "/admin/config/cache", label: "缓存管理", icon: "⚡" },
     { to: "/admin/config/compliance", label: "合规法务", icon: "📜" },
   ]},

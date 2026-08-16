@@ -5,6 +5,7 @@ import { HelpIcon, Table, StatusBadge, Modal, useToast } from "@3cloud/shared-ui
 interface UndoRecord { id: number; operation_type: string; operation_label: string; target_type: string; target_id: number; operator_id: number; operator_name: string; snapshot: any; reverted: boolean; expires_at: string; created_at: string; }
 
 const TYPE_MAP: Record<string, { label: string; color: string }> = {
+  user_status_change: { label: "用户状态变更", color: "#f59e0b" },
   user_delete: { label: "删除用户", color: "#e53935" },
   user_edit: { label: "编辑用户", color: "#fa8c16" },
   user_disable: { label: "禁用用户", color: "#f59e0b" },
@@ -24,9 +25,11 @@ export default function AdminUndoPage() {
   const [enabledTypes, setEnabledTypes] = useState<string[]>([]);
   const [detail, setDetail] = useState<UndoRecord | null>(null);
   const [tab, setTab] = useState<"log" | "config">("log");
+  // 后端加载失败标记：GET 404 视为未接入
+  const [backendMissing, setBackendMissing] = useState(false);
 
   useEffect(() => {
-    api.get("/admin/undo/records").then(r => setRecords(r.data?.data?.list ?? [])).catch(() => {});
+    api.get("/admin/undo/records").then(r => setRecords(r.data?.data?.list ?? [])).catch((e: any) => { if (e?.response?.status === 404) setBackendMissing(true); });
     api.get("/admin/undo/config").then(r => {
       const c = r.data?.data ?? {};
       setTimeoutSec(c.timeout_seconds ?? 300);
@@ -44,8 +47,12 @@ export default function AdminUndoPage() {
   }
 
   async function saveConfig() {
-    await api.put("/admin/undo/config", { timeout_seconds: timeoutSec, enabled_types: enabledTypes });
-    toast.success("撤销配置已保存");
+    try {
+      await api.put("/admin/undo/config", { timeout_seconds: timeoutSec, enabled_types: enabledTypes });
+      toast.success("撤销配置已保存");
+    } catch (e: any) {
+      toast.error(e?.response?.status === 404 ? "撤销配置后端未接入（/admin/undo 待实现），保存不生效" : (e?.response?.data?.message ?? e?.message ?? "保存失败"));
+    }
   }
 
   return (
@@ -54,6 +61,7 @@ export default function AdminUndoPage() {
         <span style={{ fontSize: 24 }}>↩️</span>
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>撤销操作日志
           <HelpIcon text="记录管理员的敏感操作快照，支持在有效时间内一键撤销。配置哪些操作类型可撤销及撤销窗口时长。" level="page" />
+          {backendMissing && <span style={{ fontSize: 11, color: "#f59e0b", marginLeft: 8 }}>⚠️ 后端未接入（/admin/undo 待实现）</span>}
         </span>
       </div>
 

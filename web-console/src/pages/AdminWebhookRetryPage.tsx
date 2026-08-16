@@ -14,23 +14,33 @@ export default function AdminWebhookRetryPage() {
   const { toast } = useToast();
   const [configs, setConfigs] = useState<RetryConfig[]>([]);
   const [editing, setEditing] = useState<RetryConfig | null>(null);
+  // 后端加载失败标记：GET 404 视为未接入
+  const [backendMissing, setBackendMissing] = useState(false);
 
   useEffect(() => {
-    api.get("/admin/webhook-retry").then(r => setConfigs(r.data?.data?.list ?? [])).catch(() => {});
+    api.get("/admin/webhook-retry").then(r => setConfigs(r.data?.data?.list ?? [])).catch((e: any) => { if (e?.response?.status === 404) setBackendMissing(true); });
   }, []);
 
   async function toggleWebhook(id: number, enabled: boolean) {
-    await api.put(`/admin/webhook-retry/${id}`, { enabled });
-    setConfigs(configs.map(c => c.id === id ? {...c, enabled} : c));
-    toast.success(enabled ? "重试已启用" : "重试已禁用");
+    try {
+      await api.put(`/admin/webhook-retry/${id}`, { enabled });
+      setConfigs(configs.map(c => c.id === id ? {...c, enabled} : c));
+      toast.success(enabled ? "重试已启用" : "重试已禁用");
+    } catch (e: any) {
+      toast.error(e?.response?.status === 404 ? "Webhook 重试后端未接入（/admin/webhook-retry 待实现），操作不生效" : (e?.response?.data?.message ?? e?.message ?? "操作失败"));
+    }
   }
 
   async function saveConfig(c: RetryConfig) {
-    await api.put(`/admin/webhook-retry/${c.id}`, { max_retries: c.max_retries, retry_delay_seconds: c.retry_delay_seconds, backoff_multiplier: c.backoff_multiplier });
-    toast.success("配置已更新");
-    setEditing(null);
-    const r = await api.get("/admin/webhook-retry");
-    setConfigs(r.data?.data?.list ?? []);
+    try {
+      await api.put(`/admin/webhook-retry/${c.id}`, { max_retries: c.max_retries, retry_delay_seconds: c.retry_delay_seconds, backoff_multiplier: c.backoff_multiplier });
+      toast.success("配置已更新");
+      setEditing(null);
+      const r = await api.get("/admin/webhook-retry");
+      setConfigs(r.data?.data?.list ?? []);
+    } catch (e: any) {
+      toast.error(e?.response?.status === 404 ? "Webhook 重试后端未接入（/admin/webhook-retry 待实现），保存不生效" : (e?.response?.data?.message ?? e?.message ?? "保存失败"));
+    }
   }
 
   return (
@@ -39,6 +49,7 @@ export default function AdminWebhookRetryPage() {
         <span style={{ fontSize: 24 }}>🔄</span>
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>Webhook 重试配置
           <HelpIcon text="配置每个 Webhook 端点的重试策略：最大重试次数、重试间隔、退避乘数。失败后按指数退避自动重试。" level="page" />
+          {backendMissing && <span style={{ fontSize: 11, color: "#f59e0b", marginLeft: 8 }}>⚠️ 后端未接入（/admin/webhook-retry 待实现）</span>}
         </span>
       </div>
 

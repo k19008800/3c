@@ -39,14 +39,16 @@
 
 > 其余（dashboard/manual-topup/adjust/orders/commissions/refunds/invoices/withdrawals/reconciliation/cost-dashboard/cost-prediction/settlement/profit/pricing）已挂路由 ✅。
 
-## ③ 消费运营 📊（原型新增分组）
+## ③ 消费运营 📊（原型新增分组）✅ 已全部实现
 
 | 原型 | 原型路由 | React 页面 | 建议 React 路由 | 后端端点（现状） |
 |---|---|---|---|---|
-| admin-consumption-tracking.html | /consumption/tracking | `admin/AdminConsumptionTrackingPage.tsx` ⚠️ | `/admin/consumption/tracking` | `/admin/consumption/tracking`（缺失） |
-| admin-consumption-stream.html | /consumption/stream | `admin/AdminConsumptionStreamPage.tsx` ⚠️ | `/admin/consumption/stream` | `/admin/consumption/stream`（缺失） |
-| admin-consumption-anomaly.html | /consumption/anomaly | `admin/AdminConsumptionAnomalyPage.tsx` ⚠️ | `/admin/consumption/anomaly` | `/admin/consumption/anomalies`（缺失） |
-| admin-balance-alert.html | /consumption/balance-alert | `admin/AdminBalanceAlertPage.tsx` ⚠️ | `/admin/consumption/balance-alert` | `/admin/balance-alerts`, `/admin/balance-alert-config`（缺失） |
+| admin-consumption-tracking.html | /consumption/tracking | `admin/AdminConsumptionTrackingPage.tsx` ✅ | `/admin/consumption/tracking` | `/admin/consumption/tracking` ✅ |
+| admin-consumption-stream.html | /consumption/stream | `admin/AdminConsumptionStreamPage.tsx` ✅ | `/admin/consumption/stream` | `/admin/consumption/stream` ✅ |
+| admin-consumption-anomaly.html | /consumption/anomaly | `admin/AdminConsumptionAnomalyPage.tsx` ✅ | `/admin/consumption/anomaly` | `/admin/consumption/anomalies`、`/admin/consumption/anomalies/:id/{resolve,ignore}` ✅ |
+| admin-balance-alert.html | /consumption/balance-alert | `admin/AdminBalanceAlertPage.tsx` ✅ | `/admin/consumption/balance-alert` | `/admin/balance-alerts`、`/admin/balance-alerts/:userId/notify`、`/admin/balance-alert-config`(GET/PUT) ✅ |
+
+> 后端 `admin-consumption.ts`（`2026-08-14` 实现），前端自动接真实数据，不再显示「⚠️ 演示数据」。明细见 [api-contract.md §2.4](./api-contract.md#24-管理后台-admin约-170-个)。
 
 ## ④ 客户分析 📈（原型新增分组）
 
@@ -119,7 +121,7 @@
 | （无原型） | — | `AdminSysCachePage.tsx` ⚠️ 缓存管理 | `/admin/config/cache` | `/admin/sys/cache/{keys,key,flush}`（缺失） |
 | （无原型） | — | `AdminConsentPage.tsx` ⚠️ 合规法务管理 | `/admin/config/compliance` | `/admin/settings/*/versions`, `/admin/data-export/*`（缺失） |
 
-> system/monitoring/performance/webhook-retry/undo/smtp/logs/maintenance/site/rate-limit/email-templates/content/oauth 已挂路由 ✅（部分共用 AdminSettingsPage 占位）。
+> site/rate-limit/smtp/email-templates/performance/webhook-retry/undo/content/logs/maintenance 已接真实后端 ✅（批次2：`admin-ops.ts` 12 端点 + `site_content`/`undo_records`/`webhook_retry_config` 三表）。system/monitoring/oauth 原为 AdminSettingsPage 占位，已摘除菜单（批次0+1）。上表 webhooks/sys-db/sys-cache/compliance 四个页面后端仍缺失（批次4 范畴）。
 
 ## ⑫ 审计合规 🔍
 
@@ -155,16 +157,16 @@
 
 | 类别 | 数量 | 明细 |
 |---|---|---|
-| ⚠️ 死代码（页面存在未挂路由） | **36** | 上表 ⚠️ 行 |
+| ⚠️ 死代码（页面存在未挂路由） | **32** | 上表 ⚠️ 行（消费运营 4 页 `2026-08-14` 已挂路由并从本类移出） |
 | 🗑️ 重复页面 | **3** | AdminCouponPage / AdminVendorsPage / AdminMarketplacePage |
 | ❌ 缺失原型页面（需新建） | **5** | customer-tags、customer-lifecycle、customer-success、supplier-bill-match、agent-customer-approval |
-| 🔍 后端缺失端点 | **33/33 组** | 上表所有端点前缀在 `api/src/routes/` 均无实现 |
+| 🔍 后端缺失端点 | **29/33 组** | 上表所有端点前缀在 `api/src/routes/` 均无实现（`2026-08-14` 消费运营 4 组已实现，见 §③） |
 
 **实施建议批次（按业务价值 + 后端聚合度）：**
 
-1. **批次 A — 消费运营+客户分析**（4+1 页，同一套消费/漏斗端点，原型明确的新分组）：tracking / stream / anomaly / balance-alert / funnel（+success 新建）
+1. **批次 A — 消费运营+客户分析**（4+1 页，同一套消费/漏斗端点，原型明确的新分组）：✅ tracking / ✅ stream / ✅ anomaly / ✅ balance-alert 已实现（后端 `admin-consumption.ts`）；剩 **funnel**（+success 新建）
 2. **批次 B — 财务结算**（reconciliation-diff / discount-engine / tax-banking / supplier-bill-match 新建）
 3. **批次 C — 风控+审计**（security-incident / ip-blacklist / content-moderation / operation-diff / data-request）
 4. **批次 D — 供应商+代理商+营销**（multimodal-models / competitive-monitor / campaigns / approvals 新建）
 5. **批次 E — 客服+系统+运维杂项**（support / chat / knowledge-base / webhooks / sys-db / sys-cache / consent / users-permission / permission-audit / activity / notification-policy / operator-dashboard / subscription / deletion）
-6. **清理**：3 个 🗑️ 重复页面（删除或注释 import），侧栏补「消费运营」「客户分析」两组，13 个配置路由解耦出各自独立页面
+6. **清理**：3 个 🗑️ 重复页面（删除或注释 import）。（`2026-08-14` 已补：侧栏「消费运营」「客户分析」两组已挂入 `ConsoleLayout.tsx`。）13 个配置路由解耦出各自独立页面

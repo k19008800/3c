@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { api } from "../lib/api";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
 
@@ -19,7 +20,9 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 
 export default function AdminSettingsPage() {
   const { toast } = useToast();
-  const [tab, setTab] = useState<"site" | "rate" | "security" | "feature">("site");
+  const { pathname } = useLocation();
+  // 依据路由映射初始 tab：/config/rate-limit→限流，其余（/config/site）→站点
+  const [tab, setTab] = useState<"site" | "rate" | "security" | "feature">(pathname.includes("/rate-limit") ? "rate" : "site");
   const [loading, setLoading] = useState(false);
 
   // Site settings

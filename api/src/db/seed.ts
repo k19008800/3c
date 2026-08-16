@@ -122,6 +122,60 @@ async function main() {
   }
   console.log(`✅ system_config 站点品牌配置 ${SITE_CONFIGS.length} keys`);
 
+  // ── system_config：运维配置键（performance / undo，与 admin-ops.ts 默认值一致）──
+  const OPS_CONFIGS: Array<[string, string, string]> = [
+    ['perf_cache_ttl_seconds', '300', '缓存 TTL 秒'],
+    ['perf_query_timeout_seconds', '30', '查询超时秒'],
+    ['perf_connection_pool_max', '20', '连接池大小'],
+    ['perf_connection_pool_idle_timeout', '60', '连接空闲超时秒'],
+    ['perf_compression_enabled', 'true', 'GZip 压缩'],
+    ['perf_response_gzip_min_bytes', '1024', '压缩最小字节'],
+    ['perf_batch_write_enabled', 'true', '批量写入'],
+    ['perf_batch_write_interval_ms', '500', '批量写入间隔 ms'],
+    ['perf_slow_query_threshold_ms', '1000', '慢查询阈值 ms'],
+    ['perf_max_concurrent_requests', '1000', '最大并发请求'],
+    ['undo_timeout_seconds', '300', '撤销窗口秒'],
+    ['undo_enabled_types', JSON.stringify(['user_status_change', 'user_disable', 'user_delete', 'user_edit', 'balance_adjust', 'role_assign', 'config_edit', 'vendor_delete', 'model_delete']), '可撤销操作类型'],
+  ];
+  for (const [key, value, description] of OPS_CONFIGS) {
+    await db.insert(schema.systemConfig)
+      .values({ key, value, description })
+      .onConflictDoUpdate({ target: schema.systemConfig.key, set: { value, description } });
+  }
+  console.log(`✅ system_config 运维配置键 ${OPS_CONFIGS.length} keys`);
+
+  // ── site_content：默认站点内容（内容管理页；slug 幂等）──
+  const CONTENTS: Array<{ type: string; slug: string; title: string; content: string }> = [
+    { type: 'legal', slug: 'terms', title: '服务条款', content: '（待编辑）欢迎使用 3Cloud。使用即表示你同意本条款。' },
+    { type: 'legal', slug: 'privacy', title: '隐私政策', content: '（待编辑）我们重视你的隐私，仅在提供服务所必需时收集数据。' },
+    { type: 'page', slug: 'about', title: '关于我们', content: '（待编辑）3Cloud 是 AI Token 聚合平台，为企业与个人提供统一的大模型 API 接入。' },
+    { type: 'page', slug: 'contact', title: '联系我们', content: '（待编辑）联系邮箱：support@unmisa.com' },
+    { type: 'faq', slug: 'faq', title: '常见问题', content: '（待编辑）Q: 如何获取 API Key？A: 注册并实名认证后，在控制台创建。' },
+    { type: 'page', slug: 'help', title: '帮助中心', content: '（待编辑）使用过程中遇到问题？请先查阅常见问题或联系我们。' },
+  ];
+  let contentsCreated = 0;
+  for (const c of CONTENTS) {
+    const [exists] = await db
+      .select({ id: schema.siteContents.id }).from(schema.siteContents)
+      .where(eq(schema.siteContents.slug, c.slug)).limit(1);
+    if (exists) continue;
+    await db.insert(schema.siteContents).values(c);
+    contentsCreated++;
+  }
+  if (contentsCreated > 0) console.log(`✅ site_content 默认内容新增 ${contentsCreated} 条`);
+
+  // ── webhook_retry_config：默认回调重试策略（幂等，按 webhook_url 去重）──
+  const [whExists] = await db
+    .select({ id: schema.webhookRetryConfigs.id }).from(schema.webhookRetryConfigs)
+    .where(eq(schema.webhookRetryConfigs.webhookUrl, 'https://api.3cloud.local/callback')).limit(1);
+  if (!whExists) {
+    await db.insert(schema.webhookRetryConfigs).values({
+      name: '默认回调', webhookUrl: 'https://api.3cloud.local/callback',
+      maxRetries: 3, retryDelaySeconds: 60, backoffMultiplier: 2, enabled: 'true',
+    });
+    console.log('✅ webhook_retry_config 默认回调策略已创建');
+  }
+
   // ── model_rate_limits：5 个原型模型（硬顶 + 按次计费覆盖） ──
   const MODELS = [
     { modelName: 'gpt-4o', vendor: 'OpenAI', capRpm: 3000, capTpm: 10_000_000, baseRpm: 300, baseTpm: 1_000_000 },

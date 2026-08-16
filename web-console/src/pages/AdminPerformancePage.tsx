@@ -24,14 +24,22 @@ export default function AdminPerformancePage() {
     max_concurrent_requests: 1000,
   });
   const [loading, setLoading] = useState(true);
+  // 后端加载失败标记：GET 404 视为未接入，页面展示禁用徽标
+  const [backendMissing, setBackendMissing] = useState(false);
 
   useEffect(() => {
-    api.get("/admin/performance").then(r => setConfig(r.data?.data ?? config)).catch(() => {}).finally(() => setLoading(false));
+    api.get("/admin/performance").then(r => setConfig(r.data?.data ?? config))
+      .catch((e: any) => { if (e?.response?.status === 404) setBackendMissing(true); })
+      .finally(() => setLoading(false));
   }, []);
 
   async function saveConfig() {
-    await api.put("/admin/performance", config);
-    toast.success("性能配置已保存，部分配置需重启生效");
+    try {
+      await api.put("/admin/performance", config);
+      toast.success("性能配置已保存，部分配置需重启生效");
+    } catch (e: any) {
+      toast.error(e?.response?.status === 404 ? "性能配置后端未接入（/admin/performance 待实现）" : (e?.response?.data?.message ?? e?.message ?? "保存失败"));
+    }
   }
 
   const row: React.CSSProperties = { display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid #f5f5f5" };
@@ -46,6 +54,7 @@ export default function AdminPerformancePage() {
         <span style={{ fontSize: 24 }}>⚡</span>
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>性能配置
           <HelpIcon text="调整平台性能参数：缓存TTL、查询超时、连接池、压缩、批量写入、慢查询阈值、并发限制等。" level="page" />
+          {backendMissing && <span style={{ fontSize: 11, color: "#f59e0b", marginLeft: 8 }}>⚠️ 后端未接入（/admin/performance 待实现），保存将不生效</span>}
         </span>
       </div>
 
