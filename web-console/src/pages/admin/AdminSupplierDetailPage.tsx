@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../../lib/api";
 import {
   PageHeader,
@@ -8,9 +9,12 @@ import {
   Table,
   SkeletonGroup,
   EmptyState,
+  HelpIcon,
+  ConfirmPopover,
   useToast,
 } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
+import type { ModelSyncResult } from "../../components/SyncResultModal";
 
 interface SupplierDetail {
   id: number;
@@ -71,6 +75,11 @@ function displayHealth(health: string | null): { color: string; label: string } 
 export default function AdminSupplierDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
+  const qc = useQueryClient();
+  const supplierId = Number(id);
+
+  /** 批量禁用/启用的勾选集合（按模型名，对齐 batch-status API） */
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const q = useQuery({
     queryKey: ["admin-supplier-detail", id],
@@ -83,7 +92,72 @@ export default function AdminSupplierDetailPage() {
 
   const { supplier, models, keys } = q.data ?? {};
 
+  /** 模型广场同步 — POST /admin/suppliers/:id/sync-models（从上游拉取模型自动填充） */
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.post(`/admin/suppliers/${supplierId}/sync-models`);
+      return res.data as { data: ModelSyncResult };
+    },
+    onSuccess: (res) => {
+      const r = res.data;
+      toast.success(`模型同步完成：新增 ${r.created}，更新 ${r.updated}，失败 ${r.failed}`);
+      qc.invalidateQueries({ queryKey: ["admin-supplier-detail", id] });
+      qc.invalidateQueries({ queryKey: ["admin-suppliers"] });
+    },
+    onError: (e) => toast.error(extractError(e)),
+  });
+
+  /** 单个模型 启用/禁用 — PATCH /admin/models/:id/status */
+  const statusMut = useMutation({
+    mutationFn: async ({ modelId, status }: { modelId: number; status: "active" | "inactive" }) =>
+      (await api.patch(`/admin/models/${modelId}/status`, { status })).data,
+    onSuccess: () => {
+      toast.success("模型状态已更新");
+      qc.invalidateQueries({ queryKey: ["admin-supplier-detail", id] });
+    },
+    onError: (e) => toast.error(extractError(e)),
+  });
+
+  /** 批量 启用/禁用 — POST /admin/suppliers/:id/models/batch-status */
+  const batchMut = useMutation({
+    mutationFn: async ({ modelNames, status }: { modelNames: string[]; status: "active" | "inactive" }) =>
+      (await api.post(`/admin/suppliers/${supplierId}/models/batch-status`, { modelNames, status })).data as {
+        updated: number;
+      },
+    onSuccess: (res) => {
+      toast.success(`已批量更新 ${res.updated} 个模型`);
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["admin-supplier-detail", id] });
+    },
+    onError: (e) => toast.error(extractError(e)),
+  });
+
+  const toggleSelect = (modelName: string, checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(modelName);
+      else next.delete(modelName);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (checked: boolean) => {
+    setSelected(checked ? new Set((models ?? []).map((m) => m.modelName)) : new Set());
+  };
+
   const modelColumns: ColumnDef<SupplierModel>[] = [
+    {
+      key: "sel",
+      title: "",
+      width: "36px",
+      render: (_, r) => (
+        <input
+          type="checkbox"
+          checked={selected.has(r.modelName)}
+          onChange={(e) => toggleSelect(r.modelName, e.target.checked)}
+        />
+      ),
+    },
     { key: "modelName", title: "模型名称", dataIndex: "modelName" },
     { key: "platformModel", title: "上游模型", dataIndex: "platformModel" },
     {
@@ -102,15 +176,34 @@ export default function AdminSupplierDetailPage() {
       key: "status",
       title: "状态",
       dataIndex: "status",
-      render: (v) => <Tag type={(v as string) === "active" ? "green" : "gray"}>{String(v ?? "—")}</Tag>,
+      render: (v) => (
+        <Tag type={(v as string) === "active" ? "green" : "gray"}>
+          {(v as string) === "active" ? "启用" : "禁用"}
+        </Tag>
+      ),
     },
     {
       key: "actions",
       title: "操作",
-      render: () => (
-        <button type="button" className="c3-btn c3-btn--text" onClick={() => toast.info("模型编辑功能开发中")}>
-          编辑
-        </button>
+      render: (_, r) => (
+        <ConfirmPopover
+          title={r.status === "active" ? "禁用该模型？" : "启用该模型？"}
+          description={
+            r.status === "active"
+              ? "禁用后该模型将不再通过此供应商参与路由调度（模型广场同步会恢复为启用）"
+              : "启用后该模型恢复参与此供应商的路由调度"
+          }
+          onConfirm={() =>
+            statusMut.mutate({ modelId: r.id, status: r.status === "active" ? "inactive" : "active" })
+          }
+        >
+          <button
+            type="button"
+            className={`c3-btn c3-btn--text c3-btn--sm${r.status === "active" ? " c3-danger" : ""}`}
+          >
+            {r.status === "active" ? "禁用" : "启用"}
+          </button>
+        </ConfirmPopover>
       ),
     },
   ];
@@ -227,20 +320,60 @@ export default function AdminSupplierDetailPage() {
         </div>
       </div>
 
-      {/* 模型管理 — 原型模型表格 */}
+      {/* 模型管理 — 同步 + 禁用开关 + 批量操作 */}
       <Panel
         title="🤖 模型管理"
-        help="供应商已同步模型及成本价。"
+        help="供应商已同步模型及成本价。点击「同步模型」从上游 /v1/models 一键拉取；行内「禁用/启用」控制该模型是否参与此供应商路由（模型广场调度）；支持勾选批量操作。"
         extra={
-          <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" onClick={() => toast.info("模型同步功能开发中")}>
-            🔄 同步模型
-          </button>
+          <div className="c3-btn-group">
+            <button
+              type="button"
+              className="c3-btn c3-btn--primary c3-btn--sm"
+              disabled={syncMutation.isPending}
+              onClick={() => syncMutation.mutate()}
+            >
+              {syncMutation.isPending ? "同步中…" : "🔄 同步模型"}
+            </button>
+            <HelpIcon text="从该供应商上游 /v1/models 拉取模型并自动填充模型库：已存在的模型自动对齐并恢复启用，新建模型自动补一条 draft 定价占位（改价即可上架）。" />
+          </div>
         }
       >
         {models && models.length > 0 ? (
-          <Table columns={modelColumns} dataSource={models} rowKey="id" />
+          <>
+            {/* 批量操作栏 */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+              <label style={{ fontSize: 12, display: "inline-flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={(models?.length ?? 0) > 0 && selected.size === (models?.length ?? 0)}
+                  onChange={(e) => toggleSelectAll(e.target.checked)}
+                />
+                全选
+              </label>
+              <span style={{ fontSize: 12, color: "#888" }}>已选 {selected.size} 个模型</span>
+              <div style={{ flex: 1 }} />
+              <button
+                type="button"
+                className="c3-btn c3-btn--default c3-btn--sm"
+                disabled={selected.size === 0 || batchMut.isPending}
+                onClick={() => batchMut.mutate({ modelNames: [...selected], status: "active" })}
+              >
+                批量启用
+              </button>
+              <button
+                type="button"
+                className="c3-btn c3-btn--default c3-btn--sm"
+                disabled={selected.size === 0 || batchMut.isPending}
+                onClick={() => batchMut.mutate({ modelNames: [...selected], status: "inactive" })}
+              >
+                批量禁用
+              </button>
+              <HelpIcon text="勾选多个模型后批量启用/禁用（按模型名更新同一供应商的模型状态）；禁用后不再参与该供应商路由。" />
+            </div>
+            <Table columns={modelColumns} dataSource={models} rowKey="id" />
+          </>
         ) : (
-          <EmptyState title="暂无模型" description="该供应商还没有同步模型" />
+          <EmptyState title="暂无模型" description="该供应商还没有同步模型，点击「同步模型」从上游拉取" />
         )}
       </Panel>
 

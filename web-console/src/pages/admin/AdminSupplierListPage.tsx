@@ -10,9 +10,11 @@ import {
   EmptyState,
   TimeRangeFilter,
   Modal,
+  HelpIcon,
   useToast,
 } from "@3cloud/shared-ui";
 import type { ColumnDef, TimeRangeKey } from "@3cloud/shared-ui";
+import { SyncResultModal, type ModelSyncResult, type SyncAllResult } from "../../components/SyncResultModal";
 
 /** 供应商状态 → 原型 tag 类型 + 文案 */
 function displayStatus(status: string): { type: "green" | "red" | "orange" | "blue" | "gray"; label: string } {
@@ -58,6 +60,8 @@ export default function AdminSupplierListPage() {
   const [range, setRange] = useState<TimeRangeKey>("today");
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ name: "", code: "", baseUrl: "", apiType: "openai" });
+  const [syncResult, setSyncResult] = useState<SyncAllResult | null>(null);
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
 
   const q = useQuery({
     queryKey: ["admin-suppliers", keyword],
@@ -108,6 +112,39 @@ export default function AdminSupplierListPage() {
     onError: (err) => toast.error(extractError(err)),
   });
 
+  /** 单个供应商模型同步 — POST /admin/suppliers/:id/sync-models */
+  const syncMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await api.post(`/admin/suppliers/${id}/sync-models`);
+      return res.data as { data: ModelSyncResult };
+    },
+    onSuccess: (res, id) => {
+      const r = res.data;
+      toast.success(`「${rows.find(x => x.id === id)?.name ?? id}」同步完成：新增 ${r.created}，更新 ${r.updated}，失败 ${r.failed}`);
+      qc.invalidateQueries({ queryKey: ["admin-suppliers"] });
+      qc.invalidateQueries({ queryKey: ["admin-supplier-detail"] });
+    },
+    onError: (err) => toast.error(extractError(err)),
+  });
+
+  /** 全部供应商一键同步 — POST /admin/suppliers/sync-all（模型广场同步） */
+  const syncAllMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.post("/admin/suppliers/sync-all", null, { timeout: 120000 });
+      return res.data as { data: SyncAllResult };
+    },
+    onSuccess: (res) => {
+      const r = res.data;
+      setSyncResult(r);
+      setSyncModalOpen(true);
+      if (r.failed === 0) toast.success(`模型广场同步完成：${r.succeeded}/${r.total} 家供应商全部成功`);
+      else toast.warning(`模型广场同步完成：${r.succeeded}/${r.total} 成功，${r.failed} 家失败，详见明细`);
+      qc.invalidateQueries({ queryKey: ["admin-suppliers"] });
+      qc.invalidateQueries({ queryKey: ["admin-supplier-detail"] });
+    },
+    onError: (err) => toast.error(extractError(err)),
+  });
+
   const columns: ColumnDef<SupplierRow>[] = [
     { key: "name", title: "供应商名称", dataIndex: "name" },
     {
@@ -143,8 +180,13 @@ export default function AdminSupplierListPage() {
       title: "操作",
       render: (_, r) => (
         <div className="c3-btn-group">
-          <button type="button" className="c3-btn c3-btn--text" onClick={() => toast.info("模型同步功能开发中")}>
-            同步模型
+          <button
+            type="button"
+            className="c3-btn c3-btn--text"
+            disabled={syncMutation.isPending && syncMutation.variables === r.id}
+            onClick={() => syncMutation.mutate(r.id)}
+          >
+            {syncMutation.isPending && syncMutation.variables === r.id ? "同步中…" : "同步模型"}
           </button>
           <button type="button" className="c3-btn c3-btn--text" onClick={() => toast.info(`连通性测试：${r.name} 待实现`)}>
             测试
@@ -163,7 +205,7 @@ export default function AdminSupplierListPage() {
 
   return (
     <>
-      <PageHeader title="供应商列表" help="管理 AI 模型供应商：基本信息、模型同步、连通性测试、成本配置、监控。" />
+      <PageHeader title="供应商列表" help="管理 AI 模型供应商：基本信息、模型广场同步、连通性测试、成本配置、监控。" />
 
       {/* 筛选栏 — 原型 filter-bar */}
       <div className="c3-filter-bar">
@@ -219,11 +261,22 @@ export default function AdminSupplierListPage() {
       {/* 面板 — 原型 panel：标题 + 新增按钮 + 表格 */}
       <Panel
         title="🔌 供应商列表"
-        help="点击操作列同步模型 / 连通性测试 / 查询余额；新增供应商可立即创建。"
+        help="点击操作列「同步模型」从该供应商上游 /v1/models 一键拉取模型；「全部同步」对所有启用供应商批量执行；连通性测试 / 余额查询见操作列。"
         extra={
-          <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" onClick={() => setModalOpen(true)}>
-            ＋ 新增供应商
-          </button>
+          <div className="c3-btn-group">
+            <button
+              type="button"
+              className="c3-btn c3-btn--default c3-btn--sm"
+              disabled={syncAllMutation.isPending}
+              onClick={() => syncAllMutation.mutate()}
+            >
+              {syncAllMutation.isPending ? "同步中…" : "🔄 全部同步"}
+            </button>
+            <HelpIcon text="模型广场同步：从全部启用中供应商的上游 /v1/models 拉取模型并自动填充模型库（新建模型自动补 draft 定价占位），一次执行查看汇总与失败明细。" />
+            <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" onClick={() => setModalOpen(true)}>
+              ＋ 新增供应商
+            </button>
+          </div>
         }
       >
         {q.isLoading ? (
@@ -234,6 +287,14 @@ export default function AdminSupplierListPage() {
           <Table columns={columns} dataSource={rows} rowKey="id" />
         )}
       </Panel>
+
+      {/* 全部同步结果弹窗 */}
+      <SyncResultModal
+        open={syncModalOpen}
+        result={syncResult}
+        pending={syncAllMutation.isPending}
+        onClose={() => setSyncModalOpen(false)}
+      />
 
       {/* 新增供应商弹窗 */}
       <Modal open={modalOpen} title="新增供应商" onClose={() => setModalOpen(false)}>

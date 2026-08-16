@@ -1,8 +1,9 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "../../lib/api";
-import { HelpIcon, StatusBadge, Tag, Table, SkeletonGroup, EmptyState } from "@3cloud/shared-ui";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api, extractError } from "../../lib/api";
+import { HelpIcon, StatusBadge, Tag, Table, SkeletonGroup, EmptyState, useToast } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
+import { SyncResultModal, type SyncAllResult } from "../../components/SyncResultModal";
 
 /* ═══════════════════════════════════════
  * 类型
@@ -88,6 +89,27 @@ export default function AdminMarketplaceHealthPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [sortKey, setSortKey] = useState("status");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const { toast } = useToast();
+  const qc = useQueryClient();
+
+  /** 模型广场同步 — POST /admin/suppliers/sync-all（全部启用供应商） */
+  const [syncResult, setSyncResult] = useState<SyncAllResult | null>(null);
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const syncAllMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.post("/admin/suppliers/sync-all", null, { timeout: 120000 });
+      return res.data as { data: SyncAllResult };
+    },
+    onSuccess: (res) => {
+      const r = res.data;
+      setSyncResult(r);
+      setSyncModalOpen(true);
+      if (r.failed === 0) toast.success(`模型广场同步完成：${r.succeeded}/${r.total} 家供应商全部成功`);
+      else toast.warning(`模型广场同步完成：${r.succeeded}/${r.total} 成功，${r.failed} 家失败，详见明细`);
+      qc.invalidateQueries({ queryKey: ["admin-marketplace-health"] });
+    },
+    onError: (err) => toast.error(extractError(err)),
+  });
 
   const listQ = useQuery({
     queryKey: ["admin-marketplace-health", windowKey],
@@ -243,7 +265,7 @@ export default function AdminMarketplaceHealthPage() {
       {/* 标题 + 帮助 */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>🤖 模型市场</h2>
-        <HelpIcon text="marketplace" />
+        <HelpIcon text="模型广场：按数据窗口聚合各模型健康度（成功率/延迟/最低价/请求量），展开模型行查看各供应商明细；点击「同步模型」从全部启用供应商的上游一键拉取模型并填充模型广场。" level="page" />
       </div>
 
       {/* 筛选区 */}
@@ -308,6 +330,15 @@ export default function AdminMarketplaceHealthPage() {
         >
           导出
         </button>
+        {/* 模型广场同步 */}
+        <button
+          onClick={() => syncAllMutation.mutate()}
+          disabled={syncAllMutation.isPending}
+          style={{ padding: "8px 14px", borderRadius: 8, border: "none", background: "#4f6ef7", color: "#fff", cursor: syncAllMutation.isPending ? "wait" : "pointer", fontWeight: 600, fontSize: 13 }}
+        >
+          {syncAllMutation.isPending ? "同步中…" : "🔄 同步模型"}
+        </button>
+        <HelpIcon text="模型广场同步：从全部启用中供应商的上游 /v1/models 拉取模型并自动填充模型库，同步完成后本页数据自动刷新。" />
       </div>
 
       {/* 表格 */}
@@ -333,6 +364,14 @@ export default function AdminMarketplaceHealthPage() {
         成功率≥95% 健康 · 90~95% 降级 · &lt;90% 异常 · 零流量显示"无数据"。数据来自最近 {windowKey} 生产流量 + 通道测试。
         最低价格 = 各供应商输入价最低值。
       </div>
+
+      {/* 模型广场同步结果弹窗 */}
+      <SyncResultModal
+        open={syncModalOpen}
+        result={syncResult}
+        pending={syncAllMutation.isPending}
+        onClose={() => setSyncModalOpen(false)}
+      />
     </div>
   );
 }
