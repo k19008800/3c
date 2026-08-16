@@ -84,6 +84,7 @@ import DeletionPage from "./pages/DeletionPage";
 import NotificationSettingsPage from "./pages/NotificationSettingsPage";
 import PlaygroundPage from "./pages/PlaygroundPage";
 import TopupRecordsPage from "./pages/TopupRecordsPage";
+import MjSunoTasksPage from "./pages/MjSunoTasksPage";
 import UserGroupsPage from "./pages/UserGroupsPage";
 import UxDemoPage from "./pages/UxDemoPage";
 import VendorSelectorPage from "./pages/VendorSelectorPage";
@@ -324,6 +325,7 @@ export default function App() {
         <Route path="notification" element={<NotificationPage />} />
         <Route path="settings/notifications" element={<NotificationSettingsPage />} />
         <Route path="playground" element={<PlaygroundPage />} />
+        <Route path="mj-tasks" element={<MjSunoTasksPage />} />
         <Route path="webhooks" element={<UserWebhooksPage />} />
         <Route path="security" element={<SecurityPage />} />
         <Route path="tickets" element={<TicketsPage />} />

@@ -186,24 +186,31 @@ export default function AdminSupplierDetailPage() {
       key: "actions",
       title: "操作",
       render: (_, r) => (
-        <ConfirmPopover
-          title={r.status === "active" ? "禁用该模型？" : "启用该模型？"}
-          description={
-            r.status === "active"
-              ? "禁用后该模型将不再通过此供应商参与路由调度（模型广场同步会恢复为启用）"
-              : "启用后该模型恢复参与此供应商的路由调度"
-          }
-          onConfirm={() =>
-            statusMut.mutate({ modelId: r.id, status: r.status === "active" ? "inactive" : "active" })
-          }
-        >
-          <button
-            type="button"
-            className={`c3-btn c3-btn--text c3-btn--sm${r.status === "active" ? " c3-danger" : ""}`}
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <ConfirmPopover
+            title={r.status === "active" ? "禁用该模型？" : "启用该模型？"}
+            description={
+              r.status === "active"
+                ? "禁用后该模型将不再通过此供应商参与路由调度（模型广场同步会恢复为启用）"
+                : "启用后该模型恢复参与此供应商的路由调度"
+            }
+            onConfirm={() =>
+              statusMut.mutate({ modelId: r.id, status: r.status === "active" ? "inactive" : "active" })
+            }
           >
-            {r.status === "active" ? "禁用" : "启用"}
-          </button>
-        </ConfirmPopover>
+            <button
+              type="button"
+              className={`c3-btn c3-btn--text c3-btn--sm${r.status === "active" ? " c3-danger" : ""}`}
+            >
+              {r.status === "active" ? "禁用" : "启用"}
+            </button>
+          </ConfirmPopover>
+          <HelpIcon
+            text={r.status === "active"
+              ? "禁用该模型：不再通过此供应商参与路由调度（模型广场同步会恢复为启用）"
+              : "启用该模型：恢复参与此供应商的路由调度"}
+          />
+        </div>
       ),
     },
   ];
