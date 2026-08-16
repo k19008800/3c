@@ -42,6 +42,7 @@ import { startPriceNotificationScheduler } from './services/price-notification';
 import { startCommissionBackfillScheduler } from './services/agent/commission-backfill';
 import { startRetentionScheduler } from './services/audit/retention';
 import { startModelHealthAggregator } from './services/marketplace/model-health-aggregator';
+import { startTaskPollingScheduler } from './services/task/task-poller';
 import { ensureDefaultGroup } from './services/groups';
 
 let env: Env;
@@ -137,6 +138,8 @@ export async function startApp(opts?: { envOverrides?: Record<string, string> })
   startRetentionScheduler(app.log);
   // 模型健康度聚合 Worker：conversation_context_records → model_health_stats 5min 桶
   startModelHealthAggregator(app.log);
+  // MJ / Suno 任务轮询器：刷新 task_records 进度，失败/超时退款
+  startTaskPollingScheduler(app.log);
 
   return app;
 }
