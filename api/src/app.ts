@@ -9,6 +9,7 @@ import { healthRoutes } from './routes/health';
 import { chatRoutes } from './routes/chat';
 import { wsRoutes } from './routes/ws';
 import { openaiCompatRoutes } from './routes/openai-compat';
+import { anthropicRoutes } from './routes/anthropic';
 import { rerankRoutes } from './routes/rerank';
 import { messagesRoutes } from './routes/messages';
 import { responsesRoutes } from './routes/responses';
@@ -81,6 +82,7 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   await app.register(chatRoutes);
   await app.register(wsRoutes);
   await app.register(openaiCompatRoutes);
+  await app.register(anthropicRoutes);
   await app.register(rerankRoutes);
   await app.register(messagesRoutes);
   await app.register(responsesRoutes);

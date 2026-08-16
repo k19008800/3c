@@ -73,6 +73,11 @@ const nextConfig = {
         source: "/v1/:path*",
         destination: "http://localhost:3000/v1/:path*",
       },
+      // 将 Anthropic 兼容 /anthropic/* 代理到后端（Anthropic SDK base_url = <host>/anthropic）
+      {
+        source: "/anthropic/:path*",
+        destination: "http://localhost:3000/anthropic/:path*",
+      },
       // ── /app/* 控制台：静态托管 web-console 构建产物 ──
       // web-console `vite build`（base=/app/）产物拷贝到 web-portal/public/app/，
       // 由 Next 直接静态服务（public/ 里的文件优先于 rewrite 命中）：

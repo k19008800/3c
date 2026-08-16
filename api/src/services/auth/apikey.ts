@@ -64,14 +64,22 @@ export async function verifyApiKey(rawKey: string): Promise<ApiKeyContext | null
 
 /**
  * Fastify preHandler hook: authenticate via API key Bearer token
+ *
+ * 兼容两种携带方式（Anthropic SDK 风格优先 x-api-key，OpenAI SDK 风格走 Bearer）：
+ *   1. `x-api-key: 3c_xxx`（Anthropic Messages 兼容入口 /anthropic/v1/messages）
+ *   2. `Authorization: Bearer 3c_xxx`（OpenAI 兼容入口 /v1/*）
+ * 两者同时存在时 Bearer 优先。
  */
 export async function apiKeyAuth(request: any, reply: any) {
+  const xApiKey = request.headers['x-api-key'];
   const authHeader = request.headers.authorization;
-  const rawKey = extractApiKeyFromHeader(authHeader);
+  const rawKey = (typeof xApiKey === 'string' && xApiKey.trim())
+    ? xApiKey.trim()
+    : extractApiKeyFromHeader(authHeader);
 
   if (!rawKey) {
     return reply.status(401).send({
-      error: { message: 'Missing API key. Use Authorization: Bearer sk-...', type: 'invalid_request_error', code: 401 },
+      error: { message: 'Missing API key. Use Authorization: Bearer sk-... or x-api-key header', type: 'invalid_request_error', code: 401 },
     });
   }
 
