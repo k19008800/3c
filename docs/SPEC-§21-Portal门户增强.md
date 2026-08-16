@@ -57,7 +57,7 @@ Portal 门户面向平台访客和潜在客户，当前仅有首页、定价页�
 | 首页 | `/` | 3Cloud - 一站式 AI API 聚合平台 | 接入 DeepSeek、OpenAI、Anthropic 等主流模型，统一计费、智能路由、精细运营 |
 | 定价页 | `/pricing` | 3Cloud 定价 - 透明计费，按量付费 | 查看所有 AI 模型价格，输入输出分别计费，无隐藏费用 |
 | 模型目录 | `/models` | 3Cloud 模型目录 - 138+ AI 模型 | DeepSeek、Qwen、GLM 等主流模型一览 |
-| 文档页 | `/docs` | 3Cloud 开发者文档 - API 接入指南 | 快速接入 3Cloud API，兼容 OpenAI 格式，零代码迁移 |
+| 文档页 | `/docs` | 3Cloud 开发者文档 - API 接入指南 | 快速接入 3Cloud API，兼容 OpenAI 与 Anthropic 双格式（base_url 随后台 api_domain 配置），零代码迁移 |
 | 状态页 | `/status` | 3Cloud 系统状态 - 服务健康实时监控 | 实时查看 3Cloud 各 API 端点和服务状态 |
 
 **技术方案：**
@@ -144,7 +144,7 @@ SSR 改造:
 
   如何在 5 分钟内接入 3Cloud API
   2026-07-20 | 5 分钟阅读
-  3Cloud 兼容 OpenAI 格式，只需修改 base_url...
+  3Cloud 兼容 OpenAI 与 Anthropic 双格式，只需修改 base_url（随后台 api_domain 配置）...
 
   [RSS 订阅]
 ```

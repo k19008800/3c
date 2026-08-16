@@ -1,6 +1,6 @@
 # 3cloud 产品文档体系
 
-> 最后更新：2026-08-12
+> 最后更新：2026-08-17
 >
 > **阅读入口**：从 [`PRD-README.md`](PRD-README.md) 开始，它是唯一总纲，包含六章完整需求 + 非功能需求（§7）。
 
@@ -39,6 +39,7 @@ docs/
 ├── ref-7-nfr.md                    ← 深化：非功能需求（性能/安全/可用性/扩展性）
 │
 ├── api-reference.md                ← 📡 API 参考手册（面向开发者，含认证/模型/错误码/WebSocket）
+│   └── 2026-08-17：独立 API 域名 api.&lt;host&gt;（OpenAI base_url=/v1 + Anthropic base_url=/anthropic，后台可配置 api_domain）
 ├── test-cases.md                   ← 🧪 测试用例与验收标准（180+ 条，P0/P1/P2 全覆盖）
 ├── frontend-routes.md              ← 🗺️ 前端路由结构（87+ 页面、5 布局、组件树）
 ├── ops-guide.md                    ← 🔧 部署运维手册（环境/部署/备份/监控/故障排查）

@@ -594,6 +594,7 @@ def stream_chat(url, headers, body):
 | 日期 | 版本 | 变更说明 |
 |------|------|---------|
 | 2026-07-28 | v1.0 | 初始版本，兼容 OpenAI API 格式 |
+| 2026-08-17 | v1.1 | **新增 Anthropic Messages API 兼容入口**（`/anthropic/v1/messages`）；独立 API 域名 `api.<host>` 同域双 base_url（OpenAI `/v1` + Anthropic `/anthropic`），域名**后台可配置**（系统设置 → API 服务，`system_config.api_domain`），门户/控制台经 `GET /public/api-config` 实时读取 |
 | 未来 | v2.0 | 计划新增流式优化、批量推理、函数调用增强 |
 
 **兼容性保证**：

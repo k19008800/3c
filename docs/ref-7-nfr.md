@@ -171,7 +171,7 @@
 
 | 项目 | 要求 | 当前状态 |
 |------|------|---------|
-| API 协议 | 兼容 OpenAI Chat Completions 格式 | ✅ 已实现 |
+| API 协议 | 兼容 OpenAI Chat Completions + Anthropic Messages（独立 API 域名双 base_url，2026-08-17 定稿） | ✅ 已实现 |
 | 前端浏览器 | Chrome/Firefox/Edge/Safari 最新 2 个主版本 | ✅ 基础支持 |
 | 移动端 | Portal 页面响应式 | ✅ 基础适配 |
 | 管理后台 | 桌面端优先（1920×1080 设计） | ✅ 已实现 |

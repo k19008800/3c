@@ -150,11 +150,13 @@ graph TB
 ```
 
 > **对外 API 域名拓扑（2026-08-17 定稿）**：`api.unmisa.com` 为**独立 API 网关域名**（nginx vhost 见
-> `deploy/api.unmisa.com.conf`，与官网 unmisa.com 分离），同域同时暴露两套 SDK 兼容入口：
+> `deploy/api.unmisa.com.conf`，与官网 unmisa.com 分离），同域同时暴露两套 SDK 兼容入口。
+> **API 域名后台可配置**（管理后台 系统设置 → API 服务，`system_config.api_domain`），
+> 门户/控制台经 `GET /api/v1/public/api-config` 实时读取派生地址：
 >
 > | 客户端 | base_url | 端点 |
 > |---|---|---|
-> | OpenAI SDK | `https://api.unmisa.com` | `POST /v1/chat/completions`（+ /v1/models、/v1/completions、/v1/embeddings） |
+> | OpenAI SDK | `https://api.unmisa.com/v1` | `POST /v1/chat/completions`（+ /v1/models、/v1/completions、/v1/embeddings） |
 > | Anthropic SDK | `https://api.unmisa.com/anthropic` | `POST /anthropic/v1/messages`（+ /anthropic/v1/models） |
 >
 > 两套入口经同一网关链路（鉴权 → 翻译 → 渠道选择 → 真实上游 → 记账/扣费/留痕），

@@ -47,7 +47,7 @@
 
 **可扩展性**：API 无状态设计，数据库水平扩展预留（读写分离），前端组件化
 
-**兼容性**：兼容 OpenAI API 格式，零代码迁移
+**兼容性**：兼容 OpenAI Chat Completions 与 Anthropic Messages 双格式（独立 API 域名 `api.<host>` 同域双 base_url，后台可配置，2026-08-17 定稿）；OpenAI 用户零代码迁移
 
 **可维护性**：代码风格统一（DrizzleORM + Fastify + TypeScript），组件拆分完成
 
