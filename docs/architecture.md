@@ -100,6 +100,8 @@ graph TB
 
 ## 二、部署架构
 
+> ⚠️ **部署状态（2026-08-16）**：生产服 3cloud 已全部清除（主 117.78.2.66 / 备 123.60.55.62 的代码、数据库、Redis、nginx 配置与证书均删除）。**本地 3cloud 未成熟前禁止部署。** 下图展示的是旧版架构蓝图，当前生产服无 3cloud 实例（nginx 仅剩宝塔默认配置）。详见 `kb/3cloud/development-plan.md` 部署闸门。
+
 ```mermaid
 graph TB
     subgraph 生产服1 [生产服1 117.78.2.66]
