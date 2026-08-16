@@ -34,6 +34,13 @@
       "when": 1786872407479,
       "tag": "0004_oauth_bindings",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786877159513,
+      "tag": "0005_cache_billing_audit",
+      "breakpoints": true
     }
   ],
   "version": "7",

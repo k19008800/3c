@@ -90,7 +90,7 @@ export default function AdminFinancePage() {
       dataIndex: "createdAt",
       render: (v) => String(v).slice(0, 16).replace("T", " "),
     },
-    { key: "customer", title: "客户", dataIndex: "customer", render: (v) => v ?? "—" },
+    { key: "customer", title: "客户", dataIndex: "customer", render: (v) => (v ?? "—") as string },
     { key: "typeLabel", title: "类型", dataIndex: "typeLabel" },
     {
       key: "amount",

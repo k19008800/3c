@@ -42,7 +42,7 @@ export default function AdminMultimodalModelsPage() {
   const list = listQ.data?.list != null ? listQ.data.list : localList;
   const demo = listQ.data?.list == null;
 
-  const toggleMut = useMutation({
+  const toggleMut = useMutation<any, unknown, { id: number; enabled: boolean }>({
     mutationFn: async ({ id, enabled }: { id: number; enabled: boolean }) =>
       (await api.put(`/admin/multimodal-models/${id}`, { is_enabled: enabled })).data,
     onSuccess: () => { toast.success("已更新"); qc.invalidateQueries({ queryKey: ["admin-multimodal"] }); },

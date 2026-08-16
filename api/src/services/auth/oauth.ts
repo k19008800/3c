@@ -1,11 +1,14 @@
 /**
- * GitHub OAuth 第三方登录服务
+ * GitHub OAuth 第三方登录 + 绑定管理服务
  *
  * 职责：
  * - getGitHubOAuthUrl：生成跳转 GitHub 授权页的 URL（/url 端点）
  * - exchangeGitHubCode：用授权 code 换 access_token
  * - fetchGitHubUser：拉取 GitHub 用户信息 + 邮箱列表
  * - handleGitHubCallback：回调完整编排（查绑定 → 链接/自动注册 → 签发 JWT）
+ * - getUserOAuthBindings：查询当前用户绑定列表（/bindings 端点）
+ * - bindOAuthAccount：已登录用户发起第三方绑定（/bind 端点，幂等 + 冲突判定）
+ * - unbindOAuthAccount：解绑当前用户的第三方账号（/unbind 端点）
  *
  * 设计要点：
  * - 所有出站 HTTP 调用使用可注入的 fetchImpl（默认全局 fetch），便于纯单测；
@@ -14,6 +17,9 @@
  *   未配置时抛 OAuthNotConfiguredError(503)，不崩溃。
  * - 错误映射：GitHub 返回 error（code 无效）→ 400；网络/上游失败 → 502；
  *   DB 写入失败 → 500。
+ * - 绑定管理错误映射：provider 不在白名单 → 400；绑定场景 code 无效 → 401；
+ *   第三方账号已被其他用户绑定 → 409；重复绑定当前用户 → 幂等返回；
+ *   wechat/telegram/google 未接入 → 501；解绑不存在的绑定 → 404。
  *
  * @see newapi-gap-analysis.md Batch 2 任务 2.1（GitHub OAuth 第三方登录）
  * @module services/auth/oauth
@@ -22,8 +28,8 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { db, schema } from '../../db';
-import { and, eq } from 'drizzle-orm';
-import { AppError } from '../../lib/errors';
+import { and, desc, eq } from 'drizzle-orm';
+import { AppError, ValidationError } from '../../lib/errors';
 import { generateTokenPair, type TokenPair } from './jwt';
 
 // ============================================================
@@ -427,4 +433,246 @@ function generateRandomPasswordHash(): string {
  */
 function syntheticEmail(openId: string): string {
   return `github-${openId}@oauth.local`;
+}
+
+// ============================================================
+// 5. 绑定管理：列表 / 发起绑定 / 解绑
+// ============================================================
+
+/** 支持的 OAuth provider 白名单（与前端 OAuthPage / SecurityPage 的 PROVIDERS 对齐） */
+export const OAUTH_PROVIDERS = ['github', 'wechat', 'telegram', 'google'] as const;
+export type OAuthProvider = (typeof OAUTH_PROVIDERS)[number];
+
+/**
+ * 绑定场景下第三方授权 code 无效（401）。
+ *
+ * 与快捷登录回调（OAuthCodeInvalidError，400）区分：已登录用户主动发起绑定时，
+ * 携带的 code 属于"第三方身份凭证"，无效即认证失败，语义上更接近 401。
+ */
+export class OAuthBindCodeInvalidError extends AppError {
+  constructor() {
+    super('OAuth code is invalid or expired', 401, 'OAUTH_BIND_CODE_INVALID');
+  }
+}
+
+/** 发起绑定：该第三方账号已被其他用户绑定（409） */
+export class OAuthBindingConflictError extends AppError {
+  constructor(provider: string, openId: string) {
+    super(
+      `OAuth account ${provider}:${openId} is already bound to another user`,
+      409,
+      'OAUTH_BINDING_CONFLICT',
+      { provider, openId },
+    );
+  }
+}
+
+/** 发起绑定：provider 的第三方 API 尚未接入（501） */
+export class OAuthNotImplementedError extends AppError {
+  constructor(provider: string) {
+    super(`OAuth provider ${provider} is not implemented yet`, 501, 'NOT_IMPLEMENTED', { provider });
+  }
+}
+
+/** 解绑：当前用户对该 provider 无绑定记录（404） */
+export class OAuthNotBoundError extends AppError {
+  constructor(provider: string) {
+    super(`No OAuth binding for provider ${provider}`, 404, 'NOT_BOUND', { provider });
+  }
+}
+
+/** 绑定列表 DTO（对外契约：open_id / bound_at 蛇形命名，对齐前端调用） */
+export interface OAuthBindingDTO {
+  provider: string;
+  open_id: string;
+  email: string | null;
+  bound_at: string;
+}
+
+/** 发起绑定的结果 */
+export interface OAuthBindResult {
+  bound: boolean;
+  provider: OAuthProvider;
+  open_id: string;
+}
+
+/** 解绑的结果 */
+export interface OAuthUnbindResult {
+  unbound: boolean;
+  provider: OAuthProvider;
+}
+
+/**
+ * 查询当前用户的全部第三方绑定（按绑定时间倒序）。
+ *
+ * @param userId - 当前登录用户（users.id）
+ * @returns 绑定列表 DTO 数组（无绑定返回空数组）
+ */
+export async function getUserOAuthBindings(userId: number): Promise<OAuthBindingDTO[]> {
+  const rows = await db.select({
+    provider: schema.userOauthBindings.provider,
+    openId: schema.userOauthBindings.openId,
+    email: schema.userOauthBindings.email,
+    createdAt: schema.userOauthBindings.createdAt,
+  })
+    .from(schema.userOauthBindings)
+    .where(eq(schema.userOauthBindings.userId, userId))
+    .orderBy(desc(schema.userOauthBindings.createdAt));
+
+  return rows.map((r) => ({
+    provider: r.provider,
+    open_id: r.openId,
+    email: r.email,
+    bound_at: new Date(r.createdAt).toISOString(),
+  }));
+}
+
+/**
+ * 已登录用户把当前账号与第三方账号绑定（OAuth 授权码流程）。
+ *
+ * 含义区别于未登录时的快捷登录：本函数要求调用方已通过 JWT 鉴权，
+ * 用第三方授权 code 换取第三方身份后，把该身份挂到当前用户下。
+ *
+ * 流程：
+ *   1. provider 白名单校验（不在白名单 → 400）
+ *   2. 非 GitHub provider 未接入第三方 API → 501
+ *   3. code 换第三方用户信息（GitHub 复用 exchangeGitHubCode + fetchGitHubUser）
+ *   4. (provider, openId) 已绑定其他用户 → 409；已绑定当前用户 → 幂等返回
+ *   5. 未绑定 → INSERT，返回 { bound: true, provider, open_id }
+ *
+ * 幂等语义：同一 provider 已绑定当前用户时直接返回现有绑定，不重复 INSERT
+ * （前端重复点击 / 回调重放时行为安全）。
+ *
+ * @param params.userId - 当前登录用户（users.id）
+ * @param params.provider - 第三方平台（github/wechat/telegram/google）
+ * @param params.code - 第三方授权 code（一次性）
+ * @param params.deps - 可注入 fetchImpl / config（测试用）
+ * @returns 绑定结果
+ * @throws {ValidationError} provider 不在白名单（400）
+ * @throws {OAuthNotImplementedError} wechat/telegram/google 未接入（501）
+ * @throws {OAuthBindCodeInvalidError} code 无效（401，绑定场景）
+ * @throws {OAuthUpstreamError} GitHub API 网络/上游失败（502）
+ * @throws {OAuthBindingConflictError} 第三方账号已被其他用户绑定（409）
+ */
+export async function bindOAuthAccount(params: {
+  userId: number;
+  provider: string;
+  code: string;
+  deps?: OAuthServiceDeps;
+}): Promise<OAuthBindResult> {
+  const { userId, provider, code, deps } = params;
+
+  if (!(OAUTH_PROVIDERS as readonly string[]).includes(provider)) {
+    throw new ValidationError(`Unsupported OAuth provider: ${provider}`);
+  }
+
+  // wechat / telegram / google 的第三方 API 尚未接入 → 501
+  // TODO(oauth): P2 按 provider 分发到各自的 exchange/fetch 实现（微信 / Telegram / Google）
+  if (provider !== 'github') {
+    throw new OAuthNotImplementedError(provider);
+  }
+
+  // 1. code 换第三方用户信息（复用登录链路的 GitHub 实现，不重复实现）
+  let ghUser: GitHubUserInfo;
+  try {
+    const accessToken = await exchangeGitHubCode(code, deps);
+    ghUser = await fetchGitHubUser(accessToken, deps);
+  } catch (err) {
+    // 绑定场景下 code 无效视为认证失败（401）；上游/配置错误保持原样（502/503）
+    if (err instanceof OAuthCodeInvalidError) throw new OAuthBindCodeInvalidError();
+    throw err;
+  }
+
+  // 2. 查 (provider, openId) 现有绑定：归属当前用户 → 幂等；归属他人 → 409
+  const existing = await db.select()
+    .from(schema.userOauthBindings)
+    .where(and(
+      eq(schema.userOauthBindings.provider, provider),
+      eq(schema.userOauthBindings.openId, ghUser.openId),
+    ))
+    .limit(1);
+
+  if (existing.length > 0) {
+    if (existing[0]!.userId === userId) {
+      // 幂等：同一第三方账号重复绑定当前用户，直接返回现有绑定，不重复 INSERT
+      return { bound: true, provider: provider as OAuthProvider, open_id: ghUser.openId };
+    }
+    throw new OAuthBindingConflictError(provider, ghUser.openId);
+  }
+
+  // 3. 插入绑定（唯一索引 uq_user_oauth_bindings_provider_open_id 兜底并发）
+  try {
+    await db.insert(schema.userOauthBindings).values({
+      userId,
+      provider,
+      openId: ghUser.openId,
+      email: ghUser.email,
+    });
+  } catch (err) {
+    // 并发下两个请求同时通过第 2 步检查 → 唯一索引冲突 → 重新查询判定归属
+    if (isUniqueViolation(err)) {
+      const re = await db.select()
+        .from(schema.userOauthBindings)
+        .where(and(
+          eq(schema.userOauthBindings.provider, provider),
+          eq(schema.userOauthBindings.openId, ghUser.openId),
+        ))
+        .limit(1);
+      if (re.length > 0 && re[0]!.userId === userId) {
+        return { bound: true, provider: provider as OAuthProvider, open_id: ghUser.openId };
+      }
+      throw new OAuthBindingConflictError(provider, ghUser.openId);
+    }
+    throw err;
+  }
+
+  return { bound: true, provider: provider as OAuthProvider, open_id: ghUser.openId };
+}
+
+/**
+ * 解绑当前用户对指定 provider 的绑定。
+ *
+ * NOTE: 本期解绑不强制验证密码 / 2FA（从简）；后续迭代可要求二次确认
+ * （如验证当前密码或 TOTP）防止账号被他人恶意解绑。
+ *
+ * @param params.userId - 当前登录用户（users.id）
+ * @param params.provider - 第三方平台（github/wechat/telegram/google）
+ * @returns 解绑结果
+ * @throws {ValidationError} provider 不在白名单（400）
+ * @throws {OAuthNotBoundError} 当前用户无该 provider 绑定（404）
+ */
+export async function unbindOAuthAccount(params: {
+  userId: number;
+  provider: string;
+}): Promise<OAuthUnbindResult> {
+  const { userId, provider } = params;
+
+  if (!(OAUTH_PROVIDERS as readonly string[]).includes(provider)) {
+    throw new ValidationError(`Unsupported OAuth provider: ${provider}`);
+  }
+
+  const result = await db.delete(schema.userOauthBindings)
+    .where(and(
+      eq(schema.userOauthBindings.userId, userId),
+      eq(schema.userOauthBindings.provider, provider),
+    ))
+    .returning({ id: schema.userOauthBindings.id });
+
+  if (result.length === 0) {
+    throw new OAuthNotBoundError(provider);
+  }
+
+  return { unbound: true, provider: provider as OAuthProvider };
+}
+
+/**
+ * 判断是否为 PostgreSQL 唯一约束冲突（SQLSTATE 23505 unique_violation）。
+ *
+ * 用于并发绑定场景下依赖唯一索引兜底时的错误识别。
+ *
+ * @param err - 捕获的异常
+ * @returns true = 唯一约束冲突
+ */
+function isUniqueViolation(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && (err as { code?: unknown }).code === '23505';
 }

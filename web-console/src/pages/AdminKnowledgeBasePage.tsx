@@ -103,7 +103,7 @@ export default function AdminKnowledgeBasePage() {
   });
 
   // —— 删除文章 ——
-  const delArticleMut = useMutation({
+  const delArticleMut = useMutation<any, unknown, number>({
     mutationFn: (id: number) => api.delete(`/admin/knowledge-base/${id}`),
     onSuccess: () => { toast.success("文章已删除"); qc.invalidateQueries({ queryKey: ["admin/knowledge-base"] }); },
     onError: (err: any, id?: number) => {
@@ -141,7 +141,7 @@ export default function AdminKnowledgeBasePage() {
   });
 
   // —— 删除分类 ——
-  const delCatMut = useMutation({
+  const delCatMut = useMutation<any, unknown, number>({
     mutationFn: (id: number) => api.delete(`/admin/knowledge-base/categories/${id}`),
     onSuccess: () => { toast.success("分类已删除"); qc.invalidateQueries({ queryKey: ["admin/knowledge-base/categories"] }); },
     onError: (err: any, id?: number) => {
@@ -179,7 +179,7 @@ export default function AdminKnowledgeBasePage() {
   });
 
   // —— 删除模板 ——
-  const delTplMut = useMutation({
+  const delTplMut = useMutation<any, unknown, number>({
     mutationFn: (id: number) => api.delete(`/admin/quick-replies/${id}`),
     onSuccess: () => { toast.success("模板已删除"); qc.invalidateQueries({ queryKey: ["admin/quick-replies"] }); },
     onError: (err: any, id?: number) => {

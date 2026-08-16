@@ -33,6 +33,7 @@ import { selectChannel, type SelectedChannel } from '../services/upstream/routin
 import { streamRelay } from '../services/upstream/proxy';
 import { claudeToOpenAI, openAIToClaude, type ClaudeMessage, type ClaudeContentBlock } from '../services/upstream/claude-adapter';
 import { countTokens } from '../services/billing/token-counter';
+import { parseAndDiscount } from '../services/billing/cache-billing';
 import { determineStreamBilling } from '../services/billing/settle-stream';
 import { getBalance, deductBalance } from '../services/billing/balance';
 import { recordConsumption } from '../services/billing/consumption-log';
@@ -184,7 +185,7 @@ function estimateInputTokens(messages: Array<{ role: string; content: unknown }>
  * @param output - 输出 token 数
  * @param cost - 费用（¥）
  * @param channel - 选中的渠道；mock 回退时为 null
- * @param opts - 记账标记：streamed / trustUpstream / fallback / finishReason / errorCode
+ * @param opts - 记账标记：streamed / trustUpstream / fallback / finishReason / errorCode / cacheHitTokens / cacheDiscount
  */
 async function settleBilling(
   ctx: PipelineContext,
@@ -192,7 +193,7 @@ async function settleBilling(
   output: number,
   cost: number,
   channel: SelectedChannel | null,
-  opts: { streamed: boolean; trustUpstream: boolean; fallback: boolean; finishReason?: string; errorCode?: string },
+  opts: { streamed: boolean; trustUpstream: boolean; fallback: boolean; finishReason?: string; errorCode?: string; cacheHitTokens?: number; cacheDiscount?: number },
 ): Promise<void> {
   await deductBalance(ctx.userId, cost.toFixed(8), 'consumption', ctx.requestId);
 
@@ -211,6 +212,8 @@ async function settleBilling(
     finishReason: opts.finishReason,
     errorCode: opts.errorCode,
     requestId: ctx.requestId,
+    cacheHitTokens: opts.cacheHitTokens,
+    cacheDiscount: opts.cacheDiscount,
   });
 
   // 实时佣金结算（异步，不阻塞响应）：消费产生即结算；无代理绑定则内部跳过。
@@ -436,9 +439,10 @@ export async function messagesRoutes(app: FastifyInstance) {
       const hasUsage = totalTokens > 0;
 
       const pricing = await getPricingForModel(req.model);
-      const cost = hasUsage
-        ? computeCost(req.model, promptTokens, completionTokens, pricing)
-        : computeCost(req.model, estimatedInputTokens, 0, pricing);
+      // 缓存命中打折：上游返回缓存字段时按 10% 命中价计费；无缓存字段行为与 computeCost 一致
+      const { cost, discountAmount, cacheHitTokens } = hasUsage
+        ? parseAndDiscount(parsedBody.usage, pricing)
+        : { cost: computeCost(req.model, estimatedInputTokens, 0, pricing), discountAmount: 0, cacheHitTokens: 0 };
 
       const choices = (parsedBody.choices as Array<{ finish_reason?: string }> | undefined);
       const finishReason = String(choices?.[0]?.finish_reason ?? 'stop');
@@ -449,7 +453,14 @@ export async function messagesRoutes(app: FastifyInstance) {
         hasUsage ? completionTokens : 0,
         cost,
         channel,
-        { streamed: false, trustUpstream: hasUsage, fallback: !hasUsage, finishReason },
+        {
+          streamed: false,
+          trustUpstream: hasUsage,
+          fallback: !hasUsage,
+          finishReason,
+          cacheHitTokens,
+          cacheDiscount: discountAmount,
+        },
       );
 
       await recordChannelResult(cbKey, true);

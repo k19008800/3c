@@ -68,7 +68,7 @@ export default function AdminChatPage() {
   const presets = presetsQ.data?.list != null ? presetsQ.data.list : MOCK_PRESETS;
   const demo = queueQ.data?.list == null || activeQ.data?.list == null || presetsQ.data?.list == null;
 
-  const statusMut = useMutation({
+  const statusMut = useMutation<any, unknown, string>({
     mutationFn: async (s: string) => (await api.post("/admin/chat/status", { status: s })).data,
     onSuccess: (d: any) => { setStaffStatus(d.data.status); },
     onError: (e: any, s?: string) => {

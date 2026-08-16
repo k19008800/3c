@@ -60,10 +60,11 @@ export async function recordConsumption(input: ConsumptionInput) {
     errorCode: input.errorCode || null,
     metadata: input.metadata || null,
     // 表有 cache 打折列时才写入；当前表结构无此列 → 展开为空对象，等价于不写入
+    // cacheDiscount 为 numeric(18,8) 列（drizzle 类型 string），写入前转字符串
     ...(HAS_CACHE_COLUMNS
       ? {
           cacheHitTokens: input.cacheHitTokens ?? 0,
-          cacheDiscount: input.cacheDiscount ?? 0,
+          cacheDiscount: input.cacheDiscount == null ? null : String(input.cacheDiscount),
         }
       : {}),
   }).returning();

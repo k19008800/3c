@@ -115,7 +115,7 @@ export default function AdminSupportPage() {
       }
     },
   });
-  const keyRevokeMut = useMutation({
+  const keyRevokeMut = useMutation<any, unknown, number>({
     mutationFn: async (id: number) => (await api.post(`/admin/support/test-key/${id}/revoke`, {})).data,
     onSuccess: () => { toast.success("测试 Key 已撤销"); qc.invalidateQueries({ queryKey: ["support-test-keys"] }); },
     onError: (e: any, id?: number) => {

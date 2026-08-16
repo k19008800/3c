@@ -41,7 +41,7 @@ export default function AdminSecurityIncidentPage() {
   const list = listQ.data?.list != null ? listQ.data.list : localList;
   const demo = listQ.data?.list == null;
 
-  const handleMut = useMutation({
+  const handleMut = useMutation<any, unknown, { id: number; op: string; reason?: string }>({
     mutationFn: async ({ id, op, reason }: { id: number; op: string; reason?: string }) =>
       (await api.post(`/admin/security/incidents/${id}/${op}`, { reason })).data,
     onSuccess: () => { toast.success("操作成功"); setDetail(null); qc.invalidateQueries({ queryKey: ["admin-security-incidents"] }); },

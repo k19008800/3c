@@ -31,7 +31,7 @@ export default function AdminSysCachePage() {
   const memory = q.data?.memory ?? "";
   const demo = q.data?.keys == null;
 
-  const delMut = useMutation({
+  const delMut = useMutation<any, unknown, string>({
     mutationFn: async (key: string) => (await api.delete("/admin/sys/cache/key", { data: { key } })).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-sys-cache-keys"] }),
     onError: (e: any, key?: string) => {

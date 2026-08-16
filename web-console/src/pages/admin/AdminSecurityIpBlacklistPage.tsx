@@ -42,7 +42,7 @@ export default function AdminSecurityIpBlacklistPage() {
   const list = listQ.data?.list != null ? listQ.data.list : localList;
   const demo = listQ.data?.list == null;
 
-  const addMut = useMutation({
+  const addMut = useMutation<any, unknown, { ip: string; reason: string }>({
     mutationFn: async (body: { ip: string; reason: string }) =>
       (await api.post("/admin/security/ip-blacklist", body)).data,
     onSuccess: () => { toast.success("IP 已加入黑名单"); setShowAdd(false); setAddForm({ ip: "", reason: "" }); qc.invalidateQueries({ queryKey: ["admin-ip-blacklist"] }); },
@@ -59,7 +59,7 @@ export default function AdminSecurityIpBlacklistPage() {
     },
   });
 
-  const removeMut = useMutation({
+  const removeMut = useMutation<any, unknown, number>({
     mutationFn: async (id: number) => (await api.delete(`/admin/security/ip-blacklist/${id}`)).data,
     onSuccess: () => { toast.success("已移除"); qc.invalidateQueries({ queryKey: ["admin-ip-blacklist"] }); },
     onError: (e: any, id?: number) => {

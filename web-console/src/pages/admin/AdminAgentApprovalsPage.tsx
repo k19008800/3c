@@ -71,7 +71,7 @@ export default function AdminAgentApprovalsPage() {
   const data: ApprovalsData = listQ.data?.pending != null ? listQ.data : local;
   const demo = listQ.data?.pending == null;
 
-  const approveMut = useMutation({
+  const approveMut = useMutation<any, unknown, number>({
     mutationFn: async (id: number) => (await api.post(`/admin/agents/approvals/${id}/approve`)).data,
     onSuccess: () => { toast.success("已通过"); qc.invalidateQueries({ queryKey: ["admin-agent-approvals"] }); },
     onError: (e: any, id?: number) => {
@@ -92,7 +92,7 @@ export default function AdminAgentApprovalsPage() {
     },
   });
 
-  const rejectMut = useMutation({
+  const rejectMut = useMutation<any, unknown, { id: number; reason: string }>({
     mutationFn: async ({ id, reason }: { id: number; reason: string }) => (await api.post(`/admin/agents/approvals/${id}/reject`, { reason })).data,
     onSuccess: () => { toast.success("已驳回"); setRejecting(null); setRejectReason(""); qc.invalidateQueries({ queryKey: ["admin-agent-approvals"] }); },
     onError: (e: any, vars?: { id: number; reason: string }) => {
@@ -114,7 +114,7 @@ export default function AdminAgentApprovalsPage() {
     },
   });
 
-  const rereviewMut = useMutation({
+  const rereviewMut = useMutation<any, unknown, number>({
     mutationFn: async (id: number) => (await api.post(`/admin/agents/approvals/${id}/re-review`)).data,
     onSuccess: () => { toast.success("已重新审核"); qc.invalidateQueries({ queryKey: ["admin-agent-approvals"] }); },
     onError: (e: any, id?: number) => {
@@ -135,7 +135,7 @@ export default function AdminAgentApprovalsPage() {
     },
   });
 
-  const unbindMut = useMutation({
+  const unbindMut = useMutation<any, unknown, { id: number; from: "approved" | "bound" }>({
     mutationFn: async ({ id, from }: { id: number; from: "approved" | "bound" }) => (await api.post(`/admin/agents/approvals/${id}/unbind`)).data,
     onSuccess: () => { toast.success("已解绑"); qc.invalidateQueries({ queryKey: ["admin-agent-approvals"] }); },
     onError: (e: any, vars?: { id: number; from: "approved" | "bound" }) => {

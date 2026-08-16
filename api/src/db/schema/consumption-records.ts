@@ -15,6 +15,10 @@ export const consumptionRecords = pgTable('consumption_records', {
   outputTokens: integer('output_tokens').notNull().default(0),
   totalTokens: integer('total_tokens').notNull().default(0),
   cost: numeric('cost', { precision: 18, scale: 8 }).notNull().default('0'),
+  /** 缓存命中 token 数（上游 usage 返回缓存字段时才有值；无缓存信息场景为 NULL，计费行为不变） */
+  cacheHitTokens: integer('cache_hit_tokens'),
+  /** 缓存命中打折省下的金额（全价 - 折后价，元）；无缓存信息场景为 NULL */
+  cacheDiscount: numeric('cache_discount', { precision: 18, scale: 8 }),
   currency: varchar('currency', { length: 10 }).default('CNY'),
   trustUpstream: boolean('trust_upstream').notNull().default(false),
   fallback: boolean('fallback').notNull().default(false),

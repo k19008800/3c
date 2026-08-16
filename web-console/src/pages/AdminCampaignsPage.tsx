@@ -81,7 +81,7 @@ export default function AdminCampaignsPage() {
       }
     },
   });
-  const statusMut = useMutation({
+  const statusMut = useMutation<any, unknown, { id: number; status: string }>({
     mutationFn: async ({ id, status }: { id: number; status: string }) => (await api.post(`/admin/campaigns/${id}/status`, { status })).data,
     onSuccess: (d: { data?: { message?: string } }) => { toast.success(d?.data?.message ?? "已切换"); qc.invalidateQueries({ queryKey: ["admin-campaigns"] }); },
     onError: (e: any, vars?: { id: number; status: string }) => {
@@ -94,7 +94,7 @@ export default function AdminCampaignsPage() {
       }
     },
   });
-  const delMut = useMutation({
+  const delMut = useMutation<any, unknown, number>({
     mutationFn: async (id: number) => (await api.delete(`/admin/campaigns/${id}`)).data,
     onSuccess: () => { toast.success("已删除"); qc.invalidateQueries({ queryKey: ["admin-campaigns"] }); },
     onError: (e: any, id?: number) => {
@@ -107,7 +107,7 @@ export default function AdminCampaignsPage() {
       }
     },
   });
-  const grantMut = useMutation({
+  const grantMut = useMutation<any, unknown, { userId: number; amount: number }>({
     mutationFn: async ({ userId, amount }: { userId: number; amount: number }) => (await api.post(`/admin/campaigns/${detail!.campaign.id}/grant`, { user_id: userId, amount })).data,
     onSuccess: (d: { data?: { message?: string } }) => { toast.success(d?.data?.message ?? "已发放"); setGrantForm({ user_id: "", amount: "" }); qc.invalidateQueries({ queryKey: ["admin-campaign-detail"] }); },
     onError: (e: any, vars?: { userId: number; amount: number }) => {

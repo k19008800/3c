@@ -94,7 +94,7 @@ export default function AdminDeletionPage() {
   const detail = detailQ ?? (demo && detailId != null ? mockDetail(detailId) : null);
 
   // 驳回
-  const rejectMutation = useMutation({
+  const rejectMutation = useMutation<any, unknown, { id: number; reason: string }>({
     mutationFn: (body: { id: number; reason: string }) =>
       api.post(`/admin/deletion/requests/${body.id}/reject`, { reason: body.reason }),
     onSuccess: () => {
@@ -117,7 +117,7 @@ export default function AdminDeletionPage() {
   });
 
   // 强制完成
-  const completeMutation = useMutation({
+  const completeMutation = useMutation<any, unknown, number>({
     mutationFn: (id: number) => api.post(`/admin/deletion/requests/${id}/complete`, { force: true }),
     onSuccess: () => {
       toast.success("管理员强制注销完成");

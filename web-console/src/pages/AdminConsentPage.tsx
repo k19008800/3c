@@ -154,7 +154,7 @@ function PolicySection({ kind, toast, qc, help }: { kind: "privacy" | "tos"; toa
     },
   });
 
-  const publishMut = useMutation({
+  const publishMut = useMutation<any, unknown, number>({
     mutationFn: async (id: number) => (await api.post(`/admin/settings/${endpoint}/versions/${id}/publish`, {})).data,
     onSuccess: (d: any) => {
       toast.success(d.message || "已发布");
@@ -171,7 +171,7 @@ function PolicySection({ kind, toast, qc, help }: { kind: "privacy" | "tos"; toa
     },
   });
 
-  const rollbackMut = useMutation({
+  const rollbackMut = useMutation<any, unknown, number>({
     mutationFn: async (id: number) => (await api.post(`/admin/settings/${endpoint}/versions/${id}/rollback`, {})).data,
     onSuccess: (d: any) => {
       toast.success(d.message || "已回滚");
@@ -325,7 +325,7 @@ function ExportSection({ toast, qc, help }: { toast: ReturnType<typeof useToast>
   const exports = listQ.data != null ? listQ.data : (demo ? (statusFilter ? localExports.filter((r) => r.status === statusFilter) : localExports) : []);
   const stats = statsQ.data != null ? statsQ.data : (demo ? MOCK_EXPORT_STATS : null);
 
-  const processMut = useMutation({
+  const processMut = useMutation<any, unknown, number>({
     mutationFn: async (id: number) => (await api.post(`/admin/data-export/${id}/process`, {})).data,
     onSuccess: (d: any) => {
       toast.success(d.message || "已处理");
@@ -343,7 +343,7 @@ function ExportSection({ toast, qc, help }: { toast: ReturnType<typeof useToast>
     },
   });
 
-  const rejectMut = useMutation({
+  const rejectMut = useMutation<any, unknown, { id: number; reason: string }>({
     mutationFn: async ({ id, reason }: { id: number; reason: string }) => (await api.post(`/admin/data-export/${id}/reject`, { reason })).data,
     onSuccess: () => {
       toast.success("已拒绝");
@@ -362,7 +362,7 @@ function ExportSection({ toast, qc, help }: { toast: ReturnType<typeof useToast>
     },
   });
 
-  const resendMut = useMutation({
+  const resendMut = useMutation<any, unknown, number>({
     mutationFn: async (id: number) => (await api.post(`/admin/data-export/${id}/resend`, {})).data,
     onSuccess: (d: any) => toast.success(d.message || (d.data?.notification_sent ? "已发送" : "SMTP 未配置")),
     onError: (e: any, id?: number) => {

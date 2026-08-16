@@ -1,12 +1,16 @@
 /**
- * OAuth Routes — 第三方登录（GitHub 先行）
+ * OAuth Routes — 第三方登录 + 绑定管理
  *
  * 端点：
  * - GET /api/v1/auth/oauth/github/url — 生成跳转 GitHub 授权页的 URL
  * - GET /api/v1/auth/oauth/github/callback — 回调：换 token → 拉用户 → 绑定/自动注册 → 签发 JWT
+ * - GET  /api/v1/auth/oauth/bindings — 绑定列表（需登录）
+ * - POST /api/v1/auth/oauth/:provider/bind — 发起绑定（需登录，body { code }）
+ * - POST /api/v1/auth/oauth/:provider/unbind — 解绑（需登录）
  *
  * 配置缺失（GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET / OAUTH_REDIRECT_BASE）时
- * 两个端点均返回 503（OAUTH_NOT_CONFIGURED），不崩溃。
+ * 登录两个端点均返回 503（OAUTH_NOT_CONFIGURED），不崩溃。
+ * 绑定管理端点需 JWT 鉴权（jwtAuth preHandler，同 me.ts / 2fa.ts 用法）。
  *
  * @see newapi-gap-analysis.md Batch 2 任务 2.1
  * @module routes/oauth
@@ -14,14 +18,33 @@
 
 import type { FastifyInstance } from 'fastify';
 import crypto from 'crypto';
-import { createSession } from '../services/auth/jwt';
+import { createSession, verifyToken } from '../services/auth/jwt';
 import {
   getGitHubOAuthConfig,
   getGitHubOAuthUrl,
   handleGitHubCallback,
+  getUserOAuthBindings,
+  bindOAuthAccount,
+  unbindOAuthAccount,
   OAuthNotConfiguredError,
 } from '../services/auth/oauth';
-import { ValidationError } from '../lib/errors';
+import { UnauthorizedError, ValidationError } from '../lib/errors';
+
+// ── JWT 鉴权 preHandler：从 Authorization: Bearer 解析用户，注入 request.userContext ──
+// 与 me.ts / 2fa.ts 的 jwtAuth 同一模式（3cloud 未抽取公共鉴权插件，各域路由自行声明）
+async function jwtAuth(request: any, _reply: any) {
+  const authHeader = request.headers.authorization;
+  const token = authHeader?.split(' ')[1];
+  if (!token) throw new UnauthorizedError('Missing token');
+  const payload = verifyToken(token);
+  if (!payload) throw new UnauthorizedError('Invalid token');
+  request.userContext = payload;
+}
+
+/** 取当前登录用户 id（须在 jwtAuth 之后调用） */
+function userId(request: any): number {
+  return (request as any).userContext.userId;
+}
 
 export async function oauthRoutes(app: FastifyInstance) {
   // GET /api/v1/auth/oauth/github/url
@@ -57,5 +80,34 @@ export async function oauthRoutes(app: FastifyInstance) {
       expiresIn: result.tokens.expiresIn,
       user: result.user,
     });
+  });
+
+  // GET /api/v1/auth/oauth/bindings — 当前用户绑定列表（需登录）
+  app.get('/api/v1/auth/oauth/bindings', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const list = await getUserOAuthBindings(userId(request));
+    // 前端契约：{ data: [{ provider, open_id, email, bound_at }] }，无绑定返回空数组
+    return reply.send({ data: list });
+  });
+
+  // POST /api/v1/auth/oauth/:provider/bind — 已登录用户发起第三方绑定（需登录）
+  app.post('/api/v1/auth/oauth/:provider/bind', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const { provider } = request.params as { provider: string };
+    const body = (request.body ?? {}) as { code?: unknown };
+    if (typeof body.code !== 'string' || body.code.length === 0) {
+      throw new ValidationError('Missing OAuth code');
+    }
+
+    const result = await bindOAuthAccount({ userId: userId(request), provider, code: body.code });
+    // 前端契约：{ data: { bound: true, provider, open_id } }
+    return reply.send({ data: result });
+  });
+
+  // POST /api/v1/auth/oauth/:provider/unbind — 解绑当前用户对指定 provider 的绑定（需登录）
+  app.post('/api/v1/auth/oauth/:provider/unbind', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const { provider } = request.params as { provider: string };
+
+    const result = await unbindOAuthAccount({ userId: userId(request), provider });
+    // 前端契约：{ data: { unbound: true, provider } }
+    return reply.send({ data: result });
   });
 }

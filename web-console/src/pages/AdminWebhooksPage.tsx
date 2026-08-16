@@ -91,7 +91,7 @@ export default function AdminWebhooksPage() {
     },
   });
 
-  const delMut = useMutation({
+  const delMut = useMutation<any, unknown, number>({
     mutationFn: (id: number) => api.delete(`/admin/webhooks/${id}`),
     onSuccess: () => { toast.success("Webhook 已删除"); qc.invalidateQueries({ queryKey: ["admin/webhooks"] }); },
     onError: (e: any, id?: number) => {
@@ -105,7 +105,7 @@ export default function AdminWebhooksPage() {
     },
   });
 
-  const toggleMut = useMutation({
+  const toggleMut = useMutation<any, unknown, { id: number; isActive: boolean }>({
     mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) => api.put(`/admin/webhooks/${id}/toggle`, { isActive }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin/webhooks"] }),
     onError: (e: any, vars?: { id: number; isActive: boolean }) => {

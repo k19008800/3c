@@ -90,13 +90,13 @@ export default function AdminSupplierDetailPage() {
       key: "inputPrice",
       title: "成本价/1K",
       dataIndex: "inputPrice",
-      render: (v) => <span className="c3-rank-amount">¥{v ?? "0"}</span>,
+      render: (v) => <span className="c3-rank-amount">¥{(v ?? "0") as string}</span>,
     },
     {
       key: "outputPrice",
       title: "输出价/1K",
       dataIndex: "outputPrice",
-      render: (v) => <span className="c3-rank-amount">¥{v ?? "0"}</span>,
+      render: (v) => <span className="c3-rank-amount">¥{(v ?? "0") as string}</span>,
     },
     {
       key: "status",
@@ -132,7 +132,7 @@ export default function AdminSupplierDetailPage() {
       key: "currentBalance",
       title: "余额",
       dataIndex: "currentBalance",
-      render: (v) => (v ? <span className="c3-rank-amount">¥{v}</span> : "—"),
+      render: (v) => (v ? <span className="c3-rank-amount">¥{v as string}</span> : "—"),
     },
   ];
 
