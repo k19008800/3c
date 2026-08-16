@@ -22,7 +22,7 @@ export default function AdminSettingsPage() {
   const { toast } = useToast();
   const { pathname } = useLocation();
   // 依据路由映射初始 tab：/config/rate-limit→限流，其余（/config/site）→站点
-  const [tab, setTab] = useState<"site" | "rate" | "security" | "feature">(pathname.includes("/rate-limit") ? "rate" : "site");
+  const [tab, setTab] = useState<"site" | "rate" | "security" | "feature" | "api">(pathname.includes("/rate-limit") ? "rate" : "site");
   const [loading, setLoading] = useState(false);
 
   // Site settings
@@ -64,6 +64,9 @@ export default function AdminSettingsPage() {
   const [rechargeEnabled, setRechargeEnabled] = useState(true);
   const [withdrawEnabled, setWithdrawEnabled] = useState(true);
 
+  // API 服务（对外 API 域名 → OpenAI/Anthropic 双 base_url）
+  const [apiDomain, setApiDomain] = useState("api.unmisa.com");
+
   useEffect(() => {
     setLoading(true);
     api.get("/admin/settings").then(r => {
@@ -97,6 +100,7 @@ export default function AdminSettingsPage() {
       setRegistrationOpen(d.registration_open ?? true);
       setRechargeEnabled(d.recharge_enabled ?? true);
       setWithdrawEnabled(d.withdraw_enabled ?? true);
+      setApiDomain(d.api_domain ?? "api.unmisa.com");
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -122,6 +126,17 @@ export default function AdminSettingsPage() {
     await api.put("/admin/settings/features", { registration_open: registrationOpen, recharge_enabled: rechargeEnabled, withdraw_enabled: withdrawEnabled });
     toast.success("功能开关已保存");
   }
+  async function saveApi() {
+    await api.put("/admin/settings/api", { api_domain: apiDomain.trim() });
+    toast.success("API 域名已保存");
+  }
+
+  // 派生预览：域名或完整 origin → origin（含协议、去尾斜杠）
+  const apiOrigin = (() => {
+    const v = apiDomain.trim();
+    if (!v) return "https://api.unmisa.com";
+    return (v.includes("://") ? v : `https://${v}`).replace(/\/+$/, "");
+  })();
 
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#888" }}>加载中…</div>;
 
@@ -135,13 +150,13 @@ export default function AdminSettingsPage() {
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {(["site","rate","security","feature"] as const).map(t => (
+        {(["site","rate","security","feature","api"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
             padding: "8px 20px", borderRadius: 8, border: tab === t ? "2px solid #4f6ef7" : "1px solid var(--color-border)",
             background: tab === t ? "#eef2ff" : "var(--color-panel)", color: tab === t ? "#4f6ef7" : "#666",
             cursor: "pointer", fontWeight: 600, fontSize: 13,
           }}>
-            {t === "site" ? "🌐 站点设置" : t === "rate" ? "🚦 限流设置" : t === "security" ? "🛡️ 安全策略" : "🔧 功能开关"}
+            {t === "site" ? "🌐 站点设置" : t === "rate" ? "🚦 限流设置" : t === "security" ? "🛡️ 安全策略" : t === "feature" ? "🔧 功能开关" : "🔌 API 服务"}
           </button>
         ))}
       </div>
@@ -242,6 +257,29 @@ export default function AdminSettingsPage() {
           <div style={cfgRow}><span style={cfgLabel}>充值功能 <HelpIcon text="关闭后用户无法充值。" /></span><Toggle on={rechargeEnabled} onChange={setRechargeEnabled} /><span style={{ fontSize: 12, color: rechargeEnabled ? "#22c55e" : "#e53935" }}>{rechargeEnabled ? "✅ 启用" : "⛔ 关闭"}</span></div>
           <div style={cfgRow}><span style={cfgLabel}>提现功能 <HelpIcon text="关闭后代理商无法发起提现。" /></span><Toggle on={withdrawEnabled} onChange={setWithdrawEnabled} /><span style={{ fontSize: 12, color: withdrawEnabled ? "#22c55e" : "#e53935" }}>{withdrawEnabled ? "✅ 启用" : "⛔ 关闭"}</span></div>
           <button onClick={saveFeature} style={{ marginTop: 16, padding: "8px 24px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存功能开关</button>
+        </div>
+      )}
+
+      {tab === "api" && (
+        <div style={cfgSection}>
+          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}>🔌 对外 API 服务 <HelpIcon text="配置对外 API 网关域名（独立域名 api.&lt;host&gt;，对齐 DeepSeek 用法）。同域同时暴露 OpenAI 与 Anthropic 两套 SDK 兼容 base_url；保存后门户首页与用户接入引导实时生效。值可为域名（api.unmisa.com）或完整地址（http://localhost:3000）。" /></h3>
+          <div style={cfgRow}>
+            <span style={cfgLabel}>API 域名 <HelpIcon text="对外 API 网关域名。OpenAI base_url = https://&lt;此域名&gt;，Anthropic base_url = https://&lt;此域名&gt;/anthropic。" /></span>
+            <input style={{...cfgInput, width: 320}} value={apiDomain} onChange={e => setApiDomain(e.target.value)} placeholder="api.unmisa.com" />
+          </div>
+          <div style={{ margin: "16px 0 6px", fontSize: 13, fontWeight: 600, color: "#333" }}>
+            📡 对外接入地址（实时派生预览）<HelpIcon text="保存后用户侧接入引导将展示以下地址。" />
+          </div>
+          <div style={{ background: "#1e293b", borderRadius: 8, padding: 14, fontFamily: "monospace", fontSize: 12, color: "#e2e8f0", lineHeight: 1.9 }}>
+            <div>OpenAI base_url（SDK）&nbsp;&nbsp;: <span style={{ color: "#34d399" }}>{apiOrigin}/v1</span></div>
+            <div>Anthropic base_url（SDK）: <span style={{ color: "#34d399" }}>{apiOrigin}/anthropic</span></div>
+            <div>OpenAI 聊天端点&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <span style={{ color: "#fbbf24" }}>{apiOrigin}/v1/chat/completions</span></div>
+            <div>Anthropic 消息端点&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <span style={{ color: "#fbbf24" }}>{apiOrigin}/anthropic/v1/messages</span></div>
+          </div>
+          <div style={{ fontSize: 12, color: "#888", marginTop: 10 }}>
+            💡 生产环境：确认 DNS（api.&lt;host&gt; → 服务器）与 nginx vhost（deploy/api.unmisa.com.conf）已配置，并签发对应 SSL 证书。
+          </div>
+          <button onClick={saveApi} style={{ marginTop: 16, padding: "8px 24px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存 API 域名</button>
         </div>
       )}
     </div>

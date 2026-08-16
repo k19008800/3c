@@ -49,6 +49,30 @@ async function fetchSiteConfig(): Promise<SiteConfig> {
   return {};
 }
 
+/** 对外 API 接入地址（后台 系统设置 → API 服务 可配置 api_domain） */
+async function fetchApiConfig(): Promise<{
+  apiDomain: string;
+  openaiBaseUrl: string;
+  anthropicBaseUrl: string;
+  openaiChatUrl: string;
+  anthropicMessagesUrl: string;
+}> {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/public/api-config`, { cache: "no-store" });
+    if (res.ok) {
+      const body = await res.json();
+      if (body?.data) return body.data;
+    }
+  } catch {}
+  return {
+    apiDomain: "api.unmisa.com",
+    openaiBaseUrl: "https://api.unmisa.com/v1",
+    anthropicBaseUrl: "https://api.unmisa.com/anthropic",
+    openaiChatUrl: "https://api.unmisa.com/v1/chat/completions",
+    anthropicMessagesUrl: "https://api.unmisa.com/anthropic/v1/messages",
+  };
+}
+
 async function fetchStats(): Promise<Stats> {
   try {
     const res = await fetch(`${API_BASE}/api/v1/public/stats`, { cache: "no-store" });
@@ -111,10 +135,11 @@ export const metadata: Metadata = {
 
 // ===== 首页 =====
 export default async function HomePage() {
-  const [config, stats, pricing] = await Promise.all([
+  const [config, stats, pricing, apiConfig] = await Promise.all([
     fetchSiteConfig(),
     fetchStats(),
     fetchPricing(),
+    fetchApiConfig(),
   ]);
 
   const siteName = config.site_name ?? "3Cloud";
@@ -179,7 +204,7 @@ export default async function HomePage() {
             }}
           >
             <div style={{ color: "#94a3b8", fontSize: 11, marginBottom: 8 }}>$ 一键接入</div>
-            <div><span style={{ color: "#60a5fa" }}>curl</span> https://api.unmisa.com/api/v1<span style={{ color: "#fbbf24" }}>/chat/completions</span> \</div>
+            <div><span style={{ color: "#60a5fa" }}>curl</span> {apiConfig.openaiChatUrl} \</div>
             <div>&nbsp;&nbsp;-H <span style={{ color: "#34d399" }}>"Authorization: Bearer YOUR_API_KEY"</span> \</div>
             <div>&nbsp;&nbsp;-H <span style={{ color: "#34d399" }}>"Content-Type: application/json"</span> \</div>
             <div>&nbsp;&nbsp;-d <span style={{ color: "#34d399" }}>'{`{"model":"deepseek-chat","messages":[{"role":"user","content":"你好"}]}`}'</span></div>
@@ -304,17 +329,21 @@ export default async function HomePage() {
 
           {/* 代码块 */}
           <div style={{ background: "#1e293b", borderRadius: 10, padding: "24px 28px", fontFamily: "Consolas, Monaco, 'Courier New', monospace", fontSize: 13, lineHeight: 1.8, overflow: "auto" }}>
-            <div style={{ color: "#64748b", marginBottom: 4 }}># Python</div>
+            <div style={{ color: "#64748b", marginBottom: 4 }}># Python · OpenAI SDK（base_url = {apiConfig.openaiBaseUrl}）</div>
             <div><span style={{ color: "#fbbf24" }}>from</span> openai <span style={{ color: "#fbbf24" }}>import</span> <span style={{ color: "#60a5fa" }}>OpenAI</span></div>
             <div style={{ marginTop: 8 }}><span style={{ color: "#60a5fa" }}>client</span> = OpenAI(</div>
             <div>&nbsp;&nbsp;api_key=<span style={{ color: "#34d399" }}>"YOUR_API_KEY"</span>,</div>
-            <div>&nbsp;&nbsp;base_url=<span style={{ color: "#34d399" }}>"https://api.unmisa.com/api/v1"</span></div>
+            <div>&nbsp;&nbsp;base_url=<span style={{ color: "#34d399" }}>"{apiConfig.openaiBaseUrl}"</span></div>
             <div>)</div>
             <div style={{ marginTop: 8 }}><span style={{ color: "#60a5fa" }}>response</span> = client.chat.completions.create(</div>
             <div>&nbsp;&nbsp;model=<span style={{ color: "#34d399" }}>"deepseek-chat"</span>,</div>
             <div>&nbsp;&nbsp;messages=[{`{"role": "user", "content": "你好"}`}]</div>
             <div>)</div>
             <div style={{ marginTop: 8 }}><span style={{ color: "#fbbf24" }}>print</span>(response.choices[0].message.content)</div>
+            <div style={{ marginTop: 16, color: "#64748b", borderTop: "1px solid #334155", paddingTop: 12 }}># Anthropic SDK（base_url = {apiConfig.anthropicBaseUrl}，支持 tool_use / 流式）</div>
+            <div><span style={{ color: "#fbbf24" }}>from</span> anthropic <span style={{ color: "#fbbf24" }}>import</span> <span style={{ color: "#60a5fa" }}>Anthropic</span></div>
+            <div><span style={{ color: "#60a5fa" }}>client</span> = Anthropic(base_url=<span style={{ color: "#34d399" }}>"{apiConfig.anthropicBaseUrl}"</span>, api_key=<span style={{ color: "#34d399" }}>"YOUR_API_KEY"</span>)</div>
+            <div>msg = client.messages.create(model=<span style={{ color: "#34d399" }}>"deepseek-chat"</span>, max_tokens=1024, messages=[{`{"role": "user", "content": "你好"}`}])</div>
           </div>
         </div>
       </section>
@@ -367,7 +396,7 @@ export default async function HomePage() {
             { q: "如何计费？", a: "按 Token 计费，输入和输出分别计价。不同模型价格不同，用多少付多少，无月费无最低消费。具体每个模型的标价请查看定价页面。" },
             { q: "支持哪些模型？", a: "我们支持对话（Chat）、嵌入（Embedding）、图像（Image）、音频（Audio）、视频（Video）等多种类别的模型，覆盖 DeepSeek、Qwen、GLM、GPT、Claude、Gemini 等主流供应商。" },
             { q: "怎么开始使用？", a: "注册账号 → 实名认证 → 创建 API Key → 使用 OpenAI 兼容接口调用。新用户注册即送 ¥5 试用额度。详细文档请查看开发者文档。" },
-            { q: "是否兼容 OpenAI SDK？", a: `完全兼容。只需将 SDK 的 base_url 指向 ${API_BASE.includes("localhost") ? "https://api.unmisa.com" : API_BASE}/api/v1，搭配 3Cloud API Key 即可使用。` },
+            { q: "是否兼容 OpenAI SDK？", a: `完全兼容。只需将 SDK 的 base_url 指向 ${apiConfig.openaiBaseUrl}，搭配 3Cloud API Key 即可使用（Anthropic SDK 用 ${apiConfig.anthropicBaseUrl}）。` },
             { q: "供应商故障时怎么办？", a: "3Cloud 的智能路由引擎会自动检测供应商健康状态，当某个供应商异常时自动切换到其他可用供应商，保障服务的高可用性。" },
             { q: "企业用户有优惠吗？", a: "有。企业用户可以联系销售获取专属折扣方案、定制化定价和优先技术支持。请联系 {config.site_contact_email ?? 'support@unmisa.com'}。" },
           ].map((faq) => (

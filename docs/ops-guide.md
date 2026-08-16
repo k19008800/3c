@@ -35,8 +35,14 @@
 | 域名 | 指向 | 说明 |
 |------|------|------|
 | `unmisa.com` | 生产服1 | Portal 首页 / 控制台 |
-| `api.unmisa.com` | 生产服1 | **独立 API 网关域名**（vhost：`deploy/api.unmisa.com.conf`），OpenAI base_url=`https://api.unmisa.com`，Anthropic base_url=`https://api.unmisa.com/anthropic` |
+| `api.unmisa.com` | 生产服1 | **独立 API 网关域名**（vhost：`deploy/api.unmisa.com.conf`），OpenAI base_url=`https://api.unmisa.com/v1`，Anthropic base_url=`https://api.unmisa.com/anthropic` |
 | `tokens.unmisa.com` | 生产服1 | 预留 |
+
+> **API 域名后台配置（2026-08-17）**：API 网关域名存 `system_config.api_domain`，可在管理后台
+> 「系统设置 → API 服务」修改（PUT `/api/v1/admin/settings/api`）。门户首页、API Key 页接入引导
+> 经 `GET /api/v1/public/api-config` 实时读取派生地址（OpenAI base_url / Anthropic base_url）。
+> 改域名后需同步：① DNS（api.&lt;host&gt; → 服务器）② nginx vhost（`deploy/api.unmisa.com.conf` 的 server_name）
+> ③ SSL 证书（对应域名）。
 
 ---
 

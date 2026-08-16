@@ -70,6 +70,8 @@ const SETTING_DEFAULTS: Record<string, { value: string; type: 'string' | 'number
   registration_open: { value: 'true', type: 'bool' },
   recharge_enabled: { value: 'true', type: 'bool' },
   withdraw_enabled: { value: 'true', type: 'bool' },
+  // api — 对外 API 网关域名（独立域名 api.<host>，OpenAI/Anthropic 双 base_url 派生）
+  api_domain: { value: 'api.unmisa.com', type: 'string' },
   // smtp
   smtp_enabled: { value: 'false', type: 'bool' },
   smtp_host: { value: '', type: 'string' },
@@ -199,6 +201,24 @@ export async function adminSettingsRoutes(app: FastifyInstance) {
     }
     await setConfigs(request.userContext?.userId ?? null, values);
     await writeAudit(request, 'features', values);
+    return reply.send({ data: { ok: true } });
+  });
+
+  /**
+   * PUT /api/v1/admin/settings/api — 对外 API 域名（OpenAI/Anthropic 双 base_url 派生源）
+   *
+   * 值可为域名（api.unmisa.com）或完整 origin（http://localhost:3000）。
+   * 门户/控制台通过 GET /api/v1/public/api-config 读取派生地址。
+   */
+  app.put('/api/v1/admin/settings/api', { preHandler: [adminAuth] }, async (request: any, reply) => {
+    const b = (request.body || {}) as Record<string, unknown>;
+    const allowed = ['api_domain'];
+    const values: Record<string, string> = {};
+    for (const k of allowed) {
+      if (b[k] !== undefined) values[k] = String(b[k]);
+    }
+    await setConfigs(request.userContext?.userId ?? null, values);
+    await writeAudit(request, 'api', values);
     return reply.send({ data: { ok: true } });
   });
 

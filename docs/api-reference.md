@@ -13,7 +13,7 @@
 
 | 项目 | 值 |
 |------|-----|
-| Base URL（OpenAI 兼容） | `https://api.unmisa.com` |
+| Base URL（OpenAI 兼容） | `https://api.unmisa.com/v1` |
 | Base URL（Anthropic 兼容） | `https://api.unmisa.com/anthropic` |
 | 协议 | HTTPS |
 | 格式 | JSON（流式：SSE / Anthropic events） |
@@ -21,8 +21,10 @@
 | 兼容性 | 兼容 OpenAI Chat Completions 与 Anthropic Messages API 格式 |
 
 > **API 域名**：`api.unmisa.com` 是独立对外 API 网关域名（nginx vhost：`deploy/api.unmisa.com.conf`），
-> 与官网/控制台（unmisa.com）分离。OpenAI SDK 用 `https://api.unmisa.com`，
-> Anthropic SDK 用 `https://api.unmisa.com/anthropic`（SDK 会自动拼接 `/v1/messages`）。
+> 与官网/控制台（unmisa.com）分离。**该域名可在管理后台配置**：系统设置 → API 服务（`api_domain`，
+> 存 `system_config`），门户首页与用户接入引导（API Key 页）实时读取展示。
+> OpenAI SDK 用 `https://api.unmisa.com/v1`（SDK 自行拼接 `/chat/completions`），
+> Anthropic SDK 用 `https://api.unmisa.com/anthropic`（SDK 自行拼接 `/v1/messages`）。
 > 本地开发：`http://localhost:3000`（后端直连）或 `http://localhost:5177`（统一入口代理）。
 
 ### 1.2 认证方式
@@ -56,7 +58,7 @@ curl https://api.unmisa.com/anthropic/v1/messages \
 ```python
 # OpenAI SDK
 from openai import OpenAI
-client = OpenAI(base_url="https://api.unmisa.com", api_key="3c-xxx")
+client = OpenAI(base_url="https://api.unmisa.com/v1", api_key="3c-xxx")
 resp = client.chat.completions.create(model="deepseek-chat", messages=[{"role": "user", "content": "Hi"}])
 
 # Anthropic SDK

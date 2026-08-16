@@ -135,7 +135,6 @@ BT_CONSUMPTION:   count=1 | sum=-0.000262
 **目标**（对齐 DeepSeek）：独立 API 域名 `api.<host>` 同域暴露两套 base_url：
 - OpenAI：`https://api.<host>/v1`（`POST /v1/chat/completions`）
 - Anthropic：`https://api.<host>/anthropic`（`POST /anthropic/v1/messages`）
-
 **实现**（新增文件）：
 | 文件 | 内容 |
 |---|---|
@@ -161,6 +160,28 @@ client = OpenAI(base_url="https://api.<host>/v1", api_key="3c_xxx")
 client = Anthropic(base_url="https://api.<host>/anthropic", api_key="3c_xxx")
 # 本地开发：<host> 换成 localhost:5177（统一入口）或 localhost:3000（后端直连）
 ```
+
+---
+
+## 六.6 API 域名后台可配置（新增功能 ✅）
+
+**需求**：`api.<host>` 域名提供的服务，后台要支持设置。
+
+**实现**：
+| 端 | 内容 |
+|---|---|
+| 后端 `admin-settings.ts` | `system_config` 新增 `api_domain` 键（默认 `api.unmisa.com`）+ `PUT /api/v1/admin/settings/api`（写操作审计） |
+| 后端 `public.ts` | `GET /api/v1/public/api-config`：按 `api_domain` 派生全套接入地址（OpenAI base_url=`<origin>/v1`、Anthropic base_url=`<origin>/anthropic`、聊天/消息端点），门户与控制台统一读取 |
+| 后端 `services/config/api-domain.ts` | 纯函数 `buildApiConfig/normalizeOrigin`（域名→https、完整 origin 保留协议、去尾斜杠、空值回退默认），单测 7 例 |
+| 控制台 `AdminSettingsPage` | 系统设置新增「🔌 API 服务」tab：API 域名输入 + 双 base_url 实时派生预览 + 保存 |
+| 控制台 `ApiKeysPage` | 顶部新增「接入地址」块（OpenAI/Anthropic base_url + 一键复制），用户接入引导不再硬编码 |
+| 门户 `page.tsx` | 首页 curl / Python OpenAI SDK / **新增 Anthropic SDK 示例** / FAQ 全部改为读取 api-config，替换硬编码 `api.unmisa.com` |
+
+**验证**（真实链路）：
+- `GET /admin/settings` 含 `api_domain=api.unmisa.com` ✅；`GET /public/api-config` 派生正确 ✅
+- `PUT /admin/settings/api` 改为 `gateway.local.test` → `GET /public/api-config` 实时反映（openai=…/v1, anthropic=…/anthropic）✅，随后恢复默认
+- 门户落地页 SSR HTML 渲染配置域名（curl 示例 / OpenAI base_url / Anthropic 示例 / FAQ 全命中）✅
+- 全量：vitest **463/463**（+7）、api tsc 0 错、web-console typecheck 0 错、web-portal typecheck 0 错
 
 ---
 

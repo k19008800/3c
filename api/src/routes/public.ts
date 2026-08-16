@@ -18,6 +18,7 @@ import { db, schema } from '../db';
 import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import { isWindowParam, foldModelStats, activeModelCatalog, buildModelStat } from '../services/marketplace/health-queries';
 import { HEALTH_ORDER } from '../lib/latency';
+import { buildApiConfig, DEFAULT_API_DOMAIN } from '../services/config/api-domain';
 
 /** 公开暴露的 site_* keys（见 3cloud-portal-ref §1.3，12 个） */
 const SITE_CONFIG_WHITELIST = [
@@ -56,6 +57,26 @@ export async function publicRoutes(app: FastifyInstance) {
     for (const r of rows) config[r.key] = r.value;
 
     return reply.send(config);
+  });
+
+  /**
+   * GET /api/v1/public/api-config — 对外 API 接入地址（OpenAI/Anthropic 双 base_url）
+   *
+   * 数据源：system_config.api_domain（管理后台 → 系统设置 → API 服务 可改）。
+   * 门户首页 / 控制台接入引导据此渲染，不再硬编码域名。
+   */
+  app.get('/api/v1/public/api-config', async (_request, reply) => {
+    let apiDomain: string | null = null;
+    try {
+      const [row] = await db.select({ value: schema.systemConfig.value })
+        .from(schema.systemConfig)
+        .where(eq(schema.systemConfig.key, 'api_domain'))
+        .limit(1);
+      apiDomain = row?.value ?? null;
+    } catch {
+      /* 查询失败 → 默认域名 */
+    }
+    return reply.send({ data: buildApiConfig(apiDomain ?? DEFAULT_API_DOMAIN) });
   });
 
   /** GET /api/v1/public/models — 公开模型目录（有 active 销售定价的模型） */

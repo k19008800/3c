@@ -61,6 +61,17 @@ export default function ApiKeysPage() {
     queryFn: async () => (await api.get("/me/api-keys")).data,
   });
 
+  // 对外接入地址（后台 系统设置 → API 服务 配置的 api_domain 派生）
+  const { data: apiConfig } = useQuery<{
+    openaiBaseUrl: string;
+    anthropicBaseUrl: string;
+    openaiChatUrl: string;
+    anthropicMessagesUrl: string;
+  }>({
+    queryKey: ["api-config"],
+    queryFn: async () => (await api.get("/public/api-config")).data,
+  });
+
   const createMutation = useMutation({
     mutationFn: async () => {
       const body: any = { name: newName, mode: newMode };
@@ -225,6 +236,29 @@ export default function ApiKeysPage() {
           <HelpIcon text="管理 API 调用密钥。支持 3 种权限模式和 IP 白名单" level="page" />
         </h2>
       </div>
+
+      {/* 接入地址（OpenAI / Anthropic 双 base_url，来自后台配置） */}
+      {apiConfig && (
+        <div style={{ background: "#1e293b", borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontFamily: "monospace", fontSize: 12, color: "#e2e8f0", lineHeight: 1.9 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", color: "#94a3b8", fontFamily: "system-ui, sans-serif", marginBottom: 4 }}>
+            <span>🔌 接入地址</span>
+            <span style={{ fontSize: 11 }}>（后台 系统设置 → API 服务 可配置）</span>
+          </div>
+          <div>
+            <span style={{ color: "#94a3b8" }}>OpenAI base_url&nbsp;&nbsp;: </span>
+            <span style={{ color: "#34d399" }}>{apiConfig.openaiBaseUrl}</span>{" "}
+            <CopyButton text={apiConfig.openaiBaseUrl} />
+          </div>
+          <div>
+            <span style={{ color: "#94a3b8" }}>Anthropic base_url: </span>
+            <span style={{ color: "#34d399" }}>{apiConfig.anthropicBaseUrl}</span>{" "}
+            <CopyButton text={apiConfig.anthropicBaseUrl} />
+          </div>
+          <div style={{ color: "#64748b" }}>
+            聊天端点：{apiConfig.openaiChatUrl} ｜ {apiConfig.anthropicMessagesUrl}
+          </div>
+        </div>
+      )}
 
       {/* 工具栏 */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>

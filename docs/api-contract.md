@@ -10,8 +10,9 @@
 |----|----|
 | 统一入口（本地） | `http://localhost:5177`（web-portal → `/api/*`、`/v1/*`、`/anthropic/*` 代理到 3000，`/app/*` 静态托管 web-console） |
 | 对外 API 域名（生产） | `https://api.<host>`（独立 vhost，见 `deploy/api.unmisa.com.conf`） |
-| OpenAI 兼容 base_url | `https://api.<host>/v1`（`POST /v1/chat/completions`） |
+| OpenAI 兼容 base_url | `https://api.<host>/v1`（`POST /v1/chat/completions`；OpenAI SDK base_url 语义含 `/v1`） |
 | Anthropic 兼容 base_url | `https://api.<host>/anthropic`（`POST /anthropic/v1/messages`，Anthropic SDK 自动拼 `/v1/messages`） |
+| **API 域名配置** | **后台可设置**：系统设置 → API 服务（`system_config.api_domain`，PUT `/admin/settings/api`）；门户/控制台经 `GET /public/api-config` 读取派生地址 |
 | API baseURL（前端） | 前端 `api` 客户端 baseURL = `/api/v1`（web-console [lib/api.ts](../web-console/src/lib/api.ts)） |
 | 后端前缀 | 业务路由一律挂 `/api/v1/...`；OpenAI 兼容路由挂 `/v1/...`（无 `/api` 前缀）；Anthropic 兼容挂 `/anthropic/...` |
 | 认证 | JWT `Authorization: Bearer <accessToken>`；OpenAI 兼容用 API Key `Bearer 3c_...`；Anthropic 兼容用 `x-api-key: 3c_...`（也接受 Bearer） |
