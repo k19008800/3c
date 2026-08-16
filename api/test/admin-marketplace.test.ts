@@ -74,8 +74,10 @@ describe('Model Marketplace API', () => {
     ]);
 
     // 对话留痕：A 20 成功(200ms) + 2 失败(1 个 500 / 1 个 429, 150ms)；B 10 成功(300ms)
+    // ⚠️ t0 锚定当前 5min 桶起点 +1s：若用 now-60s，查询落在桶边界前 60s 内时
+    //    t0 会落入上一桶，超出路由 5m 窗口（bucket_start >= now-5min）→ traffic 0 假失败。
     const now = Date.now();
-    const t0 = new Date(now - 60_000);
+    const t0 = new Date(bucketStartFrom(now) + 1000);
     const rows: Array<Record<string, unknown>> = [];
     let i = 0;
     const push = (supplierId: number, supplierModelId: number, status: string, latencyMs: number, errorCode: string | null) => {

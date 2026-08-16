@@ -115,14 +115,14 @@ test.describe("3cloud 三角色全流程（浏览器）", () => {
   test("④ 后台管理员：财务工作台 + 消费追踪", async ({ page }) => {
     await login(page, ADMIN.email, ADMIN.password, /\/app\/admin\//);
 
-    // 财务工作台
+    // 财务工作台（页面标题 h2，含 [?] 帮助按钮 → 用 heading role 避免与侧栏链接歧义）
     await page.goto("/app/admin/finance/dashboard");
-    await expect(page.getByText("财务工作台")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /财务工作台/ })).toBeVisible();
     console.log("[④] 财务工作台可访问");
 
     // 消费追踪（用户调度产生的消费）
     await page.goto("/app/admin/consumption/tracking");
-    await expect(page.getByText("消费追踪")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /消费追踪/ })).toBeVisible();
     console.log("[④] 消费追踪页可访问");
   });
 
