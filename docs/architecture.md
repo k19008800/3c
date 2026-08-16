@@ -149,6 +149,18 @@ graph TB
     NGX2 -.->|备用| PM2
 ```
 
+> **对外 API 域名拓扑（2026-08-17 定稿）**：`api.unmisa.com` 为**独立 API 网关域名**（nginx vhost 见
+> `deploy/api.unmisa.com.conf`，与官网 unmisa.com 分离），同域同时暴露两套 SDK 兼容入口：
+>
+> | 客户端 | base_url | 端点 |
+> |---|---|---|
+> | OpenAI SDK | `https://api.unmisa.com` | `POST /v1/chat/completions`（+ /v1/models、/v1/completions、/v1/embeddings） |
+> | Anthropic SDK | `https://api.unmisa.com/anthropic` | `POST /anthropic/v1/messages`（+ /anthropic/v1/models） |
+>
+> 两套入口经同一网关链路（鉴权 → 翻译 → 渠道选择 → 真实上游 → 记账/扣费/留痕），
+> 计费口径一致。本地开发等价入口：后端直连 `http://localhost:3000`，统一入口 `http://localhost:5177`。
+> 详见 `docs/api-contract.md` §0 / `docs/api-reference.md`。
+
 ### 2.1 技术栈
 
 | 层级 | 技术 | 版本 | 说明 |

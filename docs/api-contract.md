@@ -8,12 +8,15 @@
 
 | 项 | 值 |
 |----|----|
-| 统一入口 | `http://localhost:5177`（web-portal → `/api/*` 代理到 3000，`/app/*` 代理到 5175） |
-| API baseURL | 前端 `api` 客户端 baseURL = `/api/v1`（web-console [lib/api.ts](../web-console/src/lib/api.ts)） |
-| 后端前缀 | 业务路由一律挂 `/api/v1/...`；OpenAI 兼容路由挂 `/v1/...`（无 `/api` 前缀） |
-| 认证 | JWT `Authorization: Bearer <accessToken>`；OpenAI 兼容用 API Key `Bearer sk-.../3c_...` |
+| 统一入口（本地） | `http://localhost:5177`（web-portal → `/api/*`、`/v1/*`、`/anthropic/*` 代理到 3000，`/app/*` 静态托管 web-console） |
+| 对外 API 域名（生产） | `https://api.<host>`（独立 vhost，见 `deploy/api.unmisa.com.conf`） |
+| OpenAI 兼容 base_url | `https://api.<host>/v1`（`POST /v1/chat/completions`） |
+| Anthropic 兼容 base_url | `https://api.<host>/anthropic`（`POST /anthropic/v1/messages`，Anthropic SDK 自动拼 `/v1/messages`） |
+| API baseURL（前端） | 前端 `api` 客户端 baseURL = `/api/v1`（web-console [lib/api.ts](../web-console/src/lib/api.ts)） |
+| 后端前缀 | 业务路由一律挂 `/api/v1/...`；OpenAI 兼容路由挂 `/v1/...`（无 `/api` 前缀）；Anthropic 兼容挂 `/anthropic/...` |
+| 认证 | JWT `Authorization: Bearer <accessToken>`；OpenAI 兼容用 API Key `Bearer 3c_...`；Anthropic 兼容用 `x-api-key: 3c_...`（也接受 Bearer） |
 | 分页 | `{ data, pagination: { page, pageSize, total, totalPages } }` |
-| 错误 | `{ error: { message, type, code } }` |
+| 错误 | 业务 `{ error: { message, type, code } }`；Anthropic 兼容 `{ type: "error", error: { type, message } }` |
 
 **对齐原则**：前端先写页面 → 页面定了调用路径与响应形状 → 后端必须照做。若后端路由与前端不符，改**后端**，不改前端（今天的前端是成果）。
 
@@ -46,6 +49,17 @@
 | POST | `/v1/chat/completions` | OpenAI 兼容（stream/非 stream），**有 mock 回退** | chat.ts ✅ |
 | POST | `/api/v1/v1/chat/completions` | 同上（web-console 内部路径别名） | chat.ts ✅ |
 | GET | `/v1/models` | OpenAI 模型列表 | chat.ts ✅ |
+| POST | `/anthropic/v1/messages` | **Anthropic Messages API 兼容**（stream/非 stream，x-api-key 鉴权），**有 mock 回退** | anthropic.ts ✅ |
+| GET | `/anthropic/v1/models` | Anthropic 模型列表（`{ data: [{ type, id, display_name }] }`） | anthropic.ts ✅ |
+
+**SDK 接入（对齐 DeepSeek 用法）**
+```python
+# OpenAI SDK
+client = OpenAI(base_url="https://api.<host>/v1", api_key="3c_xxx")
+# Anthropic SDK
+client = Anthropic(base_url="https://api.<host>/anthropic", api_key="3c_xxx")
+# 本地开发：把 https://api.<host> 换成 http://localhost:5177（统一入口）或 http://localhost:3000（后端直连）
+```
 
 **MVP 业务规则**
 - 注册自动建余额账户并赠送 `¥10.00` 体验金（无充值渠道下让"余额扣减"可演示）。

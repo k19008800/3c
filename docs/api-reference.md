@@ -13,25 +13,63 @@
 
 | 项目 | 值 |
 |------|-----|
-| Base URL | `https://api.unmisa.com` |
+| Base URL（OpenAI 兼容） | `https://api.unmisa.com` |
+| Base URL（Anthropic 兼容） | `https://api.unmisa.com/anthropic` |
 | 协议 | HTTPS |
-| 格式 | JSON |
+| 格式 | JSON（流式：SSE / Anthropic events） |
 | 编码 | UTF-8 |
-| 兼容性 | 兼容 OpenAI Chat Completions 格式 |
+| 兼容性 | 兼容 OpenAI Chat Completions 与 Anthropic Messages API 格式 |
+
+> **API 域名**：`api.unmisa.com` 是独立对外 API 网关域名（nginx vhost：`deploy/api.unmisa.com.conf`），
+> 与官网/控制台（unmisa.com）分离。OpenAI SDK 用 `https://api.unmisa.com`，
+> Anthropic SDK 用 `https://api.unmisa.com/anthropic`（SDK 会自动拼接 `/v1/messages`）。
+> 本地开发：`http://localhost:3000`（后端直连）或 `http://localhost:5177`（统一入口代理）。
 
 ### 1.2 认证方式
 
 **API Key 认证**（推荐）
 
 ```bash
+# OpenAI 兼容（Authorization: Bearer）
 curl https://api.unmisa.com/v1/chat/completions \
-  -H "Authorization: Bearer sk-3c-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
+  -H "Authorization: Bearer 3c-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gpt-4o",
     "messages": [{"role": "user", "content": "Hello"}]
   }'
+
+# Anthropic 兼容（x-api-key，Anthropic SDK 风格）
+curl https://api.unmisa.com/anthropic/v1/messages \
+  -H "x-api-key: 3c-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
+  -H "anthropic-version: 2023-06-01" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "deepseek-chat",
+    "max_tokens": 1024,
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'
 ```
+
+**SDK 接入示例**
+
+```python
+# OpenAI SDK
+from openai import OpenAI
+client = OpenAI(base_url="https://api.unmisa.com", api_key="3c-xxx")
+resp = client.chat.completions.create(model="deepseek-chat", messages=[{"role": "user", "content": "Hi"}])
+
+# Anthropic SDK
+from anthropic import Anthropic
+client = Anthropic(base_url="https://api.unmisa.com/anthropic", api_key="3c-xxx")
+msg = client.messages.create(model="deepseek-chat", max_tokens=1024,
+                             messages=[{"role": "user", "content": "Hi"}])
+```
+
+**Anthropic 兼容支持范围**：`system` 参数（string/内容块）、文本/image（base64/url）内容块、
+`tool_use`/`tool_result`（映射 OpenAI tool_calls/tool 消息）、`tools`（input_schema）、
+`stop_sequences`、流式（message_start → content_block_delta → message_delta → message_stop 事件序列）。
+请求经网关翻译后转发真实上游（OpenAI 兼容通道），统一记账/扣费/留痕，与 OpenAI 入口完全一致。
 
 **JWT 认证**（用户端 Web 会话）
 

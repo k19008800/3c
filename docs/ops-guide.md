@@ -34,8 +34,8 @@
 
 | 域名 | 指向 | 说明 |
 |------|------|------|
-| `unmisa.com` | 生产服1 | Portal 首页 |
-| `api.unmisa.com` | 生产服1 | API 端点 |
+| `unmisa.com` | 生产服1 | Portal 首页 / 控制台 |
+| `api.unmisa.com` | 生产服1 | **独立 API 网关域名**（vhost：`deploy/api.unmisa.com.conf`），OpenAI base_url=`https://api.unmisa.com`，Anthropic base_url=`https://api.unmisa.com/anthropic` |
 | `tokens.unmisa.com` | 生产服1 | 预留 |
 
 ---
