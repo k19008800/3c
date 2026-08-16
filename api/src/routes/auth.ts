@@ -13,6 +13,7 @@ import {
   createSession,
   invalidateSession,
   refreshAccessToken,
+  generate2faTempToken,
 } from '../services/auth/jwt';
 import { AppError, UnauthorizedError, ValidationError } from '../lib/errors';
 import { initBalance, addBalance, getBalance } from '../services/billing/balance';
@@ -108,6 +109,17 @@ export async function authRoutes(app: FastifyInstance) {
     const user = users[0]!;
     if (user.status !== 'active') {
       throw new UnauthorizedError('Account is disabled');
+    }
+
+    // 2FA 已启用：先签发 5 分钟临时令牌，第二步 /2fa/verify 校验通过后才发正式 JWT
+    // （未启用 2FA 的用户路径完全不变，直接走下方原有逻辑）
+    if (user.twoFactorEnabled === '1') {
+      const tempToken = generate2faTempToken({
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      });
+      return reply.send({ twoFactorRequired: true, tempToken });
     }
 
     const tokens = generateTokenPair({ userId: user.id, email: user.email, role: user.role });

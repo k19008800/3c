@@ -20,6 +20,14 @@ export interface TokenPair {
   expiresIn: number;
 }
 
+/** 2FA 第二步确认用的临时令牌 payload（login 签发，5 分钟有效） */
+export interface TwoFactorTempPayload {
+  purpose: '2fa';
+  userId: number;
+  email: string;
+  role: string;
+}
+
 /**
  * Generate an access token (short-lived, 15 min)
  */
@@ -51,6 +59,34 @@ export function generateTokenPair(payload: TokenPayload, secret?: string): Token
 export function verifyToken(token: string, secret?: string): TokenPayload | null {
   try {
     return jwt.verify(token, secret || process.env.JWT_SECRET || DEFAULT_SECRET) as TokenPayload;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 签发 2FA 临时令牌（无状态 JWT，5 分钟过期）。
+ *
+ * login 检测到用户启用 2FA 时签发，客户端需在 /2fa/verify 中
+ * 用它 + TOTP/备用码换取正式 JWT。payload 带 purpose: '2fa' 防止与普通令牌混淆。
+ */
+export function generate2faTempToken(payload: Omit<TwoFactorTempPayload, 'purpose'>, secret?: string): string {
+  return jwt.sign(
+    { ...payload, purpose: '2fa' },
+    secret || process.env.JWT_SECRET || DEFAULT_SECRET,
+    { expiresIn: '5m' },
+  );
+}
+
+/**
+ * 校验 2FA 临时令牌；purpose 必须为 '2fa'，否则视为无效。
+ *
+ * @returns 解析后的 payload，无效/过期返回 null
+ */
+export function verify2faTempToken(token: string, secret?: string): TwoFactorTempPayload | null {
+  try {
+    const payload = jwt.verify(token, secret || process.env.JWT_SECRET || DEFAULT_SECRET) as TwoFactorTempPayload;
+    return payload.purpose === '2fa' ? payload : null;
   } catch {
     return null;
   }

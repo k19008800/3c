@@ -27,6 +27,13 @@
       "when": 1787900000000,
       "tag": "0003_agent_commission_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786872407479,
+      "tag": "0004_oauth_bindings",
+      "breakpoints": true
     }
   ],
   "version": "7",

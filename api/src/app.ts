@@ -9,6 +9,8 @@ import { healthRoutes } from './routes/health';
 import { chatRoutes } from './routes/chat';
 import { openaiCompatRoutes } from './routes/openai-compat';
 import { authRoutes } from './routes/auth';
+import { oauthRoutes } from './routes/oauth';
+import { twoFactorRoutes } from './routes/2fa';
 import { apiKeyRoutes } from './routes/apikeys';
 import { supplierRoutes } from './routes/suppliers';
 import { adminCustomerRoutes } from './routes/admin-customers';
@@ -29,10 +31,12 @@ import { adminWithdrawalRoutes } from './routes/admin-withdrawals';
 import { adminConversationRecordsRoutes } from './routes/admin-conversation-records';
 import { adminMarketplaceRoutes } from './routes/admin-marketplace';
 import { adminConsumptionRoutes } from './routes/admin-consumption';
+import { adminGroupRoutes } from './routes/admin-groups';
 import { startPriceNotificationScheduler } from './services/price-notification';
 import { startCommissionBackfillScheduler } from './services/agent/commission-backfill';
 import { startRetentionScheduler } from './services/audit/retention';
 import { startModelHealthAggregator } from './services/marketplace/model-health-aggregator';
+import { ensureDefaultGroup } from './services/groups';
 
 let env: Env;
 
@@ -70,6 +74,8 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   await app.register(chatRoutes);
   await app.register(openaiCompatRoutes);
   await app.register(authRoutes);
+  await app.register(oauthRoutes);
+  await app.register(twoFactorRoutes);
   await app.register(apiKeyRoutes);
   await app.register(supplierRoutes);
   await app.register(adminCustomerRoutes);
@@ -90,6 +96,7 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   await app.register(adminConversationRecordsRoutes);
   await app.register(adminMarketplaceRoutes);
   await app.register(adminConsumptionRoutes);
+  await app.register(adminGroupRoutes);
 
   return app;
 }
@@ -102,6 +109,13 @@ export async function startApp(opts?: { envOverrides?: Record<string, string> })
   await app.listen({ port, host });
   app.log.info(`🚀 3cloud API running at http://${host}:${port}`);
   app.log.info(`📖 Swagger docs at http://${host}:${port}/docs`);
+
+  // 启动时确保 default 分组存在（幂等；DB 暂不可用只告警，不阻断启动）
+  try {
+    await ensureDefaultGroup();
+  } catch (err) {
+    app.log.warn({ err }, '确保默认分组失败（服务继续启动）');
+  }
 
   // 常驻调度器：价格变更每小时分发 + 周一 08:00 周报（UTC+8）
   startPriceNotificationScheduler(app.log);

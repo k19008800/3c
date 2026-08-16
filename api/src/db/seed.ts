@@ -176,6 +176,24 @@ async function main() {
     console.log('✅ webhook_retry_config 默认回调策略已创建');
   }
 
+  // ── user_groups：默认分组（新注册用户自动归属；幂等，按 name 去重）──
+  const [defaultGroup] = await db
+    .select({ id: schema.userGroups.id }).from(schema.userGroups)
+    .where(eq(schema.userGroups.name, 'default')).limit(1);
+  if (!defaultGroup) {
+    await db.insert(schema.userGroups).values({
+      name: 'default',
+      description: '默认分组（新注册用户自动归属）',
+      pricingGroup: 'default',
+      modelWhitelist: [],
+      isDefault: true,
+      status: 'active',
+    });
+    console.log('✅ user_groups 默认分组已创建');
+  } else {
+    console.log('✅ user_groups 默认分组已存在，跳过');
+  }
+
   // ── model_rate_limits：5 个原型模型（硬顶 + 按次计费覆盖） ──
   const MODELS = [
     { modelName: 'gpt-4o', vendor: 'OpenAI', capRpm: 3000, capTpm: 10_000_000, baseRpm: 300, baseTpm: 1_000_000 },

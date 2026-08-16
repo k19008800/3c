@@ -3,6 +3,8 @@
 // ============================================================
 
 export { users, userRoleEnum } from './users';
+export { user2fa } from './user-2fa';
+export { userOauthBindings } from './oauth-bindings';
 export { apiKeys, apiKeyStatusEnum } from './api-keys';
 export { suppliers, supplierStatusEnum, suppliersRelations } from './suppliers';
 export { supplierKeys, supplierKeySelectModeEnum } from './supplier-keys';
@@ -47,3 +49,4 @@ export { consumptionAnomalies, consumptionAnomaliesRelations } from './consumpti
 export { siteContents } from './site-content';
 export { undoRecords } from './undo-record';
 export { webhookRetryConfigs } from './webhook-retry-config';
+export { userGroups, userGroupMemberships } from './user-groups';

@@ -73,3 +73,17 @@ export async function cacheSet(
     /* 缓存写失败不阻断主流程 */
   }
 }
+
+/**
+ * 删除缓存；Redis 不可用或异常时静默跳过（不抛错）。
+ * 用于数据变更后的缓存失效（如用户分组调整）。
+ */
+export async function cacheDel(key: string): Promise<void> {
+  try {
+    const r = getRedis();
+    if (!r) return;
+    await r.del(key);
+  } catch {
+    /* 缓存删除失败不阻断主流程 */
+  }
+}

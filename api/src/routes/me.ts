@@ -12,6 +12,7 @@ import { db, schema } from '../db';
 import { eq, and, sql, count, desc, inArray } from 'drizzle-orm';
 import { verifyToken } from '../services/auth/jwt';
 import { getBalance } from '../services/billing/balance';
+import { getUserGroup } from '../services/groups';
 import { UnauthorizedError, ValidationError, NotFoundError } from '../lib/errors';
 
 // ── JWT auth ─────────────────────────────────────────────
@@ -538,5 +539,50 @@ export async function meRoutes(app: FastifyInstance) {
   // 通知设置（本期返回空结构，设置页展示空态；按类型邮件开关后续迭代）
   app.get('/api/v1/me/notification-settings', { preHandler: [jwtAuth] }, async (_request, reply) => {
     return reply.send({ data: { types: {}, prefs: {} } });
+  });
+
+  // ═══ /me/group — 我的分组信息 ═══
+  // 返回当前用户所属分组（含限流 / 额度配置与模型白名单）；无任何分组时 data 为 null。
+  app.get('/api/v1/me/group', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const group = await getUserGroup(uid);
+    if (!group) {
+      return reply.send({ data: null, message: '当前无可用分组' });
+    }
+    return reply.send({
+      data: {
+        id: group.id,
+        name: group.name,
+        description: group.description,
+        pricingGroup: group.pricingGroup,
+        rateLimitQps: group.rateLimitQps,
+        rateLimitTpm: group.rateLimitTpm,
+        dailyQuota: group.dailyQuota != null ? Number(group.dailyQuota) : null,
+        modelWhitelist: Array.isArray(group.modelWhitelist) ? group.modelWhitelist : [],
+        isDefault: group.isDefault,
+        status: group.status,
+      },
+    });
+  });
+
+  // ═══ /me/group/models — 我可用模型列表 ═══
+  // 白名单为空 → 返回全部 active 平台模型名（去重）；非空 → 只返回白名单内且存在 active 的模型。
+  app.get('/api/v1/me/group/models', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const group = await getUserGroup(uid);
+    const whitelist = group && Array.isArray(group.modelWhitelist) ? group.modelWhitelist : [];
+
+    const activeRows = await db
+      .select({
+        platformModel: schema.supplierModels.platformModel,
+      })
+      .from(schema.supplierModels)
+      .where(eq(schema.supplierModels.status, 'active'));
+
+    // 同一平台模型可能由多个供应商提供 → 去重
+    const allModels = [...new Set(activeRows.map((r) => r.platformModel).filter(Boolean))];
+
+    const models = whitelist.length === 0 ? allModels : allModels.filter((m) => whitelist.includes(m));
+    return reply.send({ data: models });
   });
 }
