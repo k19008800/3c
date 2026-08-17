@@ -54,6 +54,7 @@ import { startModelHealthAggregator } from './services/marketplace/model-health-
 import { startTaskPollingScheduler } from './services/task/task-poller';
 import { startFreezeCleanupScheduler } from './services/billing/pre-consume';
 import { ensureDefaultGroup } from './services/groups';
+import { checkIpBlocked } from './services/security/ip-blacklist';
 
 let env: Env;
 
@@ -87,6 +88,28 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   // Decorate with deps
   app.decorate('db', db);
   app.decorate('env', env);
+
+  // ═══ IP 黑名单网关拦截（P2-4）═══
+  // 对所有 AI 网关路径（/v1/*、/anthropic/v1/*、/api/v1/v1/* 别名，scope ∈ {api, all}）
+  // 与管理后台路径（/api/v1/admin/*，scope ∈ {admin, all}）在 onRequest 阶段查黑名单，命中即 403。
+  // 放在认证之前：黑名单优先级最高，被禁 IP 不进入任何业务处理。
+  // 性能：每个命中路径一次 DB 查询（idx_ip_blacklist_active 索引，行数级通常 < 100）；
+  // 缓存策略见 services/security/ip-blacklist.ts checkIpBlocked 的 OPTIMIZE 注释。
+  app.addHook('onRequest', async (request, reply) => {
+    const rawUrl = request.url;
+    const path = rawUrl.split('?')[0] ?? rawUrl;
+    let scope: 'api' | 'admin' | null = null;
+    if (path.startsWith('/v1/') || path.startsWith('/anthropic/v1/') || path.startsWith('/api/v1/v1/')) {
+      scope = 'api';
+    } else if (path.startsWith('/api/v1/admin/')) {
+      scope = 'admin';
+    }
+    if (!scope) return;
+    const blocked = await checkIpBlocked(request.ip, scope);
+    if (blocked) {
+      return reply.code(403).send({ code: 'IP_BLACKLISTED', message: 'IP 已被封禁，如有疑问请联系管理员' });
+    }
+  });
 
   // Routes
   await app.register(healthRoutes);

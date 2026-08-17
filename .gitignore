@@ -22,3 +22,7 @@ web-portal/public/app/
 e2e/*.png
 e2e/.tmp-screenshot.mjs
 
+# P2-4 数据导出文件（api/exports/ 或 api/tmp/exports/）
+api/exports/
+api/tmp/exports/
+
