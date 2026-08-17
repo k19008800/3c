@@ -8,12 +8,13 @@
  */
 
 import type { FastifyInstance } from 'fastify';
+import bcrypt from 'bcryptjs';
 import { db, schema } from '../db';
 import { eq, and, sql, count, desc, inArray } from 'drizzle-orm';
 import { verifyToken } from '../services/auth/jwt';
 import { getBalance } from '../services/billing/balance';
 import { getUserGroup } from '../services/groups';
-import { UnauthorizedError, ValidationError, NotFoundError } from '../lib/errors';
+import { AppError, UnauthorizedError, ValidationError, NotFoundError } from '../lib/errors';
 
 // ── JWT auth ─────────────────────────────────────────────
 async function jwtAuth(request: any, reply: any) {
@@ -584,5 +585,269 @@ export async function meRoutes(app: FastifyInstance) {
 
     const models = whitelist.length === 0 ? allModels : allModels.filter((m) => whitelist.includes(m));
     return reply.send({ data: models });
+  });
+
+  // ═══ /me/change-password — 修改密码（P1-1）═══
+  // 旧密码 bcrypt 校验 → 更新 passwordHash → 使该用户全部会话失效（提示重新登录）。
+  app.post('/api/v1/me/change-password', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const body = (request.body || {}) as Record<string, unknown>;
+    const oldPassword = String(body.oldPassword ?? '');
+    const newPassword = String(body.newPassword ?? '');
+
+    if (!oldPassword) throw new ValidationError('旧密码不能为空');
+    if (newPassword.length < 8) throw new ValidationError('新密码至少 8 位');
+
+    const [user] = await db
+      .select({ id: schema.users.id, passwordHash: schema.users.passwordHash })
+      .from(schema.users)
+      .where(eq(schema.users.id, uid))
+      .limit(1);
+    if (!user) throw new UnauthorizedError('User not found');
+    if (!bcrypt.compareSync(oldPassword, user.passwordHash)) {
+      throw new UnauthorizedError('旧密码不正确');
+    }
+
+    await db.update(schema.users)
+      .set({ passwordHash: bcrypt.hashSync(newPassword, 12), updatedAt: new Date() })
+      .where(eq(schema.users.id, uid));
+
+    // 使该用户全部会话失效：旧 refresh token 立即不可用；access token 为无状态 JWT，
+    // 15 分钟内自然过期（复用现有 session 机制，前端提示重新登录）。
+    await db.delete(schema.userSessions).where(eq(schema.userSessions.userId, uid));
+
+    return reply.send({ message: '密码已更新，请重新登录' });
+  });
+
+  // ═══ /me/change-email — 修改邮箱（P1-1）═══
+  // 新邮箱唯一性校验（409 EMAIL_EXISTS）→ 更新 users.email。
+  app.post('/api/v1/me/change-email', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const body = (request.body || {}) as Record<string, unknown>;
+    const newEmail = String(body.newEmail || body.email || '').toLowerCase().trim();
+
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(newEmail)) throw new ValidationError('邮箱格式不正确');
+
+    const [existing] = await db
+      .select({ id: schema.users.id })
+      .from(schema.users)
+      .where(eq(schema.users.email, newEmail))
+      .limit(1);
+    if (existing && existing.id !== uid) {
+      throw new AppError('邮箱已被使用', 409, 'EMAIL_EXISTS');
+    }
+
+    const [user] = await db.update(schema.users)
+      .set({ email: newEmail, updatedAt: new Date() })
+      .where(eq(schema.users.id, uid))
+      .returning({ id: schema.users.id, email: schema.users.email });
+    if (!user) throw new UnauthorizedError('User not found');
+
+    return reply.send({ message: '邮箱已更新', data: { email: user.email } });
+  });
+
+  // ═══ /me/invoices — 我的发票列表（P1-1）═══
+  app.get('/api/v1/me/invoices', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const q = (request.query || {}) as Record<string, string>;
+    const page = Math.max(parseInt(q.page || '1', 10) || 1, 1);
+    const pageSize = Math.min(Math.max(parseInt(q.page_size || '20', 10) || 20, 1), 100);
+
+    const [rows, countResult] = await Promise.all([
+      db.select()
+        .from(schema.invoices)
+        .where(eq(schema.invoices.userId, uid))
+        .orderBy(desc(schema.invoices.createdAt))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize),
+      db.select({ count: sql<number>`count(*)::int` }).from(schema.invoices)
+        .where(eq(schema.invoices.userId, uid)),
+    ]);
+
+    const list = rows.map((r) => ({
+      id: r.id,
+      invoice_no: r.invoiceNo,
+      amount: Number(r.amount ?? 0),
+      tax: Number(r.tax ?? 0),
+      status: r.status,
+      title: r.title,
+      tax_id: r.taxId,
+      recipient: r.recipient,
+      issued_at: r.issuedAt,
+      created_at: r.createdAt,
+    }));
+
+    return reply.send({
+      data: { list, pagination: { page, pageSize, total: Number(countResult[0]?.count ?? 0) } },
+    });
+  });
+
+  // ═══ /me/invoices/:id/download — 发票下载（P1-1）═══
+  // 必须属于当前用户（越权一律 404 防枚举）；无真实 PDF 时返回结构化 JSON 详情
+  // + Content-Disposition 附件文件名。
+  app.get('/api/v1/me/invoices/:id/download', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const id = parseInt(String((request.params as Record<string, unknown>).id), 10);
+    if (isNaN(id) || id <= 0) throw new ValidationError('Invalid invoice id');
+
+    const [inv] = await db.select()
+      .from(schema.invoices)
+      .where(and(eq(schema.invoices.id, id), eq(schema.invoices.userId, uid)))
+      .limit(1);
+    if (!inv) throw new NotFoundError('Invoice', id);
+
+    const filename = `invoice-${inv.invoiceNo || inv.id}.json`;
+    reply.header('Content-Type', 'application/json; charset=utf-8');
+    reply.header('Content-Disposition', `attachment; filename="${filename}"`);
+    return reply.send({
+      id: inv.id,
+      invoice_no: inv.invoiceNo,
+      amount: Number(inv.amount ?? 0),
+      tax: Number(inv.tax ?? 0),
+      status: inv.status,
+      title: inv.title,
+      tax_id: inv.taxId,
+      recipient: inv.recipient,
+      issued_at: inv.issuedAt,
+      created_at: inv.createdAt,
+    });
+  });
+
+  // ═══ /me/tickets — 我的工单（P1-1）═══
+  // 列表：本人工单倒序，回复记录从 metadata.replies 展开。
+  app.get('/api/v1/me/tickets', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const q = (request.query || {}) as Record<string, string>;
+    const page = Math.max(parseInt(q.page || '1', 10) || 1, 1);
+    const pageSize = Math.min(Math.max(parseInt(q.page_size || '20', 10) || 20, 1), 100);
+
+    const [rows, countResult] = await Promise.all([
+      db.select()
+        .from(schema.tickets)
+        .where(eq(schema.tickets.userId, uid))
+        .orderBy(desc(schema.tickets.createdAt))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize),
+      db.select({ count: sql<number>`count(*)::int` }).from(schema.tickets)
+        .where(eq(schema.tickets.userId, uid)),
+    ]);
+
+    const list = rows.map((t) => ({
+      id: t.id,
+      ticket_no: `TCK${String(t.id).padStart(6, '0')}`,
+      type: t.type,
+      title: t.title,
+      content: t.content,
+      status: t.status,
+      priority: t.priority,
+      resolution: t.resolution,
+      resolved_at: t.resolvedAt,
+      replies: Array.isArray((t.metadata as any)?.replies) ? (t.metadata as any).replies : [],
+      created_at: t.createdAt,
+      updated_at: t.updatedAt,
+    }));
+
+    return reply.send({
+      data: { list, pagination: { page, pageSize, total: Number(countResult[0]?.count ?? 0) } },
+    });
+  });
+
+  /** POST /api/v1/me/tickets — 创建工单（type/title/content） */
+  app.post('/api/v1/me/tickets', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const body = (request.body || {}) as Record<string, unknown>;
+    const type = String(body.type || 'general').trim();
+    const title = String(body.title || '').trim();
+    const content = String(body.content || '').trim();
+
+    if (!title) throw new ValidationError('工单标题不能为空');
+    if (!content) throw new ValidationError('工单内容不能为空');
+    if (title.length > 200) throw new ValidationError('工单标题过长');
+
+    const [ticket] = await db.insert(schema.tickets).values({
+      userId: uid,
+      type: type || 'general',
+      title,
+      content,
+      status: 'open',
+      priority: 'normal',
+      metadata: { replies: [] },
+    }).returning();
+    if (!ticket) throw new AppError('Failed to create ticket', 500, 'TICKET_CREATE_FAILED');
+
+    return reply.status(201).send({
+      data: {
+        id: ticket.id,
+        ticket_no: `TCK${String(ticket.id).padStart(6, '0')}`,
+        type: ticket.type,
+        title: ticket.title,
+        content: ticket.content,
+        status: ticket.status,
+        created_at: ticket.createdAt,
+      },
+    });
+  });
+
+  /** POST /api/v1/me/tickets/:id/reply — 追加回复（本人；回复记录存 metadata.replies） */
+  app.post('/api/v1/me/tickets/:id/reply', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const id = parseInt(String((request.params as Record<string, unknown>).id), 10);
+    if (isNaN(id) || id <= 0) throw new ValidationError('Invalid ticket id');
+
+    const content = String((request.body as Record<string, unknown> | undefined)?.content || '').trim();
+    if (!content) throw new ValidationError('回复内容不能为空');
+
+    const [ticket] = await db.select({ id: schema.tickets.id, status: schema.tickets.status, metadata: schema.tickets.metadata })
+      .from(schema.tickets)
+      .where(and(eq(schema.tickets.id, id), eq(schema.tickets.userId, uid)))
+      .limit(1);
+    if (!ticket) throw new NotFoundError('Ticket', id);
+
+    const metadata = (ticket.metadata && typeof ticket.metadata === 'object' ? ticket.metadata : {}) as Record<string, unknown>;
+    const replies = Array.isArray(metadata.replies) ? metadata.replies : [];
+    replies.push({ role: 'user', userId: uid, content, createdAt: new Date().toISOString() });
+
+    // 用户回复：waiting_customer → open（重新回到待处理）；其余状态保持
+    const nextStatus = ticket.status === 'waiting_customer' ? 'open' : ticket.status;
+
+    const [updated] = await db.update(schema.tickets)
+      .set({ metadata: { ...metadata, replies }, status: nextStatus, updatedAt: new Date() })
+      .where(eq(schema.tickets.id, ticket.id))
+      .returning({ id: schema.tickets.id, status: schema.tickets.status, metadata: schema.tickets.metadata, updatedAt: schema.tickets.updatedAt });
+    if (!updated) throw new NotFoundError('Ticket', id);
+
+    return reply.send({
+      data: {
+        id: updated.id,
+        status: updated.status,
+        replies: Array.isArray((updated.metadata as any)?.replies) ? (updated.metadata as any).replies : [],
+        updated_at: updated.updatedAt,
+      },
+    });
+  });
+
+  /** POST /api/v1/me/tickets/:id/resolve — 用户标记解决（仅本人工单） */
+  app.post('/api/v1/me/tickets/:id/resolve', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const id = parseInt(String((request.params as Record<string, unknown>).id), 10);
+    if (isNaN(id) || id <= 0) throw new ValidationError('Invalid ticket id');
+
+    const [updated] = await db.update(schema.tickets)
+      .set({ status: 'resolved', resolvedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(schema.tickets.id, id), eq(schema.tickets.userId, uid)))
+      .returning({ id: schema.tickets.id, status: schema.tickets.status, resolvedAt: schema.tickets.resolvedAt });
+    if (!updated) throw new NotFoundError('Ticket', id);
+
+    return reply.send({ data: { id: updated.id, status: updated.status, resolved_at: updated.resolvedAt } });
+  });
+
+  // ═══ /me/api-keys/revoke-all — 吊销本人全部 API Key（P1-1）═══
+  app.post('/api/v1/me/api-keys/revoke-all', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const rows = await db.update(schema.apiKeys)
+      .set({ status: 'revoked', updatedAt: new Date() })
+      .where(and(eq(schema.apiKeys.userId, uid), sql`${schema.apiKeys.status} != 'revoked'`))
+      .returning({ id: schema.apiKeys.id });
+    return reply.send({ message: '全部 API Key 已吊销', data: { revoked: rows.length } });
   });
 }

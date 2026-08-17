@@ -18,6 +18,9 @@ import { db, schema } from '../db';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { verifyToken } from '../services/auth/jwt';
 import { getBalance } from '../services/billing/balance';
+import { adjustLedgerAvailable, clearNegativeFlag } from '../services/billing/ledger';
+// campaign_coupon_codes 未从 db/schema/index.ts 导出（该文件禁改），直接从表定义导入
+import { campaignCouponCodes } from '../db/schema/coupons';
 import { AppError, UnauthorizedError, ForbiddenError, ValidationError } from '../lib/errors';
 
 // ── auth ─────────────────────────────────────────────
@@ -173,6 +176,110 @@ export async function rechargeRoutes(app: FastifyInstance) {
   /** GET /api/v1/me/promotions — 促销活动（当前无） */
   app.get('/api/v1/me/promotions', { preHandler: [jwtAuth] }, async (_request, reply) => {
     return reply.send({ data: { list: [] } });
+  });
+
+  /**
+   * POST /api/v1/me/redemption/redeem — 兑换码兑换（P1-1）
+   *
+   * 表语义（见 iteration-plan-v2.md P1-1）：coupon_codes 是批次模板
+   * （batch_code/face_value/total_count/used_count），campaign_coupon_codes 才是单个码
+   * （code/status/used_by/used_at）。本端点操作 campaign_coupon_codes：
+   *   1. 按 code 查单个码 + 关联批次（campaign_coupon_codes.campaign_id → coupon_codes.id）；
+   *   2. 事务内原子占用（仅 status='unused' 可兑）→ 批次 used_count +1 → 余额入账 + 写流水；
+   *   3. 错误：码不存在 404 / 已使用 409 / 批次停用或过期 400。
+   */
+  app.post('/api/v1/me/redemption/redeem', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const body = (request.body || {}) as Record<string, unknown>;
+    const code = String(body.code || '').trim();
+    if (!code) throw new ValidationError('兑换码不能为空');
+
+    // 单个码 + 关联批次模板（face_value / 批次状态 / 有效期）
+    const [row] = await db.select({
+      id: campaignCouponCodes.id,
+      status: campaignCouponCodes.status,
+      usedBy: campaignCouponCodes.usedBy,
+      usedAt: campaignCouponCodes.usedAt,
+      batchId: schema.couponCodes.id,
+      faceValue: schema.couponCodes.faceValue,
+      batchStatus: schema.couponCodes.status,
+      validFrom: schema.couponCodes.validFrom,
+      validTo: schema.couponCodes.validTo,
+    })
+      .from(campaignCouponCodes)
+      .innerJoin(schema.couponCodes, eq(schema.couponCodes.id, campaignCouponCodes.campaignId))
+      .where(eq(campaignCouponCodes.code, code))
+      .limit(1);
+
+    if (!row) throw new AppError('兑换码不存在', 404, 'CODE_NOT_FOUND');
+    if (row.status !== 'unused' || row.usedBy != null) {
+      throw new AppError('兑换码已被使用', 409, 'CODE_ALREADY_USED');
+    }
+    if (row.batchStatus !== 'active') {
+      throw new AppError('该兑换码批次已停用', 400, 'CODE_BATCH_DISABLED');
+    }
+    const now = new Date();
+    if (row.validFrom && now < row.validFrom) {
+      throw new AppError('兑换码尚未生效', 400, 'CODE_NOT_YET_VALID');
+    }
+    if (row.validTo && now > row.validTo) {
+      throw new AppError('兑换码已过期', 400, 'CODE_EXPIRED');
+    }
+
+    // 事务：占用 + 批次计数 + 入账 + 流水 一次性提交，失败整体回滚
+    const result = await db.transaction(async (tx) => {
+      // 原子占用：仅 status='unused' 可兑；并发重复兑换时第二次 UPDATE 命中 0 行 → null
+      const [claimed] = await tx.update(campaignCouponCodes)
+        .set({ status: 'used', usedBy: uid, usedAt: new Date() })
+        .where(and(eq(campaignCouponCodes.code, code), eq(campaignCouponCodes.status, 'unused')))
+        .returning({ id: campaignCouponCodes.id });
+      if (!claimed) return null;
+
+      // 批次 used_count 扣减
+      await tx.update(schema.couponCodes)
+        .set({ usedCount: sql`${schema.couponCodes.usedCount} + 1`, updatedAt: new Date() })
+        .where(eq(schema.couponCodes.id, row.batchId));
+
+      // 余额入账（amount = face_value，元）
+      const upd = await tx.execute(sql`
+        UPDATE customer_balances
+        SET available_balance = available_balance + ${row.faceValue}::numeric,
+            total_balance = total_balance + ${row.faceValue}::numeric,
+            version = version + 1,
+            updated_at = NOW()
+        WHERE user_id = ${uid}
+        RETURNING available_balance AS "balanceAfter"
+      `);
+      const bal = upd[0] as unknown as { balanceAfter: string };
+      if (!bal) throw new AppError('Balance account not found', 404, 'BALANCE_NOT_FOUND');
+
+      await tx.insert(schema.balanceTransactions).values({
+        userId: uid,
+        type: 'recharge',
+        amount: row.faceValue,
+        balanceAfter: bal.balanceAfter,
+        referenceType: 'redemption',
+        referenceId: String(claimed.id),
+        description: `兑换码 ${code} 充值`,
+      });
+
+      return { claimedId: claimed.id, balanceAfter: bal.balanceAfter };
+    });
+
+    if (!result) throw new AppError('兑换码已被使用', 409, 'CODE_ALREADY_USED');
+
+    // 尽力同步 Redis 热账本（与 addBalance 语义一致，失败不影响主链路）
+    await adjustLedgerAvailable(uid, Number(row.faceValue));
+    await clearNegativeFlag(uid);
+
+    return reply.send({
+      data: {
+        code,
+        amount: Number(row.faceValue),
+        balance_after: Number(result.balanceAfter),
+        message: '兑换成功',
+      },
+    });
   });
 
   // ═══ 管理端 ═══
