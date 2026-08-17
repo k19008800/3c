@@ -181,7 +181,7 @@ export default function AdminAgentsPage() {
 
       {/* 筛选栏 — 原型 filter-bar */}
       <div className="c3-filter-bar">
-        <TimeRangeFilter value={range} onChange={setRange} />
+        <TimeRangeFilter value={range} onChange={setRange} disabled disabledHint="代理商列表暂不支持按时间范围筛选" />
         <div className="c3-filter-spacer" />
         <div className="c3-filter-group">
           <span className="c3-filter-label">搜索</span>

@@ -12,8 +12,8 @@ type NavGroup = { group: string; icon: string; items: NavItem[] };
 
 const ADMIN_NAV: NavGroup[] = [
   { group: "客户管理", icon: "👥", items: [
+    // 注：原型客户管理组无「客户详情」菜单项（详情由列表「查看」进入），此处不挂 /admin/customers/:userId
     { to: "/admin/customers", label: "客户列表", icon: "📋" },
-    { to: "/admin/customers/:userId", label: "客户详情", icon: "👤" },
     { to: "/admin/customers/quotas", label: "额度管理", icon: "🪙" },
     { to: "/admin/customers/verifications", label: "实名认证审核", icon: "🆔" },
   ]},
@@ -41,8 +41,8 @@ const ADMIN_NAV: NavGroup[] = [
     { to: "/admin/finance/pricing", label: "价格管理", icon: "🏷️" },
   ]},
   { group: "供应商管理", icon: "🔌", items: [
+    // 注：详情由列表进入，不挂参数化菜单 /admin/suppliers/:id
     { to: "/admin/suppliers", label: "供应商列表", icon: "📋" },
-    { to: "/admin/suppliers/:id", label: "供应商详情", icon: "🔍" },
     { to: "/admin/suppliers/model-service", label: "模型服务管理", icon: "🎛️" },
     { to: "/admin/suppliers/vendor-profiles", label: "厂商资料管理", icon: "🏢" },
     { to: "/admin/suppliers/vendor-pricing", label: "厂商定价管理", icon: "💰" },
@@ -64,8 +64,8 @@ const ADMIN_NAV: NavGroup[] = [
     { to: "/admin/analytics/success", label: "客户成功看板", icon: "🎯" },
   ]},
   { group: "代理商管理", icon: "🤝", items: [
+    // 注：详情由列表进入，不挂参数化菜单 /admin/agents/:id
     { to: "/admin/agents", label: "代理商列表", icon: "📋" },
-    { to: "/admin/agents/:id", label: "代理商详情", icon: "🔍" },
     { to: "/admin/agents/commission-config", label: "佣金配置", icon: "⚙️" },
     { to: "/admin/agents/approvals", label: "客户报备审核", icon: "✅" },
     { to: "/admin/agents/withdrawals", label: "提现记录", icon: "💳" },

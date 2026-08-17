@@ -177,7 +177,7 @@ export default function AdminFinancePage() {
 
       {/* 筛选栏 — 原型 filter-bar */}
       <div className="c3-filter-bar">
-        <TimeRangeFilter value={range} onChange={setRange} />
+        <TimeRangeFilter value={range} onChange={setRange} disabled disabledHint="财务工作台按固定周期（今日/本月）汇总，暂不支持自定义时间范围筛选" />
         <div className="c3-filter-spacer" />
         <div className="c3-filter-group">
           <span className="c3-filter-label">搜索</span>

@@ -14,7 +14,9 @@ import {
   SkeletonGroup,
   EmptyState,
   TimeRangeFilter,
+  resolveTimeRange,
   Modal,
+  HelpIcon,
   useToast,
 } from "@3cloud/shared-ui";
 import type { ColumnDef, TimeRangeKey } from "@3cloud/shared-ui";
@@ -75,14 +77,21 @@ export default function AdminCustomersPage() {
   const [searchInput, setSearchInput] = useState("");
   const [keyword, setKeyword] = useState("");
   const [range, setRange] = useState<TimeRangeKey>("today");
+  const [customRange, setCustomRange] = useState<{ start?: string; end?: string }>({});
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
+  /** 当前时间范围解析出的具体起止（本地时区），用于展示与传参 */
+  const resolved = resolveTimeRange(range, customRange);
+
   const q = useQuery({
-    queryKey: ["admin-customers", keyword, range, page],
+    queryKey: ["admin-customers", keyword, range, customRange, page],
     queryFn: async () => {
       const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
       if (keyword) params.set("search", keyword);
+      // 时间范围 → 注册时间（created_at）过滤；date_to 含当天 23:59:59
+      params.set("date_from", resolved.start);
+      params.set("date_to", resolved.end);
       const res = await api.get(`/admin/customers?${params.toString()}`);
       return res.data as { data: CustomerRow[]; pagination: { total: number; page: number; totalPages: number } };
     },
@@ -132,6 +141,39 @@ export default function AdminCustomersPage() {
     createMut.mutate({ email, name, customer_type: cType, password: cPassword.trim() || undefined });
   };
 
+  // 编辑客户基本信息（列表行内「编辑」→ 弹窗，详情页头部按钮同逻辑）
+  const [editTarget, setEditTarget] = useState<CustomerRow | null>(null);
+  const [eEmail, setEEmail] = useState("");
+  const [eName, setEName] = useState("");
+  const [eStatus, setEStatus] = useState<"active" | "disabled">("active");
+
+  const openEdit = (r: CustomerRow) => {
+    setEditTarget(r);
+    setEEmail(r.email);
+    setEName(r.name);
+    setEStatus(r.status === "disabled" ? "disabled" : "active");
+  };
+
+  const editMut = useMutation({
+    mutationFn: async (body: { email: string; name: string; status: string }) =>
+      (await api.put(`/admin/customers/${editTarget?.id}`, body)).data,
+    onSuccess: () => {
+      toast.success("客户信息已更新");
+      setEditTarget(null);
+      qc.invalidateQueries({ queryKey: ["admin-customers"] });
+    },
+    onError: (err) => toast.error(extractError(err)),
+  });
+
+  const submitEdit = () => {
+    if (!editTarget) return;
+    const email = eEmail.trim();
+    const name = eName.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast.error("请输入正确的邮箱地址"); return; }
+    if (!name) { toast.error("客户名称不能为空"); return; }
+    editMut.mutate({ email, name, status: eStatus });
+  };
+
   const columns: ColumnDef<CustomerRow>[] = [
     { key: "email", title: "邮箱", dataIndex: "email" },
     { key: "name", title: "名称", dataIndex: "name" },
@@ -158,11 +200,14 @@ export default function AdminCustomersPage() {
       key: "actions",
       title: "操作",
       render: (_, r) => {
-        // 原型 op2：正常 → 禁用(danger)；余额不足 → 充值；已禁用 → 启用（互斥显示）
+        // 原型 op：详情 → 客户详情页（Tab 查看消费/充值/密钥/工单/日志）；编辑 → 基本信息弹窗；禁用/启用、充值互斥显示
         const s = displayStatus(r);
         return (
           <div className="c3-btn-group">
             <button type="button" className="c3-btn c3-btn--text" onClick={() => navigate(`/admin/customers/${r.id}`)}>
+              查看
+            </button>
+            <button type="button" className="c3-btn c3-btn--text" onClick={() => openEdit(r)}>
               编辑
             </button>
             {s.label === "正常" && (
@@ -197,7 +242,18 @@ export default function AdminCustomersPage() {
 
       {/* 筛选栏 — 原型 filter-bar：时间范围 + 搜索 + 导出 */}
       <div className="c3-filter-bar">
-        <TimeRangeFilter value={range} onChange={(k) => { setRange(k); setPage(1); }} />
+        <TimeRangeFilter
+          value={range}
+          onChange={(k, r) => {
+            setRange(k);
+            if (r) setCustomRange(r);
+            setPage(1);
+          }}
+        />
+        <span className="c3-filter-range-hint" title="时间范围按客户注册时间（created_at）过滤，解析结果如下">
+          注册时间：{resolved.start} ~ {resolved.end}
+          <HelpIcon text="时间范围按客户「注册时间」过滤：今日=今天 00:00~23:59；昨日=昨天全天；本周=本周一 00:00~今天 23:59；本月=本月 1 日 00:00~今天 23:59；自定义=所选起止日期全天。此处展示的是当前选中的具体起止时间。" />
+        </span>
         <div className="c3-filter-spacer" />
         <div className="c3-filter-group">
           <span className="c3-filter-label">搜索</span>
@@ -274,6 +330,35 @@ export default function AdminCustomersPage() {
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* 编辑客户基本信息弹窗（列表「编辑」→ 打开；详情页同表单逻辑） */}
+      <Modal open={!!editTarget} onClose={() => setEditTarget(null)} title={`✏️ 编辑客户 — ${editTarget?.name ?? ""}`} width={440}>
+        {editTarget && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div className="c3-form-group" style={{ marginBottom: 0 }}>
+              <label>邮箱 <span style={{ color: "#e53935" }}>*</span></label>
+              <input type="text" value={eEmail} onChange={(e) => setEEmail(e.target.value)} />
+            </div>
+            <div className="c3-form-group" style={{ marginBottom: 0 }}>
+              <label>客户名称 <span style={{ color: "#e53935" }}>*</span></label>
+              <input type="text" value={eName} onChange={(e) => setEName(e.target.value)} />
+            </div>
+            <div className="c3-form-group" style={{ marginBottom: 0 }}>
+              <label>状态</label>
+              <select value={eStatus} onChange={(e) => setEStatus(e.target.value as "active" | "disabled")}>
+                <option value="active">正常</option>
+                <option value="disabled">已禁用</option>
+              </select>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, paddingTop: 6 }}>
+              <button type="button" className="c3-btn c3-btn--default c3-btn--sm" onClick={() => setEditTarget(null)}>取消</button>
+              <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" disabled={editMut.isPending} onClick={submitEdit}>
+                {editMut.isPending ? "保存中…" : "保存"}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </>
   );

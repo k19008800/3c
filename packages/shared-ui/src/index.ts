@@ -63,8 +63,8 @@ export { SearchBar } from "./components/navigation/SearchBar";
 export type { SearchBarProps } from "./components/navigation/SearchBar";
 export { FilterBar } from "./components/navigation/FilterBar";
 export type { FilterDef, FilterBarProps } from "./components/navigation/FilterBar";
-export { TimeRangeFilter, TIME_RANGE_OPTIONS } from "./components/navigation/TimeRangeFilter";
-export type { TimeRangeFilterProps, TimeRangeKey } from "./components/navigation/TimeRangeFilter";
+export { TimeRangeFilter, TIME_RANGE_OPTIONS, TIME_RANGE_HELP, resolveTimeRange } from "./components/navigation/TimeRangeFilter";
+export type { TimeRangeFilterProps, TimeRangeKey, ResolvedRange } from "./components/navigation/TimeRangeFilter";
 export { CopyButton } from "./components/navigation/CopyButton";
 export type { CopyButtonProps } from "./components/navigation/CopyButton";
 

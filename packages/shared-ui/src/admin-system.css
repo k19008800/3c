@@ -199,6 +199,15 @@
 }
 .c3-time-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
 .c3-time-btn--active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.c3-time-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  background: var(--color-bg, #f5f5f5);
+  color: var(--color-text-muted, #999);
+  border-color: #e0e0e0;
+}
+.c3-time-btn:disabled:hover { border-color: #e0e0e0; color: var(--color-text-muted, #999); }
+.c3-time-btn:disabled.c3-time-btn--active { background: var(--color-bg, #f5f5f5); color: var(--color-text-muted, #999); border-color: #e0e0e0; }
 
 .c3-apply-btn {
   padding: 6px 14px;
@@ -225,6 +234,20 @@
   box-sizing: border-box;
 }
 .c3-custom-date span { font-size: 12px; color: var(--color-text-muted); }
+
+/* 时间范围解析结果提示（注册时间起止） */
+.c3-filter-range-hint {
+  font-size: 12px;
+  color: var(--color-text-secondary, #666);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  background: #f5f6fa;
+  border: 1px solid #e6e8f0;
+  border-radius: var(--radius-sm, 6px);
+  padding: 3px 10px;
+}
 
 /* ==== Tag 标签 ==== */
 .c3-tag {

@@ -2,17 +2,22 @@
  * 管理端客户管理 API
  *
  * 端点覆盖：
- *   GET   /api/v1/admin/customers                 — 客户列表（分页 / 搜索 / 状态筛选，含余额）
- *   GET   /api/v1/admin/customers/:id             — 客户详情（基本资料 + 余额）
- *   GET   /api/v1/admin/customers/:id/consumption — 客户消费记录（近期）
- *   GET   /api/v1/admin/customers/:id/api-keys    — 客户 API Key 列表（仅前缀，不泄露完整 Key）
- *   GET   /api/v1/admin/customers/:id/tickets     — 客户工单列表
- *   PATCH /api/v1/admin/customers/:id/status      — 启用 / 禁用客户
+ *   GET    /api/v1/admin/customers                 — 客户列表（分页 / 搜索 / 状态筛选 / 注册时间范围，含余额）
+ *   GET    /api/v1/admin/customers/:id             — 客户详情（基本资料 + 余额）
+ *   PUT    /api/v1/admin/customers/:id             — 编辑客户基本信息（邮箱/名称/手机/状态）
+ *   POST   /api/v1/admin/customers/:id/reset-password — 重置客户密码
+ *   GET    /api/v1/admin/customers/:id/consumption — 客户消费记录（近期）
+ *   GET    /api/v1/admin/customers/:id/api-keys    — 客户 API Key 列表（仅前缀，不泄露完整 Key）
+ *   GET    /api/v1/admin/customers/:id/tickets     — 客户工单列表
+ *   GET    /api/v1/admin/customers/:id/recharges   — 客户充值记录
+ *   GET    /api/v1/admin/customers/:id/operation-logs — 客户操作日志（audit_logs）
+ *   PATCH  /api/v1/admin/customers/:id/status      — 启用 / 禁用客户
+ *   POST   /api/v1/admin/customers                 — 新增客户
  */
 
 import type { FastifyInstance } from 'fastify';
 import { db, schema } from '../db';
-import { eq, and, sql, desc } from 'drizzle-orm';
+import { eq, and, sql, desc, gte, lte } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { verifyToken } from '../services/auth/jwt';
 import {
@@ -42,6 +47,9 @@ interface PaginationQuery {
   pageSize?: string;
   search?: string;
   status?: string;
+  /** 注册时间范围（ISO 日期或 datetime，含边界） */
+  date_from?: string;
+  date_to?: string;
 }
 
 function parsePagination(query: PaginationQuery) {
@@ -126,6 +134,13 @@ export async function adminCustomerRoutes(app: FastifyInstance) {
     }
     if (q.status) {
       conditions.push(eq(schema.users.status, q.status));
+    }
+    // 注册时间范围过滤（date_from 含当天 00:00:00，date_to 含当天 23:59:59）
+    if (q.date_from) {
+      conditions.push(gte(schema.users.createdAt, new Date(q.date_from.replace(' ', 'T'))));
+    }
+    if (q.date_to) {
+      conditions.push(lte(schema.users.createdAt, new Date(q.date_to.replace(' ', 'T'))));
     }
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -321,6 +336,94 @@ export async function adminCustomerRoutes(app: FastifyInstance) {
   });
 
   /**
+   * GET /api/v1/admin/customers/:id/recharges — 客户充值记录（倒序）
+   */
+  app.get('/api/v1/admin/customers/:id/recharges', { preHandler: [adminAuth] }, async (request: any, reply) => {
+    const id = parseCustomerId(request.params.id);
+    await requireCustomer(id);
+
+    const pageSize = Math.min(200, Math.max(1, parseInt(request.query?.page_size || '50', 10) || 50));
+    const rows = await db
+      .select({
+        id: schema.rechargeOrders.id,
+        orderNo: schema.rechargeOrders.orderNo,
+        amount: schema.rechargeOrders.amount,
+        currency: schema.rechargeOrders.currency,
+        method: schema.rechargeOrders.method,
+        status: schema.rechargeOrders.status,
+        paidAt: schema.rechargeOrders.paidAt,
+        createdAt: schema.rechargeOrders.createdAt,
+      })
+      .from(schema.rechargeOrders)
+      .where(eq(schema.rechargeOrders.userId, id))
+      .orderBy(desc(schema.rechargeOrders.createdAt))
+      .limit(pageSize);
+
+    const statusMap: Record<string, string> = {
+      pending: '待审核',
+      paid: '成功',
+      failed: '失败',
+      cancelled: '已取消',
+      refunded: '已退款',
+    };
+
+    const list = rows.map((r) => ({
+      id: r.id,
+      order_no: r.orderNo,
+      amount: Number(r.amount ?? 0),
+      currency: r.currency ?? 'CNY',
+      method: r.method,
+      status: r.status,
+      status_label: statusMap[r.status] ?? r.status,
+      paid_at: r.paidAt,
+      created_at: r.createdAt,
+    }));
+
+    return reply.send({ data: { list, total: list.length } });
+  });
+
+  /**
+   * GET /api/v1/admin/customers/:id/operation-logs — 客户操作日志（倒序）
+   * 来源：audit_logs 中 resource='user' 且 resource_id=客户 id 的记录。
+   */
+  app.get('/api/v1/admin/customers/:id/operation-logs', { preHandler: [adminAuth] }, async (request: any, reply) => {
+    const id = parseCustomerId(request.params.id);
+    await requireCustomer(id);
+
+    const pageSize = Math.min(200, Math.max(1, parseInt(request.query?.page_size || '50', 10) || 50));
+    const rows = await db
+      .select({
+        id: schema.auditLogs.id,
+        action: schema.auditLogs.action,
+        details: schema.auditLogs.details,
+        userId: schema.auditLogs.userId,
+        createdAt: schema.auditLogs.createdAt,
+      })
+      .from(schema.auditLogs)
+      .where(and(eq(schema.auditLogs.resource, 'user'), eq(schema.auditLogs.resourceId, String(id))))
+      .orderBy(desc(schema.auditLogs.createdAt))
+      .limit(pageSize);
+
+    const actionMap: Record<string, string> = {
+      'customer.create': '新增客户',
+      'customer.update': '编辑客户信息',
+      'customer.reset_password': '重置密码',
+      'user_status_change': '启用/禁用',
+    };
+
+    const list = rows.map((r) => ({
+      id: r.id,
+      action: r.action,
+      action_label: actionMap[r.action] ?? r.action,
+      operator_id: r.userId,
+      details: r.details ?? null,
+      created_at: r.createdAt,
+    }));
+
+    return reply.send({ data: { list, total: list.length } });
+  });
+
+  /**
    * PATCH /api/v1/admin/customers/:id/status — 启用 / 禁用客户
    * body: { status: 'active' | 'disabled' }
    */
@@ -369,6 +472,146 @@ export async function adminCustomerRoutes(app: FastifyInstance) {
     }
 
     return reply.send({ data: row });
+  });
+
+  /**
+   * PUT /api/v1/admin/customers/:id — 编辑客户基本信息
+   * body: { email?, name?, phone?, status? }
+   * 校验邮箱唯一性（排除自身）；状态仅 active | disabled。
+   */
+  app.put('/api/v1/admin/customers/:id', { preHandler: [adminAuth] }, async (request: any, reply) => {
+    const id = parseCustomerId(request.params.id);
+    await requireCustomer(id);
+
+    const b = (request.body || {}) as {
+      email?: string;
+      name?: string;
+      phone?: string | null;
+      status?: string;
+    };
+
+    const updates: Partial<{
+      email: string;
+      name: string;
+      phone: string | null;
+      status: string;
+      updatedAt: Date;
+    }> = {};
+
+    if (b.email !== undefined) {
+      const email = String(b.email).trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ValidationError('邮箱格式不正确');
+      const [dup] = await db
+        .select({ id: schema.users.id })
+        .from(schema.users)
+        .where(and(eq(schema.users.email, email), sql`${schema.users.id} <> ${id}`));
+      if (dup) throw new ValidationError('该邮箱已被其他客户使用');
+      updates.email = email;
+    }
+    if (b.name !== undefined) {
+      const name = String(b.name).trim();
+      if (!name) throw new ValidationError('客户名称不能为空');
+      updates.name = name;
+    }
+    if (b.phone !== undefined) {
+      updates.phone = b.phone ? String(b.phone).trim() : null;
+    }
+    if (b.status !== undefined) {
+      if (b.status !== 'active' && b.status !== 'disabled') {
+        throw new ValidationError('status must be active | disabled');
+      }
+      updates.status = b.status;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      throw new ValidationError('没有可更新的字段');
+    }
+
+    const [before] = await db
+      .select({ id: schema.users.id, email: schema.users.email, name: schema.users.name, status: schema.users.status })
+      .from(schema.users)
+      .where(eq(schema.users.id, id))
+      .limit(1);
+
+    const [row] = await db
+      .update(schema.users)
+      .set({ ...updates, updatedAt: sql`NOW()` })
+      .where(eq(schema.users.id, id))
+      .returning({
+        id: schema.users.id,
+        email: schema.users.email,
+        name: schema.users.name,
+        phone: schema.users.phone,
+        status: schema.users.status,
+      });
+
+    if (!row) throw new Error('Failed to update customer');
+
+    try {
+      await db.insert(schema.auditLogs).values({
+        userId: request.userContext?.userId ?? null,
+        action: 'customer.update',
+        resource: 'user',
+        resourceId: String(id),
+        details: {
+          before: { email: before?.email, name: before?.name, status: before?.status },
+          after: { email: row.email, name: row.name, status: row.status },
+        },
+        ipAddress: request.ip ?? null,
+        userAgent: request.headers['user-agent'] ?? null,
+      });
+    } catch (err) {
+      request.log.warn({ err }, '写入审计日志失败（不影响编辑结果）');
+    }
+
+    return reply.send({ data: row, message: '客户信息已更新' });
+  });
+
+  /**
+   * POST /api/v1/admin/customers/:id/reset-password — 重置客户密码
+   * body: { password? }  — 传 password（≥8 位）则手动指定；不传则自动生成随机密码。
+   * 返回一次性明文密码（自动生成时），仅此响应可见。
+   */
+  app.post('/api/v1/admin/customers/:id/reset-password', { preHandler: [adminAuth] }, async (request: any, reply) => {
+    const id = parseCustomerId(request.params.id);
+    const u = await requireCustomer(id);
+
+    const b = (request.body || {}) as { password?: string };
+    const manualPw = b.password !== undefined && b.password !== null ? String(b.password).trim() : '';
+    const isManual = manualPw.length > 0;
+    if (isManual && manualPw.length < 8) {
+      throw new ValidationError('密码长度至少 8 位');
+    }
+
+    // 自动生成：大写+小写+数字，与新增客户初始密码同风格
+    const newPassword = isManual
+      ? manualPw
+      : `Admin@${Math.random().toString(36).slice(2, 8)}${Math.floor(Math.random() * 10)}`;
+    const passwordHash = bcrypt.hashSync(newPassword, 12);
+
+    await db
+      .update(schema.users)
+      .set({ passwordHash, updatedAt: sql`NOW()` })
+      .where(eq(schema.users.id, id));
+
+    try {
+      await db.insert(schema.auditLogs).values({
+        userId: request.userContext?.userId ?? null,
+        action: 'customer.reset_password',
+        resource: 'user',
+        resourceId: String(id),
+        details: { email: u.email, mode: isManual ? 'manual' : 'auto' },
+        ipAddress: request.ip ?? null,
+        userAgent: request.headers['user-agent'] ?? null,
+      });
+    } catch (err) {
+      request.log.warn({ err }, '写入审计日志失败（不影响重置结果）');
+    }
+
+    return reply.send({
+      data: { id, email: u.email, newPassword, mode: isManual ? 'manual' : 'auto' },
+      message: isManual ? '密码已重置' : '密码已重置，新密码仅本次可见',
+    });
   });
 
   /**
