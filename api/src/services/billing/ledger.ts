@@ -25,6 +25,8 @@ import { getRedis } from '../../lib/redis';
 import type Redis from 'ioredis';
 import { db, schema } from '../../db';
 import { eq } from 'drizzle-orm';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 // ============================================================
 // 常量
@@ -75,7 +77,33 @@ export function fromLedgerUnits(units: number | string): string {
 // ============================================================
 
 /**
- * 从 PG（customer_balances）初始化用户 Redis 账本（幂等，SETNX 防并发重复写入）。
+ * 原子初始化 Lua 脚本（并发冷启动竞态修复，见脚本头注释）
+ */
+const initLedgerLua = (() => {
+  const candidates = [
+    // tsx/vitest 开发态：api/src/services/billing/ → api/src/scripts/
+    new URL(`../../scripts/init-ledger.lua`, import.meta.url),
+    // tsc 生产构建：api/dist/services/billing/ → 回退到 api/src/scripts/（源码随包部署）
+    new URL(`../../../src/scripts/init-ledger.lua`, import.meta.url),
+  ];
+  for (const url of candidates) {
+    try {
+      return readFileSync(fileURLToPath(url), 'utf8');
+    } catch {
+      /* 尝试下一个候选路径 */
+    }
+  }
+  throw new Error('Lua script not found: init-ledger.lua (checked src/scripts and dist/scripts)');
+})();
+
+/**
+ * 从 PG（customer_balances）初始化用户 Redis 账本（幂等且原子）。
+ *
+ * 并发冷启动安全：所有并发调用统一走 initLedgerLua 原子脚本 ——
+ * 只有账本缺失（或类型错误）时才写入，绝不覆盖已存在的 HASH。
+ * 修复前为「exists 检查 → PG 读取 → HSET」两步式：并发下每个调用都读到
+ * exists=0 后各自 HSET，晚到的 HSET 会把早到的预扣覆盖回 PG 快照，导致
+ * 同一账本被反复重置、预扣多次成功（pre-consume.test.ts 10 并发实测 frozen=9）。
  *
  * PG 读取失败（DB 不可用 / 用户无余额账户）→ 抛错，由调用方 fail-open 旁路。
  *
@@ -94,17 +122,8 @@ async function initLedgerFromPg(userId: number, r: Redis): Promise<void> {
   const frozen = rows.length > 0 ? toLedgerUnits(String(rows[0]!.frozenBalance)) : 0;
 
   const key = balanceLedgerKey(userId);
-  // 原子初始化：直接 HSET（HASH 类型）。不再用「SETNX STRING 占位 → HSET 转换」两段式，
-  // 因为两段式在 set 成功但 hset 失败（崩溃/中断）时会残留 STRING 'init'，后续 exists=1
-  // 跳过初始化直接 hget → WRONGTYPE。HSET 对已存在的 HASH 是覆盖写（幂等），
-  // 对残留的 STRING 会报 WRONGTYPE → 先 DEL 再 HSET，保证类型正确（失败抛错由调用方降级）。
-  try {
-    await r.hset(key, { available: String(available), frozen: String(frozen) });
-  } catch (err) {
-    // 残留 STRING/其他类型 → 删除后重试一次；仍失败抛错（调用方 fail-open 旁路）
-    await r.del(key);
-    await r.hset(key, { available: String(available), frozen: String(frozen) });
-  }
+  // 原子初始化：Lua 内完成「类型检查 + 写入」，并发下仅第一个生效，其余 no-op
+  await r.eval(initLedgerLua, 1, key, String(available), String(frozen));
 }
 
 /**
