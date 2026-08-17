@@ -76,7 +76,7 @@ import {
   type MockStepResult,
 } from '../services/pipeline';
 import type { PipelineContext } from '../services/pipeline';
-import { getPricingForModel, computeTaskCost, TASK_BILLING_UNIT_TOKENS } from '../services/billing/pricing';
+import { getPricingForModel, computeTaskCost, TASK_BILLING_UNIT_TOKENS, buildPricingContext } from '../services/billing/pricing';
 import { settleBilling } from '../services/billing/settle';
 import crypto from 'crypto';
 
@@ -473,7 +473,8 @@ export async function taskRelayRoutes(app: FastifyInstance) {
           implement: async (c) => {
             const { action, billModel } = requireStepResult<TaskSubmitMeta>(c, STEP_KEYS.request);
             const mock = getStepResult<MockStepResult>(c, STEP_KEYS.mockResult);
-            const pricing = await getPricingForModel(billModel);
+            // P2-1：任务定价同样传用户上下文（userId），L5/L4/L3 按需生效
+            const pricing = await getPricingForModel(billModel, buildPricingContext(c.request));
             const taskCost = computeTaskCost(billModel, pricing);
 
             // ── mock 回退路径：返回占位任务 id，同样记账扣费（不落库：mock 任务不可轮询）──

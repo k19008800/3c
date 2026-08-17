@@ -33,7 +33,7 @@ import type { StreamState } from './proxy';
 import { determineStreamBilling, type StreamBillingResult } from '../billing/settle-stream';
 import { getBalance } from '../billing/balance';
 import { countTokens } from '../billing/token-counter';
-import { getPricingForModel, computeCost, DEFAULT_MAX_OUTPUT_TOKENS } from '../billing/pricing';
+import { getPricingForModel, computeCost, DEFAULT_MAX_OUTPUT_TOKENS, type PricingContext } from '../billing/pricing';
 import { settleBilling } from '../billing/settle';
 import { preConsume as sharedPreConsume, releasePreConsume as sharedReleasePreConsume, type PreConsumeResult } from '../billing/pre-consume';
 
@@ -144,8 +144,8 @@ export interface WsRelayDeps {
   ) => StreamBillingResult;
   /** 结算（记账 + 扣费 + 佣金 + key 最后调用时间） */
   settleBilling: WsSettleFn;
-  /** 模型定价（默认查 vendor_pricing，失败走默认价） */
-  getPricingForModel: (model: string) => Promise<{ input: number; output: number }>;
+  /** 模型定价（默认查六层 vendor_pricing/活动/分组/代理，失败走默认价；ctx 可选，缺省走 L2/L1） */
+  getPricingForModel: (model: string, ctx?: PricingContext) => Promise<{ input: number; output: number }>;
   /** P0-1 预扣（阈值旁路判定 + Redis Lua 冻结；默认共享实现，测试可注入） */
   preConsume: (
     ctx: { userId: number; requestId: string },
@@ -577,6 +577,9 @@ export async function relayWebSocket(opts: WsRelayOptions): Promise<WsRelayResul
     metadata: {},
   };
 
+  // P2-1：WS 会话定价上下文（userId 恒可得 → 尽力传参；groupId/agentId 由定价服务惰性解析）
+  const pricingCtx: PricingContext = { userId: opts.ctx.userId };
+
   const estimatedInputTokens = estimateInputTokens(first.messages, first.model);
 
   // ── 转发期共享状态 ──
@@ -620,9 +623,9 @@ export async function relayWebSocket(opts: WsRelayOptions): Promise<WsRelayResul
     if (!closed) socket.close(code, reason);
   };
 
-  // 定价（懒加载 + 缓存，避免每次结算都查库）
+  // 定价（懒加载 + 缓存，避免每次结算都查库；P2-1 传会话定价上下文）
   const getPricing = async (): Promise<{ input: number; output: number }> => {
-    if (!pricingCache) pricingCache = await deps.getPricingForModel(first.model);
+    if (!pricingCache) pricingCache = await deps.getPricingForModel(first.model, pricingCtx);
     return pricingCache;
   };
 

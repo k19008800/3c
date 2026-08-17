@@ -76,7 +76,7 @@ import {
 } from '../services/pipeline';
 import type { PipelineContext } from '../services/pipeline';
 import type { SelectedChannel } from '../services/upstream/routing';
-import { getPricingForModel, computeCost, computeEstimatedCost } from '../services/billing/pricing';
+import { getPricingForModel, computeCost, computeEstimatedCost, buildPricingContext } from '../services/billing/pricing';
 import { settleBilling } from '../services/billing/settle';
 import crypto from 'crypto';
 
@@ -292,7 +292,8 @@ export async function rerankRoutes(app: FastifyInstance) {
           setStepResult(c, STEP_KEYS.balance, balance);
 
           // 3.5 P0-1 定价 + 预估费用（供 pre-consume step 预扣与结算分支复用）
-          const pricing = await getPricingForModel(req.model);
+          //     P2-1：传用户上下文（userId），L5 活动价 / L4 分组价 / L3 代理价按需惰性解析
+          const pricing = await getPricingForModel(req.model, buildPricingContext(c.request));
           const estimatedCost = computeEstimatedCost(req.model, estimatedInputTokens, pricing);
           setStepResult(c, STEP_KEYS.pricing, pricing);
           setStepResult(c, STEP_KEYS.estimatedCost, estimatedCost);

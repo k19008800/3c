@@ -4,7 +4,22 @@ export { determineStreamBilling } from './settle-stream';
 export { deductBalance, addBalance, getBalance, initBalance, freezeBalance, settleFrozenBalance, releaseFrozenBalance } from './balance';
 export { recordConsumption, getUserConsumptionStats } from './consumption-log';
 export type { StreamBillingResult } from './settle-stream';
-export { getPricingForModel, computeCost, computeEstimatedCost, computeTaskCost } from './pricing';
+export {
+  getPricingForModel,
+  computeCost,
+  computeEstimatedCost,
+  computeTaskCost,
+  buildPricingContext,
+  parseCampaignPricing,
+  AGENT_LEVEL_DISCOUNT_RATE,
+  DEFAULT_AGENT_DISCOUNT_RATE,
+  CAMPAIGN_PRICE_SCAN_LIMIT,
+  DEFAULT_INPUT_PRICE,
+  DEFAULT_OUTPUT_PRICE,
+  type ModelPricing,
+  type PricingContext,
+  type CampaignPriceRule,
+} from './pricing';
 export { settleBilling, type SettleOptions } from './settle';
 export {
   shouldBypass,

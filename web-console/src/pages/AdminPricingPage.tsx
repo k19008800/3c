@@ -52,8 +52,29 @@ export default function AdminPricingPage() {
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <h2 style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
         🏷️ 价格管理
-        <HelpIcon text="平台标价管理：配置每个模型的输入/输出单价（¥/1K tokens）与缓存命中折扣率。缓存命中折扣率（0-1）为空时跟随全局「系统设置 → 计费策略 → 缓存命中折扣率」（默认 0.1）；设置了则此模型命中部分按 全价 × 折扣率 计费。" level="page" />
+        <HelpIcon
+          text="平台定价管理：本页维护每个模型的平台标价（模型覆盖价，¥/1K tokens）与缓存命中折扣率。实际生效价格按六层优先级解析：L5 活动价（进行中活动，模型级覆盖/全局折扣）＞ L4 分组价（用户所属分组对应 pricing_group 的组价）＞ L3 代理价（绑定代理按层级打折）＞ L2 模型覆盖价（本页配置）＞ L1 平台标准价。上层未配置该模型时逐层降级，任一查询失败静默回退，不阻断请求。"
+          level="page"
+        />
       </h2>
+
+      {/* P2-1 层级定价说明：六层解析规则 + [?] 帮助 */}
+      <div style={{ ...card, marginBottom: 16, fontSize: 13, lineHeight: 1.7 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontWeight: 600 }}>
+          📊 层级定价说明
+          <HelpIcon
+            text="生效价格按以下优先级取第一层命中值（上层未配置该模型 → 逐层降级）：L5 活动价：campaigns 中 status=active 且当前时间在 [startAt, endAt] 内，config.pricing.models.<模型> 覆盖价优先于 config.pricing.discount 全局折扣。L4 分组价：用户分组（user_group_memberships → user_groups.pricingGroup）匹配 vendor_pricing.pricing_group 的组价。L3 代理价：用户绑定代理（agent_customers）按层级折扣：junior 95 折 / senior 9 折 / partner 85 折。L2 模型覆盖价：本页 pricing_group=default 的单价。L1 平台标准价：未配置任何价格时的默认单价。"
+            level="page"
+          />
+        </div>
+        <ol style={{ margin: 0, paddingLeft: 20, color: "var(--color-text-secondary)" }}>
+          <li><b>L5 活动价</b>：进行中活动（status=active 且在活动期内）的模型级覆盖价 / 全局折扣，优先级最高</li>
+          <li><b>L4 分组价</b>：用户所属分组（user_groups.pricingGroup）匹配 vendor_pricing.pricing_group 的组价</li>
+          <li><b>L3 代理价</b>：绑定代理的用户按层级折扣（junior 95 折 / senior 9 折 / partner 85 折）</li>
+          <li><b>L2 模型覆盖价</b>：本页配置的模型单价（pricing_group=default）</li>
+          <li><b>L1 平台标准价</b>：未配置时兜底默认价</li>
+        </ol>
+      </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="搜索模型名称..." style={{ ...inp, width: 200, marginBottom: 0 }} />
