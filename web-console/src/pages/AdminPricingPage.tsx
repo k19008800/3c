@@ -102,23 +102,39 @@ export default function AdminPricingPage() {
         )}
       </div>
 
-      <Modal open={!!editPricing} onClose={() => setEditPricing(null)} title={`编辑定价 — ${editPricing?.model_name ?? ""}`} width={420}>
+      <Modal open={!!editPricing} onClose={() => setEditPricing(null)} title={`编辑定价 — ${editPricing?.model_name ?? ""}`} width={480}>
         {editPricing && (
           <>
             <label style={{ fontSize: 13, color: "var(--color-text-secondary)", display: "block", marginBottom: 4 }}>输入价格 / 1K tokens</label>
-            <input value={editPricing.input} onChange={(e) => setEditPricing({ ...editPricing, input: e.target.value })} type="number" step="0.0001" min="0" style={inp} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <input value={editPricing.input} onChange={(e) => setEditPricing({ ...editPricing, input: e.target.value })} type="number" step="0.0001" min="0" style={{ ...inp, marginBottom: 0, flex: 1, minWidth: 0 }} />
+              <span style={{ fontSize: 12, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>
+                ¥/1K tokens（¥/M 会被拒绝）<HelpIcon text="单价按每 1000 tokens 计，若按百万 tokens 录入会被拦截" />
+              </span>
+            </div>
 
             <label style={{ fontSize: 13, color: "var(--color-text-secondary)", display: "block", marginBottom: 4 }}>输出价格 / 1K tokens</label>
-            <input value={editPricing.output} onChange={(e) => setEditPricing({ ...editPricing, output: e.target.value })} type="number" step="0.0001" min="0" style={inp} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <input value={editPricing.output} onChange={(e) => setEditPricing({ ...editPricing, output: e.target.value })} type="number" step="0.0001" min="0" style={{ ...inp, marginBottom: 0, flex: 1, minWidth: 0 }} />
+              <span style={{ fontSize: 12, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>
+                ¥/1K tokens（¥/M 会被拒绝）<HelpIcon text="单价按每 1000 tokens 计，若按百万 tokens 录入会被拦截" />
+              </span>
+            </div>
 
             <label style={{ fontSize: 13, color: "var(--color-text-secondary)", display: "block", marginBottom: 4 }}>
               缓存命中折扣率（0-1） <HelpIcon text="缓存命中 token 按「全价 × 此折扣率」计费。留空 = 未配置，跟随全局「系统设置 → 计费策略 → 缓存命中折扣率」（默认 0.1）。示例：0.1 = 命中按 10% 计费，0.5 = 按 50%。" />
             </label>
             <input value={editPricing.cacheRate} onChange={(e) => setEditPricing({ ...editPricing, cacheRate: e.target.value })} type="number" step="0.01" min="0.01" max="1" placeholder="留空跟随全局（默认 0.1）" style={inp} />
 
+            {updateMut.isError && (
+              <div style={{ marginBottom: 10, padding: "8px 10px", background: "var(--color-danger-bg)", borderRadius: 6, fontSize: 13, color: "var(--color-danger-text)" }}>
+                ⚠️ {extractError(updateMut.error)}
+              </div>
+            )}
+
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setEditPricing(null)} style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-text)" }}>取消</button>
-              <button onClick={() => updateMut.mutate()} disabled={!editPricing.input || !editPricing.output} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff" }}>
+              <button onClick={() => updateMut.mutate()} disabled={!editPricing.input || !editPricing.output || updateMut.isPending} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff" }}>
                 {updateMut.isPending ? "保存中..." : "保存"}
               </button>
             </div>

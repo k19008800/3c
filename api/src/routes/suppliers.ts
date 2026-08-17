@@ -9,7 +9,7 @@
  *   公开定价       — /api/v1/public/pricing
  */
 
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { db, schema } from '../db';
 import { eq, and, like, sql, desc, asc, inArray } from 'drizzle-orm';
 import { verifyToken } from '../services/auth/jwt';
@@ -23,6 +23,7 @@ import {
   testSupplierConnection,
   querySupplierBalances,
 } from '../services/supplier-ops';
+import { validatePricingUnit, PRICE_UNIT_SUSPECT_MESSAGE } from '../services/billing/pricing';
 
 /* ───────── helpers ───────── */
 
@@ -47,6 +48,32 @@ function intParam(params: Record<string, unknown>, key: string): number {
   const v = parseInt(String(params[key]), 10);
   if (isNaN(v)) throw new ValidationError(`Invalid ${key}`);
   return v;
+}
+
+/**
+ * P1-4 定价录入单位校验（路由层封装）
+ *
+ * 纯校验逻辑在 services/billing/pricing.ts 的 validatePricingUnit（可单测），
+ * 本函数只负责把校验结果映射成响应：
+ *   - 合法 → 返回 true，继续写库
+ *   - 疑似 ¥/M 误填（任一价格 > 10）→ 发送 400 + code=PRICE_UNIT_SUSPECT，返回 false
+ *   - 参数非法（非数字 / ≤0）→ 抛 ValidationError（400 VALIDATION_ERROR）
+ *
+ * @see docs/iteration-plan-v2.md P1-4
+ */
+function assertPricingUnitValid(
+  input: number,
+  output: number,
+  request: FastifyRequest,
+  reply: FastifyReply,
+): boolean {
+  const result = validatePricingUnit(input, output);
+  if (result.ok) return true;
+  if (result.error === PRICE_UNIT_SUSPECT_MESSAGE) {
+    reply.status(400).send({ code: 'PRICE_UNIT_SUSPECT', message: result.error, requestId: request.id });
+    return false;
+  }
+  throw new ValidationError(result.error ?? '价格参数非法');
 }
 
 interface PaginationQuery {
@@ -605,8 +632,11 @@ export async function supplierRoutes(app: FastifyInstance) {
     const body = request.body as Record<string, unknown>;
 
     const supplierModelId = body.supplierModelId ? Number(body.supplierModelId) : null;
-    const inputPrice = String(body.inputPrice ?? '');
-    const outputPrice = String(body.outputPrice ?? '');
+    // 兼容新旧字段名：input_price_per_1k（价格管理页）↔ inputPrice（旧契约），output 同理
+    const inputPriceVal = body.input_price_per_1k !== undefined ? body.input_price_per_1k : body.inputPrice;
+    const outputPriceVal = body.output_price_per_1k !== undefined ? body.output_price_per_1k : body.outputPrice;
+    const inputPrice = inputPriceVal === undefined ? '' : String(inputPriceVal);
+    const outputPrice = outputPriceVal === undefined ? '' : String(outputPriceVal);
     const pricingGroup = String(body.pricingGroup || 'default');
     const outputMultiplier = String(body.outputMultiplier ?? '1.0');
     const currency = String(body.currency || 'CNY');
@@ -614,6 +644,11 @@ export async function supplierRoutes(app: FastifyInstance) {
 
     if (!supplierModelId || !inputPrice || !outputPrice) {
       throw new ValidationError('supplierModelId, inputPrice, and outputPrice are required');
+    }
+
+    // P1-4 定价录入单位校验：单价单位约定为 ¥/1K tokens，任一价格 > 10 视为疑似 ¥/M 误填
+    if (!assertPricingUnitValid(Number(inputPrice), Number(outputPrice), request, reply)) {
+      return;
     }
 
     const [pricing] = await db.insert(schema.vendorPricing).values({
@@ -650,6 +685,16 @@ export async function supplierRoutes(app: FastifyInstance) {
       .where(eq(schema.vendorPricing.id, id))
       .limit(1);
     if (!existing) throw new NotFoundError('Pricing', id);
+
+    // P1-4 定价录入单位校验：提交了价格字段才校验（只改 status/折扣率等不影响价格语义）；
+    // 未提交的一侧用现值兜底，保证"只改一侧"后整体状态仍满足 ¥/1K 单位语义
+    if (inputPriceVal !== undefined || outputPriceVal !== undefined) {
+      const inputNum = inputPriceVal !== undefined ? Number(inputPriceVal) : Number(existing.inputPrice);
+      const outputNum = outputPriceVal !== undefined ? Number(outputPriceVal) : Number(existing.outputPrice);
+      if (!assertPricingUnitValid(inputNum, outputNum, request, reply)) {
+        return;
+      }
+    }
 
     const [modelInfo] = await db.select({
       supplierId: schema.supplierModels.supplierId,

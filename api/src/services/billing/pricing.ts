@@ -139,3 +139,55 @@ export function computeTaskCost(model: string, pricing?: { input: number; output
   const p = pricing ?? DEFAULT_PRICING;
   return (TASK_BILLING_UNIT_TOKENS / 1000) * p.output;
 }
+
+// ============================================================
+// 定价录入单位校验（P1-4）
+// ============================================================
+
+/**
+ * 疑似 ¥/M 误填的提示文案（PRICE_UNIT_SUSPECT 的错误消息）。
+ *
+ * 路由层用该常量区分错误类型：`validatePricingUnit` 返回的 error 等于此值时，
+ * 应答 `400 + code=PRICE_UNIT_SUSPECT`（前端据此展示"单价疑似以 ¥/M 录入"），
+ * 其余 error 属于参数非法（400 VALIDATION_ERROR）。
+ */
+export const PRICE_UNIT_SUSPECT_MESSAGE = '单价疑似以 ¥/M 录入（单位应为 ¥/1K），请确认';
+
+/**
+ * 管理端定价录入单位校验 — 从入口拦截 1000× 计费偏差事故（P1-4）
+ *
+ * 背景：2026-08-17 曾发生计费偏差事故：vendor_pricing 把 ¥/M 值（2/8）误填进
+ * ¥/1K 字段 → 计费偏差 1000 倍（742 tokens 扣 ¥5.876，应为 ¥0.0058）。
+ * 语义约定：单价单位是 **¥/1K tokens**；任一价格 > 10 视为疑似 ¥/M 误填。
+ *
+ * 规则：
+ *   - 合法范围：(0, 10]，两端都为合法值才通过
+ *   - 任一 > 10 → 疑似 ¥/M 误填（error = PRICE_UNIT_SUSPECT_MESSAGE）
+ *   - 非数字（NaN/Infinity）或 ≤ 0 → 参数非法
+ *
+ * @param input - 输入单价（¥/1K tokens）
+ * @param output - 输出单价（¥/1K tokens）
+ * @returns `{ ok: true }` 合法；`{ ok: false, error }` 拒绝原因（error 等于
+ *          PRICE_UNIT_SUSPECT_MESSAGE 时为疑似 ¥/M 误填，其余为参数非法）
+ *
+ * @example
+ * ```ts
+ * validatePricingUnit(2, 8);        // { ok: true }
+ * validatePricingUnit(2000, 8);     // { ok: false, error: PRICE_UNIT_SUSPECT_MESSAGE }
+ * validatePricingUnit(0, 8);        // { ok: false, error: '单价必须为大于 0 的数字（单位 ¥/1K tokens）' }
+ * ```
+ *
+ * @see docs/iteration-plan-v2.md P1-4
+ */
+export function validatePricingUnit(input: number, output: number): { ok: boolean; error?: string } {
+  if (!Number.isFinite(input) || !Number.isFinite(output)) {
+    return { ok: false, error: '单价必须为大于 0 的数字（单位 ¥/1K tokens）' };
+  }
+  if (input <= 0 || output <= 0) {
+    return { ok: false, error: '单价必须为大于 0 的数字（单位 ¥/1K tokens）' };
+  }
+  if (input > 10 || output > 10) {
+    return { ok: false, error: PRICE_UNIT_SUSPECT_MESSAGE };
+  }
+  return { ok: true };
+}
