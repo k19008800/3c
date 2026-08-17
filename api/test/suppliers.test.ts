@@ -431,7 +431,15 @@ describe('Supplier Management API', () => {
       });
       expect(res.statusCode).toBe(200);
       const body = JSON.parse(res.payload);
+      // 契约：{ data: { list, total, page, pageSize } }，list 每项含模型/供应商名 + 缓存命中折扣率
       expect(body.data).toBeDefined();
+      expect(Array.isArray(body.data.list)).toBe(true);
+      if (body.data.list.length > 0) {
+        const item = body.data.list[0];
+        expect(item.model_name).toBeDefined();
+        expect(typeof item.input_price_per_1k).toBe('number');
+        expect('cache_discount_rate' in item).toBe(true);
+      }
     });
 
     it('GET /api/v1/admin/pricing — status filter', async () => {
@@ -452,6 +460,39 @@ describe('Supplier Management API', () => {
       const body = JSON.parse(res.payload);
       expect(body.pricing.status).toBe('active');
       expect(body.pricing.inputPrice).toBe('0.04');
+    });
+
+    it('PUT /api/v1/admin/pricing/:id — 新字段名 + 模型级缓存命中折扣率', async () => {
+      const res = await app.inject({
+        method: 'PUT', url: `/api/v1/admin/pricing/${pricingId}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { input_price_per_1k: '0.05', output_price_per_1k: '0.15', cache_discount_rate: '0.5' },
+      });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.payload);
+      expect(body.pricing.inputPrice).toBe('0.05');
+      expect(body.pricing.outputPrice).toBe('0.15');
+      expect(body.pricing.cacheDiscountRate).toBe('0.5');
+    });
+
+    it('PUT /api/v1/admin/pricing/:id — 缓存折扣率清空（回退全局）', async () => {
+      const res = await app.inject({
+        method: 'PUT', url: `/api/v1/admin/pricing/${pricingId}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { cache_discount_rate: '' },
+      });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.payload);
+      expect(body.pricing.cacheDiscountRate).toBeNull();
+    });
+
+    it('PUT /api/v1/admin/pricing/:id — 非法缓存折扣率拒绝', async () => {
+      const res = await app.inject({
+        method: 'PUT', url: `/api/v1/admin/pricing/${pricingId}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { cache_discount_rate: '2' },
+      });
+      expect(res.statusCode).toBe(400);
     });
 
     it('PUT /api/v1/admin/pricing/:id — 404 on missing', async () => {

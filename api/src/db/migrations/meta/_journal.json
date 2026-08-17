@@ -55,6 +55,13 @@
       "when": 1787965200000,
       "tag": "0007_task_records",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788556800000,
+      "tag": "0008_cache_discount_rate",
+      "breakpoints": true
     }
   ],
   "version": "7",

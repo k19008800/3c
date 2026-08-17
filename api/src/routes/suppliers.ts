@@ -535,22 +535,69 @@ export async function supplierRoutes(app: FastifyInstance) {
   // 4. 定价配置
   // ═══════════════════════════════════════════
 
-  /** GET /api/v1/admin/pricing — 定价列表 */
+  /** 定价状态中文标签（价格管理页 status_label 展示） */
+  const PRICING_STATUS_LABEL: Record<string, string> = {
+    draft: '草稿',
+    active: '生效中',
+    archived: '已归档',
+  };
+
+  /**
+   * GET /api/v1/admin/pricing — 定价列表（价格管理页）
+   *
+   * 返回 { data: { list, total, page, pageSize } }，list 每项含模型/供应商名、
+   * 输入/输出单价（¥/1K）与模型级缓存命中折扣率 cache_discount_rate（null = 用全局）。
+   * 支持 search（模型名模糊）/ status 筛选。
+   */
   app.get('/api/v1/admin/pricing', { preHandler: [adminAuth] }, async (request, reply) => {
     const q = (request.query || {}) as PaginationQuery;
     const { page, pageSize, offset } = parsePagination(q);
 
     const conditions: any[] = [];
     if (q.status) conditions.push(eq(schema.vendorPricing.status, q.status as any));
-
+    if (q.search) {
+      conditions.push(sql`${schema.supplierModels.modelName} ILIKE ${'%' + q.search + '%'}`);
+    }
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
+    const base = db.select({
+      id: schema.vendorPricing.id,
+      model_id: schema.supplierModels.id,
+      model_name: schema.supplierModels.modelName,
+      vendor_id: schema.supplierModels.supplierId,
+      vendor_name: schema.suppliers.name,
+      input_price_per_1k: schema.vendorPricing.inputPrice,
+      output_price_per_1k: schema.vendorPricing.outputPrice,
+      cache_discount_rate: schema.vendorPricing.cacheDiscountRate,
+      currency: schema.vendorPricing.currency,
+      status: schema.vendorPricing.status,
+      effective_from: schema.vendorPricing.effectiveFrom,
+      updated_at: schema.vendorPricing.updatedAt,
+    })
+      .from(schema.vendorPricing)
+      .innerJoin(schema.supplierModels, eq(schema.vendorPricing.supplierModelId, schema.supplierModels.id))
+      .innerJoin(schema.suppliers, eq(schema.supplierModels.supplierId, schema.suppliers.id));
+
     const [rows, countResult] = await Promise.all([
-      db.select().from(schema.vendorPricing).where(whereClause).limit(pageSize).offset(offset),
-      db.select({ count: sql<number>`count(*)` }).from(schema.vendorPricing).where(whereClause),
+      base.where(whereClause).limit(pageSize).offset(offset),
+      db.select({ count: sql<number>`count(*)` })
+        .from(schema.vendorPricing)
+        .innerJoin(schema.supplierModels, eq(schema.vendorPricing.supplierModelId, schema.supplierModels.id))
+        .innerJoin(schema.suppliers, eq(schema.supplierModels.supplierId, schema.suppliers.id))
+        .where(whereClause),
     ]);
 
-    return reply.send(paginatedReply(rows, Number(countResult[0]?.count ?? 0), page, pageSize));
+    const list = rows.map((r) => ({
+      ...r,
+      input_price_per_1k: Number(r.input_price_per_1k) || 0,
+      output_price_per_1k: Number(r.output_price_per_1k) || 0,
+      cache_discount_rate: r.cache_discount_rate != null ? Number(r.cache_discount_rate) : null,
+      status_label: PRICING_STATUS_LABEL[r.status] ?? r.status,
+    }));
+
+    return reply.send({
+      data: { list, total: Number(countResult[0]?.count ?? 0), page, pageSize },
+    });
   });
 
   /** POST /api/v1/admin/pricing — 创建定价 */
@@ -588,10 +635,15 @@ export async function supplierRoutes(app: FastifyInstance) {
     const id = intParam(request.params as Record<string, unknown>, 'id');
     const body = request.body as Record<string, unknown>;
 
+    // 兼容新旧字段名：input_price_per_1k（价格管理页）↔ inputPrice（旧契约），output 同理
+    const inputPriceVal = body.input_price_per_1k !== undefined ? body.input_price_per_1k : body.inputPrice;
+    const outputPriceVal = body.output_price_per_1k !== undefined ? body.output_price_per_1k : body.outputPrice;
+
     // 变更前读取旧价 + 关联模型/供应商
     const [existing] = await db.select({
       inputPrice: schema.vendorPricing.inputPrice,
       outputPrice: schema.vendorPricing.outputPrice,
+      cacheDiscountRate: schema.vendorPricing.cacheDiscountRate,
       supplierModelId: schema.vendorPricing.supplierModelId,
     })
       .from(schema.vendorPricing)
@@ -608,12 +660,25 @@ export async function supplierRoutes(app: FastifyInstance) {
       .limit(1);
 
     const setData: Record<string, unknown> = { updatedAt: new Date() };
-    if (body.inputPrice !== undefined) setData.inputPrice = String(body.inputPrice);
-    if (body.outputPrice !== undefined) setData.outputPrice = String(body.outputPrice);
+    if (inputPriceVal !== undefined) setData.inputPrice = String(inputPriceVal);
+    if (outputPriceVal !== undefined) setData.outputPrice = String(outputPriceVal);
     if (body.outputMultiplier !== undefined) setData.outputMultiplier = String(body.outputMultiplier);
     if (body.pricingGroup !== undefined) setData.pricingGroup = String(body.pricingGroup);
     if (body.currency !== undefined) setData.currency = String(body.currency);
     if (body.status !== undefined) setData.status = String(body.status);
+    // 模型级缓存命中折扣率：合法 (0,1] 存数值；空字符串/null → 清空（回退全局 billing.cache_hit_discount）
+    if (body.cache_discount_rate !== undefined) {
+      const raw = body.cache_discount_rate;
+      if (raw === null || raw === '' || raw === undefined) {
+        setData.cacheDiscountRate = null;
+      } else {
+        const rate = Number(raw);
+        if (!(Number.isFinite(rate) && rate > 0 && rate <= 1)) {
+          throw new ValidationError('cache_discount_rate 必须是 (0, 1] 区间的数字（如 0.1 = 命中按 10% 计费）；清空请传空字符串或 null');
+        }
+        setData.cacheDiscountRate = String(rate);
+      }
+    }
 
     if (Object.keys(setData).length <= 1) {
       throw new ValidationError('No fields to update');
@@ -629,8 +694,8 @@ export async function supplierRoutes(app: FastifyInstance) {
     // ── 价格变更捕获（销售价为准）──
     const oldInput = Number(existing.inputPrice);
     const oldOutput = Number(existing.outputPrice);
-    const newInput = body.inputPrice !== undefined ? Number(body.inputPrice) : oldInput;
-    const newOutput = body.outputPrice !== undefined ? Number(body.outputPrice) : oldOutput;
+    const newInput = inputPriceVal !== undefined ? Number(inputPriceVal) : oldInput;
+    const newOutput = outputPriceVal !== undefined ? Number(outputPriceVal) : oldOutput;
     const priceChanged = newInput !== oldInput || newOutput !== oldOutput;
 
     if (priceChanged && modelInfo) {
@@ -669,6 +734,7 @@ export async function supplierRoutes(app: FastifyInstance) {
       pricingGroup: schema.vendorPricing.pricingGroup,
       inputPrice: schema.vendorPricing.inputPrice,
       outputPrice: schema.vendorPricing.outputPrice,
+      cacheDiscountRate: schema.vendorPricing.cacheDiscountRate,
       currency: schema.vendorPricing.currency,
       modelName: schema.supplierModels.modelName,
       supplierName: schema.suppliers.name,

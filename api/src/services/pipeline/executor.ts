@@ -22,7 +22,11 @@ export async function runPipeline<T extends unknown[]>(
       const result = await step.execute(ctx);
       results.push(result);
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      // P0-4: 非 Error 抛出的原始值（如 PG 错误对象 { code: '23505' }）经 Error.cause
+      // 保留，路由 catch 可解包判定（如 isIdempotencyUniqueViolation），不丢失语义。
+      const error = err instanceof Error
+        ? err
+        : new Error(String(err), { cause: err });
 
       // Rollback executed steps in reverse
       for (let j = executedSteps.length - 2; j >= 0; j--) {

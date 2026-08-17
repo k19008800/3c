@@ -6,6 +6,7 @@ import swaggerUi from '@fastify/swagger-ui';
 import { db } from './db';
 import { loadEnv, type Env } from './lib/env';
 import { healthRoutes } from './routes/health';
+import { internalAssetsRoutes } from './routes/internal-assets';
 import { chatRoutes } from './routes/chat';
 import { wsRoutes } from './routes/ws';
 import { openaiCompatRoutes } from './routes/openai-compat';
@@ -59,6 +60,8 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
         ? { target: 'pino-pretty', options: { colorize: true } }
         : undefined,
     },
+    // 多模态大 base64 预处理（P0-4）需要 >1MB 请求体；默认 64MB（env BODY_LIMIT_MB 可调）
+    bodyLimit: env.BODY_LIMIT_MB * 1024 * 1024,
   });
 
   // Plugins
@@ -80,6 +83,7 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
 
   // Routes
   await app.register(healthRoutes);
+  await app.register(internalAssetsRoutes);
   await app.register(chatRoutes);
   await app.register(wsRoutes);
   await app.register(openaiCompatRoutes);

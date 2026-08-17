@@ -14,6 +14,8 @@ const envSchema = z.object({
   CIRCUIT_BREAKER_COOLDOWN_MS: z.coerce.number().default(60000),
   RATE_LIMIT_DEFAULT_RPM: z.coerce.number().default(60),
   IDEMPOTENCY_TTL_SECONDS: z.coerce.number().default(3600),
+  /** Fastify body 上限（MB）— 多模态大 base64 预处理（P0-4）需要 >1MB 请求体 */
+  BODY_LIMIT_MB: z.coerce.number().default(64),
 });
 
 export type Env = z.infer<typeof envSchema>;

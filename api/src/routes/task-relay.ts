@@ -30,13 +30,15 @@
  *   管理员通过给任务模型配置 vendor_pricing.outputPrice 控制每次任务单价。
  *   任务失败/超时由轮询器退款（addBalance refund，自动冲销代理佣金）。
  *
- * 转发/计费链路：
- *   API Key Auth → Validate（action 必填 → 400）→ 余额预检(≤0 → 402)
- *   → 渠道解析（任务依赖动作 → 渠道锁定；否则 selectTaskChannel，无可用 → mock 回退）
- *   → proxy upstream（透传）→ 落库 task_records → 记账 → 透传上游响应体
+ * 提交链路（P0-4 已改写为 pipeline steps）：
+ *   auth → rate-limit → validate（action 校验 + 余额预检 ≤0 → 402）
+ *   → route（任务依赖动作 → 渠道锁定；否则 selectTaskChannel；无可用 → mock 回退）
+ *   → proxy（上游转发，透传错误；任务提交不转发上游响应体给客户端）
+ *   → settle（落库 task_records → 记账任务单价 → 透传响应）
  *
- * 说明：本文件按 rerank.ts 等价实现私有 helper（settleBilling / getPricingForModel /
- * computeTaskCost / sendOpenAIError 等），不改动既有文件行为。
+ * ⚠️ task-relay 豁免（docs/iteration-plan-v2.md P0-1/P0-4）：
+ *   - 不接入 pre-consume（任务单价固定 + 失败有轮询器退款，保留"余额预检 + 事后扣费"）；
+ *   - 无幂等守卫（不接入 idempotency step，链路上不出现幂等锁）。
  *
  * @see newapi-gap-analysis.md Batch 4 任务 4.1
  * @see services/task/task-store（任务持久化）
@@ -46,8 +48,6 @@
  */
 
 import type { FastifyInstance, FastifyReply } from 'fastify';
-import { db, schema } from '../db';
-import { eq } from 'drizzle-orm';
 import { apiKeyAuth } from '../services/auth/apikey';
 import { selectTaskChannel, type SelectedChannel } from '../services/upstream/routing';
 import {
@@ -61,7 +61,21 @@ import {
 import { getBalance } from '../services/billing/balance';
 import { recordChannelResult } from '../services/upstream/circuit-breaker';
 import { AppError, InsufficientBalanceError } from '../lib/errors';
-import type { PipelineContext } from '../services/pipeline/types';
+import {
+  runPipeline,
+  createStep,
+  authStep,
+  rateLimitStep,
+  proxyStep,
+  UpstreamPassthroughError,
+  settleStep,
+  setStepResult,
+  requireStepResult,
+  getStepResult,
+  STEP_KEYS,
+  type MockStepResult,
+} from '../services/pipeline';
+import type { PipelineContext } from '../services/pipeline';
 import { getPricingForModel, computeTaskCost, TASK_BILLING_UNIT_TOKENS } from '../services/billing/pricing';
 import { settleBilling } from '../services/billing/settle';
 import crypto from 'crypto';
@@ -242,35 +256,22 @@ function validateAction(action: string | undefined): string {
 }
 
 /**
- * 转发任务提交请求到上游
+ * 原任务不存在/非本人（渠道锁定失败）— MJ 语义错误
  *
- * @param apiType - 供应商 apiType（midjourney / suno）
- * @param path - 上游相对路径（如 /mj/submit/imagine）
- * @param body - 请求体
- * @param keyValue - 上游 API Key
- * @param baseUrl - 供应商 baseUrl
- * @returns 上游 fetch Response
+ * 以 HTTP 200 + {code:4, description:"task_no_found"} 返回（与 New API 一致），
+ * 不是 HTTP 错误，故不继承 AppError（避免被通用 AppError 映射吞掉）。
  */
-function forwardTask(
-  apiType: string,
-  path: string,
-  body: unknown,
-  keyValue: string,
-  baseUrl: string,
-): Promise<Response> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${keyValue}`,
-  };
-  // Midjourney Proxy（novicezk/midjourney-proxy）以上游 Key 作为 mj-api-secret 头鉴权
-  if (apiType === 'midjourney') {
-    headers['mj-api-secret'] = keyValue;
+class TaskNotFoundError extends Error {
+  constructor() {
+    super('task_no_found');
+    this.name = 'TaskNotFoundError';
   }
-  return fetch(`${baseUrl}${path}`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body ?? {}),
-  });
+}
+
+/** validate step 输出：校验后的 action + 计费模型名（route/proxy/settle 步骤读取） */
+interface TaskSubmitMeta {
+  action: string;
+  billModel: string;
 }
 
 /** 把 task-store 的 supplier/key 行包装成 SelectedChannel（渠道锁定用） */
@@ -338,179 +339,243 @@ export async function taskRelayRoutes(app: FastifyInstance) {
   // ═══════════════════════════════════════
 
   /**
-   * 处理任务提交（MJ / Suno 共用）：
-   * 鉴权 → 余额预检 → 渠道解析（任务依赖动作渠道锁定 / selectTaskChannel）
-   * → 转发 → 落库 task_records → 记账（记账失败删除记录补偿）→ 透传响应
+   * 处理任务提交（MJ / Suno 共用）— P0-4 pipeline 步骤链：
+   * auth → rate-limit → validate（action + 余额预检）→ route（渠道锁定/selectTaskChannel）
+   * → proxy（上游转发）→ settle（落库 task_records + 记账任务单价 + 透传响应）。
+   *
+   * 豁免说明：task-relay 不接入 pre-consume / idempotency（docs/iteration-plan-v2.md P0-1：
+   * 任务单价固定 + 失败有轮询器退款；P0-4：本路由无幂等守卫）。
    */
   async function handleTaskSubmit(apiType: 'midjourney' | 'suno', request: any, reply: FastifyReply) {
     const ctx = (request as any).apiKeyContext as { userId: number; apiKeyId: number; keyHash: string };
     const body = (request.body ?? {}) as Record<string, unknown>;
     const userId = ctx?.userId ?? 0;
 
+    // Build pipeline context（request/reply 注入供 steps 使用；身份字段由 auth step 同步；
+    // model 由 validate step 填充为计费模型名；task-relay 无流式）
+    const pipelineCtx: PipelineContext = {
+      requestId: crypto.randomUUID(),
+      userId,
+      apiKeyId: ctx?.apiKeyId ?? 0,
+      model: '',
+      body,
+      stream: false,
+      metadata: {},
+      request,
+      reply,
+    };
+    setStepResult(pipelineCtx, STEP_KEYS.apiKeyContext, ctx);
+
     try {
-      // 校验 action（在 try 内：AppError 走统一错误格式，而非 Fastify 默认错误体）
-      const action = validateAction(request.params?.action);
+      const result = await runPipeline(pipelineCtx, [
+        // 1. auth — API Key 认证（preHandler 已执行；此处断言上下文就绪）
+        authStep(),
 
-      // action → 计费模型名
-      const modelMap = apiType === 'midjourney' ? MJ_ACTION_MODEL : SUNO_ACTION_MODEL;
-      const billModel = modelMap[action.toLowerCase()] ?? (apiType === 'midjourney' ? 'mj_imagine' : 'suno_music');
+        // 2. rate-limit — 四级限流（链路声明；实际限流视 preHandler 挂载而定）
+        rateLimitStep(),
 
-      const pipelineCtx: PipelineContext = {
-        requestId: crypto.randomUUID(),
-        userId,
-        apiKeyId: ctx?.apiKeyId ?? 0,
-        model: billModel,
-        body,
-        stream: false,
-        metadata: {},
-      };
+        // 3. validate — 校验 action + 计费模型 + 余额预检（≤0 → 402，不浪费上游调用）
+        createStep('validate', async (c) => {
+          // 校验 action（在 step 内：AppError 走统一错误格式，而非 Fastify 默认错误体）
+          const action = validateAction(request.params?.action);
 
-      // 1. 余额预检（0 余额直接 402，不浪费上游调用）
-      const balance = await getBalance(userId);
-      if (Number(balance.availableBalance || 0) <= 0) {
-        throw new InsufficientBalanceError('0', '0');
-      }
+          // action → 计费模型名
+          const modelMap = apiType === 'midjourney' ? MJ_ACTION_MODEL : SUNO_ACTION_MODEL;
+          const billModel = modelMap[action.toLowerCase()] ?? (apiType === 'midjourney' ? 'mj_imagine' : 'suno_music');
+          c.model = billModel;
+          setStepResult(c, STEP_KEYS.request, { action, billModel });
 
-      // 2. 渠道解析：
-      //    a) 任务依赖动作（change/simple-change/...）→ 按 body.taskId 定位原任务 → 渠道锁定
-      //    b) 普通提交 → selectTaskChannel 按 apiType 选渠道
-      const referencedTaskId = extractReferencedTaskId(action, body);
-      let channel: SelectedChannel | null = null;
-      if (referencedTaskId) {
-        const originTask = await getTaskForUser('midjourney', referencedTaskId, userId);
-        if (!originTask) {
-          // 原任务不存在/非本人 → MJ 语义错误（HTTP 200 + code 4，与 New API 一致）
-          return reply.send({ code: 4, description: 'task_no_found' });
-        }
-        const sup = await getSupplierWithKey(originTask.supplierId, originTask.channelKeyId);
-        if (!sup) {
-          return sendOpenAIError(reply, 502, 'Original channel unavailable', 'channel_unavailable', 502);
-        }
-        channel = toSelectedChannel(sup.supplier, sup.key, originTask.model);
-      } else {
-        channel = await selectTaskChannel(apiType, userId ? { userId } : undefined);
-      }
+          // 余额预检（0 余额直接 402，不浪费上游调用）
+          const balance = await getBalance(c.userId);
+          if (Number(balance.availableBalance || 0) <= 0) {
+            throw new InsufficientBalanceError('0', '0');
+          }
+          setStepResult(c, STEP_KEYS.balance, balance);
+          return { action, billModel };
+        }),
 
-      const pricing = await getPricingForModel(billModel);
-      const taskCost = computeTaskCost(billModel, pricing);
+        // 4. route — 渠道解析：
+        //    a) 任务依赖动作（change/simple-change/...）→ 按 body.taskId 定位原任务 → 渠道锁定
+        //    b) 普通提交 → selectTaskChannel 按 apiType 选渠道
+        //    无可用 → proxy step 走 mock 回退
+        createStep('route', async (c) => {
+          const { action } = requireStepResult<TaskSubmitMeta>(c, STEP_KEYS.request);
+          const referencedTaskId = extractReferencedTaskId(action, c.body);
+          let channel: SelectedChannel | null = null;
+          if (referencedTaskId) {
+            const originTask = await getTaskForUser('midjourney', referencedTaskId, c.userId);
+            if (!originTask) {
+              // 原任务不存在/非本人 → MJ 语义错误（HTTP 200 + code 4，与 New API 一致）
+              throw new TaskNotFoundError();
+            }
+            const sup = await getSupplierWithKey(originTask.supplierId, originTask.channelKeyId);
+            if (!sup) {
+              throw new AppError('Original channel unavailable', 502, 'channel_unavailable');
+            }
+            channel = toSelectedChannel(sup.supplier, sup.key, originTask.model);
+          } else {
+            channel = await selectTaskChannel(apiType, c.userId ? { userId: c.userId } : undefined);
+          }
+          setStepResult(c, STEP_KEYS.channel, channel);
+          return channel;
+        }),
 
-      if (!channel) {
-        // ── mock 回退路径：返回占位任务 id，同样记账扣费（不落库：mock 任务不可轮询）──
-        await settleBilling(pipelineCtx, 0, TASK_BILLING_UNIT_TOKENS, taskCost, null, {
-          streamed: false,
-          trustUpstream: false,
-          fallback: true,
-          finishReason: 'stop',
-        });
+        // 5. proxy — 上游转发（任务提交不转发上游响应体给客户端；上游错误透传；无渠道 → mock 回退）
+        proxyStep({
+          buildUpstreamRequest: async (c) => {
+            const { action } = requireStepResult<TaskSubmitMeta>(c, STEP_KEYS.request);
+            const channel = requireStepResult<SelectedChannel>(c, STEP_KEYS.channel);
+            const headers: Record<string, string> = {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${channel.key.keyValue}`,
+            };
+            // Midjourney Proxy（novicezk/midjourney-proxy）以上游 Key 作为 mj-api-secret 头鉴权
+            if (apiType === 'midjourney') {
+              headers['mj-api-secret'] = channel.key.keyValue;
+            }
+            return {
+              url: `${channel.supplier.baseUrl}/${apiType === 'midjourney' ? 'mj' : 'suno'}/submit/${action}`,
+              headers,
+              body: JSON.stringify(c.body ?? {}),
+            };
+          },
+          // mock 回退：无可用供应商 → 占位任务 id（保持原 mock 格式），同样记账扣费
+          mockFallback: async (c) => {
+            const { billModel } = requireStepResult<TaskSubmitMeta>(c, STEP_KEYS.request);
+            if (apiType === 'midjourney') {
+              return {
+                payload: {
+                  code: 1,
+                  result: `mock-task-${c.requestId}`,
+                  description: `[3cloud 模拟响应] 模型 ${billModel} 无可用供应商，返回占位任务 id。`,
+                  properties: {},
+                  mock: true,
+                },
+                content: '',
+                usage: { prompt_tokens: 0, completion_tokens: TASK_BILLING_UNIT_TOKENS, total_tokens: TASK_BILLING_UNIT_TOKENS },
+              };
+            }
+            return {
+              payload: {
+                code: 'success',
+                message: '',
+                data: `mock-task-${c.requestId}`,
+                mock: true,
+              },
+              content: '',
+              usage: { prompt_tokens: 0, completion_tokens: TASK_BILLING_UNIT_TOKENS, total_tokens: TASK_BILLING_UNIT_TOKENS },
+            };
+          },
+        }),
 
-        if (apiType === 'midjourney') {
-          return reply.send({
-            code: 1,
-            result: `mock-task-${pipelineCtx.requestId}`,
-            description: `[3cloud 模拟响应] 模型 ${billModel} 无可用供应商，返回占位任务 id。`,
-            properties: {},
-            mock: true,
-          });
-        }
-        return reply.send({
-          code: 'success',
-          message: '',
-          data: `mock-task-${pipelineCtx.requestId}`,
-          mock: true,
-        });
-      }
+        // 6. settle — 落库 task_records + 记账（任务单价）+ 透传响应（mock 路径不落库）
+        settleStep({
+          implement: async (c) => {
+            const { action, billModel } = requireStepResult<TaskSubmitMeta>(c, STEP_KEYS.request);
+            const mock = getStepResult<MockStepResult>(c, STEP_KEYS.mockResult);
+            const pricing = await getPricingForModel(billModel);
+            const taskCost = computeTaskCost(billModel, pricing);
 
-      // 3. 真实上游转发（透传请求体，路径按 action 拼接）
-      const upstreamResp = await forwardTask(
-        apiType,
-        `/${apiType === 'midjourney' ? 'mj' : 'suno'}/submit/${action}`,
-        body,
-        channel.key.keyValue,
-        channel.supplier.baseUrl,
-      );
+            // ── mock 回退路径：返回占位任务 id，同样记账扣费（不落库：mock 任务不可轮询）──
+            if (mock) {
+              await settleBilling(c, 0, TASK_BILLING_UNIT_TOKENS, taskCost, null, {
+                streamed: false,
+                trustUpstream: false,
+                fallback: true,
+                finishReason: 'stop',
+                preConsume: null,
+              });
+              return reply.send(mock.payload);
+            }
 
-      const cbKey = `supplier:${channel.supplier.id}:key:${channel.key.id}`;
+            // ── 真实上游路径 ──
+            const channel = requireStepResult<SelectedChannel>(c, STEP_KEYS.channel);
+            const parsedBody = requireStepResult<Record<string, unknown>>(c, STEP_KEYS.parsedBody);
+            const cbKey = `supplier:${channel.supplier.id}:key:${channel.key.id}`;
 
-      if (!upstreamResp.ok) {
-        await recordChannelResult(cbKey, false);
-        let errorBody = '';
-        try { errorBody = await upstreamResp.text(); } catch { /* ignore */ }
-        reply.status(upstreamResp.status || 502);
-        reply.header('Content-Type', 'application/json');
-        try {
-          return reply.send(JSON.parse(errorBody));
-        } catch {
-          return sendOpenAIError(reply, upstreamResp.status || 502, `Upstream error: ${upstreamResp.status}`);
-        }
-      }
+            // 解析上游响应；确定公开 id / 上游 id
+            let publicId: string | null;
+            let upstreamId: string | null;
+            if (apiType === 'midjourney') {
+              rewriteMjSubmitCode(parsedBody);
+              publicId = typeof parsedBody.result === 'string' && parsedBody.result ? parsedBody.result : null;
+              upstreamId = publicId;
+            } else {
+              publicId = generatePublicTaskId();
+              upstreamId = typeof parsedBody.data === 'string' && parsedBody.data ? parsedBody.data : null;
+              // 返回给客户端的是网关公开 id（上游内部 id 不外泄）
+              parsedBody.data = publicId;
+            }
 
-      // 4. 解析上游响应；确定公开 id / 上游 id
-      const rawBody = await upstreamResp.text();
-      let parsedBody: Record<string, unknown> = {};
-      try { parsedBody = JSON.parse(rawBody); } catch { parsedBody = { raw: rawBody }; }
+            if (!publicId) {
+              // 上游未返回任务 id（如 MJ 业务错误码）→ 未创建任务，不记账不落库，透传上游响应
+              reply.header('X-Request-Id', c.requestId);
+              return reply.send(parsedBody);
+            }
 
-      let publicId: string | null;
-      let upstreamId: string | null;
-      if (apiType === 'midjourney') {
-        rewriteMjSubmitCode(parsedBody);
-        publicId = typeof parsedBody.result === 'string' && parsedBody.result ? parsedBody.result : null;
-        upstreamId = publicId;
-      } else {
-        publicId = generatePublicTaskId();
-        upstreamId = typeof parsedBody.data === 'string' && parsedBody.data ? parsedBody.data : null;
-        // 返回给客户端的是网关公开 id（上游内部 id 不外泄）
-        parsedBody.data = publicId;
-      }
+            // 先落库（任务持久化；落库失败 → 不记账直接透传，无孤儿任务）
+            let task: TaskRecord;
+            try {
+              task = await createTaskRecord({
+                taskType: apiType,
+                publicId,
+                upstreamId,
+                userId: c.userId,
+                apiKeyId: c.apiKeyId ?? null,
+                supplierId: channel.supplier.id,
+                channelKeyId: channel.key.id,
+                action,
+                model: billModel,
+                prompt: (typeof c.body.prompt === 'string' ? c.body.prompt
+                  : typeof c.body.gpt_description_prompt === 'string' ? c.body.gpt_description_prompt : null)?.slice(0, 5000) ?? null,
+                cost: taskCost.toFixed(8),
+                requestId: c.requestId,
+              });
+            } catch (err) {
+              console.error(`[task-relay] 任务落库失败 ${apiType}/${action}:`, err);
+              reply.header('X-Request-Id', c.requestId);
+              return reply.send(parsedBody);
+            }
 
-      if (!publicId) {
-        // 上游未返回任务 id（如 MJ 业务错误码）→ 未创建任务，不记账不落库，透传上游响应
-        reply.header('X-Request-Id', pipelineCtx.requestId);
-        return reply.send(parsedBody);
-      }
+            // 记账；失败 → 删除任务记录补偿（不留"已扣费但无法轮询"的孤儿任务）
+            try {
+              await settleBilling(c, 0, TASK_BILLING_UNIT_TOKENS, taskCost, channel, {
+                streamed: false,
+                trustUpstream: true,
+                fallback: false,
+                finishReason: 'stop',
+                preConsume: null,
+              });
+            } catch (err) {
+              await deleteTaskRecord(task.id).catch(() => { /* 删除失败仅记录，见下 */ });
+              throw err;
+            }
 
-      // 5. 先落库（任务持久化；落库失败 → 不记账直接透传，无孤儿任务）
-      let task: TaskRecord;
-      try {
-        task = await createTaskRecord({
-          taskType: apiType,
-          publicId,
-          upstreamId,
-          userId,
-          apiKeyId: ctx?.apiKeyId ?? null,
-          supplierId: channel.supplier.id,
-          channelKeyId: channel.key.id,
-          action,
-          model: billModel,
-          prompt: (typeof body.prompt === 'string' ? body.prompt
-            : typeof body.gpt_description_prompt === 'string' ? body.gpt_description_prompt : null)?.slice(0, 5000) ?? null,
-          cost: taskCost.toFixed(8),
-          requestId: pipelineCtx.requestId,
-        });
-      } catch (err) {
-        console.error(`[task-relay] 任务落库失败 ${apiType}/${action}:`, err);
-        reply.header('X-Request-Id', pipelineCtx.requestId);
-        return reply.send(parsedBody);
-      }
+            await recordChannelResult(cbKey, true);
+            reply.header('X-Request-Id', c.requestId);
+            return reply.send(parsedBody);
+          },
+        }),
+      ]);
 
-      // 6. 记账；失败 → 删除任务记录补偿（不留"已扣费但无法轮询"的孤儿任务）
-      try {
-        await settleBilling(pipelineCtx, 0, TASK_BILLING_UNIT_TOKENS, taskCost, channel, {
-          streamed: false,
-          trustUpstream: true,
-          fallback: false,
-          finishReason: 'stop',
-        });
-      } catch (err) {
-        await deleteTaskRecord(task.id).catch(() => { /* 删除失败仅记录，见下 */ });
-        throw err;
-      }
-
-      await recordChannelResult(cbKey, true);
-      reply.header('X-Request-Id', pipelineCtx.requestId);
-      return reply.send(parsedBody);
+      if (!result.success) throw result.error;
     } catch (err) {
+      // 原任务不存在/非本人 → MJ 语义错误（HTTP 200 + code 4，与 New API 一致）
+      if (err instanceof TaskNotFoundError) {
+        return reply.send({ code: 4, description: 'task_no_found' });
+      }
       if (err instanceof InsufficientBalanceError) {
         return sendOpenAIError(reply, 402, err.message, 'insufficient_balance', 402);
+      }
+      // 上游 4xx/5xx：透传上游状态码 + 错误体
+      if (err instanceof UpstreamPassthroughError) {
+        reply.status(err.statusCode || 502);
+        reply.header('Content-Type', 'application/json');
+        try {
+          return reply.send(JSON.parse(err.upstreamBody));
+        } catch {
+          return sendOpenAIError(reply, err.statusCode || 502, `Upstream error: ${err.statusCode}`);
+        }
       }
       if (err instanceof AppError) {
         return sendOpenAIError(reply, err.statusCode, err.message, err.code.toLowerCase(), err.statusCode);

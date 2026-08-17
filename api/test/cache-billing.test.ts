@@ -17,7 +17,9 @@ import {
   CACHE_HIT_DISCOUNT,
   computeCacheDiscountedCost,
   parseAndDiscount,
+  type TokenPricing,
 } from '../src/services/billing/cache-billing.js';
+import { resolveCacheDiscountRate } from '../src/services/billing/cache-discount.js';
 
 // ============================================================
 // Helpers
@@ -285,6 +287,111 @@ describe('回归 - 无缓存字段行为不变', () => {
     );
     expect(result.cost).toBe(expected);
     expect(result.discountAmount).toBe(0);
+  });
+});
+
+// ============================================================
+// 可配置折扣率 — 自定义 discountRate（后台/模型级配置生效路径）
+// ============================================================
+
+describe('可配置折扣率 - computeCacheDiscountedCost', () => {
+  it('自定义折扣率 0.5 → 命中部分按 50% 计费', () => {
+    const result = computeCacheDiscountedCost(
+      1000, 200, pricing,
+      { cacheHitTokens: 600, cacheMissTokens: 400, hasCacheInfo: true },
+      0.5,
+    );
+
+    // 折后 = 600*1*0.5/1000 + 400*1/1000 + 200*2/1000 = 0.3 + 0.4 + 0.4
+    expect(result.cost).toBeCloseTo(1.1, 9);
+    expect(result.discountAmount).toBeCloseTo(0.3, 9); // 1.4 - 1.1
+  });
+
+  it('折扣率 1 → 命中部分全价（等价关闭缓存优惠）', () => {
+    const result = computeCacheDiscountedCost(
+      1000, 200, pricing,
+      { cacheHitTokens: 600, cacheMissTokens: 400, hasCacheInfo: true },
+      1,
+    );
+
+    expect(result.cost).toBeCloseTo(1.4, 9); // 与全价一致
+    expect(result.discountAmount).toBeCloseTo(0, 9);
+  });
+
+  it('缺省 discountRate → 仍用默认 0.1（回归安全）', () => {
+    const result = computeCacheDiscountedCost(
+      1000, 200, pricing,
+      { cacheHitTokens: 600, cacheMissTokens: 400, hasCacheInfo: true },
+    );
+
+    expect(result.cost).toBeCloseTo(0.86, 9);
+  });
+});
+
+describe('可配置折扣率 - parseAndDiscount', () => {
+  it('DeepSeek 混合命中 + 自定义折扣率 0.2 → 按 20% 计费', () => {
+    const usage = {
+      prompt_tokens: 1500,
+      completion_tokens: 100,
+      total_tokens: 1600,
+      prompt_cache_hit_tokens: 1000,
+      prompt_cache_miss_tokens: 500,
+    };
+
+    const result = parseAndDiscount(usage, pricing, 0.2);
+
+    // 折后 = 1000*1*0.2/1000 + 500*1/1000 + 100*2/1000 = 0.2 + 0.5 + 0.2
+    expect(result.cost).toBeCloseTo(0.9, 9);
+    expect(result.discountAmount).toBeCloseTo(0.8, 9); // 全价 1.7 - 0.9
+  });
+
+  it('pricing 携带模型级 cacheDiscountRate → 解析仍按显式传入折扣率（路由层先解析再传入）', () => {
+    const usage = {
+      prompt_tokens: 1000,
+      completion_tokens: 100,
+      total_tokens: 1100,
+      prompt_cache_hit_tokens: 1000,
+      prompt_cache_miss_tokens: 0,
+    };
+    const modelPricing: TokenPricing = { input: 1, output: 2, cacheDiscountRate: 0.5 };
+
+    // 路由层会把 resolveCacheDiscountRate 结果作为第三参传入；模型级 0.5 生效
+    const result = parseAndDiscount(usage, modelPricing, 0.5);
+
+    expect(result.cost).toBeCloseTo(0.7, 9); // 1000*1*0.5/1000 + 100*2/1000
+  });
+});
+
+// ============================================================
+// resolveCacheDiscountRate — 模型级 > 全局 > 默认（注入全局避免 DB/Redis 依赖）
+// ============================================================
+
+describe('resolveCacheDiscountRate', () => {
+  it('模型级配置优先于全局', async () => {
+    const pricing: TokenPricing = { input: 1, output: 2, cacheDiscountRate: 0.5 };
+    expect(await resolveCacheDiscountRate(pricing, 0.2)).toBe(0.5);
+  });
+
+  it('模型级未配置（null/undefined）→ 用全局', async () => {
+    expect(await resolveCacheDiscountRate({ input: 1, output: 2, cacheDiscountRate: null }, 0.2)).toBe(0.2);
+    expect(await resolveCacheDiscountRate({ input: 1, output: 2 }, 0.3)).toBe(0.3);
+  });
+
+  it('模型级非法（0 / >1 / NaN）→ 忽略，回退全局', async () => {
+    expect(await resolveCacheDiscountRate({ input: 1, output: 2, cacheDiscountRate: 0 }, 0.2)).toBe(0.2);
+    expect(await resolveCacheDiscountRate({ input: 1, output: 2, cacheDiscountRate: 2 }, 0.2)).toBe(0.2);
+    expect(await resolveCacheDiscountRate({ input: 1, output: 2, cacheDiscountRate: NaN }, 0.2)).toBe(0.2);
+  });
+
+  it('全局非法 → 回退默认常量 CACHE_HIT_DISCOUNT', async () => {
+    expect(await resolveCacheDiscountRate({ input: 1, output: 2 }, 0)).toBe(CACHE_HIT_DISCOUNT);
+    expect(await resolveCacheDiscountRate({ input: 1, output: 2 }, 1.5)).toBe(CACHE_HIT_DISCOUNT);
+    expect(await resolveCacheDiscountRate({ input: 1, output: 2 } as TokenPricing, NaN)).toBe(CACHE_HIT_DISCOUNT);
+  });
+
+  it('pricing 为空 / 全局缺省 → 返回默认常量', async () => {
+    expect(await resolveCacheDiscountRate(null, 0.2)).toBe(0.2);
+    expect(await resolveCacheDiscountRate(null, 0)).toBe(CACHE_HIT_DISCOUNT);
   });
 });
 

@@ -1,9 +1,18 @@
 /**
  * Preprocess multimodal request bodies:
  * - Detects base64 images/audio/video > 10MB
- * - Uploads large base64 content to temp storage to avoid memory pressure
- * - Returns processed body with temp URLs replacing base64 content
+ * - Uploads large base64 content to temp storage (see temp-asset-store.ts)
+ * - Returns processed body with internal URLs replacing large base64 content
+ *
+ * P0-4 说明（docs/iteration-plan-v2.md）：本模块此前只检测并打日志（Gate 5 未生效），
+ * P0-4 起真正执行"大 base64 → 临时文件 + 内网 URL"替换，并挂载到多模态网关路径
+ * （chat / messages / responses / anthropic）。
+ *
+ * @module services/upstream
+ * @see docs/iteration-plan-v2.md P0-4 多模态预处理挂载
  */
+
+import { storeTempAsset, getAssetBaseUrl } from './temp-asset-store';
 
 interface MultimodalContent {
   type: 'image_url' | 'image' | 'audio' | 'video';
@@ -24,7 +33,7 @@ interface ProcessedBody {
   [key: string]: unknown;
 }
 
-const LARGE_BASE64_THRESHOLD = 10 * 1024 * 1024; // 10MB
+export const LARGE_BASE64_THRESHOLD = 10 * 1024 * 1024; // 10MB
 
 /**
  * Check if a string is base64 encoded data
@@ -34,17 +43,9 @@ function isBase64Data(value: string): boolean {
 }
 
 /**
- * Extract MIME type from data URI
- */
-function extractMimeType(dataUri: string): string | null {
-  const match = dataUri.match(/^data:([a-zA-Z0-9/+.-]+);base64,/);
-  return match?.[1] ?? null;
-}
-
-/**
  * Estimate the size of base64-decoded data in bytes
  */
-function estimateDecodedSize(base64String: string): number {
+export function estimateDecodedSize(base64String: string): number {
   // Remove MIME prefix
   const data = base64String.includes(',') ? base64String.split(',')[1]! : base64String;
   // Base64: 4 chars ≈ 3 bytes
@@ -88,15 +89,24 @@ function hasLargeBase64(content: unknown): boolean {
 }
 
 /**
- * Replace large base64 content with placeholder (in production, would upload to temp storage)
- * For now, marks as large and leaves in place (safe for testing)
+ * 处理大 base64：解码后 > 阈值 → 上传临时文件并替换为内网 URL；
+ * 小 base64 / 非 base64 → 原样返回（零开销）。
+ *
+ * 上传失败（磁盘/权限等）→ fail-open 原样保留 base64（不阻断请求，与
+ * lib/redis.ts 降级语义一致），仅打日志。
  */
-function processLargeBase64(value: string): string {
-  // For Phase 1: if base64 is under threshold, pass through
-  // If over threshold, mark it (future: upload to temp storage)
+async function processLargeBase64(value: string): Promise<string> {
   if (estimateDecodedSize(value) > LARGE_BASE64_THRESHOLD) {
-    // Return the data as-is but log warning (real upload in Phase 4+)
-    console.warn(`[Multimodal] Large base64 content detected (${estimateDecodedSize(value)} bytes)`);
+    try {
+      const url = await storeTempAsset(value);
+      console.info(
+        `[Multimodal] Large base64 (${estimateDecodedSize(value)} bytes) uploaded to temp asset: ${url}`,
+      );
+      return url;
+    } catch (err) {
+      console.error('[Multimodal] temp asset upload failed, keep base64 in place:', err);
+      return value;
+    }
   }
   return value;
 }
@@ -104,49 +114,57 @@ function processLargeBase64(value: string): string {
 /**
  * Preprocess a request body for multimodal content
  * Recursively walks messages array and handles base64 in content
+ * （async：大 base64 需落盘；小 base64 原样返回）
  */
-export function preprocessRequestBody(body: Record<string, unknown>): ProcessedBody {
+export async function preprocessRequestBody(body: Record<string, unknown>): Promise<ProcessedBody> {
   if (!body.messages || !Array.isArray(body.messages)) {
     return body as ProcessedBody;
   }
 
   const processed: ProcessedBody = {
     ...(body as ProcessedBody),
-    messages: (body.messages as ProcessedMessage[]).map((msg) => {
-      if (typeof msg.content === 'string') {
-        return { ...msg, content: processLargeBase64(msg.content) };
-      }
+    messages: await Promise.all(
+      (body.messages as ProcessedMessage[]).map(async (msg) => {
+        if (typeof msg.content === 'string') {
+          return { ...msg, content: await processLargeBase64(msg.content) };
+        }
 
-      if (Array.isArray(msg.content)) {
-        return {
-          ...msg,
-          content: (msg.content as MultimodalContent[]).map((item) => {
-            // Handle image_url with base64
-            if (item.type === 'image_url' && typeof item === 'object') {
-              const url = (item as unknown as Record<string, unknown>).url;
-              if (typeof url === 'string' && isBase64Data(url)) {
-                return {
-                  ...item,
-                  url: processLargeBase64(url),
-                };
-              }
-            }
+        if (Array.isArray(msg.content)) {
+          return {
+            ...msg,
+            content: await Promise.all(
+              (msg.content as MultimodalContent[]).map(async (item) => {
+                // Handle image_url with base64（OpenAI 多模态结构：{ type: 'image_url', image_url: { url } }）
+                if (item.type === 'image_url' && typeof item === 'object') {
+                  const imageUrlObj = (item as unknown as Record<string, unknown>).image_url;
+                  if (typeof imageUrlObj === 'object' && imageUrlObj !== null) {
+                    const url = (imageUrlObj as Record<string, unknown>).url;
+                    if (typeof url === 'string' && isBase64Data(url)) {
+                      return {
+                        ...item,
+                        image_url: { ...imageUrlObj, url: await processLargeBase64(url) },
+                      };
+                    }
+                  }
+                }
 
-            // Handle direct base64 data
-            for (const key of ['data', 'image', 'audio', 'video'] as const) {
-              const val = (item as unknown as Record<string, unknown>)[key];
-              if (typeof val === 'string' && isBase64Data(val)) {
-                return { ...item, [key]: processLargeBase64(val) };
-              }
-            }
+                // Handle direct base64 data
+                for (const key of ['data', 'image', 'audio', 'video'] as const) {
+                  const val = (item as unknown as Record<string, unknown>)[key];
+                  if (typeof val === 'string' && isBase64Data(val)) {
+                    return { ...item, [key]: await processLargeBase64(val) };
+                  }
+                }
 
-            return item;
-          }),
-        };
-      }
+                return item;
+              }),
+            ),
+          };
+        }
 
-      return msg;
-    }),
+        return msg;
+      }),
+    ),
   };
 
   return processed;
@@ -164,3 +182,5 @@ export function needsPreprocessing(body: Record<string, unknown>): boolean {
     return false;
   });
 }
+
+export { getAssetBaseUrl };

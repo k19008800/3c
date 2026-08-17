@@ -20,6 +20,7 @@ import {
 } from '../lib/errors';
 import { sendMail, getSmtpConfig } from '../services/mailer';
 import { invalidateThresholdCache } from '../services/billing/pre-consume';
+import { invalidateCacheDiscountCache } from '../services/billing/cache-discount';
 
 /* ───────── helpers ───────── */
 
@@ -76,6 +77,9 @@ const SETTING_DEFAULTS: Record<string, { value: string; type: 'string' | 'number
   // billing — 计费（P0-1 阈值旁路：余额 > 此值 → 不预扣直接转发；≤ 此值 → Redis Lua 预扣）
   // 注意：键名含点号（billing.balance_threshold），与 pre-consume.ts 读取键一致
   'billing.balance_threshold': { value: '100', type: 'number' },
+  // billing — 缓存命中折扣率（0-1）：上游返回缓存命中 token 时，命中部分按全价 × 此比例计费。
+  // 默认 0.1（DeepSeek 官方口径）；模型级 vendor_pricing.cache_discount_rate 可逐模型覆盖。
+  'billing.cache_hit_discount': { value: '0.1', type: 'number' },
   // smtp
   smtp_enabled: { value: 'false', type: 'bool' },
   smtp_host: { value: '', type: 'string' },
@@ -227,14 +231,14 @@ export async function adminSettingsRoutes(app: FastifyInstance) {
   });
 
   /**
-   * PUT /api/v1/admin/settings/billing — 计费设置（P0-1 阈值旁路）
+   * PUT /api/v1/admin/settings/billing — 计费设置（P0-1 阈值旁路 + 缓存命中折扣率）
    *
-   * 写 system_config `billing.balance_threshold`（默认 ¥100）+ 写审计 +
-   * 失效 Redis 阈值缓存（判定即时生效）。
+   * 写 system_config `billing.balance_threshold`（默认 ¥100）+ `billing.cache_hit_discount`
+   * （默认 0.1）+ 写审计 + 失效 Redis 缓存（判定即时生效）。
    */
   app.put('/api/v1/admin/settings/billing', { preHandler: [adminAuth] }, async (request: any, reply) => {
     const b = (request.body || {}) as Record<string, unknown>;
-    const allowed = ['billing.balance_threshold'];
+    const allowed = ['billing.balance_threshold', 'billing.cache_hit_discount'];
     const values: Record<string, string> = {};
     for (const k of allowed) {
       if (b[k] !== undefined) values[k] = String(b[k]);
@@ -246,10 +250,18 @@ export async function adminSettingsRoutes(app: FastifyInstance) {
         throw new ValidationError('billing.balance_threshold 必须是非负数字（元）');
       }
     }
+    // 缓存命中折扣率必须在 (0, 1] 区间（0 或 >1 无意义，置 1 = 命中按全价 = 关闭折扣）
+    if (values['billing.cache_hit_discount'] !== undefined) {
+      const rate = Number(values['billing.cache_hit_discount']);
+      if (!(Number.isFinite(rate) && rate > 0 && rate <= 1)) {
+        throw new ValidationError('billing.cache_hit_discount 必须是 (0, 1] 区间的数字（如 0.1 = 命中按 10% 计费）');
+      }
+    }
     await setConfigs(request.userContext?.userId ?? null, values);
     await writeAudit(request, 'billing', values);
-    // 失效阈值 Redis 缓存（60s）→ 网关旁路判定即时生效
+    // 失效阈值 + 折扣率 Redis 缓存（60s）→ 网关旁路判定 / 缓存计费即时生效
     await invalidateThresholdCache();
+    await invalidateCacheDiscountCache();
     return reply.send({ data: { ok: true } });
   });
 

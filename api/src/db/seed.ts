@@ -99,6 +99,18 @@ async function main() {
   }
   console.log(`✅ system_config 限流/额度默认键 ${CONFIGS.length} 个`);
 
+  // ── system_config：计费默认键（幂等 upsert；与 admin-settings.ts SETTING_DEFAULTS 一致）──
+  const BILLING_CONFIGS: Array<[string, string, string]> = [
+    ['billing.balance_threshold', '100', '余额预扣阈值（元）：余额 > 此值走旁路事后扣费，≤ 此值走 Redis Lua 预扣'],
+    ['billing.cache_hit_discount', '0.1', '缓存命中折扣率（0-1）：上游返回缓存命中 token 时按全价 × 此比例计费；模型级 vendor_pricing.cache_discount_rate 可覆盖'],
+  ];
+  for (const [key, value, description] of BILLING_CONFIGS) {
+    await db.insert(schema.systemConfig)
+      .values({ key, value, description })
+      .onConflictDoUpdate({ target: schema.systemConfig.key, set: { value, description } });
+  }
+  console.log(`✅ system_config 计费默认键 ${BILLING_CONFIGS.length} 个`);
+
   // ── risk_rules：负余额强制预扣风控规则（P0-1 记负兜底依赖，risk_events.rule_id NOT NULL）──
   // 旁路扣费后余额 < 0 时写 risk_events 引用此规则；该用户后续请求强制预扣直到充值回正。
   const [negRule] = await db

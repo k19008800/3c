@@ -1,44 +1,70 @@
 /**
  * Chat Completions 网关路由 — OpenAI 兼容 /v1/chat/completions
  *
- * 流式处理链路：
- *   API Key Auth → Validate Request → Count Input Tokens → 余额预检
- *   → Select Channel（无可用 → mock 回退）→ proxy upstream
- *   → Settle Billing（deductBalance + recordConsumption）→ Record Consumption
+ * 流式处理链路（P0-4 已改写为 pipeline steps）：
+ *   auth → idempotency → rate-limit → validate → pre-consume → route → proxy → settle
+ *
+ * 说明：
+ *   - auth / rate-limit 由 Fastify preHandler（apiKeyAuth / enforceRateLimitPreHandler）
+ *     强制执行，pipeline 中对应 step 为链路声明 + 断言；
+ *   - idempotency（P0-3）：获取锁失败（重复）→ 抛 IdempotencyConflictError → 路由回放首次结果；
+ *     后续步骤失败 → rollback 释放锁（允许同一键重试）；
+ *   - pre-consume（P0-1）：余额 > 阈值旁路，否则 Redis Lua 冻结；后续失败 → rollback 解冻；
+ *   - proxy：上游转发（流式 streamRelay / 非流式读取），上游错误透传（UpstreamPassthroughError）；
+ *   - settle：记账扣费（settleBilling 共享服务）+ 幂等响应缓存 + 对话留痕。
  *
  * 注册两条路径：
  *   /v1/chat/completions               — OpenAI 兼容（外部 SDK / curl）
  *   /api/v1/v1/chat/completions        — web-console Playground 内部路径（契约对齐，见 docs/api-contract.md §4）
+ *
+ * @see docs/iteration-plan-v2.md P0-4
  */
 
 import type { FastifyInstance, FastifyReply } from 'fastify';
-import { db, schema } from '../db';
 import { apiKeyAuth } from '../services/auth/apikey';
 import { enforceRateLimitPreHandler } from '../services/rate-limit';
-import { selectChannel } from '../services/upstream/routing';
-import { streamRelay, type StreamState } from '../services/upstream/proxy';
 import { countTokens } from '../services/billing/token-counter';
 import { estimateMultimodalContentTokens } from '../services/billing/multimodal-counter';
 import { determineStreamBilling } from '../services/billing/settle-stream';
 import { parseAndDiscount } from '../services/billing/cache-billing';
+import { resolveCacheDiscountRate } from '../services/billing/cache-discount';
 import { getBalance } from '../services/billing/balance';
 import { recordChannelResult } from '../services/upstream/circuit-breaker';
 import { recordConversationContext, fingerprintKey } from '../services/audit/conversation-context';
 import { AppError, InsufficientBalanceError } from '../lib/errors';
 import {
-  acquireIdempotencyLock,
-  buildIdempotencySummary,
+  resolveIdempotencyKey,
+  replayIdempotentRequest,
   cacheIdempotentResponse,
   isIdempotencyUniqueViolation,
-  releaseIdempotencyLock,
-  replayIdempotentRequest,
-  resolveIdempotencyKey,
+  buildIdempotencySummary,
 } from '../services/idempotency';
-import type { PipelineContext } from '../services/pipeline/types';
+import {
+  runPipeline,
+  createStep,
+  authStep,
+  idempotencyStep,
+  IdempotencyConflictError,
+  rateLimitStep,
+  preConsumeStep,
+  routeStep,
+  proxyStep,
+  UpstreamPassthroughError,
+  settleStep,
+  readPreConsume,
+  setStepResult,
+  requireStepResult,
+  getStepResult,
+  STEP_KEYS,
+  type MockStepResult,
+} from '../services/pipeline';
+import type { PipelineContext } from '../services/pipeline';
 import type { SelectedChannel } from '../services/upstream/routing';
 import { getPricingForModel, computeCost, computeEstimatedCost } from '../services/billing/pricing';
 import { settleBilling } from '../services/billing/settle';
-import { preConsume, releasePreConsume, type PreConsumeResult } from '../services/billing/pre-consume';
+import { releasePreConsume } from '../services/billing/pre-consume';
+import { preprocessRequestBody } from '../services/upstream/body-preprocessor';
+import type { StreamState } from '../services/upstream/proxy';
 import crypto from 'crypto';
 
 // ============================================================
@@ -57,6 +83,9 @@ interface ChatRequest {
   user?: string;
   [key: string]: unknown;
 }
+
+/** getPricingForModel 返回的定价结构（validate step 写入共享存储，结算步骤读取） */
+type ModelPricing = { input: number; output: number; cacheDiscountRate: number | null };
 
 /** 对话上下文留痕累加器 — finally 统一落库（成功/失败/402 都记） */
 interface ConversationTrace {
@@ -199,18 +228,7 @@ export async function chatRoutes(app: FastifyInstance) {
     const idemKey = resolveIdempotencyKey(request, crypto.randomUUID());
     const isStreamRequest = (body as Record<string, unknown>)?.stream === true;
 
-    // L1: Redis SETNX 获取幂等锁；重复 → 回放首次结果（不重复扣费）
-    const lock = await acquireIdempotencyLock(idemKey);
-    if (lock.status === 'duplicate') {
-      const replayed = await replayIdempotentRequest(reply, idemKey, isStreamRequest);
-      if (replayed) return reply;
-      // 首次请求仍在处理中（无缓存、无消费记录）→ 409 幂等提示，而非 500
-      return sendOpenAIError(reply, 409, 'Duplicate request is still being processed', 'idempotency_conflict', 409);
-    }
-    // Redis 降级（不可用）时 lockToken 为 null → 失败路径无可释放的锁
-    const lockToken = lock.status === 'acquired' ? lock.token : null;
-
-    // Build pipeline context
+    // Build pipeline context（request/reply 注入供 steps 使用；身份字段由 auth step 同步）
     const pipelineCtx: PipelineContext = {
       requestId: idemKey,
       userId: ctx?.userId ?? 0,
@@ -219,9 +237,12 @@ export async function chatRoutes(app: FastifyInstance) {
       body: body as Record<string, unknown>,
       stream: false,
       metadata: {},
+      request,
+      reply,
     };
+    setStepResult(pipelineCtx, STEP_KEYS.apiKeyContext, ctx);
 
-    // 对话上下文留痕累加器：各分支填充字段，finally 统一落库（旁路，不阻断主链路）
+    // 对话上下文留痕累加器：各步骤填充字段，finally 统一落库（旁路，不阻断主链路）
     const bodyAny = body as Record<string, unknown>;
     const trace: ConversationTrace = {
       requestId: pipelineCtx.requestId,
@@ -247,276 +268,308 @@ export async function chatRoutes(app: FastifyInstance) {
       completedAt: null,
     };
 
-    // P0-1 预扣结果：转发前冻结（mode='frozen'），成功路径结算、失败路径解冻
-    let pre: PreConsumeResult | null = null;
-
     try {
-      try {
-      // 1. Validate
-      const req = validateChatRequest(body);
-      const isStream = req.stream === true;
-      pipelineCtx.model = req.model;
-      pipelineCtx.stream = isStream;
-      trace.requestedModel = req.model;
-      trace.messages = req.messages as unknown[];
+      const result = await runPipeline(pipelineCtx, [
+        // 1. auth — API Key 认证（preHandler 已执行；此处断言上下文就绪）
+        authStep(),
 
-      // 2. Count input tokens
-      const estimatedInputTokens = estimateInputTokens(req.messages as any, req.model);
+        // 2. idempotency — 幂等锁（重复 → 回放；后续失败 → 回滚释放锁）
+        idempotencyStep({ key: idemKey, isStream: isStreamRequest }),
 
-      // 3. 余额预检（0 余额直接 402，不浪费上游调用）
-      const balance = await getBalance(pipelineCtx.userId);
-      if (Number(balance.availableBalance || 0) <= 0) {
-        throw new InsufficientBalanceError('0', '0');
+        // 3. rate-limit — 四级限流（preHandler 已强制执行；链路声明）
+        rateLimitStep(),
+
+        // 4. validate — 校验 + token 计数 + 余额预检 + 定价 + 预估费用
+        createStep('validate', async (c) => {
+          // 1. Validate
+          const req = validateChatRequest(c.body);
+          const isStream = req.stream === true;
+          c.model = req.model;
+          c.stream = isStream;
+          trace.requestedModel = req.model;
+          trace.messages = req.messages as unknown[];
+
+          // 2. Count input tokens
+          const estimatedInputTokens = estimateInputTokens(req.messages as any, req.model);
+          setStepResult(c, STEP_KEYS.request, req);
+          setStepResult(c, STEP_KEYS.estimatedInputTokens, estimatedInputTokens);
+
+          // 3. 余额预检（0 余额直接 402，不浪费上游调用）
+          const balance = await getBalance(c.userId);
+          if (Number(balance.availableBalance || 0) <= 0) {
+            throw new InsufficientBalanceError('0', '0');
+          }
+          setStepResult(c, STEP_KEYS.balance, balance);
+
+          // 3.5 P0-1 定价 + 预估费用（供 pre-consume step 预扣与各结算分支复用）
+          const pricing = await getPricingForModel(req.model);
+          const estimatedCost = computeEstimatedCost(req.model, estimatedInputTokens, pricing, req.max_tokens);
+          setStepResult(c, STEP_KEYS.pricing, pricing);
+          setStepResult(c, STEP_KEYS.estimatedCost, estimatedCost);
+
+          return req;
+        }),
+
+        // 5. pre-consume — 阈值旁路 + Redis Lua 冻结（失败 402；后续失败 → 回滚解冻）
+        preConsumeStep(),
+
+        // 6. route — 渠道选择（无可用 → proxy step 走 mock 回退）
+        routeStep(),
+
+        // 7. proxy — 上游转发（流式 relay / 非流式读取；上游错误透传）
+        proxyStep({
+          buildUpstreamRequest: async (c) => {
+            const req = requireStepResult<ChatRequest>(c, STEP_KEYS.request);
+            const channel = requireStepResult<SelectedChannel>(c, STEP_KEYS.channel);
+            const upstreamUrl = `${channel.supplier.baseUrl}/v1/chat/completions`;
+            const upstreamBody = buildUpstreamBody(req, channel.modelMapping.platformModel);
+            // P0-4 多模态预处理：大 base64（>10MB）→ 临时文件 + 内网 URL；小 base64 原样转发
+            const processed = await preprocessRequestBody(upstreamBody);
+            return {
+              url: upstreamUrl,
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${channel.key.keyValue}`,
+              },
+              body: JSON.stringify(processed),
+            };
+          },
+          mockFallback: async (c) => {
+            const req = requireStepResult<ChatRequest>(c, STEP_KEYS.request);
+            const estimatedInputTokens = requireStepResult<number>(c, STEP_KEYS.estimatedInputTokens);
+            const mock = buildMockCompletion(req.model, req.messages, estimatedInputTokens);
+
+            trace.routedModel = req.model;
+            trace.responseText = mock.content;
+            trace.finishReason = 'stop';
+            trace.inputTokens = mock.usage.prompt_tokens;
+            trace.outputTokens = mock.usage.completion_tokens;
+
+            return {
+              payload: {
+                id: `chatcmpl-${c.requestId}`,
+                object: 'chat.completion',
+                created: Math.floor(Date.now() / 1000),
+                model: req.model,
+                choices: [
+                  {
+                    index: 0,
+                    message: { role: 'assistant', content: mock.content },
+                    finish_reason: 'stop',
+                  },
+                ],
+                usage: mock.usage,
+                mock: true,
+              },
+              content: mock.content,
+              usage: mock.usage,
+            };
+          },
+        }),
+
+        // 8. settle — 记账扣费（mock/流式/非流式三态）+ 幂等响应缓存 + 留痕
+        settleStep({
+          implement: async (c) => {
+            const pricing = requireStepResult<ModelPricing>(c, STEP_KEYS.pricing);
+            const mock = getStepResult<MockStepResult>(c, STEP_KEYS.mockResult);
+
+            // ── mock 回退路径（无可用渠道，同样记账扣费）──
+            if (mock) {
+              const cost = computeCost(c.model, mock.usage.prompt_tokens, mock.usage.completion_tokens, pricing);
+
+              await settleBilling(c, mock.usage.prompt_tokens, mock.usage.completion_tokens, cost, null, {
+                streamed: false,
+                trustUpstream: false,
+                fallback: true,
+                finishReason: 'stop',
+                preConsume: readPreConsume(c),
+              });
+
+              trace.cost = cost.toFixed(8);
+              trace.status = 'succeeded';
+
+              // 幂等：缓存首次成功响应（mock 非流式存完整 body，流式只存摘要）
+              await cacheIdempotentResponse(c.requestId, {
+                streamed: c.stream,
+                ...(c.stream ? {} : { body: mock.payload }),
+                summary: buildIdempotencySummary({
+                  requestId: c.requestId,
+                  model: c.model,
+                  inputTokens: mock.usage.prompt_tokens,
+                  outputTokens: mock.usage.completion_tokens,
+                  cost: cost.toFixed(8),
+                  finishReason: 'stop',
+                  streamed: c.stream,
+                }),
+              });
+
+              if (c.stream) {
+                reply.raw.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' });
+                reply.raw.write(`data: ${JSON.stringify({ ...mock.payload, choices: [{ index: 0, delta: { content: mock.content }, finish_reason: 'stop' }] })}\n\n`);
+                reply.raw.write('data: [DONE]\n\n');
+                reply.raw.end();
+                return;
+              }
+              return reply.send(mock.payload);
+            }
+
+            // ── 真实上游路径 ──
+            const channel = requireStepResult<SelectedChannel>(c, STEP_KEYS.channel);
+            trace.routedModel = channel.modelMapping.platformModel;
+            trace.supplierId = channel.supplier.id;
+            trace.supplierModelId = channel.modelMapping.id;
+            trace.supplierKeyFp = fingerprintKey(channel.key.keyValue);
+
+            // 流式：转发已在 proxy step 完成（streamRelay），此处结算
+            if (c.stream) {
+              const state = requireStepResult<StreamState>(c, STEP_KEYS.streamState);
+              const billing = determineStreamBilling(state, false, requireStepResult<number>(c, STEP_KEYS.estimatedInputTokens), c.model);
+              const cost = computeCost(c.model, billing.promptTokens, billing.completionTokens, pricing);
+
+              try {
+                await settleBilling(
+                  c,
+                  billing.promptTokens,
+                  billing.completionTokens,
+                  cost,
+                  channel,
+                  { streamed: true, trustUpstream: billing.trustUpstream, fallback: billing.fallback, finishReason: state.finishReason ?? undefined, preConsume: readPreConsume(c) },
+                );
+                // 幂等：结算成功才缓存流式摘要（失败不缓存，避免回放未计费的"成功"）
+                await cacheIdempotentResponse(c.requestId, {
+                  streamed: true,
+                  summary: buildIdempotencySummary({
+                    requestId: c.requestId,
+                    model: c.model,
+                    inputTokens: billing.promptTokens,
+                    outputTokens: billing.completionTokens,
+                    cost: cost.toFixed(8),
+                    finishReason: state.finishReason ?? undefined,
+                    streamed: true,
+                  }),
+                });
+              } catch (err) {
+                // 流式已开始，无法改状态码；记账失败仅记录（余额不足属罕见竞态）。
+                // 不解冻语义：手动解冻预扣（幂等，已结算则 no-op）；锁保留支持幂等回放。
+                console.error(`[Chat] stream settle failed for ${c.requestId}:`, err);
+                await releasePreConsume(c, readPreConsume(c)).catch(() => { /* 解冻失败有 TTL 兜底 */ });
+              }
+
+              trace.responseText = state.generatedText || null;
+              trace.inputTokens = billing.promptTokens;
+              trace.outputTokens = billing.completionTokens;
+              trace.cost = cost.toFixed(8);
+              trace.finishReason = state.finishReason ?? null;
+              trace.status = 'succeeded';
+              return;
+            }
+
+            // ── 非流式：结算成功后再发送（保证扣费失败能返回 402）──
+            const parsedBody = requireStepResult<Record<string, unknown>>(c, STEP_KEYS.parsedBody);
+            const u = (parsedBody.usage || {}) as Record<string, unknown>;
+            const promptTokens = Number(u.prompt_tokens) || 0;
+            const completionTokens = Number(u.completion_tokens) || 0;
+            const totalTokens = Number(u.total_tokens) || 0;
+            const hasUsage = totalTokens > 0;
+
+            // 缓存命中打折：usage 存在时按缓存字段打折计费；无缓存字段时与旧 computeCost 完全一致（回归安全）
+            // 折扣率 = 模型级 vendor_pricing.cache_discount_rate → 全局 billing.cache_hit_discount → 默认 0.1
+            const discount = hasUsage ? parseAndDiscount(parsedBody.usage, pricing, await resolveCacheDiscountRate(pricing)) : null;
+            const cost = discount ? discount.cost : computeCost(c.model, requireStepResult<number>(c, STEP_KEYS.estimatedInputTokens), 0, pricing);
+
+            const choices = (parsedBody.choices as Array<{ finish_reason?: string }> | undefined);
+            const finishReason = String(choices?.[0]?.finish_reason ?? 'stop');
+
+            await settleBilling(
+              c,
+              hasUsage ? promptTokens : requireStepResult<number>(c, STEP_KEYS.estimatedInputTokens),
+              hasUsage ? completionTokens : 0,
+              cost,
+              channel,
+              {
+                streamed: false,
+                trustUpstream: hasUsage,
+                fallback: !hasUsage,
+                finishReason,
+                cacheHitTokens: discount?.cacheHitTokens,
+                cacheDiscount: discount?.discountAmount,
+                preConsume: readPreConsume(c),
+              },
+            );
+
+            await recordChannelResult(`supplier:${channel.supplier.id}:key:${channel.key.id}`, true);
+            reply.header('X-Request-Id', c.requestId);
+
+            // 非流式：从响应体提取助手回复原文
+            const choiceMsg = (parsedBody.choices as Array<{ message?: { content?: unknown } }> | undefined)?.[0]?.message;
+            const respText = typeof choiceMsg?.content === 'string' ? choiceMsg.content : null;
+            trace.responseText = respText;
+            trace.inputTokens = hasUsage ? promptTokens : requireStepResult<number>(c, STEP_KEYS.estimatedInputTokens);
+            trace.outputTokens = hasUsage ? completionTokens : 0;
+            trace.cost = cost.toFixed(8);
+            trace.finishReason = finishReason;
+            trace.status = 'succeeded';
+
+            // 幂等：缓存首次非流式成功响应（命中时直接回放，不重复计费）
+            await cacheIdempotentResponse(c.requestId, {
+              streamed: false,
+              body: parsedBody,
+              summary: buildIdempotencySummary({
+                requestId: c.requestId,
+                model: c.model,
+                inputTokens: hasUsage ? promptTokens : requireStepResult<number>(c, STEP_KEYS.estimatedInputTokens),
+                outputTokens: hasUsage ? completionTokens : 0,
+                cost: cost.toFixed(8),
+                finishReason,
+                streamed: false,
+              }),
+            });
+            return reply.send(parsedBody);
+          },
+        }),
+      ]);
+
+      if (!result.success) throw result.error;
+    } catch (err) {
+      trace.completedAt = new Date();
+      trace.status = 'failed';
+
+      // 幂等锁重复（L1 命中）：回放首次结果，不重复扣费
+      if (err instanceof IdempotencyConflictError) {
+        const replayed = await replayIdempotentRequest(reply, err.key, err.isStream);
+        if (replayed) return reply;
+        // 首次请求仍在处理中（无缓存、无消费记录）→ 409 幂等提示，而非 500
+        return sendOpenAIError(reply, 409, 'Duplicate request is still being processed', 'idempotency_conflict', 409);
       }
 
-      // 3.5 P0-1 阈值旁路 + 预扣：余额 > 阈值 → 旁路（零延迟）；否则 Redis Lua 冻结。
-      //     预扣失败（余额不足 402 / Redis 异常旁路降级）都不调上游。
-      //     定价提前取一次，供预扣预估与各结算分支复用（与原多次查询结果一致）。
-      const pricing = await getPricingForModel(req.model);
-      const estimatedCost = computeEstimatedCost(req.model, estimatedInputTokens, pricing, req.max_tokens);
-      pre = await preConsume(pipelineCtx, estimatedCost, { balance });
-
-      // 4. Select channel（无可用 → mock 回退）
-      //    传入 userId：渠道分组供给过滤（supplier.allowed_groups），见 newapi-gap-analysis.md Batch 4 遗留
-      const channel = await selectChannel(req.model, ctx?.userId ? { userId: ctx.userId } : undefined);
-
-      if (!channel) {
-        // ── mock 回退路径 ──
-        const mock = buildMockCompletion(req.model, req.messages, estimatedInputTokens);
-        const cost = computeCost(req.model, mock.usage.prompt_tokens, mock.usage.completion_tokens, pricing);
-
-        await settleBilling(pipelineCtx, mock.usage.prompt_tokens, mock.usage.completion_tokens, cost, null, {
-          streamed: false,
-          trustUpstream: false,
-          fallback: true,
-          finishReason: 'stop',
-          preConsume: pre,
-        });
-
-        trace.routedModel = req.model;
-        trace.responseText = mock.content;
-        trace.finishReason = 'stop';
-        trace.inputTokens = mock.usage.prompt_tokens;
-        trace.outputTokens = mock.usage.completion_tokens;
-        trace.cost = cost.toFixed(8);
-        trace.status = 'succeeded';
-
-        const payload = {
-          id: `chatcmpl-${pipelineCtx.requestId}`,
-          object: 'chat.completion',
-          created: Math.floor(Date.now() / 1000),
-          model: req.model,
-          choices: [
-            {
-              index: 0,
-              message: { role: 'assistant', content: mock.content },
-              finish_reason: 'stop',
-            },
-          ],
-          usage: mock.usage,
-          mock: true,
-        };
-
-        // 幂等：缓存首次成功响应（mock 非流式存完整 body，流式只存摘要）
-        await cacheIdempotentResponse(idemKey, {
-          streamed: isStream,
-          ...(isStream ? {} : { body: payload }),
-          summary: buildIdempotencySummary({
-            requestId: idemKey,
-            model: req.model,
-            inputTokens: mock.usage.prompt_tokens,
-            outputTokens: mock.usage.completion_tokens,
-            cost: cost.toFixed(8),
-            finishReason: 'stop',
-            streamed: isStream,
-          }),
-        });
-
-        if (isStream) {
-          reply.raw.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' });
-          reply.raw.write(`data: ${JSON.stringify({ ...payload, choices: [{ index: 0, delta: { content: mock.content }, finish_reason: 'stop' }] })}\n\n`);
-          reply.raw.write('data: [DONE]\n\n');
-          reply.raw.end();
-          return;
-        }
-        return reply.send(payload);
+      // 幂等 DB 兜底命中：Redis 首层失效时重复 insert → 409 幂等提示，而非 500
+      if (isIdempotencyUniqueViolation(err)) {
+        trace.errorCode = 'IDEMPOTENCY_CONFLICT';
+        return sendOpenAIError(reply, 409, 'Duplicate request with the same idempotency key', 'idempotency_conflict', 409);
       }
 
-      // 5. 真实上游路径
-      trace.routedModel = channel.modelMapping.platformModel;
-      trace.supplierId = channel.supplier.id;
-      trace.supplierModelId = channel.modelMapping.id;
-      trace.supplierKeyFp = fingerprintKey(channel.key.keyValue);
-
-      const upstreamUrl = `${channel.supplier.baseUrl}/v1/chat/completions`;
-      const upstreamBody = buildUpstreamBody(req, channel.modelMapping.platformModel);
-
-      const upstreamResp = await fetch(upstreamUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${channel.key.keyValue}`,
-        },
-        body: JSON.stringify(upstreamBody),
-      });
-
-      const cbKey = `supplier:${channel.supplier.id}:key:${channel.key.id}`;
-
-      if (!upstreamResp.ok) {
-        await recordChannelResult(cbKey, false);
-        // P0-1：上游失败未结算 → 解冻预扣（防资金卡死）
-        await releasePreConsume(pipelineCtx, pre).catch(() => { /* 解冻失败有 TTL 兜底 */ });
-        // 幂等：上游失败释放锁，允许客户端用同一键重试
-        if (lockToken) {
-          await releaseIdempotencyLock(idemKey, lockToken).catch(() => { /* 释放失败不阻断 */ });
-        }
-        let errorBody = '';
-        try { errorBody = await upstreamResp.text(); } catch { /* ignore */ }
-        trace.status = 'failed';
-        trace.errorCode = String(upstreamResp.status);
-        trace.responseText = errorBody.slice(0, 20000);
-        reply.status(upstreamResp.status || 502);
+      // 上游 4xx/5xx：透传上游状态码 + 错误体（rollback 已自动解冻预扣 + 释放幂等锁）
+      if (err instanceof UpstreamPassthroughError) {
+        trace.errorCode = String(err.statusCode);
+        trace.responseText = err.upstreamBody.slice(0, 20000);
+        reply.status(err.statusCode || 502);
         reply.header('Content-Type', 'application/json');
         try {
-          return reply.send(JSON.parse(errorBody));
+          return reply.send(JSON.parse(err.upstreamBody));
         } catch {
-          return sendOpenAIError(reply, upstreamResp.status || 502, `Upstream error: ${upstreamResp.status}`);
+          return sendOpenAIError(reply, err.statusCode || 502, `Upstream error: ${err.statusCode}`);
         }
       }
 
-      if (isStream) {
-        // ── SSE 流式：转发后结算 ──
-        const state: StreamState = await streamRelay(pipelineCtx, reply, upstreamResp);
-        await recordChannelResult(cbKey, true);
-
-        const billing = determineStreamBilling(state, false, estimatedInputTokens, req.model);
-        const cost = computeCost(req.model, billing.promptTokens, billing.completionTokens, pricing);
-
-        try {
-          await settleBilling(
-            pipelineCtx,
-            billing.promptTokens,
-            billing.completionTokens,
-            cost,
-            channel,
-            { streamed: true, trustUpstream: billing.trustUpstream, fallback: billing.fallback, finishReason: state.finishReason ?? undefined, preConsume: pre },
-          );
-          // 幂等：结算成功才缓存流式摘要（失败不缓存，避免回放未计费的"成功"）
-          await cacheIdempotentResponse(idemKey, {
-            streamed: true,
-            summary: buildIdempotencySummary({
-              requestId: idemKey,
-              model: req.model,
-              inputTokens: billing.promptTokens,
-              outputTokens: billing.completionTokens,
-              cost: cost.toFixed(8),
-              finishReason: state.finishReason ?? undefined,
-              streamed: true,
-            }),
-          });
-        } catch (err) {
-          // 流式已开始，无法改状态码；记账失败仅记录（余额不足属罕见竞态）
-          console.error(`[Chat] stream settle failed for ${pipelineCtx.requestId}:`, err);
-          // P0-1：流式结算失败 → 解冻预扣（防资金卡死；幂等，已结算则 no-op）
-          await releasePreConsume(pipelineCtx, pre).catch(() => { /* 解冻失败有 TTL 兜底 */ });
-        }
-
-        trace.responseText = state.generatedText || null;
-        trace.inputTokens = billing.promptTokens;
-        trace.outputTokens = billing.completionTokens;
-        trace.cost = cost.toFixed(8);
-        trace.finishReason = state.finishReason ?? null;
-        trace.status = 'succeeded';
-        return;
+      if (err instanceof InsufficientBalanceError) {
+        trace.errorCode = 'INSUFFICIENT_BALANCE';
+        return sendOpenAIError(reply, 402, err.message, 'insufficient_balance', 402);
       }
-
-      // ── 非流式：先读 body → 结算 → 再返回（保证扣费失败能返回 402）──
-      const rawBody = await upstreamResp.text();
-      let parsedBody: Record<string, unknown> = {};
-      try { parsedBody = JSON.parse(rawBody); } catch { parsedBody = { raw: rawBody }; }
-
-      const u = (parsedBody.usage || {}) as Record<string, unknown>;
-      const promptTokens = Number(u.prompt_tokens) || 0;
-      const completionTokens = Number(u.completion_tokens) || 0;
-      const totalTokens = Number(u.total_tokens) || 0;
-      const hasUsage = totalTokens > 0;
-
-      // 缓存命中打折：usage 存在时按缓存字段打折计费；无缓存字段时与旧 computeCost 完全一致（回归安全）
-      const discount = hasUsage ? parseAndDiscount(parsedBody.usage, pricing) : null;
-      const cost = discount ? discount.cost : computeCost(req.model, estimatedInputTokens, 0, pricing);
-
-      const choices = (parsedBody.choices as Array<{ finish_reason?: string }> | undefined);
-      const finishReason = String(choices?.[0]?.finish_reason ?? 'stop');
-
-      await settleBilling(
-        pipelineCtx,
-        hasUsage ? promptTokens : estimatedInputTokens,
-        hasUsage ? completionTokens : 0,
-        cost,
-        channel,
-        {
-          streamed: false,
-          trustUpstream: hasUsage,
-          fallback: !hasUsage,
-          finishReason,
-          cacheHitTokens: discount?.cacheHitTokens,
-          cacheDiscount: discount?.discountAmount,
-          preConsume: pre,
-        },
-      );
-
-      await recordChannelResult(cbKey, true);
-      reply.header('X-Request-Id', pipelineCtx.requestId);
-
-      // 非流式：从响应体提取助手回复原文
-      const choiceMsg = (parsedBody.choices as Array<{ message?: { content?: unknown } }> | undefined)?.[0]?.message;
-      const respText = typeof choiceMsg?.content === 'string' ? choiceMsg.content : null;
-      trace.responseText = respText;
-      trace.inputTokens = hasUsage ? promptTokens : estimatedInputTokens;
-      trace.outputTokens = hasUsage ? completionTokens : 0;
-      trace.cost = cost.toFixed(8);
-      trace.finishReason = finishReason;
-      trace.status = 'succeeded';
-
-      // 幂等：缓存首次非流式成功响应（命中时直接回放，不重复计费）
-      await cacheIdempotentResponse(idemKey, {
-        streamed: false,
-        body: parsedBody,
-        summary: buildIdempotencySummary({
-          requestId: idemKey,
-          model: req.model,
-          inputTokens: hasUsage ? promptTokens : estimatedInputTokens,
-          outputTokens: hasUsage ? completionTokens : 0,
-          cost: cost.toFixed(8),
-          finishReason,
-          streamed: false,
-        }),
-      });
-      return reply.send(parsedBody);
-      } catch (err) {
-        trace.completedAt = new Date();
-        trace.status = 'failed';
-        // 幂等 DB 兜底命中：Redis 首层失效时重复 insert → 409 幂等提示，而非 500
-        if (isIdempotencyUniqueViolation(err)) {
-          trace.errorCode = 'IDEMPOTENCY_CONFLICT';
-          return sendOpenAIError(reply, 409, 'Duplicate request with the same idempotency key', 'idempotency_conflict', 409);
-        }
-        // 处理失败释放幂等锁，允许客户端用同一键重试（成功路径不释放，锁保留到 TTL）
-        if (lockToken) {
-          await releaseIdempotencyLock(idemKey, lockToken).catch(() => { /* 释放失败不阻断 */ });
-        }
-        // P0-1：异常路径解冻预扣（未结算时；幂等，已结算/已释放则 no-op）
-        await releasePreConsume(pipelineCtx, pre).catch(() => { /* 解冻失败有 TTL 兜底 */ });
-        if (err instanceof InsufficientBalanceError) {
-          trace.errorCode = 'INSUFFICIENT_BALANCE';
-          return sendOpenAIError(reply, 402, err.message, 'insufficient_balance', 402);
-        }
-        if (err instanceof AppError) {
-          trace.errorCode = err.code.toLowerCase();
-          return sendOpenAIError(reply, err.statusCode, err.message, err.code.toLowerCase(), err.statusCode);
-        }
-        throw err;
+      if (err instanceof AppError) {
+        trace.errorCode = err.code.toLowerCase();
+        return sendOpenAIError(reply, err.statusCode, err.message, err.code.toLowerCase(), err.statusCode);
       }
+      throw err;
     } finally {
       trace.completedAt = new Date();
       // 旁路写入：记录失败只打日志，不改变请求结果

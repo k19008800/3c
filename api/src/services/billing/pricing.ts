@@ -43,13 +43,19 @@ const DEFAULT_PRICING = { input: DEFAULT_INPUT_PRICE, output: DEFAULT_OUTPUT_PRI
  * 定价查询失败或数据非法（NaN / ≤0）时静默回退默认价，不阻断主链路。
  *
  * @param model - 用户请求的模型名
- * @returns { input, output } 单价（¥ / 1K tokens）
+ * @returns { input, output, cacheDiscountRate } 单价（¥ / 1K tokens）+
+ *          模型级缓存命中折扣率（0-1；未配置为 null → 用全局 `billing.cache_hit_discount`）
  */
-export async function getPricingForModel(model: string): Promise<{ input: number; output: number }> {
+export async function getPricingForModel(model: string): Promise<{
+  input: number;
+  output: number;
+  cacheDiscountRate: number | null;
+}> {
   try {
     const rows = await db.select({
       inputPrice: schema.vendorPricing.inputPrice,
       outputPrice: schema.vendorPricing.outputPrice,
+      cacheDiscountRate: schema.vendorPricing.cacheDiscountRate,
     })
       .from(schema.vendorPricing)
       .innerJoin(schema.supplierModels, eq(schema.vendorPricing.supplierModelId, schema.supplierModels.id))
@@ -59,14 +65,17 @@ export async function getPricingForModel(model: string): Promise<{ input: number
     if (rows.length > 0) {
       const input = Number(rows[0]!.inputPrice);
       const output = Number(rows[0]!.outputPrice);
+      const rate = Number(rows[0]!.cacheDiscountRate);
+      // 模型级折扣率：合法（0 < rate ≤ 1）才采信；非法/空 → null（回退全局）
+      const cacheDiscountRate = Number.isFinite(rate) && rate > 0 && rate <= 1 ? rate : null;
       if (!isNaN(input) && !isNaN(output) && input > 0 && output > 0) {
-        return { input, output };
+        return { input, output, cacheDiscountRate };
       }
     }
   } catch {
     /* 定价查询失败 → 走默认价 */
   }
-  return { ...DEFAULT_PRICING };
+  return { ...DEFAULT_PRICING, cacheDiscountRate: null };
 }
 
 // ============================================================

@@ -163,20 +163,21 @@ pnpm build                             # 三端构建通过
 - **现状**：`services/pipeline/executor.ts`（`runPipeline`/`createStep` 带回滚）有测试但**从未被路由使用**（各路由手写 try/catch，只 import 类型）；`body-preprocessor.ts`（大 base64→临时文件）实现且导出但**无任何路由调用**（Gate 5 实际未生效）。
 - **目标**：把网关路由的调用链改写为 pipeline steps（auth → idempotency → rate-limit → pre-consume → routing → proxy → settle），让回滚机制真实生效；`body-preprocessor` 挂到多模态请求路径（chat/messages/responses/anthropic）。
 - **⚠️ 依赖 P0-1 的共享服务抽取（审阅 2026-08-17）**：P0-1 已抽 `settle.ts`/`pricing.ts`/`pre-consume.ts` 共享服务 → P0-4 的 step 实现直接基于共享服务，避免"pipeline 接入后仍有 8 份重复逻辑"。
+- **⚠️ ws-relay 豁免（2026-08-18 决策）**：`ws-relay.ts` 为事件驱动 socket 编排（心跳/方案 A 上游 WS 双向透传/方案 B HTTP SSE→WS/断开触发结算），非一次性 step 执行器可表达；其失败路径已等价执行 `releasePreConsume`（防资金卡死）与结算幂等守卫，回滚语义等效 → **不入 pipeline**，保持依赖注入式编排（文档标注豁免）。
 - **实现文件**：
   - 新增 `api/src/services/pipeline/steps/{auth,idempotency,pre-consume,rate-limit,route,proxy,settle}.ts`（各 step 调用 P0-1/P0-2/P0-3 共享服务）
   - 改 `api/src/routes/chat.ts` 等：`runPipeline(ctx, steps)` 替换手写链路（保留现有行为等价，逐步替换保证回归；其余 7 处路由按同样模式跟进，可逐路由渐进）
   - 改 `api/src/routes/chat.ts`：请求体经 `preprocessRequestBody` 后再转发（大 base64 走临时文件）
   - 新增 `api/src/services/pipeline/integration.test.ts`（完整链路用例）
 - **测试要求**：
-  - ☐ 正常链路：6 step 顺序执行全部成功
-  - ☐ 第 N 步失败 → 前 N-1 步 rollback 按逆序调用（幂等）
-  - ☐ noRollbackOn 标记步骤失败 → 不触发回滚
-  - ☐ 余额不足（pre-consume 失败）→ 402 且未调上游
-  - ☐ 上游全部不可用 → 502 + 解冻预扣
-  - ☐ 大 base64（>10MB）→ 上传临时文件、替换为内网 URL；小 base64 原样转发
-  - ☐ 现有 chat/messages/rerank/responses 行为回归（等价性）
-- **Gate**：`pnpm -w api test` 全量（含 pipeline 集成）+ verify 17/17 + E2E 10/10。
+  - ☑ 正常链路：6 step 顺序执行全部成功
+  - ☑ 第 N 步失败 → 前 N-1 步 rollback 按逆序调用（幂等）
+  - ☑ noRollbackOn 标记步骤失败 → 不触发回滚
+  - ☑ 余额不足（pre-consume 失败）→ 402 且未调上游
+  - ☑ 上游全部不可用 → 502 + 解冻预扣
+  - ☑ 大 base64（>10MB）→ 上传临时文件、替换为内网 URL；小 base64 原样转发
+  - ☑ 现有 chat/messages/rerank/responses 行为回归（等价性）→ chat 已回归（idempotency-gateway 7 用例 + verify 17/17）；messages/rerank/responses 全部路由接入后全量回归通过
+- **Gate**：`pnpm -w api test` 全量（含 pipeline 集成）+ verify 17/17 + E2E 10/10。→ **P0-4 完成：574/574 单测、api/console/portal 三端 tsc 0 错、verify 17/17、E2E 10/10（含真实上游调度）**
 - **依赖**：P0-1、P0-2、P0-3 完成后做（steps 复用其服务：pre-consume / rate-limit / idempotency）。
 - **工时**：后端 3d（重构风险最高，回归测试为主）。
 

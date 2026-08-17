@@ -233,12 +233,21 @@ export async function getCachedIdempotentResponse(key: string): Promise<Idempote
  * @returns true = 幂等唯一约束冲突
  */
 export function isIdempotencyUniqueViolation(err: unknown): boolean {
-  if (!err || typeof err !== 'object') return false;
-  const e = err as { code?: unknown; message?: unknown };
-  if (e.code === '23505') return true;
-  return typeof e.message === 'string'
-    && /duplicate key value violates unique constraint/i.test(e.message)
-    && /consumption_records_request_id/i.test(e.message);
+  // 逐层解包 Error.cause（P0-4 pipeline 把非 Error 原始值如 PG { code: '23505' }
+  // 经 Error.cause 传递），最多 3 层防环
+  let e: unknown = err;
+  for (let i = 0; i < 3 && e && typeof e === 'object'; i++) {
+    const cur = e as { code?: unknown; message?: unknown; cause?: unknown };
+    if (cur.code === '23505') return true;
+    if (typeof cur.message === 'string'
+      && /duplicate key value violates unique constraint/i.test(cur.message)
+      && /consumption_records_request_id/i.test(cur.message)) {
+      return true;
+    }
+    e = cur.cause;
+    if (e === undefined || e === null) break;
+  }
+  return false;
 }
 
 /**
