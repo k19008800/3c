@@ -62,6 +62,20 @@
       "when": 1788556800000,
       "tag": "0008_cache_discount_rate",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789000000000,
+      "tag": "0009_user_webhooks",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789000001000,
+      "tag": "0010_agent_invitations",
+      "breakpoints": true
     }
   ],
   "version": "7",

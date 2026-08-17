@@ -51,3 +51,5 @@ export { undoRecords } from './undo-record';
 export { webhookRetryConfigs } from './webhook-retry-config';
 export { userGroups, userGroupMemberships } from './user-groups';
 export { taskRecords } from './task-records';
+export { userWebhooks } from './user-webhooks';
+export { agentInvitations } from './agent-invitations';
