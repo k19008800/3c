@@ -21,12 +21,12 @@
 
 import type { FastifyInstance } from 'fastify';
 import { db, schema } from '../db';
-import { eq, desc, inArray } from 'drizzle-orm';
+import { eq, desc, inArray, and } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { join, resolve } from 'path';
 import { verifyToken } from '../services/auth/jwt';
-import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError } from '../lib/errors';
+import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError, AppError } from '../lib/errors';
 
 /* ───────── auth / audit helpers ───────── */
 
@@ -202,6 +202,69 @@ export async function adminOpsRoutes(app: FastifyInstance) {
       id: c.id, type: c.type, title: c.title, content: c.content, slug: c.slug, status: c.status, updated_at: c.updatedAt,
     }));
     return reply.send({ data: { list, total: list.length } });
+  });
+
+  /**
+   * POST /api/v1/admin/content — 创建内容（P2-2 营销素材库）
+   *
+   * 营销素材约定：type='marketing-material'，slug='material-<name>'，status='published'|'draft'。
+   * 写操作记 audit_logs（writeAudit，与 GET/PUT 风格一致）。
+   */
+  app.post('/api/v1/admin/content', { preHandler: [adminAuth] }, async (request: any, reply) => {
+    const b = (request.body || {}) as { type?: string; slug?: string; title?: string; content?: string; status?: string };
+    if (!b.type || !b.slug || !b.title || typeof b.content !== 'string' || b.content.trim() === '') {
+      throw new ValidationError('type / slug / title / content 均必填');
+    }
+    const type = b.type.trim();
+    const slug = b.slug.trim();
+    const title = b.title.trim();
+    if (type === 'marketing-material' && !/^material-[a-z0-9-]+$/.test(slug)) {
+      throw new ValidationError('营销素材 slug 需符合 material-<name> 约定（小写字母/数字/中划线）');
+    }
+    const status = b.status === 'draft' ? 'draft' : 'published';
+
+    // slug 重复防护（site_content 无唯一约束，应用层兜底）
+    const dup = await db.select({ id: schema.siteContents.id })
+      .from(schema.siteContents)
+      .where(and(eq(schema.siteContents.type, type), eq(schema.siteContents.slug, slug)))
+      .limit(1);
+    if (dup.length > 0) throw new ValidationError(`slug 已存在（id=${dup[0]!.id}）`);
+
+    const [row] = await db.insert(schema.siteContents).values({
+      type,
+      slug,
+      title,
+      content: b.content,
+      status,
+    }).returning({
+      id: schema.siteContents.id,
+      type: schema.siteContents.type,
+      slug: schema.siteContents.slug,
+      title: schema.siteContents.title,
+      status: schema.siteContents.status,
+      updatedAt: schema.siteContents.updatedAt,
+    });
+    if (!row) throw new AppError('Failed to create content', 500, 'CONTENT_CREATE_FAILED');
+
+    await writeAudit(request, 'content-create', {
+      contentId: row.id,
+      type: row.type,
+      slug: row.slug,
+      title: row.title,
+      status: row.status,
+    });
+
+    return reply.status(201).send({
+      data: {
+        id: row.id,
+        type: row.type,
+        slug: row.slug,
+        title: row.title,
+        status: row.status,
+        updated_at: row.updatedAt,
+      },
+      message: '内容已创建',
+    });
   });
 
   /**

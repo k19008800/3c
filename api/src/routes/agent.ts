@@ -15,6 +15,7 @@
  *   GET  /agent/invite/code           — 当前有效邀请码
  *   POST /agent/invite/code/regenerate — 重新生成邀请码
  *   GET  /agent/invite/records        — 邀请记录（按创建时间倒序）
+ *   GET  /agent/materials             — 营销素材库（published 素材，P2-2）
  *
  * 金额单位：DB/管理端为「元」（numeric 18,4），代理商端契约为「分」（×100/÷100）。
  */
@@ -353,5 +354,32 @@ export async function agentRoutes(app: FastifyInstance) {
     const agent = await requireAgent(request);
     const list = await listInviteRecords(agent.id);
     return reply.send({ data: { list } });
+  });
+
+  /** GET /api/v1/agent/materials — 营销素材库（P2-2，仅 published 素材） */
+  app.get('/api/v1/agent/materials', { preHandler: [jwtAuth] }, async (request, reply) => {
+    await requireAgent(request);
+    const rows = await db
+      .select({
+        id: schema.siteContents.id,
+        slug: schema.siteContents.slug,
+        title: schema.siteContents.title,
+        content: schema.siteContents.content,
+        updatedAt: schema.siteContents.updatedAt,
+      })
+      .from(schema.siteContents)
+      .where(and(
+        eq(schema.siteContents.type, 'marketing-material'),
+        eq(schema.siteContents.status, 'published'),
+      ))
+      .orderBy(desc(schema.siteContents.updatedAt));
+    const list = rows.map((r) => ({
+      id: r.id,
+      slug: r.slug,
+      title: r.title,
+      content: r.content,
+      updated_at: r.updatedAt.toISOString(),
+    }));
+    return reply.send({ data: { list, total: list.length } });
   });
 }

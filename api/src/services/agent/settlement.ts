@@ -22,8 +22,14 @@
 
 import crypto from 'crypto';
 import { db, schema } from '../../db';
-import { eq, and, sql, desc, inArray, like, type SQL } from 'drizzle-orm';
+import { eq, and, sql, desc, inArray, like, isNull, type SQL } from 'drizzle-orm';
+import type { PgTransaction } from 'drizzle-orm/pg-core';
+import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js';
+import type { ExtractTablesWithRelations } from 'drizzle-orm';
 import { ValidationError, AppError } from '../../lib/errors';
+
+/** 事务上下文：与 db.transaction 回调的 tx 同型（避免手写泛型漂移） */
+type Tx = PgTransaction<PostgresJsQueryResultHKT, typeof schema, ExtractTablesWithRelations<typeof schema>>;
 
 /** 结算期格式：YYYY-MM */
 const PERIOD_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -322,11 +328,12 @@ export interface AgentRankingItem {
  * @param agentId - 当前登录代理商 id（用于 my_rank 定位）
  * @param opts.period - 'month'（本月，默认）| 'total'（累计）
  * @param opts.limit - 榜单条数（默认 50，上限 200；my_rank 不受 limit 截断影响）
+ * @returns { list, my_rank, total } — total 为榜单口径下的代理商总数（不受 limit 截断）
  */
 export async function agentSettlementRanking(
   agentId: number,
   opts: { period?: string; limit?: number } = {},
-): Promise<{ list: AgentRankingItem[]; my_rank: AgentRankingItem | null }> {
+): Promise<{ list: AgentRankingItem[]; my_rank: AgentRankingItem | null; total: number }> {
   const scope = opts.period === 'total' ? 'total' : currentMonth();
   const conditions: SQL[] = [eq(schema.agentCommissions.status, 'settled')];
   if (scope !== 'total') {
@@ -365,6 +372,7 @@ export async function agentSettlementRanking(
   return {
     list: ranked.slice(0, limit),
     my_rank: ranked.find((r) => r.agent_id === agentId) ?? null,
+    total: ranked.length,
   };
 }
 
@@ -415,6 +423,51 @@ export async function getActiveInviteCode(agentId: number): Promise<{ code: stri
     .orderBy(desc(schema.agentInvitations.id))
     .limit(1);
   return { code: rows[0]?.code ?? null };
+}
+
+/**
+ * 按邀请码查询邀请记录（注册流程预校验用，P2-2）。
+ *
+ * 只读查询不做占用；占用走 consumeInviteCode 的原子 UPDATE。
+ *
+ * @param code - 邀请码（调用方需先 trim + 大写归一，与生成字符集一致）
+ * @returns 邀请记录行或 null（码不存在）
+ */
+export async function findInviteByCode(code: string): Promise<typeof schema.agentInvitations.$inferSelect | null> {
+  const rows = await db
+    .select()
+    .from(schema.agentInvitations)
+    .where(eq(schema.agentInvitations.code, code))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/**
+ * 原子占用邀请码：注册成功后标记 used_by / used_at（P2-2）。
+ *
+ * 并发安全：WHERE used_by IS NULL 的 UPDATE 在 READ COMMITTED 下互斥——
+ * 两个并发注册同码，先提交者占用成功（返回 true），后到者 UPDATE 重估
+ * WHERE 命中 0 行（返回 false），由调用方回滚整个注册事务，保证只产生一个用户。
+ *
+ * 模型对齐（SPEC-§8）：本函数只做邀请记录占用，**不写入 agent_customers**，
+ * 客户归属唯一来源为报备划拨制，邀请码仅作拉新激励。
+ *
+ * @param tx - 事务上下文（必须与用户创建同一事务，失败回滚不产生孤儿用户）
+ * @param code - 邀请码（需已通过 findInviteByCode 预校验）
+ * @param userId - 新注册用户 id
+ * @returns true = 占用成功；false = 已被使用/已失效/不存在
+ */
+export async function consumeInviteCode(tx: Tx, code: string, userId: number): Promise<boolean> {
+  const rows = await tx
+    .update(schema.agentInvitations)
+    .set({ usedBy: userId, usedAt: new Date() })
+    .where(and(
+      eq(schema.agentInvitations.code, code),
+      eq(schema.agentInvitations.status, 'active'),
+      isNull(schema.agentInvitations.usedBy),
+    ))
+    .returning({ id: schema.agentInvitations.id });
+  return rows.length > 0;
 }
 
 /**

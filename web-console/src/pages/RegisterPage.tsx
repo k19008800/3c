@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
@@ -33,7 +33,9 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPwd, setConfirmPwd] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
+  // P2-2 邀请链接落地：/?invite_code=XXX 自动预填邀请码（代理商分享链接打开注册页）
+  const [searchParams] = useSearchParams();
+  const [inviteCode, setInviteCode] = useState(searchParams.get("invite_code") ?? "");
   const [successEmail, setSuccessEmail] = useState("");
   const { toast } = useToast();
 
@@ -224,7 +226,7 @@ export default function RegisterPage() {
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: "block", fontSize: 13, color: "var(--color-text)", marginBottom: 6 }}>
               邀请码（选填）
-              <HelpIcon text="如果您有邀请码，输入后可获得注册奖励" level="button" />
+              <HelpIcon text="由代理商提供的邀请码（选填）。邀请仅作拉新激励，不自动建立客户归属；客户归属以平台报备审核划拨为准。" level="button" />
             </label>
             <input
               type="text"

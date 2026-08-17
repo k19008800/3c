@@ -19,6 +19,7 @@ import { AppError, UnauthorizedError, ValidationError } from '../lib/errors';
 import { initBalance, addBalance, getBalance } from '../services/billing/balance';
 import { sendMail } from '../services/mailer';
 import { getRedis } from '../lib/redis';
+import { findInviteByCode, consumeInviteCode } from '../services/agent/settlement';
 
 // ============================================================
 // Helpers
@@ -51,6 +52,9 @@ export async function authRoutes(app: FastifyInstance) {
     const email = String(body.email).toLowerCase().trim();
     const password = String(body.password);
     const name = String(body.name || email.split('@')[0]);
+    // 邀请码（选填）：仅作拉新激励，不产生/不改变客户归属（SPEC-§8 模型对齐）
+    // 生成字符集为大写字母+数字，输入统一 trim + 大写归一，避免大小写误输
+    const inviteCode = body.invite_code ? String(body.invite_code).trim().toUpperCase() : '';
 
     if (password.length < 8) {
       throw new ValidationError('Password must be at least 8 characters');
@@ -66,14 +70,42 @@ export async function authRoutes(app: FastifyInstance) {
       throw new AppError('Email already registered', 409, 'EMAIL_EXISTS');
     }
 
-    // Create user
+    // 邀请码预校验（仅用于给用户更明确的错误提示；最终以事务内原子占用为准）
+    let inviteOk = false;
+    if (inviteCode) {
+      const invite = await findInviteByCode(inviteCode);
+      if (!invite) throw new ValidationError('邀请码无效');
+      if (invite.status !== 'active') throw new ValidationError('邀请码已失效');
+      if (invite.usedBy != null) throw new ValidationError('邀请码已被使用');
+    }
+
+    // Create user + 原子占用邀请码（同一事务，P2-2）
+    // 并发同码注册：consumeInviteCode 的 WHERE used_by IS NULL UPDATE 保证只有一个成功，
+    // 失败方整个事务回滚 → 用户不创建，返回 400。
     const passwordHash = hashPassword(password);
-    const [user] = await db.insert(schema.users).values({
-      email,
-      passwordHash,
-      name,
-      role: 'customer',
-    }).returning({ id: schema.users.id, email: schema.users.email, role: schema.users.role, name: schema.users.name });
+    const user = await db.transaction(async (tx) => {
+      const [u] = await tx.insert(schema.users).values({
+        email,
+        passwordHash,
+        name,
+        role: 'customer',
+      }).returning({ id: schema.users.id, email: schema.users.email, role: schema.users.role, name: schema.users.name });
+
+      if (!u) {
+        throw new AppError('Failed to create user', 500, 'REGISTRATION_FAILED');
+      }
+
+      if (inviteCode) {
+        const consumed = await consumeInviteCode(tx, inviteCode, u.id);
+        if (!consumed) {
+          // 预校验通过但占用失败 → 并发竞态下已被他人占用/期间失效
+          throw new ValidationError('邀请码已被使用或已失效');
+        }
+        inviteOk = true;
+      }
+
+      return u;
+    });
 
     if (!user) {
       throw new AppError('Failed to create user', 500, 'REGISTRATION_FAILED');
@@ -90,6 +122,8 @@ export async function authRoutes(app: FastifyInstance) {
     return reply.status(201).send({
       user: { id: user.id, email: user.email, name: user.name, role: user.role },
       ...tokens,
+      // P2-2：携带有效邀请码注册成功 → invite_ok=true；未携带 → false
+      invite_ok: inviteOk,
     });
   });
 
