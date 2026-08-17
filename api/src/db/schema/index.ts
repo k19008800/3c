@@ -55,3 +55,8 @@ export { userWebhooks } from './user-webhooks';
 export { agentInvitations } from './agent-invitations';
 export { vendorSettlements, vendorSettlementItems } from './vendor-settlements';
 export { campaignCouponCodes } from './coupons';
+// P2 预置（2026-08-18 调度方先行，db:push 已应用）
+export { ipBlacklist } from './ip-blacklist';
+export { dataRequests } from './data-requests';
+export { deletionRequests } from './deletion-requests';
+export { i18nEntries } from './i18n-entries';

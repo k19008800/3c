@@ -42,6 +42,11 @@ import { adminConsumptionRoutes } from './routes/admin-consumption';
 import { adminGroupRoutes } from './routes/admin-groups';
 import { webhooksRoutes } from './routes/webhooks';
 import { adminVendorSettlementsRoutes } from './routes/admin-vendor-settlements';
+// P2 预注册占位（2026-08-18 调度方先行，子代理填充实现）
+import { dataRequestsRoutes } from './routes/data-requests';
+import { deletionRoutes } from './routes/deletion';
+import { adminSecurityRoutes } from './routes/admin-security';
+import { adminI18nRoutes } from './routes/admin-i18n';
 import { startPriceNotificationScheduler } from './services/price-notification';
 import { startCommissionBackfillScheduler } from './services/agent/commission-backfill';
 import { startRetentionScheduler } from './services/audit/retention';
@@ -121,6 +126,10 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   await app.register(adminGroupRoutes);
   await app.register(webhooksRoutes);
   await app.register(adminVendorSettlementsRoutes);
+  await app.register(dataRequestsRoutes);
+  await app.register(deletionRoutes);
+  await app.register(adminSecurityRoutes);
+  await app.register(adminI18nRoutes);
 
   return app;
 }
