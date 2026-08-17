@@ -1,13 +1,20 @@
 /**
  * 代理商端路由 — /api/v1/agent/*
  *
- * 契约对齐（web-console AgentCommissionPage / AgentWithdrawPage）：
+ * 契约对齐（web-console AgentCommissionPage / AgentWithdrawPage / AgentSettlementPage / AgentRankingPage / AgentInvitePage）：
  *   GET  /agent/commission            — 佣金记录 + 统计（分）
  *   GET  /agent/withdraw/balance      — 可提现余额（分）
  *   GET  /agent/withdraw/bank-info    — 收款银行账户
  *   PUT  /agent/withdraw/bank-info    — 保存收款银行账户
  *   POST /agent/withdraw/apply        — 申请提现（冻结余额）
  *   GET  /agent/withdraw/records      — 提现记录（分）
+ *   GET  /agent/settlements           — 月度结算单列表（分）
+ *   GET  /agent/settlements/:period   — 单期结算单详情（分）
+ *   POST /agent/settlements/:period/confirm — 确认结算（幂等）
+ *   GET  /agent/ranking               — 业绩排名 Top 榜（分）
+ *   GET  /agent/invite/code           — 当前有效邀请码
+ *   POST /agent/invite/code/regenerate — 重新生成邀请码
+ *   GET  /agent/invite/records        — 邀请记录（按创建时间倒序）
  *
  * 金额单位：DB/管理端为「元」（numeric 18,4），代理商端契约为「分」（×100/÷100）。
  */
@@ -16,6 +23,15 @@ import { db, schema } from '../db';
 import { eq, and, sql, desc, gte, lte } from 'drizzle-orm';
 import { verifyToken } from '../services/auth/jwt';
 import { UnauthorizedError, NotFoundError, ValidationError, AppError } from '../lib/errors';
+import {
+  listAgentSettlements,
+  getAgentSettlementDetail,
+  confirmAgentSettlement,
+  agentSettlementRanking,
+  getActiveInviteCode,
+  regenerateInviteCode,
+  listInviteRecords,
+} from '../services/agent/settlement';
 
 async function jwtAuth(request: any, _reply: any) {
   const authHeader = request.headers.authorization;
@@ -273,6 +289,69 @@ export async function agentRoutes(app: FastifyInstance) {
         updated_at: r.updatedAt.toISOString(),
       };
     });
+    return reply.send({ data: { list } });
+  });
+
+  /** GET /api/v1/agent/settlements — 月度结算单列表（分） */
+  app.get('/api/v1/agent/settlements', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const agent = await requireAgent(request);
+    const q = (request.query || {}) as { status?: string; page?: string; page_size?: string };
+    const result = await listAgentSettlements(agent.id, {
+      status: q.status,
+      page: parseInt(q.page ?? '1', 10) || 1,
+      pageSize: parseInt(q.page_size ?? '20', 10) || 20,
+    });
+    return reply.send({ data: result });
+  });
+
+  /** GET /api/v1/agent/settlements/:period — 单期结算单详情（分） */
+  app.get('/api/v1/agent/settlements/:period', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const agent = await requireAgent(request);
+    const period = String((request.params as { period: string }).period);
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) {
+      throw new ValidationError('结算期格式必须为 YYYY-MM');
+    }
+    const detail = await getAgentSettlementDetail(agent.id, period);
+    return reply.send({ data: detail });
+  });
+
+  /** POST /api/v1/agent/settlements/:period/confirm — 确认结算（幂等） */
+  app.post('/api/v1/agent/settlements/:period/confirm', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const agent = await requireAgent(request);
+    const period = String((request.params as { period: string }).period);
+    const result = await confirmAgentSettlement(agent.id, period);
+    return reply.send({ data: result, message: '结算单已确认' });
+  });
+
+  /** GET /api/v1/agent/ranking — 业绩排名 Top 榜（分，含自己的名次） */
+  app.get('/api/v1/agent/ranking', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const agent = await requireAgent(request);
+    const q = (request.query || {}) as { period?: string; limit?: string };
+    const result = await agentSettlementRanking(agent.id, {
+      period: q.period === 'total' ? 'total' : 'month',
+      limit: parseInt(q.limit ?? '50', 10) || 50,
+    });
+    return reply.send({ data: result });
+  });
+
+  /** GET /api/v1/agent/invite/code — 当前有效邀请码（无则 { code: null }） */
+  app.get('/api/v1/agent/invite/code', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const agent = await requireAgent(request);
+    const result = await getActiveInviteCode(agent.id);
+    return reply.send({ data: result });
+  });
+
+  /** POST /api/v1/agent/invite/code/regenerate — 重新生成邀请码（旧 active 码置 disabled） */
+  app.post('/api/v1/agent/invite/code/regenerate', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const agent = await requireAgent(request);
+    const result = await regenerateInviteCode(agent.id);
+    return reply.send({ data: result, message: '邀请码已重新生成' });
+  });
+
+  /** GET /api/v1/agent/invite/records — 邀请记录（所有码 + 使用情况，按创建时间倒序） */
+  app.get('/api/v1/agent/invite/records', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const agent = await requireAgent(request);
+    const list = await listInviteRecords(agent.id);
     return reply.send({ data: { list } });
   });
 }
