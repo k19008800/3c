@@ -40,6 +40,8 @@ import { adminConversationRecordsRoutes } from './routes/admin-conversation-reco
 import { adminMarketplaceRoutes } from './routes/admin-marketplace';
 import { adminConsumptionRoutes } from './routes/admin-consumption';
 import { adminGroupRoutes } from './routes/admin-groups';
+import { webhooksRoutes } from './routes/webhooks';
+import { adminVendorSettlementsRoutes } from './routes/admin-vendor-settlements';
 import { startPriceNotificationScheduler } from './services/price-notification';
 import { startCommissionBackfillScheduler } from './services/agent/commission-backfill';
 import { startRetentionScheduler } from './services/audit/retention';
@@ -117,6 +119,8 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   await app.register(adminMarketplaceRoutes);
   await app.register(adminConsumptionRoutes);
   await app.register(adminGroupRoutes);
+  await app.register(webhooksRoutes);
+  await app.register(adminVendorSettlementsRoutes);
 
   return app;
 }
