@@ -94,18 +94,18 @@ client = Anthropic(base_url="https://api.<host>/anthropic", api_key="3c_xxx")
 | /me/stats | 1 | ✅ |
 | /me/logs | 1 | ✅ |
 | /me/billing/current · history · current/daily · history/:month · download | 1 | ✅ |
-| /me/change-password · /me/change-email | 1 | ⬜ |
-| /me/invoices · /me/invoices/:id/download | 1 | ⬜ |
-| /me/webhooks · /me/webhooks/:id | 3 | ⬜ |
-| /me/api-keys/revoke-all | 1 | ⬜ |
+| /me/change-password · /me/change-email | 1 | ✅ |
+| /me/invoices · /me/invoices/:id/download | 1 | ✅ |
+| /me/webhooks · /me/webhooks/:id (+regenerate-secret · /test) | 3 | ✅ |
+| /me/api-keys/revoke-all | 1 | ✅ |
 | /me/notifications/:id/read · /me/notifications/read-all | 1 | ⬜ |
 | /me/notification-settings/:id/email | 1 | ⬜ |
 | /me/preferences/notifications · /reset | 1 | ⬜ |
 | /me/devices/:id/logout | 1 | ⬜ |
-| /me/real-name | 1 | ⬜ |
-| /me/redemption/redeem | 1 | ⬜ |
+| /me/real-name | 1 | ✅ |
+| /me/redemption/redeem | 1 | ✅ |
 | /me/groups/:id | 1 | ⬜ |
-| /me/tickets · /reply · /resolve | 1 | ⬜ |
+| /me/tickets · /reply · /resolve | 1 | ✅ |
 | /me/knowledge-base/categories · /me/knowledge-base/:id/feedback | 1 | ⬜ |
 | /me/announcements/:id/read · /me/announcements/read-all | 1 | ⬜ |
 | /me/deletion/checks · /status · /request · /cancel | 1 | ⬜ |
@@ -120,8 +120,8 @@ client = Anthropic(base_url="https://api.<host>/anthropic", api_key="3c_xxx")
 |------|----|----|
 | /auth/login · /auth/register | 1 | ✅ |
 | /auth/logout · /auth/refresh | 1 | ✅ |
-| /auth/forgot-password · /auth/reset-password | 1 | ⬜ |
-| /auth/send-email-code | 1 | ⬜ |
+| /auth/forgot-password · /auth/reset-password | 1 | ✅ |
+| /auth/send-email-code | 1 | ✅ |
 | /auth/oauth/:id/bind · /auth/oauth/:id/unbind | 1 | ⬜ |
 | /auth/2fa/setup · /auth/2fa/verify · /auth/2fa/disable | 1 | ⬜ |
 
@@ -129,15 +129,15 @@ client = Anthropic(base_url="https://api.<host>/anthropic", api_key="3c_xxx")
 | 端点 | 状态 |
 |------|----|
 | /agent/dashboard · /agent/commission · /agent/consumption · /agent/consumption/recent · /agent/customers | ⬜ |
-| /agent/invite/code · /agent/invite/records · /agent/invite/code/regenerate | ⬜ |
-| /agent/settlements · /:id · /:id/confirm | ⬜ |
-| /agent/withdraw/balance · /agent/withdraw/records · /agent/withdraw/bank-info · /agent/withdraw/apply | ⬜ |
-| /agent/ranking · /agent/reports | ⬜ |
+| /agent/invite/code · /agent/invite/records · /agent/invite/code/regenerate | ✅ |
+| /agent/settlements · /:id · /:id/confirm | ✅ |
+| /agent/withdraw/balance · /agent/withdraw/records · /agent/withdraw/bank-info · /agent/withdraw/apply | ✅ |
+| /agent/ranking · /agent/reports | ✅（ranking 已实现，reports 待定） |
 
 ### 2.4 管理后台 `/admin/*`（体量最大，约 170 个）
-- **供应商/模型/定价**：/admin/vendors·/:id·/models·/keys、/admin/vendor-profiles、/admin/vendor-pricing·/:id·batch-adjust、/admin/vendor-models·/:id、/admin/vendor-costs·/:id、/admin/vendor-stats、/admin/vendor-performance、/admin/vendor-settlements/generate、/admin/models·/:id、/admin/models/marketplace、/admin/multimodal-models·/:id、/admin/price-changes·/:id/notify — **全部 ⬜**
+- **供应商/模型/定价**：/admin/vendors·/:id·/models·/keys、/admin/vendor-profiles、/admin/vendor-pricing·/:id·batch-adjust、/admin/vendor-models·/:id、/admin/vendor-costs·/:id、/admin/vendor-stats、/admin/vendor-performance、/admin/models·/:id、/admin/models/marketplace、/admin/multimodal-models·/:id、/admin/price-changes·/:id/notify — **⬜**（/admin/pricing 定价 CRUD ✅ 已实现；/admin/vendor-settlements/generate ✅ 已实现，见下方结算行）
 - **供应商→前端 `/admin/suppliers` 后端已有，但前端页面实际调的是 `/admin/vendors`** — 需后端按 `/admin/vendors` 对齐 ✅→（迁移后）
-- **财务/资金**：/admin/finance/*、/admin/settlements、/admin/reconciliation·/diffs、/admin/cost/dashboard、/admin/cost/prediction、/admin/profit、/admin/manual-topup、/admin/finance/ledger/adjust — **⬜**
+- **财务/资金**：/admin/finance/*、/admin/settlements、/admin/reconciliation·/diffs、/admin/cost/dashboard、/admin/cost/prediction、/admin/profit、/admin/manual-topup、/admin/finance/ledger/adjust — **⬜**（/admin/vendor-settlements/* + /admin/supplier-bill-match ✅ 已实现，见下方结算行）
 - **客户/工单/客服**：/admin/customers、/admin/agents·/:id·/assign·/level、/admin/tickets/:id/status·/reply·/note·/assign、/admin/chat/sessions/:id/transfer·/close、/admin/chat/status、/admin/support/*、/admin/quick-replies、/admin/knowledge-base·/:id·/categories — **⬜**
 - **运营/营销**：/admin/campaigns·/:id·/status·/grant、/admin/coupons/generate、/admin/discount-rules·/:id、/admin/affiliate/config·/records、/admin/announcements·/:id、/admin/redemption/batches·/:id/toggle — **⬜**
 - **风控/安全**：/admin/risk/dashboard·/rules·/events、/admin/security/incidents·/ip-blacklist、/admin/audit-logs — **⬜**（/admin/balance-alerts 已实现，见下方消费运营行）
@@ -147,6 +147,7 @@ client = Anthropic(base_url="https://api.<host>/anthropic", api_key="3c_xxx")
 - **系统·已实现**：/admin/sys/logs·/logs/read、/admin/sys/version·/migrations、/admin/undo/records·/:id/execute(+config GET/PUT)、/admin/webhook-retry·/:id — **✅**（后端 `admin-ops.ts`，前端 `admin/config/logs·maintenance·undo·webhook-retry`）；/admin/email-templates(+/:name CRUD·/test)、/admin/email-logs — **✅ 已实现**（后端 `admin-email.ts`）
 - **系统·待实现**：/admin/sys/cache·/db、/admin/settings·/:id/versions、/admin/i18n/entries、/admin/subscription/plans·/subscribers、/admin/tax-banking/config·/history·/bank-accounts、/admin/notification-policies·/:id、/admin/webhooks·/:id·/logs·/test、/admin/roles — **⬜**
 - **看板/洞察**：/admin/performance — **✅ 已实现**（后端 `admin-ops.ts`，前端 `admin/config/performance`）；/admin/dashboard、/admin/cockpit（前端页面在但调用集中在以上端点）、/admin/commission/flow、/admin/competitive/monitor、/admin/conversion/funnel、/admin/operation/diff、/admin/operator/dashboard、/admin/price-changes — **⬜**（/admin/consumption/* 已实现，见上方消费运营行）
+- **供应商结算（P1-3）**：/admin/vendor-settlements/generate、/admin/vendor-settlements、/admin/vendor-settlements/:id、/admin/vendor-settlements/:id/download、/admin/vendor-settlements/:id/confirm、/admin/supplier-bill-match — **✅ 全部已实现**（后端 `admin-vendor-settlements.ts` + `services/finance/vendor-settlement.ts`，新表 vendor_settlements/vendor_settlement_items）
 - **公开**：/public/pricing ✅（后端已有）、/public/status · /public/stats ⬜、/health ✅
 
 ---

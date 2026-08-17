@@ -185,9 +185,10 @@ pnpm build                             # 三端构建通过
 
 ---
 
-## P1 — 契约收口 + 资金闭环（🟡 重要）
+## P1 — 契约收口 + 资金闭环（🟡 重要）✅ 已完成（2026-08-18）
 
 > 目标：按 `docs/api-contract.md` §2 的 253 端点地图消灭 ⬜，优先用户高频项；补齐资金闭环。
+> **P1 验收结果**：api-contract §2 高频 ⬜ 清零（P1-1 用户 10 组 / P1-2 代理 4 组 / P1-3 供应商结算 6 端点 / P1-4 定价校验）；回归 Gate 全绿：typecheck 0 错、**685/685 单测**（574 基线 + 111 新增）、verify 17/17、E2E 10/10、build 全过 → **宣告 P1 完成**。
 
 ### P1-1 用户高频端点补齐
 
@@ -230,7 +231,12 @@ pnpm build                             # 三端构建通过
 - **Gate**：`pnpm -w api test` + web-console typecheck。
 - **工时**：后端 0.5d + 前端 0.5d。
 
-**P1 验收**：api-contract §2 高频 ⬜ 清零（其余 ⬜ 标注"开发中"而非假数据）；回归 Gate 全绿 → **宣告 P1 完成**。
+**P1 验收**：api-contract §2 高频 ⬜ 清零（其余 ⬜ 标注"开发中"而非假数据）；回归 Gate 全绿 → **宣告 P1 完成** ✅（2026-08-18：685/685 单测、verify 17/17、E2E 10/10、build 全过）
+
+**P1 补充记录（2026-08-18）**：
+- 开工前修复 P0 级真实 bug：账本初始化非原子竞态（并发冷启动下晚到 HSET 覆盖已冻结金额 → 超扣窗口），新增 `init-ledger.lua` 原子初始化（提交 4034ccb）
+- 预置 P1 新表：`user_webhooks`（0009）、`agent_invitations`（0010）、`vendor_settlements`/`vendor_settlement_items`（0011）、`campaign_coupon_codes` 正式迁移（0012，原 schema 声明但从未建表）
+- 提交：ec9926a（P1-1）、c2085c1（P1-2）、b000e30（P1-3）、ca42e89（P1-4）、6e0ae49（schema 收口）
 
 ---
 
