@@ -76,6 +76,20 @@
       "when": 1789000001000,
       "tag": "0010_agent_invitations",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1789000002000,
+      "tag": "0011_vendor_settlements",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1789000003000,
+      "tag": "0012_campaign_coupon_codes",
+      "breakpoints": true
     }
   ],
   "version": "7",

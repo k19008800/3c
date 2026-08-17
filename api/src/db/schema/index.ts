@@ -53,3 +53,5 @@ export { userGroups, userGroupMemberships } from './user-groups';
 export { taskRecords } from './task-records';
 export { userWebhooks } from './user-webhooks';
 export { agentInvitations } from './agent-invitations';
+export { vendorSettlements, vendorSettlementItems } from './vendor-settlements';
+export { campaignCouponCodes } from './coupons';
