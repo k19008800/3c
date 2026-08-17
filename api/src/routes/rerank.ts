@@ -324,7 +324,7 @@ export async function rerankRoutes(app: FastifyInstance) {
   // ============================================================
   // POST /v1/rerank
   // ============================================================
-  app.post('/v1/rerank', routeOptions, async (request: any, reply: FastifyReply) => {
+  const rerankHandler = async (request: any, reply: FastifyReply) => {
     const ctx = (request as any).apiKeyContext as { userId: number; apiKeyId: number; keyHash: string };
     const pipelineCtx: PipelineContext = {
       requestId: crypto.randomUUID(),
@@ -452,5 +452,9 @@ export async function rerankRoutes(app: FastifyInstance) {
       }
       throw err;
     }
-  });
+  };
+
+  app.post('/v1/rerank', routeOptions, rerankHandler);
+  // web-console Playground 内部路径（契约对齐，见 docs/api-contract.md §4）
+  app.post('/api/v1/v1/rerank', routeOptions, rerankHandler);
 }

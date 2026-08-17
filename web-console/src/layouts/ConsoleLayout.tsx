@@ -141,6 +141,7 @@ const SALES_NAV: NavItem[] = [
 const PORTAL_NAV: NavItem[] = [
   { to: "/", label: "仪表盘", icon: "📊" },
   { to: "/api-keys", label: "API Keys", icon: "🔑" },
+  { to: "/playground", label: "API 调试", icon: "🧪" },
   { to: "/mj-tasks", label: "MJ/Suno 任务", icon: "🎨" },
   { to: "/logs", label: "调用日志", icon: "📋" },
   { to: "/recharge", label: "充值中心", icon: "💰" },

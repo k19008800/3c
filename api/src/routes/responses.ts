@@ -328,7 +328,7 @@ export async function responsesRoutes(app: FastifyInstance) {
     },
   };
 
-  app.post('/v1/responses', routeOptions, async (request: any, reply: FastifyReply) => {
+  const responsesHandler = async (request: any, reply: FastifyReply) => {
     const ctx = (request as any).apiKeyContext as { userId: number; apiKeyId: number; keyHash: string };
     const pipelineCtx: PipelineContext = {
       requestId: crypto.randomUUID(),
@@ -513,5 +513,9 @@ export async function responsesRoutes(app: FastifyInstance) {
       }
       throw err;
     }
-  });
+  };
+
+  app.post('/v1/responses', routeOptions, responsesHandler);
+  // web-console Playground 内部路径（契约对齐，见 docs/api-contract.md §4）
+  app.post('/api/v1/v1/responses', routeOptions, responsesHandler);
 }

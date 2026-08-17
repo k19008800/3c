@@ -49,6 +49,16 @@
 | GET | `/me/billing/history/:month/download` | CSV blob | me.ts ✅ |
 | POST | `/v1/chat/completions` | OpenAI 兼容（stream/非 stream），**有 mock 回退** | chat.ts ✅ |
 | POST | `/api/v1/v1/chat/completions` | 同上（web-console 内部路径别名） | chat.ts ✅ |
+| POST | `/v1/rerank` | Cohere 兼容重排序（`{ model, query, documents, top_n?, return_documents? }`），**有 mock 回退** | rerank.ts ✅ |
+| POST | `/api/v1/v1/rerank` | 同上（web-console Playground 内部路径别名，2026-08-17） | rerank.ts ✅ |
+| POST | `/v1/responses` | OpenAI Responses API 兼容（非流式 + 流式 SSE 事件序列），**有 mock 回退** | responses.ts ✅ |
+| POST | `/api/v1/v1/responses` | 同上（web-console Playground 内部路径别名，2026-08-17） | responses.ts ✅ |
+| POST | `/v1/embeddings` | OpenAI 兼容向量化（string / string[] input），**有 mock 回退** | openai-compat.ts ✅ |
+| POST | `/api/v1/v1/embeddings` | 同上（web-console Playground 内部路径别名，2026-08-17） | openai-compat.ts ✅ |
+| POST | `/v1/completions` | OpenAI 兼容文本补全（prompt 字段，stream/非 stream），**有 mock 回退** | openai-compat.ts ✅ |
+| POST | `/api/v1/v1/completions` | 同上（web-console Playground 内部路径别名，2026-08-17） | openai-compat.ts ✅ |
+| POST | `/v1/messages` | Anthropic Messages API 兼容（stream/非 stream，Bearer 或 x-api-key），**有 mock 回退** | messages.ts ✅ |
+| POST | `/api/v1/v1/messages` | 同上（web-console Playground 内部路径别名，2026-08-17） | messages.ts ✅ |
 | GET | `/v1/models` | OpenAI 模型列表 | chat.ts ✅ |
 | POST | `/anthropic/v1/messages` | **Anthropic Messages API 兼容**（stream/非 stream，x-api-key 鉴权），**有 mock 回退** | anthropic.ts ✅ |
 | GET | `/anthropic/v1/models` | Anthropic 模型列表（`{ data: [{ type, id, display_name }] }`） | anthropic.ts ✅ |
@@ -163,7 +173,7 @@ client = Anthropic(base_url="https://api.<host>/anthropic", api_key="3c_xxx")
 | # | 问题 | 处理 |
 |---|------|------|
 | 1 | Playground 把 `keyPrefix`（12位）当 Bearer 发 → 永远 401 | 已修：改为发送完整 Key（创建时仅展示一次，存入 localStorage 供 Playground 预填） |
-| 2 | Playground URL 为 `/api/v1/v1/chat/completions`（双 v1，历史笔误） | 保留：后端注册 `/api/v1/v1/chat/completions` 别名，与 OpenAI 兼容 `/v1/chat/completions` 并存 |
+| 2 | Playground URL 为 `/api/v1/v1/chat/completions`（双 v1，历史笔误） | 保留：后端注册 `/api/v1/v1/chat/completions` 别名，与 OpenAI 兼容 `/v1/chat/completions` 并存；2026-08-17 Playground 多端点化后，rerank/responses/embeddings/completions/messages 同步注册 `/api/v1/v1/*` 别名（同一 handler 双注册，无逻辑差异） |
 | 3 | auth store 调 `/me`，后端只有 `/auth/me` | 已修：新增 `/me`，按 store 期望直接返回 user 对象 |
 | 4 | `/me/api-keys` 期望 `{list}` 与 `{key: rawString}`，旧后端是 `/customers/me/keys` `{keys}`/`{key:{}}` | 已修：重写为前端形状，旧路径保留为别名 |
 | 5 | Dashboard 三个面板用 mock 数据（/me/stats/trend、/model-distribution、/recent-calls） | 保留 mock 展示，`/me/stats` 已给真实汇总；细分接口列为后续切片 |

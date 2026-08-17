@@ -395,7 +395,7 @@ export async function openaiCompatRoutes(app: FastifyInstance) {
   // ============================================================
   // POST /v1/embeddings
   // ============================================================
-  app.post('/v1/embeddings', routeOptions, async (request: any, reply: FastifyReply) => {
+  const embeddingsHandler = async (request: any, reply: FastifyReply) => {
     const ctx = (request as any).apiKeyContext as { userId: number; apiKeyId: number; keyHash: string };
     const pipelineCtx: PipelineContext = {
       requestId: crypto.randomUUID(),
@@ -516,12 +516,16 @@ export async function openaiCompatRoutes(app: FastifyInstance) {
       }
       throw err;
     }
-  });
+  };
+
+  app.post('/v1/embeddings', routeOptions, embeddingsHandler);
+  // web-console Playground 内部路径（契约对齐，见 docs/api-contract.md §4）
+  app.post('/api/v1/v1/embeddings', routeOptions, embeddingsHandler);
 
   // ============================================================
   // POST /v1/completions
   // ============================================================
-  app.post('/v1/completions', routeOptions, async (request: any, reply: FastifyReply) => {
+  const completionsHandler = async (request: any, reply: FastifyReply) => {
     const ctx = (request as any).apiKeyContext as { userId: number; apiKeyId: number; keyHash: string };
     const pipelineCtx: PipelineContext = {
       requestId: crypto.randomUUID(),
@@ -687,7 +691,11 @@ export async function openaiCompatRoutes(app: FastifyInstance) {
       }
       throw err;
     }
-  });
+  };
+
+  app.post('/v1/completions', routeOptions, completionsHandler);
+  // web-console Playground 内部路径（契约对齐，见 docs/api-contract.md §4）
+  app.post('/api/v1/v1/completions', routeOptions, completionsHandler);
 
   // ============================================================
   // GET /v1/models
