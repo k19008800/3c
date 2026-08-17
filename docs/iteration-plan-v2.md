@@ -240,45 +240,51 @@ pnpm build                             # 三端构建通过
 
 ---
 
-## P2 — 商业化与运营增强（🟢 增强）
+## P2 — 商业化与运营增强（🟢 增强）✅ 已完成（2026-08-18）
 
-### P2-1 定价引擎接入 L3–L5（代理价/分组价/活动价）
+> 目标：六层定价 / 邀请闭环 / Portal 增强 / 合规闭环落地。
+> **P2 验收结果**：4 项全部交付；回归 Gate 全绿：三端 typecheck 0 错、**全量单测 792/792**（685 基线 + 107 P2 新增）、verify 17/17、E2E 10/10、三端 build 通过、记账一致性通过 → **宣告 P2 完成** ✅（提交 bc862ba / a4e72bc / 04b3ec7 / 1789c5f，预置 7ed71dd）。
 
-- **现状**：`getPricingForModel` 只读 vendor_pricing（**且 8 处重复实现**：chat/messages/responses/anthropic/openai-compat/rerank/ws-relay/task-relay），campaigns/coupons/discount 表仅 CRUD。
-- **⚠️ 前置（审阅 2026-08-17）**：P0-1 已抽 `services/billing/pricing.ts` 共享服务 → P2-1 只需改这一处，8 入口自动生效。
-- **⚠️ 已存在的数据载体**：`vendor_pricing.pricing_group` 字段已存在（默认 'default'，admin/pricing 创建/更新已支持）→ **L4 分组价只需网关按 pricing_group 匹配**，无需新表；L3 代理价（`agents` 表按层级配置折扣率）、L5 活动价（`campaigns.config` jsonb）需新增解析逻辑与可能的配置字段。
-- **范围**：定价解析链路升级为六层匹配（L5 活动价 → L4 分组价 → L3 代理价 → L2 模型覆盖价 → L1 平台标准价），网关 `getPricingForModel`（共享 `pricing.ts`）接收 userId/groupId/agentId 上下文。
-- **实现文件**：改 `api/src/services/billing/pricing.ts`（分层解析 + `pricing.test.ts` 每层用例）；`api/src/routes/chat.ts` 等传上下文（8 处 import 处传参）；前端 `AdminPricingPage` 支持层级配置（分组价已有字段，补代理价/活动价 UI）。
-- **测试要求**：每层优先级命中/降级、活动价有效期、分组价、代理价（绑定代理的客户）。
-- **Gate**：`pnpm -w api test` + verify（真实计费回归，防 1000× 类偏差）。
-- **工时**：后端 2.5d。
+### P2-1 定价引擎接入 L3–L5（代理价/分组价/活动价）✅
 
-### P2-2 代理增长机制（邀请/排行榜/素材库）
+- **实现**：`pricing.ts` 升级 `getPricingForModel(model, ctx?)` 六层解析（L5 活动价 → L4 分组价 → L3 代理价 → L2 模型覆盖价(pricing_group='default') → L1 平台标准价）；每层独立 try/catch 静默降级；`buildPricingContext(request)`（WeakMap 按请求记忆）+ groupId/agentId 惰性只查一次（ctx 对象 WeakMap）
+- **L3**：`AGENT_LEVEL_DISCOUNT_RATE`（junior 0.95 / senior 0.9 / partner 0.85，乘 L2/L1 基价），`agent_customers.status='active'` 且 `agents.status='active'` 生效
+- **L4**：user_group_memberships → user_groups.pricingGroup → vendor_pricing.pricing_group 匹配
+- **L5**：campaigns status='active' + startAt≤now≤endAt；config jsonb `{"pricing": {"models": {"<模型>": {input, output}}, "discount": 0.8}}`（模型级覆盖优先于全局折扣，格式已文档化于 pricing.ts JSDoc）
+- 8 处网关入口（chat/messages/responses/anthropic/openai-compat/rerank/task-relay/ws-relay）接入 ctx；不传 ctx 与旧行为等价
+- 前端：AdminPricingPage 层级定价说明卡片 + [?] 帮助；测试 41 用例（每层命中/降级/优先级/兼容）
+- **Gate**：`vitest run pricing` 64/64 + 计费回归 12 文件 188/188（注：vitest 3 已移除 `--grep`，用文件过滤或 `-t`；有状态套件请整文件跑）
 
-- **范围**：邀请链接落地（P1-2 的 invite 端点 + 注册关联 + 佣金率继承）；`/agent/ranking` 排行榜页增强；营销素材库（文件管理/模板下载，`site_contents` 表复用）。
-- **实现文件**：改 `api/src/routes/agent.ts`、`auth.ts`（注册携带 invite_code）；前端 `AgentInvitePage`/`AgentRankingPage`。
-- **测试要求**：邀请注册链路端到端、排行榜数据正确。
-- **Gate**：`pnpm -w api test` + E2E 回归。
-- **工时**：后端 2d + 前端 1.5d。
+### P2-2 代理增长机制（邀请/排行榜/素材库）✅
 
-### P2-3 Portal 商业化（i18n / SEO / 博客）
+- **邀请注册**：register 支持 `invite_code`（trim+大写归一）；预校验 + 事务内 `consumeInviteCode` 原子占用（WHERE used_by IS NULL，并发同码仅 1 成功，失败回滚用户不创建）；响应 `invite_ok`；**不产生客户归属**（SPEC-§8 报备划拨制对齐）
+- **排行榜**：`agentSettlementRanking` 响应新增 `total`（榜单口径总数）；AgentRankingPage 我行高亮 + 佣金达成进度条 + period 切换 + [?]
+- **素材库**：POST /admin/content（type='marketing-material'，slug 'material-<name>' 约定校验 + 重复 400 + 审计）+ GET /agent/materials（仅 published）；AgentInvitePage 素材区块 + 邀请链接落地（`?invite_code=` 预填 RegisterPage）
+- **测试**：18 用例（原子占用并发 / 权限 / slug 约定 / 排行榜结构）；注册前端帮助文案按 SPEC-§8 纠正
 
-- **范围**：Portal i18n 方案（`/admin/i18n/entries` CRUD + 前端语言切换）；SEO/OG 元数据（`metadata` + sitemap.ts 已有骨架）；博客/新闻模块（`site_contents` 类型扩展 + `/blog` 路由）。
-- **实现文件**：改 `web-portal/src/app/*`；新增 `api/src/routes/admin-i18n.ts`、`web-portal/src/app/blog/`。
-- **测试要求**：i18n 条目 CRUD、切换渲染、sitemap 输出完整。
-- **Gate**：web-portal typecheck + build；`pnpm -w api test`。
-- **工时**：后端 1d + 前端 2.5d。
+### P2-3 Portal 商业化（i18n / SEO / 博客）✅
 
-### P2-4 安全合规（数据导出/删除/IP 黑名单/合规报告）
+- **i18n**：`/admin/i18n/entries` CRUD + import（key×lang 行式，软删 disabled，审计）；`/public/i18n/entries?lang=`（active+portal 映射）；Portal 轻量 i18n 层（lib/i18n + i18n-server，EN_DEFAULTS 英文回退）+ LanguageSwitcher（cookie + `?lang=` 同步，保留 SEO URL，中间件不重定向）+ 首页/定价/导航/页脚 key 化 + hreflang；seed 228 条（114 key × zh/en）
+- **SEO**：各页 generateMetadata + openGraph；`sitemap.ts`（6 主页面 + /blog 动态 URL）；`robots.ts`
+- **博客**：`/blog` + `/blog/[slug]`（SEO title 用文章标题，404 notFound）；site_contents type='blog' + `/public/blog` + `/public/blog/:slug`；seed 2 篇示例文章
+- **[?] 帮助组件 Help.tsx**（页面级弹窗 + 按钮 tooltip）落地新页面；AdminI18nPage 适配行式契约（修 TS2532）
+- **测试**：18 用例；web-portal typecheck + build 通过
+- **i18n URL 取舍**：cookie + `?lang=`（未做 /zh /en 子路径，理由文档化于 lib/i18n.ts；未来升级只需改中间件）
 
-- **现状（审阅 2026-08-17 核实）**：IP 黑名单、数据导出、账号删除**均无任何表与路由**（grep 零命中）→ 全部新建。
-- **范围**：`/me/data-export/request` + `/admin/data-requests/:id(approve|reject|export)`（数据导出流转）；`/me/deletion/*` 账号删除流转（`users` 表无软删除字段，需 migration 加 `deleted_at` 或独立 deletion 请求表）；**IP 黑名单**：新增 `ip_blacklist` 表（ip/status/reason/expires_at）+ 管理端 CRUD + `app.ts` onRequest hook 强制网关（`/v1/*` 请求前查，命中 403）；合规审计报告生成（对话留痕导出已有，补报表）。
-- **实现文件**：新增 `api/src/routes/data-requests.ts`、`deletion.ts`、`api/src/db/schema/ip-blacklist.ts`（+ migration 0011）+ `api/src/routes/admin-security.ts`（黑名单 CRUD）；改 `api/src/app.ts`（IP 黑名单 onRequest hook）；`api/src/services/compliance/report.ts`。
-- **测试要求**：导出流转状态机、删除级联、黑名单 IP 403、报告生成。
-- **Gate**：`pnpm -w api test` + verify 回归。
-- **工时**：后端 3d。
+### P2-4 安全合规（数据导出/删除/IP 黑名单/合规报告）✅
 
-**P2 验收**：六层定价/邀请闭环/Portal 增强/合规闭环落地；回归 Gate 全绿 → **宣告 P2 完成**。
+- **数据导出**：`/me/data-export/request|requests|:id|:id/cancel|:id/download` + `/admin/data-requests` approve/reject/export（幂等复用 + 文件缺失自愈）；导出文件 72h 过期（SQL 侧 NOW() 比较）410；聚合不泄 password_hash/key_hash；越权 403；管理端写操作审计
+- **账号删除**：`/me/deletion/checks|request|status|cancel` + `/admin/deletion-requests` list/approve/reject/execute；approve → `users.status='deleting'` + cool_down_until=+7 天；cancel 冷静期内恢复；execute 事务清理（api_keys/sessions/agents(级联归属)/实名/2FA/oauth/webhooks/分组 + 余额清零记账 + `status='deleted'`）；**取舍**：consumption_records user_id NOT NULL 无法匿名化 → users 行保留 status='deleted'，消费记录保留关联
+- **IP 黑名单**：`ip_blacklist` CRUD + batch + unblock；app.ts onRequest hook（认证前拦 `/v1/*`、`/anthropic/v1/*`、`/admin/*`，scope api/admin/all 语义，CIDR 手写掩码，命中 403 `IP_BLACKLISTED`）
+- **合规报告**：`/admin/compliance/report`（export_audit / data_access，json|csv）
+- **测试**：36 用例（状态机 / 越权 / 403 / CSV）；修复 ESM `__dirname` 启动崩溃（改 import.meta.dirname）
+- **新表**：ip_blacklist / data_requests / deletion_requests / i18n_entries（migration 0013–0016，调度方预置 7ed71dd，db 已应用）
+
+**P2 补充记录（2026-08-18）**：
+- 调度方预置：4 新表 + 路由占位 4 个 + journal（commit 7ed71dd）；绕过 db:push TTY 交互坑用 postgres 脚本直跑 migration SQL
+- 4 子代理并行实现（P2-1 定价 / P2-2 代理 / P2-3 Portal / P2-4 合规），首轮运行收尾阶段全部失败后调度方修复阻塞（deletion inArray 类型 / export.ts ESM __dirname）并恢复续跑
+- vitest 3.2.7 移除 `--grep`：Gate 命令统一改用文件过滤或 `-t`；有状态套件整文件跑
+- 并发会话（admin-customers 批量操作）文件未纳入 P2 提交，保持未提交待对方收尾
 
 ---
 
