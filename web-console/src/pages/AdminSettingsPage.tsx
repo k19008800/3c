@@ -22,7 +22,7 @@ export default function AdminSettingsPage() {
   const { toast } = useToast();
   const { pathname } = useLocation();
   // 依据路由映射初始 tab：/config/rate-limit→限流，其余（/config/site）→站点
-  const [tab, setTab] = useState<"site" | "rate" | "security" | "feature" | "api">(pathname.includes("/rate-limit") ? "rate" : "site");
+  const [tab, setTab] = useState<"site" | "rate" | "security" | "feature" | "api" | "billing">(pathname.includes("/rate-limit") ? "rate" : "site");
   const [loading, setLoading] = useState(false);
 
   // Site settings
@@ -67,6 +67,9 @@ export default function AdminSettingsPage() {
   // API 服务（对外 API 域名 → OpenAI/Anthropic 双 base_url）
   const [apiDomain, setApiDomain] = useState("api.unmisa.com");
 
+  // 计费（P0-1 阈值旁路）：余额 > 阈值 → 不预扣直接转发；≤ 阈值 → Redis Lua 预扣
+  const [billingThreshold, setBillingThreshold] = useState(100);
+
   useEffect(() => {
     setLoading(true);
     api.get("/admin/settings").then(r => {
@@ -101,6 +104,7 @@ export default function AdminSettingsPage() {
       setRechargeEnabled(d.recharge_enabled ?? true);
       setWithdrawEnabled(d.withdraw_enabled ?? true);
       setApiDomain(d.api_domain ?? "api.unmisa.com");
+      setBillingThreshold(Number(d["billing.balance_threshold"] ?? 100));
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -130,6 +134,10 @@ export default function AdminSettingsPage() {
     await api.put("/admin/settings/api", { api_domain: apiDomain.trim() });
     toast.success("API 域名已保存");
   }
+  async function saveBilling() {
+    await api.put("/admin/settings/billing", { "billing.balance_threshold": billingThreshold });
+    toast.success("计费设置已保存");
+  }
 
   // 派生预览：域名或完整 origin → origin（含协议、去尾斜杠）
   const apiOrigin = (() => {
@@ -145,18 +153,18 @@ export default function AdminSettingsPage() {
       <div style={{ background: "linear-gradient(135deg,#667eea,#764ba2)", color: "#fff", padding: "20px 24px", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
         <span style={{ fontSize: 24 }}>⚙️</span>
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>系统设置
-          <HelpIcon text="配置平台全局设置：站点基本信息、限流规则、安全策略、功能开关。所有变更写入操作审计日志。" level="page" />
+          <HelpIcon text="配置平台全局设置：站点基本信息、限流规则、安全策略、功能开关、API 服务、计费策略。所有变更写入操作审计日志。" level="page" />
         </span>
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {(["site","rate","security","feature","api"] as const).map(t => (
+        {(["site","rate","security","feature","api","billing"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
             padding: "8px 20px", borderRadius: 8, border: tab === t ? "2px solid #4f6ef7" : "1px solid var(--color-border)",
             background: tab === t ? "#eef2ff" : "var(--color-panel)", color: tab === t ? "#4f6ef7" : "#666",
             cursor: "pointer", fontWeight: 600, fontSize: 13,
           }}>
-            {t === "site" ? "🌐 站点设置" : t === "rate" ? "🚦 限流设置" : t === "security" ? "🛡️ 安全策略" : t === "feature" ? "🔧 功能开关" : "🔌 API 服务"}
+            {t === "site" ? "🌐 站点设置" : t === "rate" ? "🚦 限流设置" : t === "security" ? "🛡️ 安全策略" : t === "feature" ? "🔧 功能开关" : t === "api" ? "🔌 API 服务" : "💰 计费策略"}
           </button>
         ))}
       </div>
@@ -280,6 +288,29 @@ export default function AdminSettingsPage() {
             💡 生产环境：确认 DNS（api.&lt;host&gt; → 服务器）与 nginx vhost（deploy/api.unmisa.com.conf）已配置，并签发对应 SSL 证书。
           </div>
           <button onClick={saveApi} style={{ marginTop: 16, padding: "8px 24px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存 API 域名</button>
+        </div>
+      )}
+
+      {tab === "billing" && (
+        <div style={cfgSection}>
+          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}>💰 计费策略（余额预扣阈值） <HelpIcon text="余额预扣阈值旁路：用户可用余额 &gt; 此阈值 → 不预扣、直接转发、响应后按实际用量扣费（零延迟）；余额 ≤ 阈值 → 请求前 Redis Lua 原子冻结（available → frozen），响应后多退少补。阈值本身即防打爆屏障（单次请求费用天然有 max_tokens 封顶）。" /></h3>
+          <div style={cfgRow}>
+            <span style={cfgLabel}>预扣阈值（元） <HelpIcon text="单位：元。余额大于此值走旁路（事后扣费），小于等于此值走预扣冻结。建议保持默认 ¥100；过低会让小额用户承担预扣冻结延迟，过高会让大额用户暴露在透支窗口。" /></span>
+            <input style={cfgInput} type="number" min={0} step={10} value={billingThreshold} onChange={e => setBillingThreshold(Number(e.target.value))} />
+            <span style={{ fontSize: 12, color: "#888" }}>元 · 保存后即时生效（Redis 缓存 60s 内失效）</span>
+          </div>
+          <div style={{ margin: "16px 0 6px", fontSize: 13, fontWeight: 600, color: "#333" }}>
+            📖 旁路模式说明 <HelpIcon text="旁路（余额 &gt; 阈值）：不预扣、零延迟，响应后按实际用量扣费；极端并发竞态下余额可能扣成负数 → 允许记负并写入风控事件（risk_events），该用户后续请求自动转预扣直到充值回正。预扣（余额 ≤ 阈值）：请求前冻结预估费用（输入 tokens 实算 + 输出按 max_tokens 封顶估算），响应后按实际用量多退少补；上游失败/超时自动解冻（Redis TTL 兜底）。" />
+          </div>
+          <div style={{ background: "#1e293b", borderRadius: 8, padding: 14, fontFamily: "monospace", fontSize: 12, color: "#e2e8f0", lineHeight: 1.9 }}>
+            <div>余额 &gt; <span style={{ color: "#34d399" }}>{billingThreshold}</span> 元&nbsp;&nbsp;→&nbsp;&nbsp;旁路：直接转发，事后按实际用量扣费（零延迟）</div>
+            <div>余额 ≤ <span style={{ color: "#fbbf24" }}>{billingThreshold}</span> 元&nbsp;&nbsp;→&nbsp;&nbsp;预扣：Redis Lua 冻结（available → frozen）+ 多退少补</div>
+            <div>记负兜底&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→&nbsp;&nbsp;旁路扣费后余额 &lt; 0 → 写 risk_events，后续强制预扣直到充值回正</div>
+          </div>
+          <div style={{ fontSize: 12, color: "#888", marginTop: 10 }}>
+            💡 配置键：<code>system_config.billing.balance_threshold</code>（默认 100），修改写入操作审计日志。
+          </div>
+          <button onClick={saveBilling} style={{ marginTop: 16, padding: "8px 24px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存计费设置</button>
         </div>
       )}
     </div>

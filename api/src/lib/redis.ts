@@ -18,8 +18,11 @@ let clientFailed = false;
 
 /** 获取懒连接的 Redis 客户端；不可用时返回 null（不抛错） */
 export function getRedis(): Redis | null {
-  if (client) return client;
+  // ⚠️ clientFailed 检查必须先于 client：连接失败后 ioredis 的 client 对象仍被引用，
+  // 但其命令队列会永久挂起（retryStrategy: () => null 不重连）。若不先短路，
+  // 后续调用会拿到"已失败"的 client 导致命令永不返回（网关/测试挂起）。
   if (clientFailed) return null;
+  if (client) return client;
   try {
     const url = process.env.REDIS_URL || 'redis://localhost:6379';
     client = new Redis(url, {

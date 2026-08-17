@@ -44,6 +44,7 @@ import { startCommissionBackfillScheduler } from './services/agent/commission-ba
 import { startRetentionScheduler } from './services/audit/retention';
 import { startModelHealthAggregator } from './services/marketplace/model-health-aggregator';
 import { startTaskPollingScheduler } from './services/task/task-poller';
+import { startFreezeCleanupScheduler } from './services/billing/pre-consume';
 import { ensureDefaultGroup } from './services/groups';
 
 let env: Env;
@@ -142,6 +143,8 @@ export async function startApp(opts?: { envOverrides?: Record<string, string> })
   startModelHealthAggregator(app.log);
   // MJ / Suno 任务轮询器：刷新 task_records 进度，失败/超时退款
   startTaskPollingScheduler(app.log);
+  // P0-1 预扣超时清理：扫描过期未结算的 Redis 冻结（TTL 兜底 + PG 镜像自愈），每 60s
+  startFreezeCleanupScheduler(60_000);
 
   return app;
 }

@@ -58,28 +58,20 @@ import {
   getSupplierWithKey,
   type TaskRecord,
 } from '../services/task/task-store';
-import { getBalance, deductBalance } from '../services/billing/balance';
-import { recordConsumption } from '../services/billing/consumption-log';
-import { generateCommissionForConsumption } from '../services/agent/commission';
+import { getBalance } from '../services/billing/balance';
 import { recordChannelResult } from '../services/upstream/circuit-breaker';
 import { AppError, InsufficientBalanceError } from '../lib/errors';
 import type { PipelineContext } from '../services/pipeline/types';
+import { getPricingForModel, computeTaskCost, TASK_BILLING_UNIT_TOKENS } from '../services/billing/pricing';
+import { settleBilling } from '../services/billing/settle';
 import crypto from 'crypto';
 
 // ============================================================
 // 任务型计费约定
 // ============================================================
 
-/**
- * 任务计费单位：1 次任务按 1000 output tokens 计费（任务 API 无 token 语义）。
- * 目的：任务消费能在 consumption 统计/仪表盘中以 token 量呈现，且
- * 任务单价 = 模型 outputPrice（¥/1K tokens × 1），管理员配置直观。
- */
-const TASK_BILLING_UNIT_TOKENS = 1000;
-
-/** 默认单价（¥ / 1K tokens）——取不到 vendor_pricing 时兜底 */
-const DEFAULT_INPUT_PRICE = 0.002;
-const DEFAULT_OUTPUT_PRICE = 0.008;
+// 任务计费单位 TASK_BILLING_UNIT_TOKENS 已随定价工具抽取至 services/billing/pricing.ts（P0-1）。
+// 1 次任务按 1000 output tokens 计费（任务 API 无 token 语义），任务单价 = 模型 outputPrice。
 
 /** MJ action → 计费模型名（对齐 New API constant/midjourney.go MidjourneyModel2Action 子集） */
 const MJ_ACTION_MODEL: Record<string, string> = {
@@ -222,104 +214,12 @@ function buildSunoTaskDto(task: TaskRecord): Record<string, unknown> {
 }
 
 // ============================================================
-// 定价与记账（与 rerank.ts 等价实现）
+// 定价与记账（已抽共享服务 services/billing/{pricing,settle}.ts，P0-1）
 // ============================================================
 
-/**
- * 查找模型定价（vendor_pricing × supplier_models），无则默认
- *
- * @param model - 计费模型名（如 mj_imagine / suno_music）
- * @returns { input, output } 单价（¥ / 1K tokens）
- */
-async function getPricingForModel(model: string): Promise<{ input: number; output: number }> {
-  try {
-    const rows = await db.select({
-      inputPrice: schema.vendorPricing.inputPrice,
-      outputPrice: schema.vendorPricing.outputPrice,
-    })
-      .from(schema.vendorPricing)
-      .innerJoin(schema.supplierModels, eq(schema.vendorPricing.supplierModelId, schema.supplierModels.id))
-      .where(eq(schema.supplierModels.modelName, model))
-      .limit(1);
-
-    if (rows.length > 0) {
-      const input = Number(rows[0]!.inputPrice);
-      const output = Number(rows[0]!.outputPrice);
-      if (!isNaN(input) && !isNaN(output) && input > 0 && output > 0) {
-        return { input, output };
-      }
-    }
-  } catch {
-    /* 定价查询失败 → 走默认价 */
-  }
-  return { input: DEFAULT_INPUT_PRICE, output: DEFAULT_OUTPUT_PRICE };
-}
-
-/**
- * 任务单价：1 次任务 = TASK_BILLING_UNIT_TOKENS 个 output tokens，
- * 即任务单价 = 模型 outputPrice（¥/次）。
- *
- * @param model - 计费模型名
- * @param pricing - 单价，缺省用默认价
- * @returns 单次任务费用（元）
- */
-function computeTaskCost(model: string, pricing?: { input: number; output: number }): number {
-  const p = pricing ?? { input: DEFAULT_INPUT_PRICE, output: DEFAULT_OUTPUT_PRICE };
-  return (TASK_BILLING_UNIT_TOKENS / 1000) * p.output;
-}
-
-/**
- * 记账 + 扣费 + 更新 key 最后调用时间（与 rerank.ts 的 settleBilling 等价）
- *
- * @param ctx - 流水线上下文
- * @param cost - 任务费用（¥）
- * @param channel - 选中的渠道；mock 回退时为 null
- * @param opts - 记账标记：fallback / errorCode
- */
-async function settleBilling(
-  ctx: PipelineContext,
-  cost: number,
-  channel: SelectedChannel | null,
-  opts: { fallback: boolean; errorCode?: string },
-): Promise<void> {
-  await deductBalance(ctx.userId, cost.toFixed(8), 'consumption', ctx.requestId);
-
-  const record = await recordConsumption({
-    userId: ctx.userId,
-    apiKeyId: ctx.apiKeyId,
-    model: ctx.model,
-    supplierId: channel?.supplier.id,
-    supplierModelId: channel?.modelMapping.id || undefined,
-    inputTokens: 0,
-    outputTokens: TASK_BILLING_UNIT_TOKENS,
-    cost: cost.toFixed(8),
-    trustUpstream: !opts.fallback,
-    fallback: opts.fallback,
-    streamed: false,
-    finishReason: 'stop',
-    errorCode: opts.errorCode,
-    requestId: ctx.requestId,
-  });
-
-  // 实时佣金结算（异步，不阻塞响应）；幂等由唯一索引保证
-  if (record?.id) {
-    void generateCommissionForConsumption({
-      userId: ctx.userId,
-      consumptionRecordId: record.id,
-      cost: cost.toFixed(8),
-    }).catch((e) => {
-      console.error(`[task-relay] commission generation failed for consumption ${record.id}:`, e);
-    });
-  }
-
-  // 更新 key 最后调用时间（非致命）
-  if (ctx.apiKeyId) {
-    await db.update(schema.apiKeys)
-      .set({ lastUsedAt: new Date() })
-      .where(eq(schema.apiKeys.id, ctx.apiKeyId))
-      .catch(() => { /* 非致命 */ });
-  }
-}
+// 任务型计费豁免预扣（docs/iteration-plan-v2.md P0-1）：任务单价固定（outputPrice）、
+// 失败有退款（task-poller 退款 + 佣金冲销），保留"余额预检 + 事后扣费"，
+// 仅切换为共享 pricing/settle（getPricingForModel / computeTaskCost / settleBilling）。
 
 /** 统一 OpenAI 错误响应 */
 function sendOpenAIError(reply: FastifyReply, status: number, message: string, type = 'upstream_error', code?: number) {
@@ -496,7 +396,12 @@ export async function taskRelayRoutes(app: FastifyInstance) {
 
       if (!channel) {
         // ── mock 回退路径：返回占位任务 id，同样记账扣费（不落库：mock 任务不可轮询）──
-        await settleBilling(pipelineCtx, taskCost, null, { fallback: true });
+        await settleBilling(pipelineCtx, 0, TASK_BILLING_UNIT_TOKENS, taskCost, null, {
+          streamed: false,
+          trustUpstream: false,
+          fallback: true,
+          finishReason: 'stop',
+        });
 
         if (apiType === 'midjourney') {
           return reply.send({
@@ -589,7 +494,12 @@ export async function taskRelayRoutes(app: FastifyInstance) {
 
       // 6. 记账；失败 → 删除任务记录补偿（不留"已扣费但无法轮询"的孤儿任务）
       try {
-        await settleBilling(pipelineCtx, taskCost, channel, { fallback: false });
+        await settleBilling(pipelineCtx, 0, TASK_BILLING_UNIT_TOKENS, taskCost, channel, {
+          streamed: false,
+          trustUpstream: true,
+          fallback: false,
+          finishReason: 'stop',
+        });
       } catch (err) {
         await deleteTaskRecord(task.id).catch(() => { /* 删除失败仅记录，见下 */ });
         throw err;

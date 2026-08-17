@@ -127,3 +127,108 @@ describe('Billing Engine', () => {
     expect(stats.totalTokens).toBeGreaterThanOrEqual(150);
   });
 });
+
+// ============================================================
+// P0-1 余额 frozen 语义（预扣 PG 镜像 + allowNegative 记负）
+// ============================================================
+
+describe('Billing frozen semantics (P0-1)', () => {
+  let userId: number;
+
+  beforeAll(async () => {
+    const email = `frozen-test-${Date.now()}@test.com`;
+    const [user] = await db.insert(schema.users).values({
+      email,
+      passwordHash: bcrypt.hashSync('Test1234!', 12),
+      name: 'Frozen Test',
+      role: 'customer',
+      status: 'active',
+    }).returning({ id: schema.users.id });
+    userId = user!.id;
+    await db.insert(schema.customerBalances).values({
+      userId,
+      totalBalance: '100',
+      availableBalance: '100',
+      frozenBalance: '0',
+      currency: 'CNY',
+    });
+  });
+
+  afterAll(async () => {
+    await db.delete(schema.users).where(eq(schema.users.id, userId)).catch(() => {});
+  });
+
+  it('freezeBalance: available 减、frozen 增（总余额不变）', async () => {
+    const { freezeBalance } = await import('../src/services/billing/balance');
+    await freezeBalance(userId, '30', 'req-freeze-1');
+
+    const row = await db.select({
+      available: schema.customerBalances.availableBalance,
+      frozen: schema.customerBalances.frozenBalance,
+      total: schema.customerBalances.totalBalance,
+    }).from(schema.customerBalances).where(eq(schema.customerBalances.userId, userId)).limit(1);
+    expect(Number(row[0]!.available)).toBeCloseTo(70, 4);
+    expect(Number(row[0]!.frozen)).toBeCloseTo(30, 4);
+    // 总余额不变：available + frozen = total
+    expect(Number(row[0]!.available) + Number(row[0]!.frozen)).toBeCloseTo(Number(row[0]!.total), 4);
+  });
+
+  it('settleFrozenBalance: 实际 < 冻结 → 多退（available 只减实际，frozen 清 0）', async () => {
+    const { settleFrozenBalance } = await import('../src/services/billing/balance');
+    // 冻结 30，实际消费 12 → 退 18
+    await settleFrozenBalance(userId, '30', '12', 'req-settle-1');
+
+    const row = await db.select({
+      available: schema.customerBalances.availableBalance,
+      frozen: schema.customerBalances.frozenBalance,
+    }).from(schema.customerBalances).where(eq(schema.customerBalances.userId, userId)).limit(1);
+    // 初始 100 → 冻结 30 → 结算 12：available = 100 - 12 = 88
+    expect(Number(row[0]!.available)).toBeCloseTo(88, 4);
+    expect(Number(row[0]!.frozen)).toBeCloseTo(0, 4);
+  });
+
+  it('settleFrozenBalance: 实际 > 冻结 → 少补（差额从 available 扣）', async () => {
+    const { freezeBalance, settleFrozenBalance } = await import('../src/services/billing/balance');
+    // 先冻结 20，再结算 25 → 少补 5：available = 88 - 20（冻结） - 5（补扣）= 63
+    await freezeBalance(userId, '20', 'req-freeze-2');
+    await settleFrozenBalance(userId, '20', '25', 'req-settle-2');
+
+    const row = await db.select({
+      available: schema.customerBalances.availableBalance,
+      frozen: schema.customerBalances.frozenBalance,
+    }).from(schema.customerBalances).where(eq(schema.customerBalances.userId, userId)).limit(1);
+    // 88 → 冻结 20（available=68）→ 结算 25（available += 20-25 = 68-5 = 63）
+    expect(Number(row[0]!.available)).toBeCloseTo(63, 4);
+    expect(Number(row[0]!.frozen)).toBeCloseTo(0, 4);
+  });
+
+  it('releaseFrozenBalance: 解冻全额退回 available', async () => {
+    const { freezeBalance, releaseFrozenBalance } = await import('../src/services/billing/balance');
+    await freezeBalance(userId, '10', 'req-release-1');
+    await releaseFrozenBalance(userId, '10', 'req-release-1');
+
+    const row = await db.select({
+      available: schema.customerBalances.availableBalance,
+      frozen: schema.customerBalances.frozenBalance,
+    }).from(schema.customerBalances).where(eq(schema.customerBalances.userId, userId)).limit(1);
+    expect(Number(row[0]!.available)).toBeCloseTo(63, 4); // 回到 63（上一步结算后）
+    expect(Number(row[0]!.frozen)).toBeCloseTo(0, 4);
+  });
+
+  it('deductBalance allowNegative: 余额不足允许记负（旁路兜底）', async () => {
+    const { deductBalance } = await import('../src/services/billing/balance');
+    const result = await deductBalance(userId, '100', 'consumption', 'req-negative-1', { allowNegative: true });
+    expect(Number(result.balanceAfter)).toBeLessThan(0);
+
+    const row = await db.select({
+      available: schema.customerBalances.availableBalance,
+    }).from(schema.customerBalances).where(eq(schema.customerBalances.userId, userId)).limit(1);
+    expect(Number(row[0]!.available)).toBeCloseTo(Number(result.balanceAfter), 4);
+  });
+
+  it('deductBalance 默认严格校验：不足仍抛 InsufficientBalanceError', async () => {
+    const { deductBalance } = await import('../src/services/billing/balance');
+    await expect(deductBalance(userId, '99999', 'consumption', 'req-negative-2'))
+      .rejects.toThrow();
+  });
+});

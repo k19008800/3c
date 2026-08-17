@@ -29,18 +29,29 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { db, schema } from '../db';
 import { eq } from 'drizzle-orm';
 import { apiKeyAuth } from '../services/auth/apikey';
+import { enforceRateLimitPreHandler } from '../services/rate-limit';
 import { selectChannel, type SelectedChannel } from '../services/upstream/routing';
 import { streamRelay } from '../services/upstream/proxy';
 import { claudeToOpenAI, openAIToClaude, type ClaudeMessage, type ClaudeContentBlock } from '../services/upstream/claude-adapter';
 import { countTokens } from '../services/billing/token-counter';
 import { parseAndDiscount } from '../services/billing/cache-billing';
 import { determineStreamBilling } from '../services/billing/settle-stream';
-import { getBalance, deductBalance } from '../services/billing/balance';
-import { recordConsumption } from '../services/billing/consumption-log';
-import { generateCommissionForConsumption } from '../services/agent/commission';
+import { getBalance } from '../services/billing/balance';
 import { recordChannelResult } from '../services/upstream/circuit-breaker';
 import { AppError, InsufficientBalanceError } from '../lib/errors';
+import {
+  acquireIdempotencyLock,
+  buildIdempotencySummary,
+  cacheIdempotentResponse,
+  isIdempotencyUniqueViolation,
+  releaseIdempotencyLock,
+  replayIdempotentRequest,
+  resolveIdempotencyKey,
+} from '../services/idempotency';
 import type { PipelineContext } from '../services/pipeline/types';
+import { getPricingForModel, computeCost, computeEstimatedCost } from '../services/billing/pricing';
+import { settleBilling } from '../services/billing/settle';
+import { preConsume, releasePreConsume, type PreConsumeResult } from '../services/billing/pre-consume';
 import crypto from 'crypto';
 
 // ============================================================
@@ -59,62 +70,12 @@ interface MessagesRequest {
 }
 
 // ============================================================
-// 计费常量与工具（与 chat.ts 等价实现）
-// ============================================================
-
-/** 默认单价（¥ / 1K tokens）——取不到 vendor_pricing 时兜底 */
-const DEFAULT_INPUT_PRICE = 0.002;
-const DEFAULT_OUTPUT_PRICE = 0.008;
-
-/**
- * 查找模型定价（vendor_pricing × supplier_models），无则默认
- *
- * 定价查询失败或数据非法（NaN / ≤0）时静默回退默认价，不阻断主链路。
- *
- * @param model - 用户请求的模型名
- * @returns { input, output } 单价（¥ / 1K tokens）
- */
-async function getPricingForModel(model: string): Promise<{ input: number; output: number }> {
-  try {
-    const rows = await db.select({
-      inputPrice: schema.vendorPricing.inputPrice,
-      outputPrice: schema.vendorPricing.outputPrice,
-    })
-      .from(schema.vendorPricing)
-      .innerJoin(schema.supplierModels, eq(schema.vendorPricing.supplierModelId, schema.supplierModels.id))
-      .where(eq(schema.supplierModels.modelName, model))
-      .limit(1);
-
-    if (rows.length > 0) {
-      const input = Number(rows[0]!.inputPrice);
-      const output = Number(rows[0]!.outputPrice);
-      if (!isNaN(input) && !isNaN(output) && input > 0 && output > 0) {
-        return { input, output };
-      }
-    }
-  } catch {
-    /* 定价查询失败 → 走默认价 */
-  }
-  return { input: DEFAULT_INPUT_PRICE, output: DEFAULT_OUTPUT_PRICE };
-}
-
-/**
- * 按 token 数与单价计算费用（¥）
- *
- * @param model - 模型名（当前仅用于保持签名与 chat.ts 一致，便于后续按模型差异化计价）
- * @param inputTokens - 输入 token 数
- * @param outputTokens - 输出 token 数
- * @param pricing - 单价，缺省时用默认价
- * @returns 费用（元）
- */
-function computeCost(model: string, inputTokens: number, outputTokens: number, pricing?: { input: number; output: number }): number {
-  const p = pricing ?? { input: DEFAULT_INPUT_PRICE, output: DEFAULT_OUTPUT_PRICE };
-  return (inputTokens / 1000) * p.input + (outputTokens / 1000) * p.output;
-}
-
-// ============================================================
 // 校验与估算
 // ============================================================
+
+// 计费工具（getPricingForModel / computeCost / computeEstimatedCost / settleBilling）
+// 已抽取至共享服务 services/billing/{pricing,settle}.ts（P0-1），本文件直接 import。
+// @see docs/iteration-plan-v2.md P0-1 关键约束（8 处重复实现 → 共享服务）
 
 /**
  * 校验 /v1/messages 请求体
@@ -173,69 +134,6 @@ function estimateInputTokens(messages: Array<{ role: string; content: unknown }>
 // ============================================================
 // 记账与 mock 回退（与 chat.ts 等价实现）
 // ============================================================
-
-/**
- * 记账 + 扣费 + 更新 key 最后调用时间（与 chat.ts 的 settleBilling 等价）
- *
- * 顺序：先 deductBalance 扣费 → recordConsumption 记消费 → 异步生成佣金 → 更新 key 时间。
- * 任何一步失败都向上抛出（由路由 catch 统一处理），保证不出现"响应成功但未记账"。
- *
- * @param ctx - 流水线上下文（含 userId / apiKeyId / requestId / model）
- * @param input - 输入 token 数
- * @param output - 输出 token 数
- * @param cost - 费用（¥）
- * @param channel - 选中的渠道；mock 回退时为 null
- * @param opts - 记账标记：streamed / trustUpstream / fallback / finishReason / errorCode / cacheHitTokens / cacheDiscount
- */
-async function settleBilling(
-  ctx: PipelineContext,
-  input: number,
-  output: number,
-  cost: number,
-  channel: SelectedChannel | null,
-  opts: { streamed: boolean; trustUpstream: boolean; fallback: boolean; finishReason?: string; errorCode?: string; cacheHitTokens?: number; cacheDiscount?: number },
-): Promise<void> {
-  await deductBalance(ctx.userId, cost.toFixed(8), 'consumption', ctx.requestId);
-
-  const record = await recordConsumption({
-    userId: ctx.userId,
-    apiKeyId: ctx.apiKeyId,
-    model: ctx.model,
-    supplierId: channel?.supplier.id,
-    supplierModelId: channel?.modelMapping.id,
-    inputTokens: input,
-    outputTokens: output,
-    cost: cost.toFixed(8),
-    trustUpstream: opts.trustUpstream,
-    fallback: opts.fallback,
-    streamed: opts.streamed,
-    finishReason: opts.finishReason,
-    errorCode: opts.errorCode,
-    requestId: ctx.requestId,
-    cacheHitTokens: opts.cacheHitTokens,
-    cacheDiscount: opts.cacheDiscount,
-  });
-
-  // 实时佣金结算（异步，不阻塞响应）：消费产生即结算；无代理绑定则内部跳过。
-  // 幂等由 agent_commissions.consumption_record_id 唯一索引保证；进程崩溃由回填调度器自愈。
-  if (record?.id) {
-    void generateCommissionForConsumption({
-      userId: ctx.userId,
-      consumptionRecordId: record.id,
-      cost: cost.toFixed(8),
-    }).catch((e) => {
-      console.error(`[messages] commission generation failed for consumption ${record.id}:`, e);
-    });
-  }
-
-  // 更新 key 最后调用时间（非致命）
-  if (ctx.apiKeyId) {
-    await db.update(schema.apiKeys)
-      .set({ lastUsedAt: new Date() })
-      .where(eq(schema.apiKeys.id, ctx.apiKeyId))
-      .catch(() => { /* 非致命 */ });
-  }
-}
 
 /**
  * 从 Claude 消息 content 中提取纯文本（用于 mock 回退的回显 prompt）
@@ -306,7 +204,7 @@ function sendClaudeError(reply: FastifyReply, status: number, message: string, t
  */
 export async function messagesRoutes(app: FastifyInstance) {
   const routeOptions = {
-    preHandler: [apiKeyAuth],
+    preHandler: [apiKeyAuth, enforceRateLimitPreHandler],
     config: {
       rateLimit: {
         max: 60,
@@ -318,8 +216,25 @@ export async function messagesRoutes(app: FastifyInstance) {
 
   const messagesHandler = async (request: any, reply: FastifyReply) => {
     const ctx = (request as any).apiKeyContext as { userId: number; apiKeyId: number; keyHash: string };
+
+    // ── 幂等守卫（P0-3）：键 = Idempotency-Key 头 || 服务端生成 requestId ──
+    // pipelineCtx.requestId 统一为幂等键（见 chat.ts 同款注释：保证 L2 DB 兜底同键）。
+    const idemKey = resolveIdempotencyKey(request, crypto.randomUUID());
+    const isStreamRequest = (request.body as Record<string, unknown>)?.stream === true;
+
+    // L1: Redis SETNX 获取幂等锁；重复 → 回放首次结果（不重复扣费）
+    const lock = await acquireIdempotencyLock(idemKey);
+    if (lock.status === 'duplicate') {
+      const replayed = await replayIdempotentRequest(reply, idemKey, isStreamRequest);
+      if (replayed) return reply;
+      // 首次请求仍在处理中（无缓存、无消费记录）→ 409 幂等提示，而非 500
+      return sendClaudeError(reply, 409, 'Duplicate request is still being processed', 'idempotency_conflict');
+    }
+    // Redis 降级（不可用）时 lockToken 为 null → 失败路径无可释放的锁
+    const lockToken = lock.status === 'acquired' ? lock.token : null;
+
     const pipelineCtx: PipelineContext = {
-      requestId: crypto.randomUUID(),
+      requestId: idemKey,
       userId: ctx?.userId ?? 0,
       apiKeyId: ctx?.apiKeyId ?? 0,
       model: '',
@@ -327,6 +242,9 @@ export async function messagesRoutes(app: FastifyInstance) {
       stream: false,
       metadata: {},
     };
+
+    // P0-1 预扣结果：转发前冻结（mode='frozen'），成功路径结算、失败路径解冻
+    let pre: PreConsumeResult | null = null;
 
     try {
       // 1. 校验请求体
@@ -347,6 +265,12 @@ export async function messagesRoutes(app: FastifyInstance) {
         throw new InsufficientBalanceError('0', '0');
       }
 
+      // 4.5 P0-1 阈值旁路 + 预扣（预扣失败 402 / Redis 异常旁路降级，都不调上游）
+      //     定价提前取一次，供预扣预估与各结算分支复用（与原多次查询结果一致）。
+      const pricing = await getPricingForModel(req.model);
+      const estimatedCost = computeEstimatedCost(req.model, estimatedInputTokens, pricing, req.max_tokens);
+      pre = await preConsume(pipelineCtx, estimatedCost, { balance });
+
       // 5. Select channel（无可用 → mock 回退）
       //    传入 userId：渠道分组供给过滤（supplier.allowed_groups），见 newapi-gap-analysis.md Batch 4 遗留
       const channel = await selectChannel(req.model, ctx?.userId ? { userId: ctx.userId } : undefined);
@@ -354,7 +278,6 @@ export async function messagesRoutes(app: FastifyInstance) {
       if (!channel) {
         // ── mock 回退路径：返回 Claude 格式占位响应，同样记账扣费 ──
         const mock = buildMockMessage(req.model, req.messages, estimatedInputTokens, pipelineCtx.requestId);
-        const pricing = await getPricingForModel(req.model);
         const cost = computeCost(req.model, mock.usage.input_tokens, mock.usage.output_tokens, pricing);
 
         await settleBilling(pipelineCtx, mock.usage.input_tokens, mock.usage.output_tokens, cost, null, {
@@ -362,6 +285,22 @@ export async function messagesRoutes(app: FastifyInstance) {
           trustUpstream: false,
           fallback: true,
           finishReason: 'stop',
+          preConsume: pre,
+        });
+
+        // 幂等：缓存首次成功响应（mock 非流式存完整 body，流式只存摘要）
+        await cacheIdempotentResponse(idemKey, {
+          streamed: isStream,
+          ...(isStream ? {} : { body: mock }),
+          summary: buildIdempotencySummary({
+            requestId: idemKey,
+            model: req.model,
+            inputTokens: mock.usage.input_tokens,
+            outputTokens: mock.usage.output_tokens,
+            cost: cost.toFixed(8),
+            finishReason: 'stop',
+            streamed: isStream,
+          }),
         });
 
         if (isStream) {
@@ -392,6 +331,12 @@ export async function messagesRoutes(app: FastifyInstance) {
 
       if (!upstreamResp.ok) {
         await recordChannelResult(cbKey, false);
+        // P0-1：上游失败未结算 → 解冻预扣（防资金卡死）
+        await releasePreConsume(pipelineCtx, pre).catch(() => { /* 解冻失败有 TTL 兜底 */ });
+        // 幂等：上游失败释放锁，允许客户端用同一键重试
+        if (lockToken) {
+          await releaseIdempotencyLock(idemKey, lockToken).catch(() => { /* 释放失败不阻断 */ });
+        }
         let errorBody = '';
         try { errorBody = await upstreamResp.text(); } catch { /* ignore */ }
         reply.status(upstreamResp.status || 502);
@@ -409,7 +354,6 @@ export async function messagesRoutes(app: FastifyInstance) {
         await recordChannelResult(cbKey, true);
 
         const billing = determineStreamBilling(state, false, estimatedInputTokens, req.model);
-        const pricing = await getPricingForModel(req.model);
         const cost = computeCost(req.model, billing.promptTokens, billing.completionTokens, pricing);
 
         try {
@@ -419,11 +363,26 @@ export async function messagesRoutes(app: FastifyInstance) {
             billing.completionTokens,
             cost,
             channel,
-            { streamed: true, trustUpstream: billing.trustUpstream, fallback: billing.fallback, finishReason: state.finishReason ?? undefined },
+            { streamed: true, trustUpstream: billing.trustUpstream, fallback: billing.fallback, finishReason: state.finishReason ?? undefined, preConsume: pre },
           );
+          // 幂等：结算成功才缓存流式摘要（失败不缓存，避免回放未计费的"成功"）
+          await cacheIdempotentResponse(idemKey, {
+            streamed: true,
+            summary: buildIdempotencySummary({
+              requestId: idemKey,
+              model: req.model,
+              inputTokens: billing.promptTokens,
+              outputTokens: billing.completionTokens,
+              cost: cost.toFixed(8),
+              finishReason: state.finishReason ?? undefined,
+              streamed: true,
+            }),
+          });
         } catch (err) {
           // 流式已开始，无法改状态码；记账失败仅记录（余额不足属罕见竞态）
           console.error(`[Messages] stream settle failed for ${pipelineCtx.requestId}:`, err);
+          // P0-1：流式结算失败 → 解冻预扣（防资金卡死；幂等，已结算则 no-op）
+          await releasePreConsume(pipelineCtx, pre).catch(() => { /* 解冻失败有 TTL 兜底 */ });
         }
         return;
       }
@@ -439,7 +398,6 @@ export async function messagesRoutes(app: FastifyInstance) {
       const totalTokens = Number(u.total_tokens) || 0;
       const hasUsage = totalTokens > 0;
 
-      const pricing = await getPricingForModel(req.model);
       // 缓存命中打折：上游返回缓存字段时按 10% 命中价计费；无缓存字段行为与 computeCost 一致
       const { cost, discountAmount, cacheHitTokens } = hasUsage
         ? parseAndDiscount(parsedBody.usage, pricing)
@@ -461,6 +419,7 @@ export async function messagesRoutes(app: FastifyInstance) {
           finishReason,
           cacheHitTokens,
           cacheDiscount: discountAmount,
+          preConsume: pre,
         },
       );
 
@@ -469,8 +428,33 @@ export async function messagesRoutes(app: FastifyInstance) {
 
       // OpenAI 响应 → Claude 格式响应
       const claudeBody = openAIToClaude(parsedBody, req.model, pipelineCtx.requestId);
+
+      // 幂等：缓存首次非流式成功响应（命中时直接回放，不重复计费）
+      await cacheIdempotentResponse(idemKey, {
+        streamed: false,
+        body: claudeBody,
+        summary: buildIdempotencySummary({
+          requestId: idemKey,
+          model: req.model,
+          inputTokens: hasUsage ? promptTokens : estimatedInputTokens,
+          outputTokens: hasUsage ? completionTokens : 0,
+          cost: cost.toFixed(8),
+          finishReason,
+          streamed: false,
+        }),
+      });
       return reply.send(claudeBody);
     } catch (err) {
+      // 幂等 DB 兜底命中：Redis 首层失效时重复 insert → 409 幂等提示，而非 500
+      if (isIdempotencyUniqueViolation(err)) {
+        return sendClaudeError(reply, 409, 'Duplicate request with the same idempotency key', 'idempotency_conflict');
+      }
+      // 处理失败释放幂等锁，允许客户端用同一键重试（成功路径不释放，锁保留到 TTL）
+      if (lockToken) {
+        await releaseIdempotencyLock(idemKey, lockToken).catch(() => { /* 释放失败不阻断 */ });
+      }
+      // P0-1：异常路径解冻预扣（未结算时；幂等，已结算/已释放则 no-op）
+      await releasePreConsume(pipelineCtx, pre).catch(() => { /* 解冻失败有 TTL 兜底 */ });
       if (err instanceof InsufficientBalanceError) {
         return sendClaudeError(reply, 402, err.message, 'insufficient_balance');
       }

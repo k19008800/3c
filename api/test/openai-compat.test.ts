@@ -1,4 +1,4 @@
-/**
+﻿/**
  * OpenAI 兼容端点单元测试 — /v1/embeddings、/v1/completions、/v1/models
  *
  * 纯单测风格（对齐 key-selector.test.ts / sse-stream.test.ts / circuit-breaker.test.ts）：
@@ -66,6 +66,32 @@ vi.mock('../src/services/auth/apikey', () => ({
   hashApiKey: vi.fn(),
   extractApiKeyFromHeader: vi.fn(),
   verifyApiKey: vi.fn(),
+}));
+// 四级限流（P0-2）为跨切面网关守卫，路由单测中整体 mock，避免真实 Redis/DB 计数干扰
+vi.mock('../src/services/rate-limit', () => ({
+  enforceRateLimitPreHandler: vi.fn(async () => {}),
+  enforceRateLimit: vi.fn(),
+  estimateRequestTokens: vi.fn(() => 1),
+  isExceptionActive: vi.fn(() => false),
+  buildRateLimitContext: vi.fn(),
+  computeEffectiveLimit: vi.fn(),
+  computeEffectiveLimits: vi.fn(),
+}));
+// 幂等守卫（P0-3）：路由单测整体 mock，避免真实 Redis SETNX/DB 兜底干扰
+vi.mock('../src/services/idempotency', () => ({
+  resolveIdempotencyKey: vi.fn((_req: unknown, fallback: string) => fallback),
+  acquireIdempotencyLock: vi.fn().mockResolvedValue({ status: 'degraded' }),
+  releaseIdempotencyLock: vi.fn().mockResolvedValue(undefined),
+  replayIdempotentRequest: vi.fn().mockResolvedValue(false),
+  cacheIdempotentResponse: vi.fn().mockResolvedValue(undefined),
+  isIdempotencyUniqueViolation: vi.fn(() => false),
+  buildIdempotencySummary: vi.fn((p: Record<string, unknown>) => ({ idempotent_replay: true, ...p })),
+}));
+// 预扣（P0-1）：路由单测整体 mock（bypass 直通 + 无冻结），避免真实 Redis Lua/PG 镜像干扰
+vi.mock('../src/services/billing/pre-consume', () => ({
+  preConsume: vi.fn().mockResolvedValue({ mode: 'bypass', amount: 0, requestId: 'test' }),
+  releasePreConsume: vi.fn().mockResolvedValue(undefined),
+  settlePreConsume: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ============================================================

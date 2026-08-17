@@ -1,24 +1,50 @@
 /**
- * 余额服务 — 原子余额操作
+ * 余额服务 — 原子余额操作（P0-1 起支持 frozen 语义）
  *
- * 使用 PostgreSQL 乐观锁（version 字段）保证并发安全
- * Phase 4+ 将升级为 Redis Lua 原子预扣
+ * 使用 PostgreSQL 乐观锁（version 字段）保证并发安全。
+ * P0-1（阈值旁路预扣）新增：
+ *   - `freezeBalance` / `settleFrozenBalance` / `releaseFrozenBalance`：预扣的 PG 侧
+ *     镜像（available ↔ frozen 转移），与 Redis 热账本（ledger.ts）双写保持一致；
+ *   - `deductBalance` 支持 `allowNegative`：旁路扣费的极端并发竞态允许记负
+ *     （配合 risk_events + 强制预扣标记，见 pre-consume.ts）；
+ *   - 每次余额变更尽力同步 Redis 热账本 available（账本缺失则跳过，下次预扣自愈）。
+ *
+ * @see coding-standards-control-logic.md §五 双层余额 + Redis Lua 原子预扣
+ * @module services/billing
  */
 
 import { db, schema } from '../../db';
 import { eq, sql } from 'drizzle-orm';
 import { AppError, InsufficientBalanceError } from '../../lib/errors';
+import { adjustLedgerAvailable, clearNegativeFlag } from './ledger';
+
+/** deductBalance 可选参数 */
+export interface DeductOptions {
+  /** 允许余额扣成负数（旁路扣费的极端并发竞态兜底）；默认 false 严格校验 */
+  allowNegative?: boolean;
+}
+
 /**
- * Deduct balance atomically
- * Uses optimistic locking via version field
+ * 扣减余额（事后扣费）
+ *
+ * @param userId - 用户 ID
+ * @param amount - 扣减金额（元，字符串）
+ * @param referenceType - 引用类型（consumption 等）
+ * @param referenceId - 引用 ID（requestId 等）
+ * @param opts - 可选参数（allowNegative）
+ * @returns 扣减后余额与版本号
+ * @throws {AppError} 404 BALANCE_NOT_FOUND
+ * @throws {InsufficientBalanceError} 402 余额不足（allowNegative=false 时）
  */
 export async function deductBalance(
   userId: number,
   amount: string,
   referenceType: string,
   referenceId: string,
+  opts?: DeductOptions,
 ): Promise<{ balanceAfter: string; version: number }> {
-  // Use UPDATE ... RETURNING with version check
+  const allowNegative = opts?.allowNegative === true;
+  // UPDATE ... RETURNING 带余额校验；allowNegative 时跳过校验（允许记负）
   const result = await db.execute(sql`
     UPDATE customer_balances
     SET 
@@ -27,7 +53,7 @@ export async function deductBalance(
       version = version + 1,
       updated_at = NOW()
     WHERE user_id = ${userId}
-      AND available_balance >= ${amount}::numeric
+      ${allowNegative ? sql`` : sql`AND available_balance >= ${amount}::numeric`}
     RETURNING 
       available_balance AS "balanceAfter",
       version
@@ -53,6 +79,9 @@ export async function deductBalance(
 
   const row = result[0] as unknown as { balanceAfter: string; version: number };
 
+  // 同步 Redis 热账本 available（尽力而为；账本缺失跳过，下次预扣从 PG 自愈）
+  await adjustLedgerAvailable(userId, -Number(amount));
+
   // Log the transaction
   await db.insert(schema.balanceTransactions).values({
     userId,
@@ -67,7 +96,16 @@ export async function deductBalance(
 }
 
 /**
- * Add balance (recharge, refund, commission)
+ * 增加余额（充值、退款、佣金、调整）
+ *
+ * 充值回正时清除负余额强制预扣标记（P0-1：负余额用户充值后恢复旁路资格）。
+ *
+ * @param userId - 用户 ID
+ * @param amount - 增加金额（元，字符串）
+ * @param type - 类型（recharge/refund/commission/adjustment）
+ * @param referenceType - 引用类型（可选）
+ * @param referenceId - 引用 ID（可选）
+ * @returns 增加后余额
  */
 export async function addBalance(
   userId: number,
@@ -94,6 +132,12 @@ export async function addBalance(
 
   const row = result[0] as unknown as { balanceAfter: string };
 
+  // 同步 Redis 热账本 available + 充值回正时清除负余额强制预扣标记
+  await adjustLedgerAvailable(userId, Number(amount));
+  if (Number(row.balanceAfter) >= 0) {
+    await clearNegativeFlag(userId);
+  }
+
   // Log transaction
   await db.insert(schema.balanceTransactions).values({
     userId,
@@ -116,6 +160,143 @@ export async function addBalance(
       });
     }
   }
+
+  return { balanceAfter: row.balanceAfter };
+}
+
+/**
+ * 冻结余额（预扣的 PG 镜像）：available -amount、frozen +amount
+ *
+ * 由 preConsume 在 Redis Lua 冻结成功后调用，保证 PG 与 Redis 热账本一致；
+ * 若此步失败（PG 异常），调用方应释放 Redis 冻结并返回 500（资金安全优先）。
+ *
+ * @param userId - 用户 ID
+ * @param amount - 冻结金额（元，字符串）
+ * @param requestId - 请求 ID（balance_transactions 引用）
+ * @returns 冻结后可用余额
+ */
+export async function freezeBalance(
+  userId: number,
+  amount: string,
+  requestId: string,
+): Promise<{ balanceAfter: string }> {
+  const result = await db.execute(sql`
+    UPDATE customer_balances
+    SET 
+      available_balance = available_balance - ${amount}::numeric,
+      frozen_balance = frozen_balance + ${amount}::numeric,
+      version = version + 1,
+      updated_at = NOW()
+    WHERE user_id = ${userId}
+    RETURNING 
+      available_balance AS "balanceAfter"
+  `);
+
+  if (result.length === 0) {
+    throw new AppError('Balance account not found', 404, 'BALANCE_NOT_FOUND');
+  }
+  const row = result[0] as unknown as { balanceAfter: string };
+
+  await db.insert(schema.balanceTransactions).values({
+    userId,
+    type: 'freeze',
+    amount: `-${amount}`,
+    balanceAfter: row.balanceAfter,
+    referenceType: 'pre_consume',
+    referenceId: requestId,
+  });
+
+  return { balanceAfter: row.balanceAfter };
+}
+
+/**
+ * 结算冻结（预扣结算的 PG 镜像）：available += (frozen - actual)、frozen -= frozen
+ *
+ * 与 Redis 结算结果一致的多退少补：
+ *   - actual ≤ frozen → 差额退回 available（多退）；
+ *   - actual > frozen → 差额从 available 补扣（少补，Redis 侧已校验可用性）。
+ *
+ * @param userId - 用户 ID
+ * @param frozenAmount - 预扣冻结金额（元，字符串）
+ * @param actualAmount - 实际消费金额（元，字符串）
+ * @param requestId - 请求 ID（balance_transactions 引用）
+ * @returns 结算后可用余额
+ */
+export async function settleFrozenBalance(
+  userId: number,
+  frozenAmount: string,
+  actualAmount: string,
+  requestId: string,
+): Promise<{ balanceAfter: string }> {
+  const result = await db.execute(sql`
+    UPDATE customer_balances
+    SET 
+      available_balance = available_balance + (${frozenAmount}::numeric - ${actualAmount}::numeric),
+      frozen_balance = frozen_balance - ${frozenAmount}::numeric,
+      version = version + 1,
+      updated_at = NOW()
+    WHERE user_id = ${userId}
+    RETURNING 
+      available_balance AS "balanceAfter"
+  `);
+
+  if (result.length === 0) {
+    throw new AppError('Balance account not found', 404, 'BALANCE_NOT_FOUND');
+  }
+  const row = result[0] as unknown as { balanceAfter: string };
+
+  await db.insert(schema.balanceTransactions).values({
+    userId,
+    type: 'consumption',
+    amount: `-${actualAmount}`,
+    balanceAfter: row.balanceAfter,
+    referenceType: 'pre_consume',
+    referenceId: requestId,
+  });
+
+  return { balanceAfter: row.balanceAfter };
+}
+
+/**
+ * 解冻余额（预扣释放的 PG 镜像）：available +frozen、frozen -frozen
+ *
+ * 异常中断/上游失败时由 releasePreConsume 调用，全额退回冻结。
+ *
+ * @param userId - 用户 ID
+ * @param frozenAmount - 释放的冻结金额（元，字符串）
+ * @param requestId - 请求 ID（balance_transactions 引用）
+ * @returns 解冻后可用余额
+ */
+export async function releaseFrozenBalance(
+  userId: number,
+  frozenAmount: string,
+  requestId: string,
+): Promise<{ balanceAfter: string }> {
+  const result = await db.execute(sql`
+    UPDATE customer_balances
+    SET 
+      available_balance = available_balance + ${frozenAmount}::numeric,
+      frozen_balance = frozen_balance - ${frozenAmount}::numeric,
+      version = version + 1,
+      updated_at = NOW()
+    WHERE user_id = ${userId}
+    RETURNING 
+      available_balance AS "balanceAfter"
+  `);
+
+  if (result.length === 0) {
+    throw new AppError('Balance account not found', 404, 'BALANCE_NOT_FOUND');
+  }
+  const row = result[0] as unknown as { balanceAfter: string };
+
+  await db.insert(schema.balanceTransactions).values({
+    userId,
+    type: 'unfreeze',
+    amount: `+${frozenAmount}`,
+    balanceAfter: row.balanceAfter,
+    referenceType: 'pre_consume',
+    referenceId: requestId,
+  });
 
   return { balanceAfter: row.balanceAfter };
 }

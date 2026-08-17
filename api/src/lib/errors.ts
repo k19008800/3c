@@ -85,11 +85,45 @@ export class InsufficientBalanceError extends AppError {
   }
 }
 
+/**
+ * 预扣失败（余额不足）— P0-1 阈值旁路模式的预扣路径专用错误（402）
+ *
+ * 与 InsufficientBalanceError 的语义差异：后者用于"事后扣费"（deductBalance），
+ * 前者用于"请求前冻结"（preConsume Lua 冻结失败）。二者都映射 HTTP 402；
+ * 预扣失败发生在转发上游之前，因此不产生任何消费记录。
+ *
+ * @see coding-standards-control-logic.md §八 错误分层
+ */
+export class PreConsumeFailedError extends AppError {
+  constructor(currentBalance?: string, requiredCost?: string) {
+    super(
+      '余额不足，请充值',
+      402,
+      'PRE_CONSUME_FAILED',
+      { currentBalance, requiredCost },
+    );
+    this.name = 'PreConsumeFailedError';
+  }
+}
+
 // Circuit breaker errors
 export class CircuitBreakerOpenError extends AppError {
   constructor(channelKey: string) {
     super(`Circuit breaker open for channel: ${channelKey}`, 503, 'CIRCUIT_BREAKER_OPEN');
     this.name = 'CircuitBreakerOpenError';
+  }
+}
+
+// Idempotency errors
+export class IdempotencyConflictError extends AppError {
+  constructor(requestId: string, context?: Record<string, unknown>) {
+    super(
+      `Duplicate request with the same idempotency key: ${requestId}`,
+      409,
+      'IDEMPOTENCY_CONFLICT',
+      { requestId, ...context },
+    );
+    this.name = 'IdempotencyConflictError';
   }
 }
 

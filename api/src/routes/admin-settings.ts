@@ -19,6 +19,7 @@ import {
   ValidationError,
 } from '../lib/errors';
 import { sendMail, getSmtpConfig } from '../services/mailer';
+import { invalidateThresholdCache } from '../services/billing/pre-consume';
 
 /* ───────── helpers ───────── */
 
@@ -72,6 +73,9 @@ const SETTING_DEFAULTS: Record<string, { value: string; type: 'string' | 'number
   withdraw_enabled: { value: 'true', type: 'bool' },
   // api — 对外 API 网关域名（独立域名 api.<host>，OpenAI/Anthropic 双 base_url 派生）
   api_domain: { value: 'api.unmisa.com', type: 'string' },
+  // billing — 计费（P0-1 阈值旁路：余额 > 此值 → 不预扣直接转发；≤ 此值 → Redis Lua 预扣）
+  // 注意：键名含点号（billing.balance_threshold），与 pre-consume.ts 读取键一致
+  'billing.balance_threshold': { value: '100', type: 'number' },
   // smtp
   smtp_enabled: { value: 'false', type: 'bool' },
   smtp_host: { value: '', type: 'string' },
@@ -219,6 +223,33 @@ export async function adminSettingsRoutes(app: FastifyInstance) {
     }
     await setConfigs(request.userContext?.userId ?? null, values);
     await writeAudit(request, 'api', values);
+    return reply.send({ data: { ok: true } });
+  });
+
+  /**
+   * PUT /api/v1/admin/settings/billing — 计费设置（P0-1 阈值旁路）
+   *
+   * 写 system_config `billing.balance_threshold`（默认 ¥100）+ 写审计 +
+   * 失效 Redis 阈值缓存（判定即时生效）。
+   */
+  app.put('/api/v1/admin/settings/billing', { preHandler: [adminAuth] }, async (request: any, reply) => {
+    const b = (request.body || {}) as Record<string, unknown>;
+    const allowed = ['billing.balance_threshold'];
+    const values: Record<string, string> = {};
+    for (const k of allowed) {
+      if (b[k] !== undefined) values[k] = String(b[k]);
+    }
+    // 阈值必须为非负数字（元）
+    if (values['billing.balance_threshold'] !== undefined) {
+      const threshold = Number(values['billing.balance_threshold']);
+      if (!(Number.isFinite(threshold) && threshold >= 0)) {
+        throw new ValidationError('billing.balance_threshold 必须是非负数字（元）');
+      }
+    }
+    await setConfigs(request.userContext?.userId ?? null, values);
+    await writeAudit(request, 'billing', values);
+    // 失效阈值 Redis 缓存（60s）→ 网关旁路判定即时生效
+    await invalidateThresholdCache();
     return reply.send({ data: { ok: true } });
   });
 

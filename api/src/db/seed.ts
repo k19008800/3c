@@ -99,6 +99,24 @@ async function main() {
   }
   console.log(`✅ system_config 限流/额度默认键 ${CONFIGS.length} 个`);
 
+  // ── risk_rules：负余额强制预扣风控规则（P0-1 记负兜底依赖，risk_events.rule_id NOT NULL）──
+  // 旁路扣费后余额 < 0 时写 risk_events 引用此规则；该用户后续请求强制预扣直到充值回正。
+  const [negRule] = await db
+    .select({ id: schema.riskRules.id }).from(schema.riskRules)
+    .where(eq(schema.riskRules.name, 'negative-balance-force-preconsume')).limit(1);
+  if (!negRule) {
+    await db.insert(schema.riskRules).values({
+      name: 'negative-balance-force-preconsume',
+      ruleType: 'balance',
+      description: '旁路扣费后余额为负 → 写风控事件；该用户后续请求强制预扣（Redis neg 标记）直到充值回正',
+      config: { action: 'force_preconsume' },
+      enabled: true,
+    });
+    console.log('✅ risk_rules 负余额强制预扣规则已创建');
+  } else {
+    console.log('✅ risk_rules 负余额强制预扣规则已存在，跳过');
+  }
+
   // ── system_config：站点品牌配置（Portal site-config 白名单，幂等 upsert）──
   // 白名单见 api/src/routes/public.ts SITE_CONFIG_WHITELIST（12 keys）
   const SITE_CONFIGS: Array<[string, string, string]> = [

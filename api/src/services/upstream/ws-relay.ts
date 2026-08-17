@@ -24,8 +24,6 @@
  */
 
 import { randomUUID } from 'crypto';
-import { db, schema } from '../../db';
-import { eq } from 'drizzle-orm';
 import { AppError } from '../../lib/errors';
 import type { PipelineContext } from '../pipeline/types';
 import { selectChannel, type SelectedChannel } from './routing';
@@ -33,10 +31,11 @@ import { recordChannelResult } from './circuit-breaker';
 import { parseSSELines } from './sse-parser';
 import type { StreamState } from './proxy';
 import { determineStreamBilling, type StreamBillingResult } from '../billing/settle-stream';
-import { getBalance, deductBalance } from '../billing/balance';
-import { recordConsumption } from '../billing/consumption-log';
-import { generateCommissionForConsumption } from '../agent/commission';
+import { getBalance } from '../billing/balance';
 import { countTokens } from '../billing/token-counter';
+import { getPricingForModel, computeCost, DEFAULT_MAX_OUTPUT_TOKENS } from '../billing/pricing';
+import { settleBilling } from '../billing/settle';
+import { preConsume as sharedPreConsume, releasePreConsume as sharedReleasePreConsume, type PreConsumeResult } from '../billing/pre-consume';
 
 // ============================================================
 // 常量
@@ -46,11 +45,12 @@ import { countTokens } from '../billing/token-counter';
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 30_000;
 /** 空闲超时：60s 无任何收发活动则断开 */
 const DEFAULT_IDLE_TIMEOUT_MS = 60_000;
-/** 默认单价（¥ / 1K tokens）——取不到 vendor_pricing 时兜底（与 chat.ts 一致） */
-const DEFAULT_INPUT_PRICE = 0.002;
-const DEFAULT_OUTPUT_PRICE = 0.008;
 /** ws.WebSocket readyState 常量（OPEN） */
 const WS_OPEN = 1;
+
+// 计费工具（getPricingForModel / computeCost / settleBilling / preConsume）已抽取至
+// 共享服务 services/billing/{pricing,settle,pre-consume}.ts（P0-1），本文件直接 import。
+// @see docs/iteration-plan-v2.md P0-1 关键约束（8 处重复实现 → 共享服务）
 
 // ============================================================
 // Types
@@ -123,6 +123,8 @@ export interface WsSettleArgs {
   fallback: boolean;
   finishReason?: string;
   errorCode?: string;
+  /** P0-1 预扣结果：mode='frozen' → 冻结结算，否则普通扣费 */
+  preConsume?: PreConsumeResult | null;
 }
 
 export type WsSettleFn = (args: WsSettleArgs) => Promise<void>;
@@ -144,6 +146,14 @@ export interface WsRelayDeps {
   settleBilling: WsSettleFn;
   /** 模型定价（默认查 vendor_pricing，失败走默认价） */
   getPricingForModel: (model: string) => Promise<{ input: number; output: number }>;
+  /** P0-1 预扣（阈值旁路判定 + Redis Lua 冻结；默认共享实现，测试可注入） */
+  preConsume: (
+    ctx: { userId: number; requestId: string },
+    estimatedAmount: number,
+    opts?: { balance?: { availableBalance?: string | number | null } },
+  ) => Promise<PreConsumeResult>;
+  /** P0-1 异常释放预扣（默认共享实现；mode 非 frozen 时 no-op） */
+  releasePreConsume: (ctx: { userId: number; requestId: string }, pre: PreConsumeResult | null | undefined) => Promise<void>;
   /** HTTP 转发用（默认全局 fetch） */
   fetchImpl: typeof fetch;
   /** 方案 A 上游 WS 连接工厂（默认 Node 22+ 内置 WebSocket） */
@@ -278,37 +288,6 @@ function buildUpstreamBody(req: RelayFirstMessage, platformModel: string): Recor
   return body;
 }
 
-/** 查找模型定价（vendor_pricing × supplier_models），无则默认（镜像 chat.ts） */
-async function getPricingForModel(model: string): Promise<{ input: number; output: number }> {
-  try {
-    const rows = await db.select({
-      inputPrice: schema.vendorPricing.inputPrice,
-      outputPrice: schema.vendorPricing.outputPrice,
-    })
-      .from(schema.vendorPricing)
-      .innerJoin(schema.supplierModels, eq(schema.vendorPricing.supplierModelId, schema.supplierModels.id))
-      .where(eq(schema.supplierModels.modelName, model))
-      .limit(1);
-
-    if (rows.length > 0 && rows[0]) {
-      const input = Number(rows[0].inputPrice);
-      const output = Number(rows[0].outputPrice);
-      if (!isNaN(input) && !isNaN(output) && input > 0 && output > 0) {
-        return { input, output };
-      }
-    }
-  } catch {
-    /* 定价查询失败 → 走默认价 */
-  }
-  return { input: DEFAULT_INPUT_PRICE, output: DEFAULT_OUTPUT_PRICE };
-}
-
-/** 按 token 数 + 单价计算费用（¥，元；镜像 chat.ts computeCost） */
-function computeCost(model: string, inputTokens: number, outputTokens: number, pricing?: { input: number; output: number }): number {
-  const p = pricing ?? { input: DEFAULT_INPUT_PRICE, output: DEFAULT_OUTPUT_PRICE };
-  return (inputTokens / 1000) * p.input + (outputTokens / 1000) * p.output;
-}
-
 /** mock 回退：无可用供应商时返回占位 completion（镜像 chat.ts buildMockCompletion） */
 function buildMockCompletion(model: string, messages: RelayFirstMessage['messages'], inputTokens: number) {
   const lastUser = [...messages].reverse().find((m) => m.role === 'user');
@@ -322,57 +301,33 @@ function buildMockCompletion(model: string, messages: RelayFirstMessage['message
 }
 
 // ============================================================
-// 结算（复用 chat.ts settleBilling 的同一服务链）
+// 结算（复用共享 settleBilling 的同一服务链）
 // ============================================================
 
 /**
  * 结算 — 记账 + 扣费 + 佣金 + 更新 key 最后调用时间
  *
- * 与 chat.ts 的 settleBilling 使用同一服务链（deductBalance / recordConsumption /
- * generateCommissionForConsumption / apiKeys.lastUsedAt），保证 WS 转发与 HTTP 转发计费口径一致。
+ * 委托共享服务 settleBilling（P0-1 抽取），保证 WS 转发与 HTTP 转发计费口径一致；
+ * 预扣请求（args.preConsume.mode='frozen'）走冻结结算（Redis 多退少补 + PG 镜像）。
  *
  * @param args - 结算入参（见 WsSettleArgs）
  */
 export async function settleWsBilling(args: WsSettleArgs): Promise<void> {
-  const { ctx, promptTokens, completionTokens, cost, channel } = args;
-
-  await deductBalance(ctx.userId, cost.toFixed(8), 'consumption', ctx.requestId);
-
-  const record = await recordConsumption({
-    userId: ctx.userId,
-    apiKeyId: ctx.apiKeyId,
-    model: ctx.model,
-    supplierId: channel?.supplier.id,
-    supplierModelId: channel?.modelMapping.id,
-    inputTokens: promptTokens,
-    outputTokens: completionTokens,
-    cost: cost.toFixed(8),
-    trustUpstream: args.trustUpstream,
-    fallback: args.fallback,
-    streamed: args.streamed,
-    finishReason: args.finishReason,
-    errorCode: args.errorCode,
-    requestId: ctx.requestId,
-  });
-
-  // 实时佣金结算（异步，不阻塞转发）；幂等由唯一索引保证，进程崩溃由回填调度器自愈
-  if (record?.id) {
-    void generateCommissionForConsumption({
-      userId: ctx.userId,
-      consumptionRecordId: record.id,
-      cost: cost.toFixed(8),
-    }).catch((e) => {
-      console.error(`[ws-relay] commission generation failed for consumption ${record.id}:`, e);
-    });
-  }
-
-  // 更新 key 最后调用时间（非致命）
-  if (ctx.apiKeyId) {
-    await db.update(schema.apiKeys)
-      .set({ lastUsedAt: new Date() })
-      .where(eq(schema.apiKeys.id, ctx.apiKeyId))
-      .catch(() => { /* 非致命 */ });
-  }
+  await settleBilling(
+    args.ctx,
+    args.promptTokens,
+    args.completionTokens,
+    args.cost,
+    args.channel,
+    {
+      streamed: args.streamed,
+      trustUpstream: args.trustUpstream,
+      fallback: args.fallback,
+      finishReason: args.finishReason,
+      errorCode: args.errorCode,
+      preConsume: args.preConsume ?? null,
+    },
+  );
 }
 
 // ============================================================
@@ -556,6 +511,8 @@ export const defaultWsRelayDeps: WsRelayDeps = {
   determineStreamBilling,
   settleBilling: settleWsBilling,
   getPricingForModel,
+  preConsume: sharedPreConsume,
+  releasePreConsume: sharedReleasePreConsume,
   fetchImpl: fetch,
   connectUpstreamWs: connectNodeWebSocket,
   buildUpstreamWsUrl,
@@ -633,6 +590,8 @@ export async function relayWebSocket(opts: WsRelayOptions): Promise<WsRelayResul
   // 上游请求已发出且流结果未定（客户端此时断开 → 按已收 chunk 结算）。
   // 仅在此为 true 时，客户端断开才触发结算 —— 402/502/上游 5xx 等失败路径不结算（无消费）。
   let awaitingStream = false;
+  // P0-1 预扣结果：转发前冻结（mode='frozen'），成功路径结算、失败路径解冻
+  let preConsumeState: PreConsumeResult | null = null;
   const state: StreamState = { lastValidUsage: null, generatedText: '', finishReason: null, totalChunks: 0 };
 
   const isClosed = () => closed;
@@ -674,13 +633,16 @@ export async function relayWebSocket(opts: WsRelayOptions): Promise<WsRelayResul
     settleTask = (async () => {
       const pricing = await getPricing();
       const cost = computeCost(first.model, args.promptTokens, args.completionTokens, pricing);
-      await deps.settleBilling({ ...args, ctx, channel: channelRef, cost });
+      await deps.settleBilling({ ...args, ctx, channel: channelRef, cost, preConsume: preConsumeState });
     })().catch((err) => {
       // 记账失败仅记录（WS 已开始，无法改状态码；余额不足属罕见竞态）
       console.error(`[ws-relay] settle failed for ${ctx.requestId}:`, err);
     });
     return settleTask;
   };
+
+  // P0-1：异常释放预扣（未结算时；幂等，已结算/已释放则 no-op）
+  const releasePre = () => deps.releasePreConsume(ctx, preConsumeState).catch(() => { /* 解冻失败有 TTL 兜底 */ });
 
   // 按当前已收 chunk 结算（异常结束 / 客户端断开时使用）
   const settleFromState = (abnormal: boolean, extra?: Partial<Pick<WsSettleArgs, 'finishReason' | 'errorCode'>>): Promise<void> => {
@@ -697,12 +659,15 @@ export async function relayWebSocket(opts: WsRelayOptions): Promise<WsRelayResul
     });
   };
 
-  // ── 2. 客户端断开兜底：上游流未定 → 未结算则按已收 chunk 结算 ──
+  // ── 2. 客户端断开兜底：上游流未定 → 未结算则按已收 chunk 结算；上游未发出 → 解冻预扣 ──
   const onClientClose = () => {
     closed = true;
     cleanup();
     if (awaitingStream && !settled) {
       void settleFromState(true, { errorCode: 'client_closed' });
+    } else if (!settled && preConsumeState?.mode === 'frozen') {
+      // P0-1：客户端在转发前断开（无任何消费）→ 解冻预扣
+      void deps.releasePreConsume(ctx, preConsumeState).catch(() => { /* 解冻失败有 TTL 兜底 */ });
     }
   };
   socket.on('close', onClientClose);
@@ -722,10 +687,25 @@ export async function relayWebSocket(opts: WsRelayOptions): Promise<WsRelayResul
     return { settled: false, error: { code: 402, message: '余额不足，请充值', type: 'insufficient_balance' } };
   }
 
+  // ── 3.5 P0-1 阈值旁路 + 预扣（余额 ≤ 阈值 → Redis Lua 冻结；余额不足 402 / 异常旁路降级）──
+  try {
+    const pricing = await getPricing();
+    const estimatedCost = computeCost(first.model, estimatedInputTokens, DEFAULT_MAX_OUTPUT_TOKENS, pricing);
+    preConsumeState = await deps.preConsume(ctx, estimatedCost, { balance });
+  } catch (err) {
+    // 预扣失败（余额不足 → 402）：WS 内错误帧 + 关闭，不转发上游（无消费）
+    const e = toWsError(err, 402, 'insufficient_balance');
+    sendError(e.code, e.message, e.type);
+    finishClose(4000, e.code === 402 ? 'insufficient_balance' : 'internal_error');
+    return { settled: false, error: { code: e.code, message: e.message, type: e.type } };
+  }
+
   // ── 4. selectChannel（无可用 → mock 回退）──
   try {
     channelRef = await deps.selectChannel(first.model);
   } catch (err) {
+    // P0-1：选路失败未结算 → 解冻预扣
+    await releasePre();
     sendError(502, 'channel selection failed');
     finishClose(4000, 'channel_unavailable');
     return { settled: false, error: { code: 502, message: 'channel selection failed' } };
@@ -782,6 +762,8 @@ export async function relayWebSocket(opts: WsRelayOptions): Promise<WsRelayResul
     try {
       upstream = deps.connectUpstreamWs(wsUrl, headers);
     } catch (err) {
+      // P0-1：上游连接失败未结算 → 解冻预扣
+      await releasePre();
       sendError(502, 'upstream ws connect failed');
       finishClose(4000, 'upstream_unavailable');
       return { settled: false, mode: 'ws', error: { code: 502, message: 'upstream ws connect failed' } };
@@ -867,6 +849,8 @@ export async function relayWebSocket(opts: WsRelayOptions): Promise<WsRelayResul
   } catch (err) {
     awaitingStream = false; // 上游请求失败（未产生任何消费）→ 不结算
     await deps.recordChannelResult(cbKey, false).catch(() => {});
+    // P0-1：上游请求失败未结算 → 解冻预扣
+    await releasePre();
     sendError(502, 'upstream request failed');
     finishClose(4000, 'upstream_unavailable');
     return { settled: false, mode: 'http', error: { code: 502, message: 'upstream request failed' } };
@@ -875,6 +859,8 @@ export async function relayWebSocket(opts: WsRelayOptions): Promise<WsRelayResul
   if (!upstreamResp.ok) {
     awaitingStream = false; // 上游明确失败（5xx）→ 不结算
     await deps.recordChannelResult(cbKey, false).catch(() => {});
+    // P0-1：上游失败未结算 → 解冻预扣
+    await releasePre();
     const status = upstreamResp.status || 502;
     sendError(status, `upstream error: ${status}`);
     finishClose(4000, 'upstream_error');

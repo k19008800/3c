@@ -10,7 +10,7 @@
  */
 
 import { encodingForModel } from 'js-tiktoken';
-import type { TiktokenModel } from 'js-tiktoken';
+import type { TiktokenModel, Tiktoken } from 'js-tiktoken';
 
 // ============================================================
 // 模型 → tiktoken encoding 映射
@@ -41,6 +41,16 @@ const KNOWN_TIKTOKEN_MODELS: Set<string> = new Set([
 /** 对于未知模型，使用 cl100k_base encoding（GPT-4/3.5 的通用 encoding） */
 const FALLBACK_MODEL: TiktokenModel = 'gpt-4o';
 
+/**
+ * tiktoken encoding 缓存（按 encoding 名）。
+ *
+ * js-tiktoken 的 getEncoding 每次调用都会重新解压并构建 BPE ranks 表
+ * （实测约 500ms/次），而网关热路径上每个请求会多次 countTokens（输入估算 +
+ * mock 输出估算等）→ 每次都重复付出该成本。
+ * Tiktoken.encode 为纯函数，缓存实例不影响计数结果，仅首次调用付出构建成本。
+ */
+const ENCODING_CACHE = new Map<string, Tiktoken>();
+
 // ============================================================
 // Token 计数
 // ============================================================
@@ -65,13 +75,28 @@ export function countTokens(text: string, model: string): number {
       ? (normalizedModel as TiktokenModel)
       : FALLBACK_MODEL;
 
-    const encoder = encodingForModel(tiktokenModel);
+    const encoder = getEncoder(tiktokenModel);
     const tokens = encoder.encode(text);
     return tokens.length;
   } catch {
     // tiktoken 失败时的粗略估算（英文 ~4 char/token, 中文 ~1.5 char/token）
     return roughTokenCount(text);
   }
+}
+
+/**
+ * 获取（并缓存）指定 encoding 的 Tiktoken 实例。
+ *
+ * @param model - tiktoken 模型名（已规范化）
+ * @returns 缓存的 encoder；仅首次调用构建
+ */
+function getEncoder(model: TiktokenModel): Tiktoken {
+  let encoder = ENCODING_CACHE.get(model);
+  if (!encoder) {
+    encoder = encodingForModel(model);
+    ENCODING_CACHE.set(model, encoder);
+  }
+  return encoder;
 }
 
 /**
