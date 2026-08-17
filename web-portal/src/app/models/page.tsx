@@ -58,6 +58,11 @@ const STATUS_META: Record<PublicModelHealth["status"], { text: string; color: st
 export const metadata = {
   title: "3Cloud 模型目录",
   description: "3Cloud 接入的 AI 模型一览",
+  openGraph: {
+    title: "3Cloud 模型目录",
+    description: "3Cloud 接入的 AI 模型一览",
+    type: "website",
+  },
 };
 
 export default async function ModelsPage() {

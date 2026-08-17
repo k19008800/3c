@@ -1,8 +1,36 @@
 import { useState, useEffect } from "react";
-import { api } from "../lib/api";
-import { HelpIcon, Table, StatusBadge, Modal, useToast } from "@3cloud/shared-ui";
+import { api, extractError } from "../lib/api";
+import { HelpIcon, Modal, useToast } from "@3cloud/shared-ui";
 
-interface I18nEntry { id: number; key: string; namespace: string; zh_cn: string; en_us: string; ja_jp: string; ko_kr: string; updated_at: string; }
+/**
+ * 国际化翻译管理页 — 对齐 P2-3 后端契约（/api/v1/admin/i18n/entries）
+ *
+ * 后端 i18n_entries 为「一行 = 一个 key × 一个 lang」行式存储
+ * （key/lang/value/scope/status，unique(key, lang)）。
+ * 本页把行式数据在客户端按 key 分组为「一行多语言列」的表格展示；
+ * 语言代码映射：zh_cn→zh-CN、en_us→en、ja_jp→ja-JP、ko_kr→ko-KR。
+ * 删除为后端软删（status='disabled'），公开接口自动过滤。
+ */
+
+interface BackendEntry {
+  id: number;
+  key: string;
+  lang: string;
+  value: string;
+  scope: string;
+  status: string;
+  updated_by: number | null;
+  updated_at: string;
+}
+
+/** 表格行（按 key 分组，各语言列 + 各语言行 id 用于编辑/删除） */
+interface I18nRow {
+  key: string;
+  scope: string;
+  langs: Record<string, { id: number; value: string; status: string }>;
+  updated_at: string;
+}
+
 interface Namespace { name: string; label: string; key_count: number; color: string; }
 
 const NAMESPACES: Namespace[] = [
@@ -15,18 +43,18 @@ const NAMESPACES: Namespace[] = [
 ];
 
 const LANGS = [
-  { code: "zh_cn", flag: "🇨🇳", label: "简体中文" },
-  { code: "en_us", flag: "🇺🇸", label: "English" },
-  { code: "ja_jp", flag: "🇯🇵", label: "日本語" },
-  { code: "ko_kr", flag: "🇰🇷", label: "한국어" },
+  { code: "zh_cn", lang: "zh-CN", flag: "🇨🇳", label: "简体中文" },
+  { code: "en_us", lang: "en", flag: "🇺🇸", label: "English" },
+  { code: "ja_jp", lang: "ja-JP", flag: "🇯🇵", label: "日本語" },
+  { code: "ko_kr", lang: "ko-KR", flag: "🇰🇷", label: "한국어" },
 ];
 
 export default function AdminI18nPage() {
   const { toast } = useToast();
-  const [entries, setEntries] = useState<I18nEntry[]>([]);
+  const [rows, setRows] = useState<I18nRow[]>([]);
   const [namespace, setNamespace] = useState("");
   const [search, setSearch] = useState("");
-  const [editing, setEditing] = useState<I18nEntry | null>(null);
+  const [editing, setEditing] = useState<I18nRow | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [showNew, setShowNew] = useState(false);
   const [newKey, setNewKey] = useState("");
@@ -35,46 +63,101 @@ export default function AdminI18nPage() {
 
   useEffect(() => { loadEntries(); }, [namespace]);
 
+  /** 拉取后端行式条目 → 按 key 分组为表格行 */
   async function loadEntries() {
     try {
-      const r = await api.get("/admin/i18n/entries", { params: { namespace: namespace || undefined } });
-      setEntries(r.data?.data?.list ?? []);
+      const r = await api.get("/admin/i18n/entries", {
+        params: { scope: namespace || undefined, page: 1, pageSize: 500 },
+      });
+      const items: BackendEntry[] = r.data?.data?.items ?? [];
+      const byKey = new Map<string, I18nRow>();
+      for (const it of items) {
+        let row = byKey.get(it.key);
+        if (!row) {
+          row = { key: it.key, scope: it.scope, langs: {}, updated_at: it.updated_at };
+          byKey.set(it.key, row);
+        }
+        row.langs[it.lang] = { id: it.id, value: it.value, status: it.status };
+        if (new Date(it.updated_at) > new Date(row.updated_at)) row.updated_at = it.updated_at;
+      }
+      setRows([...byKey.values()]);
     } catch {}
   }
 
-  function openEdit(e: I18nEntry) {
-    setEditing(e);
-    setEditValues({ zh_cn: e.zh_cn, en_us: e.en_us, ja_jp: e.ja_jp, ko_kr: e.ko_kr });
+  function langValue(row: I18nRow, l: { code: string; lang: string }): string {
+    return row.langs[l.lang]?.value ?? "";
   }
 
+  function openEdit(e: I18nRow) {
+    setEditing(e);
+    setEditValues(Object.fromEntries(LANGS.map((l) => [l.code, langValue(e, l)])));
+  }
+
+  /** 每个已存在的语言行单独 PUT 更新 value */
   async function saveEdit() {
     if (!editing) return;
-    await api.put(`/admin/i18n/entries/${editing.id}`, editValues);
-    toast.success("翻译已更新");
-    setEditing(null);
-    loadEntries();
+    try {
+      for (const l of LANGS) {
+        const cell = editing.langs[l.lang];
+        if (!cell) continue; // 该语言尚未翻译 → 走「新增翻译键」创建
+        await api.put(`/admin/i18n/entries/${cell.id}`, { value: editValues[l.code] ?? "" });
+      }
+      toast.success("翻译已更新");
+      setEditing(null);
+      loadEntries();
+    } catch (err) {
+      toast.error(extractError(err));
+    }
   }
 
-  async function deleteEntry(id: number) {
-    if (!confirm("确认删除此翻译键？")) return;
-    await api.post(`/admin/i18n/entries/${id}/delete`, {});
-    toast.success("已删除");
-    loadEntries();
+  /** 删除 key 下所有语言行（后端软删 status=disabled） */
+  async function deleteEntry(e: I18nRow) {
+    if (!confirm(`确认删除翻译键「${e.key}」？（软删，可在列表中按状态筛选查看）`)) return;
+    try {
+      for (const l of LANGS) {
+        const cell = e.langs[l.lang];
+        if (cell) await api.delete(`/admin/i18n/entries/${cell.id}`);
+      }
+      toast.success("已删除");
+      loadEntries();
+    } catch (err) {
+      toast.error(extractError(err));
+    }
   }
 
+  /** 创建：按语言逐个 POST（key + lang + value + scope） */
   async function createEntry() {
     if (!newKey.trim()) { toast.error("键名不能为空"); return; }
-    await api.post("/admin/i18n/entries", { key: newKey, namespace: newNs, ...newValues });
-    toast.success("翻译键已创建");
-    setShowNew(false); setNewKey(""); setNewValues({});
-    loadEntries();
+    const provided = LANGS.filter((l) => (newValues[l.code] ?? "").trim());
+    if (provided.length === 0) { toast.error("请至少填写一种语言的翻译"); return; }
+    try {
+      for (const l of provided) {
+        await api.post("/admin/i18n/entries", {
+          key: newKey.trim(),
+          lang: l.lang,
+          value: (newValues[l.code] ?? "").trim(),
+          scope: newNs,
+        });
+      }
+      toast.success("翻译键已创建");
+      setShowNew(false); setNewKey(""); setNewValues({});
+      loadEntries();
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        toast.error(`已存在相同 key+lang 的条目：${extractError(err)}`);
+      } else {
+        toast.error(extractError(err));
+      }
+    }
   }
 
-  const filtered = entries.filter(e => !search || e.key.toLowerCase().includes(search.toLowerCase()) || Object.values(e).some(v => typeof v === "string" && v.toLowerCase().includes(search.toLowerCase())));
+  const filtered = rows.filter((e) => !search ||
+    e.key.toLowerCase().includes(search.toLowerCase()) ||
+    Object.values(e.langs).some((v) => v.value.toLowerCase().includes(search.toLowerCase())));
 
-  const coverageData = LANGS.map(l => {
-    const total = entries.length;
-    const filled = entries.filter(e => (e as any)[l.code]).length;
+  const coverageData = LANGS.map((l) => {
+    const total = rows.length;
+    const filled = rows.filter((e) => langValue(e, l)).length;
     const pct = total ? Math.round((filled / total) * 100) : 100;
     return { ...l, filled, total, pct };
   });
@@ -90,7 +173,7 @@ export default function AdminI18nPage() {
 
       {/* Coverage Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
-        {coverageData.map(l => (
+        {coverageData.map((l) => (
           <div key={l.code} style={{ background: "var(--color-panel)", borderRadius: 8, padding: "14px 16px", boxShadow: "0 1px 4px rgba(0,0,0,.06)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
               <span style={{ fontSize: 20 }}>{l.flag}</span>
@@ -106,9 +189,9 @@ export default function AdminI18nPage() {
       </div>
 
       {/* Filter */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
         <span style={{ fontSize: 13, color: "#666" }}>命名空间:</span>
-        {[{ name: "", label: "全部", color: "#666" }, ...NAMESPACES].map(ns => (
+        {[{ name: "", label: "全部", color: "#666" }, ...NAMESPACES].map((ns) => (
           <button key={ns.name} onClick={() => setNamespace(ns.name)} style={{
             padding: "4px 14px", borderRadius: 14, border: namespace === ns.name ? "2px solid #4f6ef7" : "1px solid var(--color-border)",
             background: namespace === ns.name ? "#eef2ff" : "var(--color-panel)", color: namespace === ns.name ? "#4f6ef7" : "#666",
@@ -116,11 +199,11 @@ export default function AdminI18nPage() {
           }}>{ns.label}</button>
         ))}
         <div style={{ flex: 1 }} />
-        <input placeholder="搜索键名/翻译值..." value={search} onChange={e => setSearch(e.target.value)}
+        <input placeholder="搜索键名/翻译值..." value={search} onChange={(e) => setSearch(e.target.value)}
           style={{ padding: "6px 12px", border: "1px solid var(--color-border)", borderRadius: 6, width: 240, fontSize: 13 }} />
         <button onClick={() => setShowNew(true)} style={{ padding: "6px 16px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>
           + 新增翻译键
-          <HelpIcon text="创建新的翻译键。键名全局唯一，建议使用 namespace.key 格式。" />
+          <HelpIcon text="创建新的翻译键。键名全局唯一，建议使用 namespace.key 格式；同一键可分别填写多种语言。" />
         </button>
       </div>
 
@@ -128,15 +211,15 @@ export default function AdminI18nPage() {
       {showNew && (
         <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, padding: 16, marginBottom: 16 }}>
           <div style={{ display: "flex", gap: 12, marginBottom: 10 }}>
-            <select value={newNs} onChange={e => setNewNs(e.target.value)} style={{ padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4 }}>
-              {NAMESPACES.map(ns => <option key={ns.name} value={ns.name}>{ns.label}</option>)}
+            <select value={newNs} onChange={(e) => setNewNs(e.target.value)} style={{ padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4 }}>
+              {NAMESPACES.map((ns) => <option key={ns.name} value={ns.name}>{ns.label}</option>)}
             </select>
-            <input placeholder="翻译键名 (如 common.hello)" value={newKey} onChange={e => setNewKey(e.target.value)} style={{ flex: 1, padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4 }} />
+            <input placeholder="翻译键名 (如 common.hello)" value={newKey} onChange={(e) => setNewKey(e.target.value)} style={{ flex: 1, padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4 }} />
           </div>
-          {LANGS.map(l => (
+          {LANGS.map((l) => (
             <div key={l.code} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
               <span style={{ width: 80, fontSize: 13, color: "#666" }}>{l.flag} {l.label}</span>
-              <input placeholder={`${l.label}翻译`} value={newValues[l.code] ?? ""} onChange={e => setNewValues({ ...newValues, [l.code]: e.target.value })}
+              <input placeholder={`${l.label}翻译`} value={newValues[l.code] ?? ""} onChange={(e) => setNewValues({ ...newValues, [l.code]: e.target.value })}
                 style={{ flex: 1, padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4 }} />
             </div>
           ))}
@@ -154,25 +237,25 @@ export default function AdminI18nPage() {
             <tr style={{ background: "#fafafa" }}>
               <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600 }}>键名</th>
               <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600 }}>命名空间</th>
-              {LANGS.map(l => <th key={l.code} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600 }}>{l.flag}</th>)}
+              {LANGS.map((l) => <th key={l.code} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600 }}>{l.flag}</th>)}
               <th style={{ padding: "10px 14px", textAlign: "center", fontWeight: 600 }}>操作</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map(e => {
-              const ns = NAMESPACES.find(n => n.name === e.namespace);
+            {filtered.map((e) => {
+              const ns = NAMESPACES.find((n) => n.name === e.scope);
               return (
-                <tr key={e.id} style={{ borderBottom: "1px solid #f5f5f5" }}>
+                <tr key={e.key} style={{ borderBottom: "1px solid #f5f5f5" }}>
                   <td style={{ padding: "8px 14px", fontFamily: "monospace", fontSize: 12, color: "#4f6ef7" }}>{e.key}</td>
-                  <td style={{ padding: "8px 14px" }}><span style={{ padding: "2px 10px", borderRadius: 10, fontSize: 11, fontWeight: 500, background: `${ns?.color}20`, color: ns?.color }}>{ns?.label ?? e.namespace}</span></td>
-                  {LANGS.map(l => (
+                  <td style={{ padding: "8px 14px" }}><span style={{ padding: "2px 10px", borderRadius: 10, fontSize: 11, fontWeight: 500, background: `${ns?.color}20`, color: ns?.color }}>{ns?.label ?? e.scope}</span></td>
+                  {LANGS.map((l) => (
                     <td key={l.code} style={{ padding: "8px 14px", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {(e as any)[l.code] ? <span style={{ color: "#333" }}>{(e as any)[l.code]}</span> : <span style={{ color: "#e53935", fontStyle: "italic" }}>未翻译</span>}
+                      {langValue(e, l) ? <span style={{ color: "#333" }}>{langValue(e, l)}</span> : <span style={{ color: "#e53935", fontStyle: "italic" }}>未翻译</span>}
                     </td>
                   ))}
                   <td style={{ padding: "8px 14px", textAlign: "center" }}>
                     <button onClick={() => openEdit(e)} style={{ padding: "2px 10px", border: "1px solid var(--color-border)", borderRadius: 4, background: "var(--color-panel)", cursor: "pointer", marginRight: 4 }}>编辑</button>
-                    <button onClick={() => deleteEntry(e.id)} style={{ padding: "2px 10px", border: "1px solid #e53935", borderRadius: 4, background: "var(--color-panel)", color: "#e53935", cursor: "pointer" }}>删除</button>
+                    <button onClick={() => deleteEntry(e)} style={{ padding: "2px 10px", border: "1px solid #e53935", borderRadius: 4, background: "var(--color-panel)", color: "#e53935", cursor: "pointer" }}>删除</button>
                   </td>
                 </tr>
               );
@@ -189,11 +272,15 @@ export default function AdminI18nPage() {
         {editing && (
           <div>
             <div style={{ background: "#f5f5f5", borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontFamily: "monospace", fontSize: 13 }}>{editing.key}</div>
-            {LANGS.map(l => (
+            {LANGS.map((l) => (
               <div key={l.code} style={{ display: "flex", gap: 10, marginBottom: 10, alignItems: "center" }}>
                 <span style={{ width: 90, fontSize: 13, color: "#888" }}>{l.flag} {l.label}</span>
-                <input value={editValues[l.code] ?? ""} onChange={e => setEditValues({ ...editValues, [l.code]: e.target.value })}
-                  style={{ flex: 1, padding: "8px 12px", border: "1px solid var(--color-border)", borderRadius: 6, fontSize: 13 }} />
+                {editing.langs[l.lang] ? (
+                  <input value={editValues[l.code] ?? ""} onChange={(e) => setEditValues({ ...editValues, [l.code]: e.target.value })}
+                    style={{ flex: 1, padding: "8px 12px", border: "1px solid var(--color-border)", borderRadius: 6, fontSize: 13 }} />
+                ) : (
+                  <span style={{ flex: 1, fontSize: 12, color: "#e53935", fontStyle: "italic" }}>该语言尚未翻译，请使用「新增翻译键」补充</span>
+                )}
               </div>
             ))}
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>

@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { fetchDictionary, makeT, siteAlternates } from "../lib/i18n";
+import { getCookieLang } from "../lib/i18n-server";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { ButtonHelp } from "../components/Help";
 
 const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3000";
 
@@ -35,16 +39,21 @@ export const metadata: Metadata = {
     description: "统一计费、智能路由、精细运营",
     type: "website",
   },
+  // hreflang：cookie 方案下 en 直链为 ?lang=en（全站子路径化见交付报告取舍说明）
+  alternates: siteAlternates("/"),
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const config = await fetchSiteConfig();
+  const [config, lang] = await Promise.all([fetchSiteConfig(), getCookieLang()]);
+  const dict = await fetchDictionary(lang);
+  const t = makeT(dict);
+
   const siteName = config.site_name ?? "3Cloud";
   const year = new Date().getFullYear();
   const copyright = config.site_copyright ?? `© ${year} ${siteName} · AI Token 聚合平台`;
 
   return (
-    <html lang="zh-CN">
+    <html lang={lang === "en" ? "en" : "zh-CN"}>
       <body>
         {/* ===== Header ===== */}
         <header
@@ -70,15 +79,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </span>
             )}
           </a>
-          <nav style={{ display: "flex", gap: 24, alignItems: "center" }}>
-            <a href="/" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>首页</a>
-            <a href="/models" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>模型目录</a>
-            <a href="/pricing" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>定价</a>
-            <a href="/about" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>关于我们</a>
-            <a href="/status" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>系统状态</a>
-            <a href="/app/login" style={{ background: "#2563eb", color: "#fff", padding: "8px 20px", borderRadius: 6, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>
-              登录
-            </a>
+          <nav style={{ display: "flex", gap: 24, alignItems: "center", flexWrap: "wrap" }}>
+            <a href="/" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>{t("nav.home")}</a>
+            <a href="/models" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>{t("nav.models")}</a>
+            <a href="/pricing" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>{t("nav.pricing")}</a>
+            <a href="/blog" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>{t("nav.blog")}</a>
+            <a href="/about" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>{t("nav.about")}</a>
+            <a href="/status" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>{t("nav.status")}</a>
+            <LanguageSwitcher current={lang} />
+            <span style={{ display: "inline-flex", alignItems: "center" }}>
+              <a href="/app/login" style={{ background: "#2563eb", color: "#fff", padding: "8px 20px", borderRadius: 6, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>
+                {t("nav.login")}
+              </a>
+              <ButtonHelp text="登录 3Cloud 控制台；未注册用户可先注册。" />
+            </span>
           </nav>
         </header>
 
@@ -90,19 +104,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 32, marginBottom: 32 }}>
               {/* 产品 */}
               <div>
-                <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "#0f172a" }}>产品</h4>
+                <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "#0f172a" }}>{t("footer.product")}</h4>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <a href="/models" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>模型目录</a>
-                  <a href="/pricing" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>定价方案</a>
-                  <a href="/status" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>系统状态</a>
+                  <a href="/models" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>{t("nav.models")}</a>
+                  <a href="/pricing" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>{t("nav.pricing")}</a>
+                  <a href="/status" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>{t("nav.status")}</a>
                 </div>
               </div>
               {/* 资源 */}
               <div>
-                <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "#0f172a" }}>资源</h4>
+                <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "#0f172a" }}>{t("footer.resources")}</h4>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <a href="/about" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>关于我们</a>
-                  <a href="/app/help" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>帮助中心</a>
+                  <a href="/blog" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>{t("nav.blog")}</a>
+                  <a href="/about" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>{t("nav.about")}</a>
+                  <a href="/app/help" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>Help Center</a>
                   {config.site_company_name && <span style={{ color: "#64748b", fontSize: 13 }}>{config.site_company_name}</span>}
                   {config.site_contact_email && <span style={{ color: "#64748b", fontSize: 13 }}>{config.site_contact_email}</span>}
                   {config.site_contact_phone && <span style={{ color: "#64748b", fontSize: 13 }}>{config.site_contact_phone}</span>}
@@ -110,10 +125,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </div>
               {/* 法律 */}
               <div>
-                <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "#0f172a" }}>法律</h4>
+                <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "#0f172a" }}>{t("footer.legal")}</h4>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <a href="/privacy" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>隐私政策</a>
-                  <a href="/terms" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>服务条款</a>
+                  <a href="/privacy" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>Privacy Policy</a>
+                  <a href="/terms" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>Terms of Service</a>
                 </div>
               </div>
             </div>

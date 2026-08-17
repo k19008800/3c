@@ -24,6 +24,11 @@ async function fetchSiteConfig(): Promise<SiteConfig> {
 export const metadata: Metadata = {
   title: "关于我们 — 3Cloud",
   description: "了解 3Cloud 平台，AI API 聚合平台的使命、团队与发展历程",
+  openGraph: {
+    title: "关于我们 — 3Cloud",
+    description: "了解 3Cloud 平台，AI API 聚合平台的使命、团队与发展历程",
+    type: "website",
+  },
 };
 
 // 默认里程碑（后台未配置时使用）

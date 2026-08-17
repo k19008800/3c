@@ -1,5 +1,10 @@
 // 定价页 — 使用公开标价 API（成本 × 加价率 = 对外标价）
+// P2-3：核心文案 i18n（cookie/?lang 切换，en 回退），generateMetadata + [?] 页面帮助
+import type { Metadata } from "next";
 import PriceCalculator from "./PriceCalculator";
+import { fetchDictionary, makeT, resolveLang, siteAlternates } from "../../lib/i18n";
+import { getCookieLang } from "../../lib/i18n-server";
+import { PageHelp } from "../../components/Help";
 
 const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3000";
 
@@ -49,32 +54,78 @@ const CATEGORY_LABELS: Record<string, string> = {
   chat: "对话", embedding: "嵌入", image: "图像", audio: "音频", video: "视频", rerank: "重排",
 };
 
-export const metadata = {
-  title: "3Cloud 定价",
-  description: "3Cloud 模型标价，透明计费、按量付费，动态拉取模型价格",
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ lang?: string }>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const lang = resolveLang(sp?.lang, await getCookieLang());
+  const dict = await fetchDictionary(lang);
+  const t = makeT(dict);
+  return {
+    title: t("pricing.title"),
+    description: t("pricing.subtitle"),
+    openGraph: {
+      title: t("pricing.title"),
+      description: t("pricing.subtitle"),
+      type: "website",
+    },
+    alternates: siteAlternates("/pricing"),
+  };
+}
 
-export default async function PricingPage() {
+export default async function PricingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ lang?: string }>;
+}) {
+  const sp = await searchParams;
+  const lang = resolveLang(sp?.lang, await getCookieLang());
+  const dict = await fetchDictionary(lang);
+  const t = makeT(dict);
+
   const { list: models } = await fetchPricing();
 
   // 按分类分组
   const categories = Array.from(new Set(models.map((m) => m.category ?? "chat"))).sort();
 
+  const calculatorLabels = {
+    title: t("pricing.calc.title"),
+    model: t("pricing.calc.model"),
+    selectPlaceholder: t("pricing.calc.selectPlaceholder"),
+    inputTokens: t("pricing.calc.inputTokens"),
+    outputTokens: t("pricing.calc.outputTokens"),
+    selectPrompt: t("pricing.calc.selectPrompt"),
+    estimate: t("pricing.calc.estimate"),
+  };
+
+  const faqs = [
+    { q: t("pricing.faq.q1"), a: t("pricing.faq.a1") },
+    { q: t("pricing.faq.q2"), a: t("pricing.faq.a2") },
+    { q: t("pricing.faq.q3"), a: t("pricing.faq.a3") },
+    { q: t("pricing.faq.q4"), a: t("pricing.faq.a4") },
+    { q: t("pricing.faq.q5"), a: t("pricing.faq.a5") },
+  ];
+
   return (
     <div style={{ maxWidth: 1000, margin: "0 auto", padding: "48px 24px" }}>
-      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>模型标价</h1>
+      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>
+        {t("pricing.title")}
+        <PageHelp text={t("help.pricing")} />
+      </h1>
       <p style={{ color: "#64748b", marginBottom: 8, fontSize: 15 }}>
-        透明计费 · 按量付费 · 无隐藏费用 · 实时拉取标价
+        {t("pricing.subtitle")}
       </p>
 
-      <PriceCalculator models={models} />
+      <PriceCalculator models={models} labels={calculatorLabels} />
 
-      <h2 style={{ fontSize: 24, fontWeight: 700, margin: "48px 0 16px" }}>全部模型标价</h2>
+      <h2 style={{ fontSize: 24, fontWeight: 700, margin: "48px 0 16px" }}>{t("pricing.allModels")}</h2>
 
       {/* 分类筛选 */}
       <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
         <span style={{ background: "#2563eb", color: "#fff", borderRadius: 20, padding: "6px 16px", fontSize: 13, fontWeight: 600 }}>
-          全部 ({models.length})
+          {t("pricing.allLabel")} ({models.length})
         </span>
         {categories.map((cat) => (
           <span key={cat} style={{ background: "#f1f5f9", color: "#475569", borderRadius: 20, padding: "6px 16px", fontSize: 13 }}>
@@ -87,12 +138,12 @@ export default async function PricingPage() {
         <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", fontSize: 14, minWidth: 700 }}>
           <thead>
             <tr style={{ background: "#f8fafc", textAlign: "left", borderBottom: "2px solid #e2e8f0" }}>
-              <th style={{ padding: "12px 16px" }}>模型名称</th>
-              <th style={{ padding: "12px 16px" }}>供应商</th>
-              <th style={{ padding: "12px 16px" }}>类别</th>
-              <th style={{ padding: "12px 16px" }}>输入标价/1K tokens</th>
-              <th style={{ padding: "12px 16px" }}>输出标价/1K tokens</th>
-              <th style={{ padding: "12px 16px" }}>上下文长度</th>
+              <th style={{ padding: "12px 16px" }}>{t("pricing.table.model")}</th>
+              <th style={{ padding: "12px 16px" }}>{t("pricing.table.vendor")}</th>
+              <th style={{ padding: "12px 16px" }}>{t("pricing.table.category")}</th>
+              <th style={{ padding: "12px 16px" }}>{t("pricing.table.input")}</th>
+              <th style={{ padding: "12px 16px" }}>{t("pricing.table.output")}</th>
+              <th style={{ padding: "12px 16px" }}>{t("pricing.table.context")}</th>
             </tr>
           </thead>
           <tbody>
@@ -125,21 +176,15 @@ export default async function PricingPage() {
 
       {models.length === 0 && (
         <p style={{ color: "#94a3b8", marginTop: 16, textAlign: "center", padding: 40 }}>
-          暂无模型数据
+          {t("pricing.empty")}
         </p>
       )}
 
       {/* FAQ */}
       <div style={{ marginTop: 60 }}>
-        <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 24 }}>计费说明</h2>
+        <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 24 }}>{t("pricing.faq.title")}</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {[
-            { q: "标价是什么意思？", a: "标价是 3Cloud 平台对外的标准售价，由后台为每个供应商-模型独立配置。这是用户折扣前的基准价，所有折扣均基于此价格独立计算。" },
-            { q: "如何计费？", a: "按 Token 计费，输入和输出分别计价。您每调用一次 API，系统自动按照实际消耗的 Token 数量计算费用并从账户余额中扣除。" },
-            { q: "有套餐吗？", a: "按量计费，用多少付多少。如需更高额度或专属折扣，可联系销售获取企业定制方案。" },
-            { q: "有免费额度吗？", a: "新用户注册后实名认证即送 ¥5 试用额度，可以充分体验平台各模型能力。" },
-            { q: "价格会变吗？", a: "供应商成本价变动时，标价会自动调整。平台标价为实时拉取，确保定价透明。" },
-          ].map((faq) => (
+          {faqs.map((faq) => (
             <details key={faq.q} style={{ background: "#fff", borderRadius: 10, padding: "16px 20px", border: "1px solid #e2e8f0" }}>
               <summary style={{ fontWeight: 600, fontSize: 15, cursor: "pointer", listStyle: "none" }}>Q: {faq.q}</summary>
               <p style={{ marginTop: 10, color: "#475569", fontSize: 14, lineHeight: 1.8, paddingLeft: 8, borderLeft: "3px solid #2563eb" }}>{faq.a}</p>

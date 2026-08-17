@@ -5,20 +5,28 @@
  *   站点配置   — GET /api/v1/public/site-config
  *   模型目录   — GET /api/v1/public/models
  *   系统状态   — GET /api/v1/public/status
+ *   i18n 词典  — GET /api/v1/public/i18n/entries（P2-3）
+ *   博客列表   — GET /api/v1/public/blog（P2-3）
+ *   博客详情   — GET /api/v1/public/blog/:slug（P2-3）
  *
  * 说明：
  *   · site-config 按白名单过滤 system_config 的 site_* keys（与 3cloud-portal-ref 一致）
  *   · models 与 /public/pricing 同源，均为「供应商模型 × 销售定价」join，
  *     只返回存在 active 销售定价（vendor_pricing）的模型
  *   · status 反映 3Cloud 基础设施健康度 + 供应商健康状态（不反映供应商侧故障）
+ *   · i18n 词典只返回 status='active' 且 scope='portal' 的条目（key → value 映射）
+ *   · blog 只返回 type='blog' 且 status='published' 的文章
  */
 
 import type { FastifyInstance } from 'fastify';
 import { db, schema } from '../db';
-import { eq, and, desc, sql, inArray } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray, count } from 'drizzle-orm';
 import { isWindowParam, foldModelStats, activeModelCatalog, buildModelStat } from '../services/marketplace/health-queries';
 import { HEALTH_ORDER } from '../lib/latency';
 import { buildApiConfig, DEFAULT_API_DOMAIN } from '../services/config/api-domain';
+
+/** 门户 i18n 默认语言（未传 lang 时） */
+const DEFAULT_PORTAL_LANG = 'zh-CN';
 
 /** 公开暴露的 site_* keys（见 3cloud-portal-ref §1.3，12 个） */
 const SITE_CONFIG_WHITELIST = [
@@ -219,6 +227,118 @@ export async function publicRoutes(app: FastifyInstance) {
           totalModels: Number(stats[0]?.models ?? 0),
           totalVendors: Number(stats[0]?.vendors ?? 0),
         },
+      },
+    });
+  });
+
+  /**
+   * GET /api/v1/public/i18n/entries — 门户 i18n 词典（P2-3）
+   *
+   * query: lang（缺省 zh-CN）。只返回 status='active' 且 scope='portal' 的条目，
+   * 响应格式为 { key: value } 映射，Portal 服务端按 lang 拉取后渲染；
+   * 未翻译的 key 由前端回退英文源语（EN_DEFAULTS）。
+   *
+   * @see docs/SPEC-§23-系统级能力增强.md §23.4
+   */
+  app.get('/api/v1/public/i18n/entries', async (request, reply) => {
+    const q = (request.query || {}) as Record<string, string | undefined>;
+    const lang = (q.lang || DEFAULT_PORTAL_LANG).trim();
+
+    const rows = await db.select({
+      key: schema.i18nEntries.key,
+      value: schema.i18nEntries.value,
+    })
+      .from(schema.i18nEntries)
+      .where(and(
+        eq(schema.i18nEntries.lang, lang),
+        eq(schema.i18nEntries.scope, 'portal'),
+        eq(schema.i18nEntries.status, 'active'),
+      ));
+
+    const map: Record<string, string> = {};
+    for (const r of rows) map[r.key] = r.value;
+
+    return reply.send({ data: map });
+  });
+
+  /**
+   * GET /api/v1/public/blog — 博客文章列表（P2-3）
+   *
+   * 只返回 type='blog' 且 status='published' 的文章（site_content 表），
+   * 分页返回 id/slug/title/updated_at；按更新时间倒序。
+   */
+  app.get('/api/v1/public/blog', async (request, reply) => {
+    const q = (request.query || {}) as Record<string, string | undefined>;
+    const page = Math.max(1, parseInt(q.page || '1', 10) || 1);
+    const pageSize = Math.min(50, Math.max(1, parseInt(q.pageSize || '20', 10) || 20));
+    const offset = (page - 1) * pageSize;
+
+    const where = and(
+      eq(schema.siteContents.type, 'blog'),
+      eq(schema.siteContents.status, 'published'),
+    );
+
+    const [rows, totalRows] = await Promise.all([
+      db.select({
+        id: schema.siteContents.id,
+        slug: schema.siteContents.slug,
+        title: schema.siteContents.title,
+        updatedAt: schema.siteContents.updatedAt,
+      })
+        .from(schema.siteContents)
+        .where(where)
+        .orderBy(desc(schema.siteContents.updatedAt))
+        .limit(pageSize)
+        .offset(offset),
+      db.select({ total: count() }).from(schema.siteContents).where(where),
+    ]);
+
+    return reply.send({
+      data: {
+        items: rows.map((r) => ({
+          id: r.id,
+          slug: r.slug,
+          title: r.title,
+          updated_at: r.updatedAt,
+        })),
+        total: Number(totalRows[0]?.total ?? 0),
+        page,
+        pageSize,
+      },
+    });
+  });
+
+  /**
+   * GET /api/v1/public/blog/:slug — 博客文章详情（P2-3）
+   *
+   * 按 slug 精确匹配 type='blog' + status='published'；不存在返回 404。
+   */
+  app.get('/api/v1/public/blog/:slug', async (request, reply) => {
+    const slug = String((request.params as Record<string, unknown>).slug || '').trim();
+    if (!slug) {
+      return reply.status(404).send({ code: 404, message: '文章不存在', requestId: request.id });
+    }
+
+    const [row] = await db.select()
+      .from(schema.siteContents)
+      .where(and(
+        eq(schema.siteContents.slug, slug),
+        eq(schema.siteContents.type, 'blog'),
+        eq(schema.siteContents.status, 'published'),
+      ))
+      .limit(1);
+
+    if (!row) {
+      return reply.status(404).send({ code: 404, message: '文章不存在', requestId: request.id });
+    }
+
+    return reply.send({
+      data: {
+        id: row.id,
+        slug: row.slug,
+        title: row.title,
+        content: row.content,
+        updated_at: row.updatedAt,
       },
     });
   });
