@@ -7,6 +7,7 @@ interface PricingItem {
   id: number; model_id: number; model_name: string;
   vendor_id: number | null; vendor_name: string | null;
   input_price_per_1k: number; output_price_per_1k: number;
+  cache_discount_rate: number | null;
   currency: string; status: string; status_label: string;
   effective_from: string | null; updated_at: string;
 }
@@ -25,7 +26,7 @@ export default function AdminPricingPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
-  const [editPricing, setEditPricing] = useState<{ id: number; model_name: string; input: string; output: string } | null>(null);
+  const [editPricing, setEditPricing] = useState<{ id: number; model_name: string; input: string; output: string; cacheRate: string } | null>(null);
 
   const q = useQuery({
     queryKey: ["admin-pricing", search],
@@ -40,6 +41,8 @@ export default function AdminPricingPage() {
     mutationFn: async () => (await api.put(`/admin/pricing/${editPricing?.id}`, {
       input_price_per_1k: Number(editPricing?.input),
       output_price_per_1k: Number(editPricing?.output),
+      // 缓存命中折扣率：留空 → 清空（回退全局 billing.cache_hit_discount）
+      cache_discount_rate: editPricing?.cacheRate?.trim() ? Number(editPricing.cacheRate) : null,
     })).data,
     onSuccess: (d: any) => { toast.success(d?.data?.message ?? "价格更新成功"); setEditPricing(null); qc.invalidateQueries({ queryKey: ["admin-pricing"] }); },
     onError: (e) => toast.error(extractError(e)),
@@ -49,7 +52,7 @@ export default function AdminPricingPage() {
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <h2 style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
         🏷️ 价格管理
-        <HelpIcon text="平台标价管理，支持模型定价配置。" level="page" />
+        <HelpIcon text="平台标价管理：配置每个模型的输入/输出单价（¥/1K tokens）与缓存命中折扣率。缓存命中折扣率（0-1）为空时跟随全局「系统设置 → 计费策略 → 缓存命中折扣率」（默认 0.1）；设置了则此模型命中部分按 全价 × 折扣率 计费。" level="page" />
       </h2>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
@@ -68,6 +71,7 @@ export default function AdminPricingPage() {
                 <th style={{ padding: "8px" }}>供应商</th>
                 <th style={{ padding: "8px" }}>输入价格/1K</th>
                 <th style={{ padding: "8px" }}>输出价格/1K</th>
+                <th style={{ padding: "8px" }}>缓存命中折扣率 <HelpIcon text="缓存命中 token 按「全价 × 此折扣率」计费；「-」表示未配置，跟随全局「系统设置 → 计费策略」默认值（0.1）。" /></th>
                 <th style={{ padding: "8px" }}>状态</th>
                 <th style={{ padding: "8px" }}>操作</th>
               </tr>
@@ -79,10 +83,13 @@ export default function AdminPricingPage() {
                   <td style={{ padding: "8px", color: "var(--color-text-secondary)" }}>{p.vendor_name ?? "-"}</td>
                   <td style={{ padding: "8px", fontWeight: 600 }}>¥{p.input_price_per_1k.toFixed(4)}</td>
                   <td style={{ padding: "8px", fontWeight: 600 }}>¥{p.output_price_per_1k.toFixed(4)}</td>
+                  <td style={{ padding: "8px", color: p.cache_discount_rate != null ? "var(--color-primary)" : "var(--color-text-secondary)" }}>
+                    {p.cache_discount_rate != null ? `${(p.cache_discount_rate * 100).toFixed(1)}%` : "—（跟随全局）"}
+                  </td>
                   <td style={{ padding: "8px" }}><StatusBadge status={STATUS_MAP[p.status] ?? "success"}>{p.status_label}</StatusBadge></td>
                   <td style={{ padding: "8px" }}>
                     <button
-                      onClick={() => setEditPricing({ id: p.id, model_name: p.model_name, input: String(p.input_price_per_1k), output: String(p.output_price_per_1k) })}
+                      onClick={() => setEditPricing({ id: p.id, model_name: p.model_name, input: String(p.input_price_per_1k), output: String(p.output_price_per_1k), cacheRate: p.cache_discount_rate != null ? String(p.cache_discount_rate) : "" })}
                       style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-primary)", padding: "4px 10px" }}
                     >
                       编辑
@@ -103,6 +110,11 @@ export default function AdminPricingPage() {
 
             <label style={{ fontSize: 13, color: "var(--color-text-secondary)", display: "block", marginBottom: 4 }}>输出价格 / 1K tokens</label>
             <input value={editPricing.output} onChange={(e) => setEditPricing({ ...editPricing, output: e.target.value })} type="number" step="0.0001" min="0" style={inp} />
+
+            <label style={{ fontSize: 13, color: "var(--color-text-secondary)", display: "block", marginBottom: 4 }}>
+              缓存命中折扣率（0-1） <HelpIcon text="缓存命中 token 按「全价 × 此折扣率」计费。留空 = 未配置，跟随全局「系统设置 → 计费策略 → 缓存命中折扣率」（默认 0.1）。示例：0.1 = 命中按 10% 计费，0.5 = 按 50%。" />
+            </label>
+            <input value={editPricing.cacheRate} onChange={(e) => setEditPricing({ ...editPricing, cacheRate: e.target.value })} type="number" step="0.01" min="0.01" max="1" placeholder="留空跟随全局（默认 0.1）" style={inp} />
 
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setEditPricing(null)} style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-text)" }}>取消</button>

@@ -126,12 +126,47 @@ Completion 费用 = completion_tokens × output_price / 1,000,000
 实际扣费 = 总费用 × discount_rate（用户折扣率）
 ```
 
+**缓存命中打折（§3.2.1 可配置）**：上游 usage 返回缓存命中 token 时，
+`Prompt 费用 = 命中 × input_price × 缓存折扣率 / 1,000,000 + 未命中 × input_price / 1,000,000`
+
 **精度规则**：
 - 费用计算保留 6 位小数
 - 最低扣费 ¥0.000001（不足 1 token 的场景）
 - 余额以 0 为边界：`Math.max(0, balanceBefore - cost)` 确保余额不会低于 0 写入
 - 但请求检查允许小额透支：余额低于 0 但高于 `-alert_stop_balance`（默认 -10 元）时仍可继续消费
 - 余额低于 `-alert_stop_balance` 时返回 402 BALANCE_EXHAUSTED
+
+### 3.2.1 缓存命中打折计费（可配置）
+
+> **背景**：部分上游在 usage 中返回缓存命中字段，命中部分应按折扣价计费（参考 New API「缓存命中打折计费」）。
+
+**上游格式对照（usage 归一化）**：
+
+| 上游 | 字段 | 说明 |
+|------|------|------|
+| DeepSeek | `prompt_cache_hit_tokens` / `prompt_cache_miss_tokens` | 命中/未命中成对出现，官方命中按 10% 计费 |
+| Anthropic | `cache_read_input_tokens` | 读取命中打折；`cache_creation_input_tokens`（写入缓存）全价不计入命中 |
+| OpenAI | `prompt_tokens_details.cached_tokens` | 命中数量，官方按 50% 计费 |
+
+**计费公式**（¥ / 1K tokens 单价下）：
+```
+费用 = 命中 × 输入价 × 折扣率 + (输入 - 命中) × 输入价 + 输出 × 输出价
+（无缓存字段/命中为 0 → 与全价公式完全一致；命中超输入上限时收敛到输入数）
+```
+
+**折扣率三级配置（优先级从高到低）**：
+
+| 层级 | 配置位置 | 默认值 | 说明 |
+|------|---------|--------|------|
+| 1. 模型级 | `vendor_pricing.cache_discount_rate`（价格管理页逐模型） | null（跟随全局） | 合法区间 (0, 1]；空/非法回退下一级 |
+| 2. 全局 | `system_config.billing.cache_hit_discount`（系统设置 → 计费策略） | 0.1 | 合法区间 (0, 1]；Redis 缓存 60s，后台修改即时失效 |
+| 3. 代码兜底 | `cache-billing.ts CACHE_HIT_DISCOUNT` | 0.1 | 前两级均不可用时生效 |
+
+**落库审计**（`consumption_records`）：
+- `cache_hit_tokens`：缓存命中 token 数（integer，可空）
+- `cache_discount`：打折省下的金额（全价 − 折后价，numeric(18,8)，可空）
+
+**生效范围**：作用于非流式响应（上游 usage 携带缓存字段）；流式场景沿用全价计费。
 
 ### 3.3 缓存策略
 
@@ -255,13 +290,23 @@ outputPrice: numeric("output_price", { precision: 18, scale: 6 }).notNull().defa
 costInputPrice: numeric("cost_input_price", { precision: 18, scale: 6 }),   // L0 供应商成本
 costOutputPrice: numeric("cost_output_price", { precision: 18, scale: 6 }),
 
+// vendor_pricing 表（价格管理页载体）— 模型级缓存命中折扣率（可空，回退全局）
+cacheDiscountRate: varchar("cache_discount_rate", { length: 10 }),  // 0-1，如 0.1 = 命中按 10% 计费
+
 // models 表中的覆盖价格
 overrideInputPrice: numeric("override_input_price", { precision: 18, scale: 6 }),  // L2 模型覆盖价
 overrideOutputPrice: numeric("override_output_price", { precision: 18, scale: 6 }),
 
 // users 表中的折扣率
 discountRate: numeric("discount_rate", { precision: 5, scale: 4 }).default("1.0000"),
+
+// consumption_records 表 — 缓存命中审计
+cacheHitTokens: integer("cache_hit_tokens"),                 // 缓存命中 token 数（可空）
+cacheDiscount: numeric("cache_discount", { precision: 18, scale: 8 }),  // 打折省下的金额（元，可空）
 ```
+
+**全局缓存命中折扣率**：`system_config.billing.cache_hit_discount`（默认 `0.1`，合法区间 `(0, 1]`），
+后台入口：系统设置 → 计费策略 → 缓存命中折扣率；修改后 Redis 缓存 60s 内失效即时生效。
 
 ### 5.2 计费日志表
 
@@ -344,6 +389,10 @@ export const invoices = pgTable("invoices", {
 | `GET` | `/api/v1/admin/billing/reconciliation` | 对账结果 | finance_ops 以上 |
 | `GET` | `/api/v1/admin/billing/reconciliation/detail` | 对账差异详情 | finance_ops 以上 |
 | `POST` | `/api/v1/admin/billing/reconciliation/resolve` | 处理对账差异 | finance_ops 以上 |
+| `GET` | `/api/v1/admin/settings` | 系统设置汇总（含 `billing.cache_hit_discount` 全局折扣率） | admin 以上 |
+| `PUT` | `/api/v1/admin/settings/billing` | 保存计费设置（预扣阈值 + 缓存命中折扣率，即时失效缓存） | admin 以上 |
+| `GET` | `/api/v1/admin/pricing` | 定价列表（含模型级 `cache_discount_rate`） | admin 以上 |
+| `PUT` | `/api/v1/admin/pricing/:id` | 更新定价（单价 + 模型级缓存折扣率，留空回退全局） | admin 以上 |
 
 ---
 
@@ -358,16 +407,17 @@ export const invoices = pgTable("invoices", {
 │ 修改后影响全部模型的标准售价                            │
 │                                                       │
 │ ┌─ 供应商价格 ─────────────────────────────────────┐ │
-│ │ 模型名称   | 成本价(in/out) | 标准价(in/out) | 覆盖价 | │
-│ │ gpt-4o     | 0.01/0.03     | 0.015/0.045   | —    │ │
-│ │ deepseek   | 0.001/0.002   | 0.0015/0.003  | —    │ │
-│ │ claude-3   | 0.015/0.045   | 0.0225/0.0675 | —    │ │
+│ │ 模型名称   | 成本价(in/out) | 标准价(in/out) | 覆盖价 | 缓存折扣率 |
+│ │ gpt-4o     | 0.01/0.03     | 0.015/0.045   | —    | 0.1 (10%) |
+│ │ deepseek   | 0.001/0.002   | 0.0015/0.003  | —    | —(跟随全局) |
+│ │ claude-3   | 0.015/0.045   | 0.0225/0.0675 | —    | 0.5 (50%) |
 │ └──────────────────────────────────────────────────┘ │
 │                                                       │
 │ 编辑模型覆盖价:                                       │
 │ 模型: [gpt-4o                     ▼]                 │
 │ 覆盖输入价: [0.0200] ¥/1K tokens（空=使用标准价）     │
 │ 覆盖输出价: [0.0500] ¥/1K tokens                     │
+│ 缓存命中折扣率: [0.1] 0-1（空=跟随全局默认 0.1）      │
 │ [保存]                                                │
 └──────────────────────────────────────────────────────┘
 ```

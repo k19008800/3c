@@ -404,7 +404,7 @@ interface GenerateSettlementResult {
 | Token 计量差异 | 双方 Token 计数算法不同 | 按供应商计价规范重新核算 |
 | 单价不符 | 合同价格与系统配置价不一致 | 检查 vendor_models 配置，如配置错误需修正后重新生成 |
 | 折扣未生效 | 双方约定的批量折扣未体现在结算单 | 补充 discount 字段记录，需审批确认 |
-| 缓存计费 | 缓存命中的 Token 按不同单价计算 | 检查 cachePrice 配置是否与合同一致 |
+| 缓存计费 | 缓存命中的 Token 按不同单价计算 | 检查 `vendor_pricing.cache_discount_rate`（模型级）与 `system_config.billing.cache_hit_discount`（全局默认 0.1）是否与合同一致 |
 
 ### 5.2 争议处理流程（完整版）
 

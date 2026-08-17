@@ -258,6 +258,8 @@
 | `completion_tokens` | 输出 Token 数 | 整数 | 计费依据 |
 | `total_tokens` | 总 Token 数 | prompt + completion | 计费依据 |
 | `cost` | 本次调用费用 | 精度 18.6，单位 ¥ | 扣减用户余额 |
+| `cache_hit_tokens` | 缓存命中 Token 数 | 整数，可空；上游 usage 返回缓存字段时才有值 | 缓存命中打折计费（§2.6 说明） |
+| `cache_discount` | 缓存命中打折省下的金额 | 精度 18.8，单位 ¥，可空（全价 − 折后价） | 计费审计 |
 | `duration_ms` | 响应时间 | 毫秒，从发起到收到完整响应 | 性能监控 |
 | `status` | 调用状态 | 枚举，见 §1.7 | 监控指标 |
 | `is_streaming` | 是否流式 | 布尔值 | 计费方式区分 |
@@ -322,6 +324,8 @@
 | `cost_output_price` | 输出成本价 | 精度 18.6 | 毛利率计算 |
 | `status` | 映射状态 | active / disabled | 可用性控制 |
 | `key_group_id` | 关联的 Key 资源池 | 可选 | 路由到具体 Key 池 |
+
+> **缓存命中打折计费**（详见 `ref-5.2-billing.md §3.2.1`）：上游（DeepSeek `prompt_cache_hit_tokens` / Anthropic `cache_read_input_tokens` / OpenAI `prompt_tokens_details.cached_tokens`）返回缓存命中 token 时，命中部分按 `全价 × 折扣率` 计费。折扣率三级配置：① 模型级 `vendor_pricing.cache_discount_rate`（varchar(10)，可空，(0,1]）；② 全局 `system_config.billing.cache_hit_discount`（默认 0.1，(0,1]）；③ 代码兜底 0.1。命中数/折扣金额落 `consumption_records.cache_hit_tokens` / `cache_discount`。
 
 ### 2.7 recharge_orders（充值订单表）
 

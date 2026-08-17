@@ -69,6 +69,8 @@ export default function AdminSettingsPage() {
 
   // 计费（P0-1 阈值旁路）：余额 > 阈值 → 不预扣直接转发；≤ 阈值 → Redis Lua 预扣
   const [billingThreshold, setBillingThreshold] = useState(100);
+  // 计费（缓存命中打折）：上游返回缓存命中 token 时，命中部分按全价 × 折扣率计费（默认 0.1）
+  const [cacheDiscountRate, setCacheDiscountRate] = useState(0.1);
 
   useEffect(() => {
     setLoading(true);
@@ -105,6 +107,7 @@ export default function AdminSettingsPage() {
       setWithdrawEnabled(d.withdraw_enabled ?? true);
       setApiDomain(d.api_domain ?? "api.unmisa.com");
       setBillingThreshold(Number(d["billing.balance_threshold"] ?? 100));
+      setCacheDiscountRate(Number(d["billing.cache_hit_discount"] ?? 0.1));
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -135,7 +138,7 @@ export default function AdminSettingsPage() {
     toast.success("API 域名已保存");
   }
   async function saveBilling() {
-    await api.put("/admin/settings/billing", { "billing.balance_threshold": billingThreshold });
+    await api.put("/admin/settings/billing", { "billing.balance_threshold": billingThreshold, "billing.cache_hit_discount": cacheDiscountRate });
     toast.success("计费设置已保存");
   }
 
@@ -293,11 +296,16 @@ export default function AdminSettingsPage() {
 
       {tab === "billing" && (
         <div style={cfgSection}>
-          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}>💰 计费策略（余额预扣阈值） <HelpIcon text="余额预扣阈值旁路：用户可用余额 &gt; 此阈值 → 不预扣、直接转发、响应后按实际用量扣费（零延迟）；余额 ≤ 阈值 → 请求前 Redis Lua 原子冻结（available → frozen），响应后多退少补。阈值本身即防打爆屏障（单次请求费用天然有 max_tokens 封顶）。" /></h3>
+          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}>💰 计费策略（预扣阈值 + 缓存命中折扣） <HelpIcon text="① 余额预扣阈值旁路：用户可用余额 &gt; 此阈值 → 不预扣、直接转发、响应后按实际用量扣费（零延迟）；余额 ≤ 阈值 → 请求前 Redis Lua 原子冻结（available → frozen），响应后多退少补。② 缓存命中折扣率：上游（DeepSeek/Anthropic/OpenAI）返回缓存命中 token 时，命中部分按「全价 × 折扣率」计费（默认 0.1 = 10%），模型级可在「价格管理」页逐模型覆盖。" /></h3>
           <div style={cfgRow}>
             <span style={cfgLabel}>预扣阈值（元） <HelpIcon text="单位：元。余额大于此值走旁路（事后扣费），小于等于此值走预扣冻结。建议保持默认 ¥100；过低会让小额用户承担预扣冻结延迟，过高会让大额用户暴露在透支窗口。" /></span>
             <input style={cfgInput} type="number" min={0} step={10} value={billingThreshold} onChange={e => setBillingThreshold(Number(e.target.value))} />
             <span style={{ fontSize: 12, color: "#888" }}>元 · 保存后即时生效（Redis 缓存 60s 内失效）</span>
+          </div>
+          <div style={cfgRow}>
+            <span style={cfgLabel}>缓存命中折扣率 <HelpIcon text="单位：比例（0-1）。上游返回缓存命中 token 时，命中部分按全价 × 此比例计费，未命中部分仍按全价。示例：0.1 = 命中部分按 10% 计费（DeepSeek 官方口径），0.5 = 按 50%（OpenAI 官方口径）。置 1 = 命中不优惠。修改后即时生效。" /></span>
+            <input style={cfgInput} type="number" min={0.01} max={1} step={0.01} value={cacheDiscountRate} onChange={e => setCacheDiscountRate(Number(e.target.value))} />
+            <span style={{ fontSize: 12, color: "#888" }}>0-1 · 模型级覆盖见「价格管理」页</span>
           </div>
           <div style={{ margin: "16px 0 6px", fontSize: 13, fontWeight: 600, color: "#333" }}>
             📖 旁路模式说明 <HelpIcon text="旁路（余额 &gt; 阈值）：不预扣、零延迟，响应后按实际用量扣费；极端并发竞态下余额可能扣成负数 → 允许记负并写入风控事件（risk_events），该用户后续请求自动转预扣直到充值回正。预扣（余额 ≤ 阈值）：请求前冻结预估费用（输入 tokens 实算 + 输出按 max_tokens 封顶估算），响应后按实际用量多退少补；上游失败/超时自动解冻（Redis TTL 兜底）。" />
@@ -306,9 +314,10 @@ export default function AdminSettingsPage() {
             <div>余额 &gt; <span style={{ color: "#34d399" }}>{billingThreshold}</span> 元&nbsp;&nbsp;→&nbsp;&nbsp;旁路：直接转发，事后按实际用量扣费（零延迟）</div>
             <div>余额 ≤ <span style={{ color: "#fbbf24" }}>{billingThreshold}</span> 元&nbsp;&nbsp;→&nbsp;&nbsp;预扣：Redis Lua 冻结（available → frozen）+ 多退少补</div>
             <div>记负兜底&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→&nbsp;&nbsp;旁路扣费后余额 &lt; 0 → 写 risk_events，后续强制预扣直到充值回正</div>
+            <div>缓存命中&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→&nbsp;&nbsp;费用 = 命中 × 输入价 × <span style={{ color: "#34d399" }}>{cacheDiscountRate}</span> + 未命中 × 输入价 + 输出 × 输出价（命中 token 按 /1K 折算）</div>
           </div>
           <div style={{ fontSize: 12, color: "#888", marginTop: 10 }}>
-            💡 配置键：<code>system_config.billing.balance_threshold</code>（默认 100），修改写入操作审计日志。
+            💡 配置键：<code>system_config.billing.balance_threshold</code>（默认 100）、<code>system_config.billing.cache_hit_discount</code>（默认 0.1）；修改写入操作审计日志，Redis 缓存 60s 内失效即时生效。
           </div>
           <button onClick={saveBilling} style={{ marginTop: 16, padding: "8px 24px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存计费设置</button>
         </div>
