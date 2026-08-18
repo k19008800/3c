@@ -1,0 +1,11 @@
+approved: 2026-08-18
+by: dispatch-agent
+gates:
+  typecheck: 0 errors (api / web-console / web-portal)
+  vitest: 808/808 passed (52 files)
+  verify: 17/17 passed
+  e2e: 10/10 passed (playwright msedge)
+  build: shared / api / web-console / web-portal all passed
+  accounting: consumption == balance_transactions == balance delta (exact)
+  stress: 9/9 passed (20 concurrent requests, no double-billing, no frozen residue)
+note: 生产服仍为空（2026-08-16 已清空），部署执行需 BOSS 最终确认后按 deploy/deployment-runbook.md 进行
