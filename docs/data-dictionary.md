@@ -116,12 +116,14 @@
 
 ### 1.11 代理商等级
 
-| 枚举值 | 显示名称 | 晋升条件 | 佣金率范围 | 客户数上限 |
-|-------|---------|---------|-----------|-----------|
-| `preparatory` | 预备代理 | 注册即自动获得 | 10% | 5 |
-| `primary` | 一级代理 | 月消费 ≥ ¥10,000 或客户 ≥ 20 | 15-25% | 100 |
-| `advanced` | 高级代理 | 月消费 ≥ ¥100,000 或客户 ≥ 200 | 25-40% | 不限 |
-| `sub` | 子代理 | 隶属于一级代理 | 由一级代理配置 | 受一级代理限制 |
+| 枚举值 | 显示名称 | 晋升条件 | 佣金率范围 | 客户数上限 | 状态（后台主导版） |
+|-------|---------|---------|-----------|-----------|------|
+| `preparatory` | 预备代理 | ~~注册即自动获得~~ **后台「设为代理商」** | 10% | 5 | 无自助获得 |
+| `primary` | 一级代理 | ~~月消费 ≥ ¥10,000 或客户 ≥ 20~~ **后台设定** | 15-25% | 100 | 等级仅后台可调 |
+| `advanced` | 高级代理 | ~~月消费 ≥ ¥100,000 或客户 ≥ 200~~ **后台设定** | 25-40% | 不限 | 等级仅后台可调 |
+| ~~`sub`~~ | ~~子代理~~ | ~~隶属于一级代理~~ | ~~由一级代理配置~~ | ~~受一级代理限制~~ | **已移除（D1：单级分销）** |
+
+> 注：依据 [`PRD-代理商体系-后台主导版.md`](PRD-代理商体系-后台主导版.md)（D1/D2），代理商身份由后台「设为代理商」创建（等级+佣金档位），**无注册/升级入口**；无子代理层级。
 
 ### 1.12 提现状态
 
@@ -363,25 +365,27 @@
 | `id` | 代理商标识 | 自增 | — |
 | `user_id` | 对应的用户 ID | 唯一，一个用户只能是一个代理 | users.id |
 | `level` | 代理等级 | 枚举，见 §1.11 | 权益计算 |
-| `parent_agent_id` | 上级代理 | 可为 NULL（一级代理） | 代理层级 |
+| `parent_agent_id` | ~~上级代理~~ | ~~可为 NULL（一级代理）~~ **已移除（D1：单级，无上下级代理）** | — |
 | `commission_rate` | 自定义佣金率 | 精度 5.4，覆盖等级默认值 | 佣金计算 |
 | `total_commission` | 累计佣金 | 汇总字段 | 展示 |
 | `pending_balance` | 可提现余额 | 精度 18.6 | 提现限制 |
 | `status` | 代理状态 | active / disabled | 分佣控制 |
 | `created_at` | 成为代理时间 | 自动设置 | — |
 
-### 2.10 commission_logs（佣金流水表）
+### 2.10 agent_commissions（佣金流水表）
+
+> ⚠️ 旧模型文档中的 `commission_logs` 已演化为 **`agent_commissions`**（当前实现）：字段为 `id, agent_id, customer_user_id, consumption_record_id, amount, rate, status(pending/settled/cancelled), settled_at, created_at`；`consumption_record_id` 唯一索引保证幂等（同一笔消费只产生一条佣金）。
 
 | 字段 | 业务含义 | 约束/规则 | 关联 |
 |------|---------|----------|------|
 | `id` | 流水唯一标识 | 自增 | — |
-| `agent_id` | 代理商 | NOT NULL | agents.id |
-| `user_id` | 消费用户 | NOT NULL | users.id |
-| `call_log_id` | 关联调用日志 | NOT NULL | call_logs.id |
-| `commission_amount` | 佣金金额 | 精度 18.6 | 佣金计算 |
-| `commission_rate` | 佣金率 | 当时生效的佣金率 | 计算验证 |
+| `agent_id` | 归属代理商 | NOT NULL | agents.id |
+| `customer_user_id` | 消费用户 | NOT NULL | users.id |
+| `consumption_record_id` | 关联消费记录 | NOT NULL，唯一索引 | consumption_records.id |
+| `amount` | 佣金金额 | 精度 18.4 | 佣金计算 |
+| `rate` | 佣金率 | 当时生效的佣金率 | 计算验证 |
 | `status` | 佣金状态 | 枚举，见 §1.13 | 结算控制 |
-| `settled_at` | 结算时间 | 结算时设置 | 财务核算 |
+| `settled_at` | 结算时间 | 实时结算时设置 | 财务核算 |
 | `created_at` | 记录时间 | 自动设置 | — |
 
 ### 2.11 withdraw_requests（提现申请表）
@@ -470,16 +474,25 @@
 - 消费时先扣 `api_keys.quota_balance`（Key 独立余额），再扣 `users.balance`（用户余额）
 - 余额可低至负数（欠费模式），但欠费超过 ¥50 后 API 路由返回 402
 
-### 3.2 佣金计算规则
+### 3.2 佣金计算规则（单级 · 按消费时刻归属解析）
 
 ```
-佣金 = 用户消费金额 × 代理商佣金率（commission_rate）
+佣金 = 归属客户消费金额 × 代理商佣金率（commission_rate）
+
+归属解析（消费时刻）：
+  SELECT agent_user_id FROM agent_customer_bindings
+  WHERE customer_user_id = $1 AND status = 'active'
+    AND bound_at <= $2            -- $2 = 消费发生时刻
+    AND (unbound_at IS NULL OR unbound_at > $2)
+  LIMIT 1;
+  -- 命中 → 佣金计入该代理；未命中 → 该笔消费不计佣金
 ```
 
-- 佣金率在代理等级范围内，由管理员配置
-- 佣金记录在 `commission_logs`，按日汇总
-- 结算周期：月结（每月 1 日自动结算上月佣金）
-- 用户退款时，对应佣金自动冲正
+- 佣金率由管理员（后台）配置，等级/佣金档位仅后台可调（无自助升级）
+- 佣金记录在 `agent_commissions`，按消费时刻归属解析入账，`consumption_record_id` 唯一索引幂等
+- 结算周期：实时 settled（消费发生时入账）+ 月结对账
+- 用户退款时，对应佣金自动冲正（置 cancelled 并回冲代理余额）
+- **单级**：无多级抽成/团队分润（D1）
 
 ### 3.3 提现双审规则
 

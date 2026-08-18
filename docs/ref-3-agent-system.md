@@ -4,6 +4,12 @@
 > **状态**：基于现有后端代码（`api/src/db/schema/agents.ts`、`api/src/routes/admin/agents.ts`、`api/src/routes/admin/finance/withdraws.ts`、`api/src/routes/agent/*.ts`）及前端组件分析生成
 > **粒度**：Drizzle Schema → API 接口 → 前端组件 Props → 业务流程图 → 交叉引用
 
+> ⚠️ **模型对齐（重要）**：本参考文档基于**旧版自助代理模型**（三级审核晋升、子代理/团队层级、邀请裂变绑定、多级抽成）分析生成，其中以下内容已被已定稿的 [`PRD-代理商体系-后台主导版.md`](PRD-代理商体系-后台主导版.md) 覆盖移除，**以后台主导版（报备划拨制）为准**：
+> - **代理商准入**：无注册/升级入口；代理商身份由后台「设为代理商」创建，等级/佣金档位仅后台可调（D：单级、隐蔽）。
+> - **客户归属**：唯一来源 = 报备划拨（代理商报备 → 后台审核 → 自动划拨）；归属唯一、变更留审计；**无邀请裂变/邀请码自助绑定**（D2）。
+> - **佣金**：单级，按「消费时刻归属」解析计佣；**无多级抽成/团队分润**（D1）。
+> - 本文档中「绑定客户」「邀请链接」「子代理」「团队佣金」等表述均为旧模型残留，读者请勿据此实现。
+
 ---
 
 ## 目录
@@ -23,9 +29,12 @@
 
 | 枚举值 | 层级 | 准入条件 | 权益 | 审核方 | 默认佣金率 |
 |--------|------|---------|------|--------|-----------|
-| `preparatory` | 预备 | 注册+实名 | 查看佣金规则，**不能提现** | 自动 | 0% |
-| `primary` | 一级 | 实名+资质审核 | 全功能面板、自定义佣金、可提现 | `agent_mgr` 审核 | 10% |
-| `advanced` | 高级 | 月调用 > 100 万 Token | 专属客户经理、优先支持、阶梯佣金 | `super_admin` 审批 | 12-18% |
+| 枚举值 | 层级 | 准入条件 | 权益 | 审核方 | 默认佣金率 | 状态（后台主导版） |
+|--------|------|---------|------|--------|-----------|------|
+| `preparatory` | 预备 | ~~注册+实名~~ **后台「设为代理商」** | 查看佣金规则，**不能提现** | ~~自动~~ **后台创建** | 0% | 等级仅后台可设，无自助获得 |
+| `primary` | 一级 | ~~实名+资质审核~~ **后台「设为代理商」** | 全功能面板、自定义佣金、可提现 | ~~`agent_mgr` 审核~~ **后台** | 10% | 等级仅后台可设 |
+| `advanced` | 高级 | ~~月调用 > 100 万 Token~~ **后台「设为代理商」** | 专属客户经理、优先支持、阶梯佣金 | ~~`super_admin` 审批~~ **后台** | 12-18% | 等级仅后台可设 |
+| ~~`sub`~~ | ~~子代理~~ | ~~由一级代理创建~~ | — | — | — | **已移除（D1：单级，无子代理层级）** |
 
 ### 1.2 审核状态流转（enum: `agent_audit_status_enum`）
 
@@ -49,9 +58,9 @@ export const agents = pgTable("agents", {
   auditedBy: integer("audited_by").references(() => users.id),
   auditedAt: timestamp("audited_at", { withTimezone: true }),
 
-  // 团队层级（子代理）
-  parentAgentId: integer("parent_agent_id").references((): AnyPgColumn => agents.id),
-  teamDepth: integer("team_depth").default(0),
+  // 团队层级（子代理）—— ⚠️ 已移除（D1：单级分销，不实现）
+  // parentAgentId: integer("parent_agent_id").references(...)  // 不实现
+  // teamDepth: integer("team_depth").default(0)               // 不实现
 
   // 高级代理专有
   accountManager: varchar("account_manager", { length: 128 }),
@@ -60,7 +69,7 @@ export const agents = pgTable("agents", {
   // ...财务字段见下文
 }, (table) => ({
   userIdIdx: uniqueIndex("agents_user_id_idx").on(table.userId),
-  parentIdx: index("agents_parent_idx").on(table.parentAgentId),
+  // parentIdx: index("agents_parent_idx").on(table.parentAgentId),  // 已移除（D1：单级，无上下级）
   levelIdx: index("agents_level_idx").on(table.level),
 }));
 ```
@@ -337,24 +346,24 @@ agent/commissions/CommissionSettings.tsx
 └── 规则生效时间："立即生效" / "下个结算周期"
 ```
 
-### 2.5 佣金计算引擎要点
+### 2.5 佣金计算引擎要点（单级 · 按消费时刻归属解析）
 
-参考 `api/src/services/billing/commission.ts`：
+> ⚠️ 依据后台主导版（D1/D7）：佣金**单级**、按**消费时刻的客户归属**解析，无 team/多级抽成。
 
 ```
-用户消费产生 call_log → billing 模块扣费
-  → 查询用户的代理绑定关系（agent_clients）
-  → 查询该代理的 commission_rules（按优先级：activity > team > renewal > sale）
-  → 计算佣金金额 = 消费 × rate（或 fixedAmount）
-  → 写入 commission_logs（状态 pending）
-  → 更新 agents.total_commission
+用户消费产生 consumption_record → billing 模块扣费
+  → 按消费时刻解析客户归属：agent_customer_bindings 中
+    bound_at <= 消费时刻 < unbound_at（或 status=active 未解绑）的 active 记录
+  → 命中归属代理 → 佣金 = 消费金额 × 该代理佣金率（commission_rate）
+  → 写入 agent_commissions（幂等：consumption_record_id 唯一索引）
+  → 同步更新 agents.available_balance / total_earnings（实时 settled）
+  → 未命中归属 → 该消费不计佣金（客户无归属代理）
 ```
 
-**关键优先级**（高→低）：
-1. `activity` 活动佣金（固定金额或特别费率）
-2. `team` 团队佣金（上级代理从子代理佣金中分润）
-3. `renewal` 续费佣金（老客户续费）
-4. `sale` 标准销售佣金
+**归属解析（单级，无 team 优先级）**：
+1. 归属唯一：同一客户同一时刻仅一条 active 归属（UNIQUE(customer, status)）
+2. 佣金切分边界：以「划拨执行时刻（bound_at）」为界，之前归属原代理、之后归属新代理
+3. 退款冲销：佣金 cancelled 并回冲代理余额（幂等）
 
 ---
 
@@ -443,17 +452,20 @@ interface AgentDashboardProps {
 
 ### 3.4 客户列表（代理端）
 
+> ⚠️ 旧模型为「邀请绑定/解绑」，新模型（后台主导版）为「归属客户」：归属由报备划拨产生，代理端仅可查看与报备，**不可自助绑定/解绑**。
+
 ```
-agent-clients list
+agent-clients list（归属客户）
 ├── 列表（表格）
 │   ├── 客户名称
-│   ├── 绑定时间
+│   ├── 归属时间
 │   ├── 累计消费
 │   ├── 本月消费
-│   └── 操作（查看详情/解绑）
+│   └── 操作（查看详情）
 │
-├── 搜索/筛选（按名称、绑定时间范围）
-└── 邀请链接 / 邀请码复制按钮
+├── 搜索/筛选（按名称、归属时间范围）
+└── 「报备目标客户」入口（新增报备 → 后台审核 → 自动划拨）
+```
 ```
 
 ---
@@ -805,42 +817,39 @@ interface SettlementListProps {
 
 ## 6. 跨模块数据流
 
-### 6.1 核心调用链
+### 6.1 核心调用链（单级 · 按消费时刻归属）
 
 ```
-[calling log created]
+[consumption_record created]
       ↓
 [billing/commission.ts]
-  1. 查询用户是否绑定了 agent（agent_clients）
-  2. 查询该 agent 的 commission_rules（按优先级排序）
-  3. 计算佣金金额
-  4. 写入 commission_logs（status=pending）
-  5. 更新 agents.total_commission
+  1. 按消费时刻解析客户归属（agent_customer_bindings：bound_at <= 消费时刻 < unbound_at 的 active 记录）
+  2. 命中归属代理 → 佣金 = 消费金额 × 该代理 commission_rate
+  3. 写入 agent_commissions（status=settled，实时入账；consumption_record_id 唯一索引幂等）
+  4. 同步更新 agents.available_balance / total_earnings
+  5. 未命中归属 → 该笔消费不计佣金
       ↓
-[commission_logs 每日聚合]
-  写入 commission_daily_rollup
+[退款冲销]
+  消费退款 → 对应佣金置 cancelled + 回冲代理余额（幂等）
       ↓
-[结算触发（手动/自动）]
-  1. 拉取 period 内 pending 状态的 commission_logs
-  2. 写入 settlement_cycles / agent_settlements / settlement_details
-  3. 标记 commission_logs.status = settled
-  4. 更新 agents.settled_commission
+[结算/对账]
+  按 agent_commissions 汇总生成结算单（月结），对账见 SPEC-§29
       ↓
 [代理发起提现]
-  1. 风控检查 → riskCheckResult 存入 withdraw_orders
+  1. 风控检查 → 提现单
   2. 初审 → 复审 → 打款
-  3. 更新 agents.pending_withdraw / frozen_amount
+  3. 更新 agents.available_balance / 冻结金额
 ```
 
 ### 6.2 依赖模块
 
 | 模块 | 依赖关系 | 说明 |
 |------|---------|------|
-| `billing/commission.ts` | → `agent_clients` / `commission_rules` / `commission_logs` | 每次消费触发佣金计算 |
-| `agent-finance.ts` | → `agents` / `commission_logs` / `withdraw_orders` | 代理财务摘要 |
-| `agent-settlement.ts` | → `commission_logs` / `settlement_cycles` / `agent_settlements` | 结算引擎 |
+| `billing/commission.ts` | → `agent_customer_bindings` / `agents.commission_rate` / `agent_commissions` | 每次消费按消费时刻归属触发佣金计算（单级） |
+| `agent-finance.ts` | → `agents` / `agent_commissions` / `agent_withdrawals` | 代理财务摘要 |
+| `agent-settlement.ts` | → `agent_commissions` / 结算单 | 结算引擎 |
 | `agent-withdraw.ts` | → `agents` / `withdraw_orders` / `users` | 提现审核流 |
-| `stats-usage-service/agent.ts` | → `call_logs` / `agent_clients` | 代理端统计 |
+| `stats-usage-service/agent.ts` | → `consumption_records` / `agent_customer_bindings` | 代理端统计（归属客户） |
 
 ### 6.3 关联文档
 
@@ -858,7 +867,7 @@ interface SettlementListProps {
 2. **可提现余额公式**：`settledCommission - pendingWithdraw - frozenAmount - redemptionLocked`
 3. **审核不可逆**：reject 操作需记录原因，且不自动恢复 agent 余额冻结
 4. **结算独立于提现**：结算只是将佣金从 pending 转为 settled，提现是另一条审批链路
-5. **子代理分润**：`team` 类型佣金 = 子代理佣金的 N%（由 `teamLevelLimit` 和上级 `commission_rules` 决定）
+5. **佣金单级**：无 team/子代理分润（D1）；佣金仅按消费时刻归属的代理 × 自身佣金率计算
 
 ---
 
@@ -879,7 +888,7 @@ interface SettlementListProps {
 | 佣金规则配置错误 | 自动校验 | 阶梯阈值重叠、佣金率 > 100%、阶梯缺失 | P0 |
 | 计费流水缺失 | 对账对比 | 消费记录存在但佣金记录缺失 | P0 |
 | 佣金重复计算 | 幂等性检查 | 同一消费记录出现多笔佣金 | P0 |
-| 多级代理重复计算 | 逻辑校验 | 同一用户在多个代理名下产生佣金 | P0 |
+| ~~多级代理重复计算~~ | ~~逻辑校验~~ | ~~同一用户在多个代理名下产生佣金~~ | **已废弃（D1：单级归属，UNIQUE(customer,status) 保证唯一）**；改为校验：同一消费时刻归属解析命中数 > 1 即异常 |
 | 佣金率异常波动 | 环比检查 | 佣金率环比波动 > 20%（无规则变更） | P1 |
 | 佣金封顶溢出 | 数值检查 | 佣金金额 > maxCap 但未截断 | P1 |
 
@@ -925,7 +934,7 @@ flowchart TD
     K --> L[自动回收多付佣金]
     
     B -->|多级代理冲突| M[运营确认代理归属]
-    M --> N[修正 agent_clients 关联]
+    M --> N[修正归属/佣金关联（agent_customer_bindings / agent_commissions）]
     N --> O[触发重算]
     
     F --> P[写入 operation_logs 审计]

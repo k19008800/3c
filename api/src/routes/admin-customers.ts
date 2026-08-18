@@ -13,11 +13,15 @@
  *   GET    /api/v1/admin/customers/:id/operation-logs — 客户操作日志（audit_logs）
  *   PATCH  /api/v1/admin/customers/:id/status      — 启用 / 禁用客户
  *   POST   /api/v1/admin/customers                 — 新增客户
+ *   POST   /api/v1/admin/customers/batch/status          — 批量启用/禁用
+ *   POST   /api/v1/admin/customers/batch/reset-password  — 批量重置密码（自动生成）
+ *   POST   /api/v1/admin/customers/batch/bind-agent      — 批量绑定代理商
+ *   POST   /api/v1/admin/customers/batch/verify          — 批量强制实名认证
  */
 
 import type { FastifyInstance } from 'fastify';
 import { db, schema } from '../db';
-import { eq, and, sql, desc, gte, lte } from 'drizzle-orm';
+import { eq, and, sql, desc, gte, lte, inArray } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { verifyToken } from '../services/auth/jwt';
 import {
@@ -50,6 +54,11 @@ interface PaginationQuery {
   /** 注册时间范围（ISO 日期或 datetime，含边界） */
   date_from?: string;
   date_to?: string;
+  /** 累计消费区间（元） */
+  consumption_min?: string;
+  consumption_max?: string;
+  /** 绑定代理商：1=已绑定，0=未绑定 */
+  bound?: string;
 }
 
 function parsePagination(query: PaginationQuery) {
@@ -120,11 +129,24 @@ async function requireCustomer(id: number) {
 export async function adminCustomerRoutes(app: FastifyInstance) {
   /**
    * GET /api/v1/admin/customers — 客户列表
-   * 仅 customer 角色；搜索命中 email/name；状态筛选命中 users.status。
+   * 仅 customer 角色；搜索命中 email/name；状态筛选命中 users.status；
+   * 支持注册时间范围、累计消费区间、绑定代理商状态筛选。
    */
   app.get('/api/v1/admin/customers', { preHandler: [adminAuth] }, async (request, reply) => {
     const q = (request.query || {}) as PaginationQuery;
     const { page, pageSize, offset } = parsePagination(q);
+
+    // 累计消费（consumption_records.cost 聚合）与绑定代理商名（agent_customers → agents → users）标量子查询
+    const consumptionSub = sql`(select coalesce(sum(${schema.consumptionRecords.cost}), 0) from ${schema.consumptionRecords} where ${schema.consumptionRecords.userId} = ${schema.users.id})`;
+    const agentNameSub = sql`(
+      select su.name
+      from agent_customers ac
+      join agents ag on ag.id = ac.agent_id
+      join users su on su.id = ag.user_id
+      where ac.customer_user_id = ${schema.users.id}
+      order by ac.created_at desc
+      limit 1
+    )`;
 
     const conditions: any[] = [eq(schema.users.role, 'customer')];
     if (q.search) {
@@ -142,6 +164,19 @@ export async function adminCustomerRoutes(app: FastifyInstance) {
     if (q.date_to) {
       conditions.push(lte(schema.users.createdAt, new Date(q.date_to.replace(' ', 'T'))));
     }
+    // 累计消费区间
+    if (q.consumption_min) {
+      conditions.push(sql`${consumptionSub} >= ${Number(q.consumption_min)}`);
+    }
+    if (q.consumption_max) {
+      conditions.push(sql`${consumptionSub} <= ${Number(q.consumption_max)}`);
+    }
+    // 绑定代理商状态
+    if (q.bound === '1') {
+      conditions.push(sql`exists (select 1 from ${schema.agentCustomers} where ${schema.agentCustomers.customerUserId} = ${schema.users.id})`);
+    } else if (q.bound === '0') {
+      conditions.push(sql`not exists (select 1 from ${schema.agentCustomers} where ${schema.agentCustomers.customerUserId} = ${schema.users.id})`);
+    }
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const [rows, countResult] = await Promise.all([
@@ -151,10 +186,13 @@ export async function adminCustomerRoutes(app: FastifyInstance) {
           email: schema.users.email,
           name: schema.users.name,
           status: schema.users.status,
+          realNameStatus: schema.users.realNameStatus,
           createdAt: schema.users.createdAt,
           availableBalance: schema.customerBalances.availableBalance,
           frozenBalance: schema.customerBalances.frozenBalance,
           totalBalance: schema.customerBalances.totalBalance,
+          totalConsumption: sql<number>`coalesce(${consumptionSub}, 0)`,
+          boundAgent: agentNameSub,
         })
         .from(schema.users)
         .leftJoin(schema.customerBalances, eq(schema.customerBalances.userId, schema.users.id))
@@ -171,10 +209,13 @@ export async function adminCustomerRoutes(app: FastifyInstance) {
       email: r.email,
       name: r.name,
       status: r.status,
+      realNameVerified: r.realNameStatus === 'approved',
       createdAt: r.createdAt,
       availableBalance: Number(r.availableBalance ?? 0),
       frozenBalance: Number(r.frozenBalance ?? 0),
       totalBalance: Number(r.totalBalance ?? 0),
+      totalConsumption: Number(r.totalConsumption ?? 0),
+      boundAgent: r.boundAgent ?? null,
     }));
 
     return reply.send({
@@ -680,6 +721,179 @@ export async function adminCustomerRoutes(app: FastifyInstance) {
     return reply.send({
       data: { id: user.id, email: user.email, name: user.name, customerType, defaultPassword: password },
       message: '客户创建成功',
+    });
+  });
+
+  /**
+   * POST /api/v1/admin/customers/batch/status — 批量启用/禁用客户
+   * body: { ids: number[], status: 'active' | 'disabled' }
+   */
+  app.post('/api/v1/admin/customers/batch/status', { preHandler: [adminAuth] }, async (request: any, reply) => {
+    const b = (request.body || {}) as { ids?: number[]; status?: string };
+    const ids = Array.isArray(b.ids) ? b.ids.filter((n) => Number.isInteger(n) && n > 0) : [];
+    if (ids.length === 0) throw new ValidationError('ids 不能为空');
+    if (b.status !== 'active' && b.status !== 'disabled') {
+      throw new ValidationError('status must be active | disabled');
+    }
+
+    const [rows, countResult] = await Promise.all([
+      db
+        .update(schema.users)
+        .set({ status: b.status, updatedAt: sql`NOW()` })
+        .where(and(inArray(schema.users.id, ids), eq(schema.users.role, 'customer')))
+        .returning({ id: schema.users.id, email: schema.users.email, name: schema.users.name, status: schema.users.status }),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(schema.users)
+        .where(and(inArray(schema.users.id, ids), eq(schema.users.role, 'customer'))),
+    ]);
+
+    const total = Number(countResult[0]?.count ?? 0);
+    try {
+      await db.insert(schema.auditLogs).values({
+        userId: request.userContext?.userId ?? null,
+        action: 'customer.batch_status_change',
+        resource: 'user',
+        resourceId: ids.join(','),
+        details: { ids, status: b.status, count: total },
+        ipAddress: request.ip ?? null,
+        userAgent: request.headers['user-agent'] ?? null,
+      });
+    } catch (err) {
+      request.log.warn({ err }, '写入审计日志失败（不影响批量结果）');
+    }
+
+    return reply.send({
+      data: { updated: rows.length, status: b.status },
+      message: `已${b.status === 'disabled' ? '禁用' : '启用'} ${rows.length} 个客户`,
+    });
+  });
+
+  /**
+   * POST /api/v1/admin/customers/batch/reset-password — 批量重置密码（自动生成）
+   * body: { ids: number[] }
+   * 返回每个客户的一次性明文密码，仅此响应可见。
+   */
+  app.post('/api/v1/admin/customers/batch/reset-password', { preHandler: [adminAuth] }, async (request: any, reply) => {
+    const b = (request.body || {}) as { ids?: number[] };
+    const ids = Array.isArray(b.ids) ? b.ids.filter((n) => Number.isInteger(n) && n > 0) : [];
+    if (ids.length === 0) throw new ValidationError('ids 不能为空');
+
+    const rows = await db
+      .select({ id: schema.users.id, email: schema.users.email, name: schema.users.name })
+      .from(schema.users)
+      .where(and(inArray(schema.users.id, ids), eq(schema.users.role, 'customer')));
+
+    const results = rows.map((u) => {
+      const newPassword = `Admin@${Math.random().toString(36).slice(2, 8)}${Math.floor(Math.random() * 10)}`;
+      return { id: u.id, email: u.email, name: u.name, newPassword, hash: bcrypt.hashSync(newPassword, 12) };
+    });
+
+    for (const r of results) {
+      await db
+        .update(schema.users)
+        .set({ passwordHash: r.hash, updatedAt: sql`NOW()` })
+        .where(eq(schema.users.id, r.id));
+    }
+
+    try {
+      await db.insert(schema.auditLogs).values({
+        userId: request.userContext?.userId ?? null,
+        action: 'customer.batch_reset_password',
+        resource: 'user',
+        resourceId: ids.join(','),
+        details: { ids, count: results.length, mode: 'auto' },
+        ipAddress: request.ip ?? null,
+        userAgent: request.headers['user-agent'] ?? null,
+      });
+    } catch (err) {
+      request.log.warn({ err }, '写入审计日志失败（不影响批量结果）');
+    }
+
+    return reply.send({
+      data: { list: results.map(({ hash, ...rest }) => rest) },
+      message: `已为 ${results.length} 个客户重置密码（自动生成）`,
+    });
+  });
+
+  /**
+   * POST /api/v1/admin/customers/batch/bind-agent — 批量绑定代理商
+   * body: { ids: number[], agentId: number }
+   */
+  app.post('/api/v1/admin/customers/batch/bind-agent', { preHandler: [adminAuth] }, async (request: any, reply) => {
+    const b = (request.body || {}) as { ids?: number[]; agentId?: number };
+    const ids = Array.isArray(b.ids) ? b.ids.filter((n) => Number.isInteger(n) && n > 0) : [];
+    const agentId = Number(b.agentId);
+    if (ids.length === 0) throw new ValidationError('ids 不能为空');
+    if (!Number.isInteger(agentId) || agentId <= 0) throw new ValidationError('agentId 无效');
+
+    const [agent] = await db.select({ id: schema.agents.id }).from(schema.agents).where(eq(schema.agents.id, agentId));
+    if (!agent) throw new NotFoundError('Agent');
+
+    // 已绑定的客户先解绑再绑定（保证一对一）
+    await db.delete(schema.agentCustomers).where(inArray(schema.agentCustomers.customerUserId, ids));
+    const values = ids.map((customerUserId) => ({
+      agentId,
+      customerUserId,
+      status: 'active',
+      source: 'admin_batch',
+    }));
+    await db.insert(schema.agentCustomers).values(values);
+
+    try {
+      await db.insert(schema.auditLogs).values({
+        userId: request.userContext?.userId ?? null,
+        action: 'customer.batch_bind_agent',
+        resource: 'agent',
+        resourceId: String(agentId),
+        details: { ids, agentId, count: ids.length },
+        ipAddress: request.ip ?? null,
+        userAgent: request.headers['user-agent'] ?? null,
+      });
+    } catch (err) {
+      request.log.warn({ err }, '写入审计日志失败（不影响批量结果）');
+    }
+
+    return reply.send({
+      data: { bound: ids.length, agentId },
+      message: `已为 ${ids.length} 个客户绑定代理商`,
+    });
+  });
+
+  /**
+   * POST /api/v1/admin/customers/batch/verify — 批量强制实名认证
+   * body: { ids: number[] }
+   */
+  app.post('/api/v1/admin/customers/batch/verify', { preHandler: [adminAuth] }, async (request: any, reply) => {
+    const b = (request.body || {}) as { ids?: number[] };
+    const ids = Array.isArray(b.ids) ? b.ids.filter((n) => Number.isInteger(n) && n > 0) : [];
+    if (ids.length === 0) throw new ValidationError('ids 不能为空');
+
+    const [rows] = await Promise.all([
+      db
+        .update(schema.users)
+        .set({ realNameStatus: 'approved', updatedAt: sql`NOW()` })
+        .where(and(inArray(schema.users.id, ids), eq(schema.users.role, 'customer')))
+        .returning({ id: schema.users.id, email: schema.users.email }),
+    ]);
+
+    try {
+      await db.insert(schema.auditLogs).values({
+        userId: request.userContext?.userId ?? null,
+        action: 'customer.batch_force_verify',
+        resource: 'user',
+        resourceId: ids.join(','),
+        details: { ids, count: rows.length },
+        ipAddress: request.ip ?? null,
+        userAgent: request.headers['user-agent'] ?? null,
+      });
+    } catch (err) {
+      request.log.warn({ err }, '写入审计日志失败（不影响批量结果）');
+    }
+
+    return reply.send({
+      data: { verified: rows.length },
+      message: `已强制认证 ${rows.length} 个客户`,
     });
   });
 }

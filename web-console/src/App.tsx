@@ -121,6 +121,8 @@ import AdminSecurityIncidentPage from "./pages/admin/AdminSecurityIncidentPage";
 import AdminSecurityIpBlacklistPage from "./pages/admin/AdminSecurityIpBlacklistPage";
 import AdminBalanceAlertPage from "./pages/admin/AdminBalanceAlertPage";
 import AdminOperatorDashboardPage from "./pages/admin/AdminOperatorDashboardPage";
+import AdminPaymentPage from "./pages/AdminPaymentPage";
+import AdminAdjustPage from "./pages/AdminAdjustPage";
 import AdminOperationDiffPage from "./pages/admin/AdminOperationDiffPage";
 import AdminConversionFunnelPage from "./pages/admin/AdminConversionFunnelPage";
 import AdminCustomerSuccessPage from "./pages/admin/AdminCustomerSuccessPage";
@@ -217,7 +219,7 @@ export default function App() {
         <Route path="admin/finance/accounts" element={<AdminFundsAccountsPage />} />
         <Route path="admin/finance/close" element={<AdminClosePage />} />
         <Route path="admin/finance/manual-topup" element={<AdminManualRechargePage />} />
-        <Route path="admin/finance/adjust" element={<AdminFinancePage />} />
+        <Route path="admin/finance/adjust" element={<AdminAdjustPage />} />
         <Route path="admin/finance/orders" element={<AdminRechargeOrdersPage />} />
         <Route path="admin/finance/commissions" element={<AdminCommissionFlowPage />} />
         <Route path="admin/finance/refunds" element={<AdminRefundReviewPage />} />
@@ -271,6 +273,7 @@ export default function App() {
         <Route path="admin/settings/notification-policy" element={<AdminNotificationPolicyPage />} />
         <Route path="admin/settings/operator-dashboard" element={<AdminOperatorDashboardPage />} />
         <Route path="admin/settings/user-permissions" element={<AdminUsersPermissionPage />} />
+        <Route path="admin/settings/payment" element={<AdminPaymentPage />} />
         <Route path="admin/ops/activity" element={<AdminActivityPage />} />
         <Route path="admin/subscription" element={<AdminSubscriptionPage />} />
         {/* ── 运维配置 ── */}

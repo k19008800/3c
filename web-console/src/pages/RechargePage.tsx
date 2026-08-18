@@ -19,6 +19,7 @@ interface RechargeResult {
   qr_code_url?: string;
   expires_at?: string;
   promotion?: { free_amount: number };
+  channel_enabled?: boolean;
   bank_info?: {
     account_name: string;
     account_number: string;
@@ -51,11 +52,13 @@ const QUICK_AMOUNTS = [100, 500, 1000, 5000, 10000];
 const METHOD_LABEL: Record<string, string> = {
   alipay: "支付宝",
   wechat: "微信支付",
+  qq: "QQ钱包",
   bank_transfer: "对公转账",
 };
 const METHOD_ICONS: Record<string, string> = {
   alipay: "💙",
   wechat: "💚",
+  qq: "🐧",
   bank_transfer: "🏦",
 };
 
@@ -79,7 +82,7 @@ const btnBase: React.CSSProperties = {
 export default function RechargePage() {
   const qc = useQueryClient();
   const [amountInput, setAmountInput] = useState("");
-  const [method, setMethod] = useState<"alipay" | "wechat" | "bank_transfer">("alipay");
+  const [method, setMethod] = useState<"alipay" | "wechat" | "qq" | "bank_transfer">("alipay");
   const [paying, setPaying] = useState<RechargeResult | null>(null);
   const [bankOrder, setBankOrder] = useState<RechargeResult | null>(null);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "auditing">("idle");
@@ -266,7 +269,7 @@ export default function RechargePage() {
         <div style={{ marginBottom: 24 }}>
           <label style={{ display: "block", fontSize: 13, color: "#333", marginBottom: 8 }}>支付方式</label>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            {(["alipay", "wechat", "bank_transfer"] as const).map((m) => (
+            {(["alipay", "wechat", "qq", "bank_transfer"] as const).map((m) => (
               <label
                 key={m}
                 onClick={() => {

@@ -145,7 +145,7 @@ export async function financeDashboardRoutes(app: FastifyInstance) {
       db.select({ count: sql<number>`count(*)::int` }).from(schema.balanceTransactions)
         .where(eq(schema.balanceTransactions.type, 'refund')),
       db.select({ count: sql<number>`count(*)::int` }).from(schema.invoices)
-        .where(eq(schema.invoices.status, 'draft')),
+        .where(sql`${schema.invoices.status} IN ('pending', 'draft')`),
       db.select({ count: sql<number>`count(*)::int` }).from(schema.agentWithdrawals)
         .where(eq(schema.agentWithdrawals.status, 'pending')),
     ]);

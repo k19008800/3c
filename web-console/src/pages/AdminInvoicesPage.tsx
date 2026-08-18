@@ -18,6 +18,8 @@ interface Invoice {
   title: string;
   tax_no: string | null;
   email: string | null;
+  email_sent_at: string | null;
+  email_status: string | null;
   created_at: string;
   email_user: string;
   username: string;
@@ -32,6 +34,7 @@ const STATUS_MAP: Record<string, "success" | "warning" | "danger" | "info" | "de
   issued: "success",
   rejected: "danger",
   voided: "default",
+  void: "default",
 };
 const STATUS_FILTERS = [
   { value: "", label: "全部" },
@@ -75,6 +78,14 @@ export default function AdminInvoicesPage() {
   const rejectMut = useMutation({
     mutationFn: async (id: number) => (await api.post(`/admin/invoices/${id}/reject`, { reason: "信息有误" })).data,
     onSuccess: (d: { data?: { message?: string } }) => { toast.success(d?.data?.message ?? "已驳回"); qc.invalidateQueries({ queryKey: ["admin-invoices"] }); },
+    onError: (e) => toast.error(extractError(e)),
+  });
+  const sendEmailMut = useMutation({
+    mutationFn: async (id: number) => (await api.post(`/admin/invoices/${id}/send-email`)).data,
+    onSuccess: (d: { data?: { message?: string } }) => {
+      toast.success(d?.data?.message ?? "发票邮件已发送");
+      qc.invalidateQueries({ queryKey: ["admin-invoices"] });
+    },
     onError: (e) => toast.error(extractError(e)),
   });
 
@@ -151,7 +162,12 @@ export default function AdminInvoicesPage() {
                       </>
                     )}
                     {inv.status === "issued" && (
-                      <button onClick={() => downloadPdf(inv.id)} style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-primary)", padding: "4px 10px" }}>下载PDF</button>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        <button onClick={() => downloadPdf(inv.id)} style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-primary)", padding: "4px 10px" }}>下载</button>
+                        <button onClick={() => sendEmailMut.mutate(inv.id)} disabled={sendEmailMut.isPending} style={{ ...btnBase, background: inv.email_status === "sent" ? "var(--color-bg)" : "var(--color-primary)", color: inv.email_status === "sent" ? "var(--color-success-text)" : "#fff", padding: "4px 10px" }}>
+                          {inv.email_status === "sent" ? `✓ 已发送${inv.email_sent_at ? ` ${new Date(inv.email_sent_at).toLocaleDateString()}` : ""}` : inv.email_status === "failed" ? "重试发送邮件" : inv.email_status === "skipped" ? "发送邮件(SMTP未配置)" : "发送发票邮件"}
+                        </button>
+                      </div>
                     )}
                     {(inv.status === "rejected" || inv.status === "voided") && <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>-</span>}
                   </td>

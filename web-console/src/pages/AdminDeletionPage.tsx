@@ -5,6 +5,7 @@ import { HelpIcon, StatusBadge, Pagination, useToast, Modal, ConfirmPopover, Ske
 
 /**
  * 管理端 — 账号注销审核
+ * 对接真实后端 /admin/deletion/*（api/src/routes/admin-misc-missing.ts，内部复用 deletion_requests）
  * 对齐 docs/sprint-1/02-account-deletion-frontend.md §3.3
  */
 
@@ -22,28 +23,11 @@ const STATUS_TABS = [
   { key: "rejected", label: "已驳回" },
 ] as const;
 
-/* ───────── 演示数据（后端 /admin/deletion 待接入） ───────── */
-const MOCK_REQUESTS = [
-  { id: 1, userId: 1001, username: "用户小王", userEmail: "user1@example.com", status: "pending", reason: "不再使用该平台", coolingDeadline: null, createdAt: "2026-08-08T10:00:00", rejectedReason: null, completedAt: null },
-  { id: 2, userId: 1002, username: "用户小李", userEmail: "user2@example.com", status: "cooling", reason: "账户重复注册", coolingDeadline: "2026-08-15T10:00:00", createdAt: "2026-08-01T09:30:00", rejectedReason: null, completedAt: null },
-  { id: 3, userId: 1003, username: "用户小张", userEmail: "user3@example.com", status: "completed", reason: "数据导出已完成", coolingDeadline: null, createdAt: "2026-07-20T14:00:00", rejectedReason: null, completedAt: "2026-07-21T09:00:00" },
-  { id: 4, userId: 1004, username: "用户小赵", userEmail: "user4@example.com", status: "rejected", reason: "存在未结清订单", coolingDeadline: null, createdAt: "2026-07-15T11:00:00", rejectedReason: "存在未结清订单，请先结清", completedAt: null },
-];
-const MOCK_STATS = { pending: 1, cooling: 1, completed: 1, rejected: 1, todayNew: 1, overdue: 0 };
-
-// 演示模式：由列表行构建详情
-function mockDetail(id: number) {
-  const row = MOCK_REQUESTS.find((r) => r.id === id);
-  if (!row) return null;
-  return {
-    request: { ...row },
-    user: { id: row.userId, email: row.userEmail, username: row.username, status: "active", balance: 12500, realNameStatus: "verified", createdAt: "2025-12-01T00:00:00" },
-    checklist: row.status === "pending" ? [
-      { id: 1, checkItem: "余额结清", passed: "true" },
-      { id: 2, checkItem: "未结订单", passed: "true" },
-      { id: 3, checkItem: "导出个人数据", passed: "false", detail: "待用户确认导出" },
-    ] : [],
-  };
+/** 后端原始状态（pending/approved/rejected/cancelled/deleted）→ 前端展示状态（冷却期/已完成） */
+function displayStatus(s: string): string {
+  if (s === "approved") return "cooling";
+  if (s === "deleted") return "completed";
+  return s;
 }
 
 export default function AdminDeletionPage() {
@@ -52,13 +36,11 @@ export default function AdminDeletionPage() {
   const [detailId, setDetailId] = useState<number | null>(null);
   const [rejectId, setRejectId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
-  // 演示兜底：本地可变列表（写操作在演示模式下直接改它）
-  const [localList, setLocalList] = useState<any[]>(MOCK_REQUESTS);
   const qc = useQueryClient();
   const { toast } = useToast();
 
   // 列表查询
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["admin/deletion/requests", statusFilter, page],
     queryFn: () =>
       api
@@ -66,23 +48,19 @@ export default function AdminDeletionPage() {
           params: { status: statusFilter || undefined, page, pageSize: 20 },
         })
         .then((r) => r.data.data),
-    // 后端未实现时立即回退演示数据，避免 404 反复重试导致页面卡加载
     retry: 0,
   });
 
-  // 后端未实现时回退到演示数据（未来接入真实端点后此兜底自动失效）
-  const demo = data == null;
-  const list = data?.list ?? (demo ? localList.filter((r) => !statusFilter || r.status === statusFilter) : []);
-  const total = data?.total ?? (demo ? list.length : 0);
+  const list = data?.list ?? [];
+  const total = data?.total ?? 0;
   const pageSize = data?.pageSize ?? 20;
 
   // 统计
-  const { data: statsQ } = useQuery({
+  const { data: stats } = useQuery({
     queryKey: ["admin/deletion/stats"],
     queryFn: () => api.get("/admin/deletion/stats").then((r) => r.data.data),
     retry: 0,
   });
-  const stats = statsQ ?? (demo ? MOCK_STATS : null);
 
   // 详情
   const { data: detailQ, refetch: refetchDetail } = useQuery({
@@ -91,7 +69,7 @@ export default function AdminDeletionPage() {
     enabled: detailId !== null,
     retry: 0,
   });
-  const detail = detailQ ?? (demo && detailId != null ? mockDetail(detailId) : null);
+  const detail = detailQ;
 
   // 驳回
   const rejectMutation = useMutation<any, unknown, { id: number; reason: string }>({
@@ -103,16 +81,8 @@ export default function AdminDeletionPage() {
       setRejectReason("");
       qc.invalidateQueries({ queryKey: ["admin/deletion"] });
     },
-    onError: (err: any, body?: { id: number; reason: string }) => {
-      // 演示模式：后端未实现时本地生效
-      if (err?.response?.status === 404 && body) {
-        setLocalList((prev) => prev.map((r) => r.id === body.id ? { ...r, status: "rejected", rejectedReason: body.reason } : r));
-        setRejectId(null);
-        setRejectReason("");
-        toast.success("注销请求已驳回（演示）");
-      } else {
-        toast.error(extractError(err));
-      }
+    onError: (err: any) => {
+      toast.error(extractError(err));
     },
   });
 
@@ -124,15 +94,8 @@ export default function AdminDeletionPage() {
       setDetailId(null);
       qc.invalidateQueries({ queryKey: ["admin/deletion"] });
     },
-    onError: (err: any, id?: number) => {
-      // 演示模式：后端未实现时本地生效
-      if (err?.response?.status === 404 && id != null) {
-        setLocalList((prev) => prev.map((r) => r.id === id ? { ...r, status: "completed", completedAt: new Date().toISOString() } : r));
-        setDetailId(null);
-        toast.success("管理员强制注销完成（演示）");
-      } else {
-        toast.error(extractError(err));
-      }
+    onError: (err: any) => {
+      toast.error(extractError(err));
     },
   });
 
@@ -155,7 +118,6 @@ export default function AdminDeletionPage() {
       <h2 style={{ marginBottom: 4 }}>
         账号注销审核
         <HelpIcon text={PAGE_HELP} level="page" />
-        {demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/deletion 待接入）</span>}
       </h2>
       <p style={{ color: "#94a3b8", marginTop: 0, fontSize: 13 }}>查看和管理用户账号注销请求 · Sprint 1</p>
 
@@ -167,11 +129,11 @@ export default function AdminDeletionPage() {
             { label: "冷却期", value: stats.cooling, color: "#3b82f6" },
             { label: "已完成", value: stats.completed, color: "#10b981" },
             { label: "已驳回", value: stats.rejected, color: "#ef4444" },
-            { label: "今日新增", value: stats.todayNew, color: "#8b5cf6" },
+            { label: "今日新增", value: stats.today_new, color: "#8b5cf6" },
             { label: "逾期未确认", value: stats.overdue, color: "var(--color-danger-text)" },
           ].map((s) => (
             <div key={s.label} style={{ ...card, padding: "12px 16px", minWidth: 100, textAlign: "center" }}>
-              <div style={{ fontSize: 24, fontWeight: 700, color: s.color }}>{s.value}</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: s.color }}>{s.value ?? 0}</div>
               <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>{s.label}</div>
             </div>
           ))}
@@ -194,6 +156,8 @@ export default function AdminDeletionPage() {
       {/* 列表 */}
       {isLoading ? (
         <SkeletonGroup lines={5} />
+      ) : isError ? (
+        <EmptyState title="加载失败" description="无法获取注销请求列表，请检查后端服务或稍后重试" />
       ) : list.length === 0 ? (
         <EmptyState title="暂无数据" description="当前筛选条件无匹配的注销请求" />
       ) : (
@@ -211,30 +175,33 @@ export default function AdminDeletionPage() {
               </tr>
             </thead>
             <tbody>
-              {list.map((row: any, i: number) => (
-                <tr key={row.id} style={{ borderBottom: `1px solid var(--color-border)`, background: i % 2 === 0 ? "var(--color-panel)" : "#fafafa" }}>
-                  <td style={{ padding: "10px 16px", color: "var(--color-text)" }}>{row.id}</td>
-                  <td style={{ padding: "10px 16px", color: "var(--color-text)" }}>
-                    <div>{row.username ?? row.userEmail}</div>
-                    <div style={{ fontSize: 12, color: "#94a3b8" }}>{row.userEmail}</div>
-                  </td>
-                  <td style={{ padding: "10px 16px" }}>
-                    <StatusBadge status={getStatusType(row.status)}>{statusLabel(row.status)}</StatusBadge>
-                  </td>
-                  <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {row.reason ?? "-"}
-                  </td>
-                  <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", fontSize: 12 }}>
-                    {row.coolingDeadline ? new Date(row.coolingDeadline).toLocaleDateString("zh-CN") : "-"}
-                  </td>
-                  <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", fontSize: 12 }}>
-                    {new Date(row.createdAt).toLocaleString("zh-CN")}
-                  </td>
-                  <td style={{ padding: "10px 16px" }}>
-                    <button onClick={() => setDetailId(row.id)} style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-text)", border: `1px solid var(--color-border)`, fontSize: 12 }}>详情</button>
-                  </td>
-                </tr>
-              ))}
+              {list.map((row: any, i: number) => {
+                const st = displayStatus(row.status);
+                return (
+                  <tr key={row.id} style={{ borderBottom: `1px solid var(--color-border)`, background: i % 2 === 0 ? "var(--color-panel)" : "#fafafa" }}>
+                    <td style={{ padding: "10px 16px", color: "var(--color-text)" }}>{row.id}</td>
+                    <td style={{ padding: "10px 16px", color: "var(--color-text)" }}>
+                      <div>{row.userName ?? row.userEmail}</div>
+                      <div style={{ fontSize: 12, color: "#94a3b8" }}>{row.userEmail}</div>
+                    </td>
+                    <td style={{ padding: "10px 16px" }}>
+                      <StatusBadge status={getStatusType(st)}>{statusLabel(st)}</StatusBadge>
+                    </td>
+                    <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {row.reason ?? "-"}
+                    </td>
+                    <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", fontSize: 12 }}>
+                      {row.coolingDeadline ? new Date(row.coolingDeadline).toLocaleDateString("zh-CN") : "-"}
+                    </td>
+                    <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", fontSize: 12 }}>
+                      {new Date(row.createdAt).toLocaleString("zh-CN")}
+                    </td>
+                    <td style={{ padding: "10px 16px" }}>
+                      <button onClick={() => setDetailId(row.id)} style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-text)", border: `1px solid var(--color-border)`, fontSize: 12 }}>详情</button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           {total > pageSize && (
@@ -250,65 +217,68 @@ export default function AdminDeletionPage() {
 
       {/* 详情弹窗 */}
       <Modal open={detailId !== null && !!detail} onClose={() => setDetailId(null)} title={`注销申请 ${detail?.request?.id ? `#${detail.request.id}` : ""}`}>
-        {detail && (
-          <div style={{ fontSize: 13 }}>
-            {/* 用户信息 */}
-            {detail.user && (
-              <div style={{ background: "var(--color-bg)", borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13 }}>
-                <div style={{ color: "var(--color-text)", fontWeight: 600, marginBottom: 8 }}>用户信息</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", color: "#475569" }}>
-                  <div>ID: {detail.user.id}</div>
-                  <div>邮箱: {detail.user.email}</div>
-                  <div>用户名: {detail.user.username ?? "-"}</div>
-                  <div>状态: {detail.user.status}</div>
-                  <div>余额: ¥{(detail.user.balance / 100).toFixed(2)}</div>
-                  <div>实名: {detail.user.realNameStatus}</div>
-                  <div>注册时间: {new Date(detail.user.createdAt).toLocaleDateString("zh-CN")}</div>
+        {detail && (() => {
+          const st = displayStatus(detail.request.status);
+          return (
+            <div style={{ fontSize: 13 }}>
+              {/* 用户信息 */}
+              {detail.user && (
+                <div style={{ background: "var(--color-bg)", borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13 }}>
+                  <div style={{ color: "var(--color-text)", fontWeight: 600, marginBottom: 8 }}>用户信息</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", color: "#475569" }}>
+                    <div>ID: {detail.user.id}</div>
+                    <div>邮箱: {detail.user.email}</div>
+                    <div>用户名: {detail.user.username ?? "-"}</div>
+                    <div>状态: {detail.user.status}</div>
+                    <div>余额: ¥{(Number(detail.user.balance ?? 0) / 100).toFixed(2)}</div>
+                    <div>实名: {detail.user.real_name_status}</div>
+                    <div>注册时间: {detail.user.created_at ? new Date(detail.user.created_at).toLocaleDateString("zh-CN") : "-"}</div>
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {/* 申请信息 */}
-            <div style={{ fontSize: 13, marginBottom: 16 }}>
-              <div style={{ color: "var(--color-text)", fontWeight: 600, marginBottom: 8 }}>申请信息</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4, color: "#475569" }}>
-                <div>原因：{detail.request.reason ?? "未填写"}</div>
-                <div>提交时间：{new Date(detail.request.createdAt).toLocaleString("zh-CN")}</div>
-                {detail.request.coolingDeadline && <div>冷却截止：{new Date(detail.request.coolingDeadline).toLocaleString("zh-CN")}</div>}
-                {detail.request.rejectedReason && <div style={{ color: "var(--color-danger-text)" }}>驳回原因：{detail.request.rejectedReason}</div>}
-                {detail.request.completedAt && <div>完成时间：{new Date(detail.request.completedAt).toLocaleString("zh-CN")}</div>}
-              </div>
-            </div>
-
-            {/* 检查清单 */}
-            {detail.checklist && detail.checklist.length > 0 && (
-              <div style={{ fontSize: 13, marginBottom: 16 }}>
-                <div style={{ color: "var(--color-text)", fontWeight: 600, marginBottom: 8 }}>检查清单</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {detail.checklist.map((item: any) => (
-                    <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 8, color: item.passed === "true" ? "var(--color-success-text)" : "var(--color-danger-text)" }}>
-                      <span>{item.passed === "true" ? "✅" : "❌"}</span>
-                      <span>{item.checkItem}</span>
-                      {item.detail && <span style={{ color: "var(--color-text-secondary)" }}>— {item.detail}</span>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 操作按钮 */}
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", borderTop: `1px solid var(--color-border)`, paddingTop: 16 }}>
-              {(detail.request.status === "pending" || detail.request.status === "cooling") && (
-                <>
-                  <button onClick={() => { setRejectId(detail.request.id); setDetailId(null); }} style={{ ...btnBase, background: "var(--color-danger-bg)", color: "var(--color-danger-text)", border: `1px solid #fecaca` }}>驳回</button>
-                  <ConfirmPopover title={`确定强制完成用户 #${detail.request.userId} 的注销？此操作不可逆。`} onConfirm={() => completeMutation.mutate(detail.request.id)}>
-                    <button style={{ ...btnBase, background: "var(--color-danger-text)", color: "#fff" }}>强制注销</button>
-                  </ConfirmPopover>
-                </>
               )}
+
+              {/* 申请信息 */}
+              <div style={{ fontSize: 13, marginBottom: 16 }}>
+                <div style={{ color: "var(--color-text)", fontWeight: 600, marginBottom: 8 }}>申请信息</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, color: "#475569" }}>
+                  <div>原因：{detail.request.reason ?? "未填写"}</div>
+                  <div>提交时间：{new Date(detail.request.createdAt).toLocaleString("zh-CN")}</div>
+                  {detail.request.coolingDeadline && <div>冷却截止：{new Date(detail.request.coolingDeadline).toLocaleString("zh-CN")}</div>}
+                  {detail.request.rejectedReason && <div style={{ color: "var(--color-danger-text)" }}>驳回原因：{detail.request.rejectedReason}</div>}
+                  {detail.request.completedAt && <div>完成时间：{new Date(detail.request.completedAt).toLocaleString("zh-CN")}</div>}
+                </div>
+              </div>
+
+              {/* 检查清单 */}
+              {detail.checklist && detail.checklist.length > 0 && (
+                <div style={{ fontSize: 13, marginBottom: 16 }}>
+                  <div style={{ color: "var(--color-text)", fontWeight: 600, marginBottom: 8 }}>检查清单</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {detail.checklist.map((item: any) => (
+                      <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 8, color: item.passed === "true" ? "var(--color-success-text)" : "var(--color-danger-text)" }}>
+                        <span>{item.passed === "true" ? "✅" : "❌"}</span>
+                        <span>{item.check_item}</span>
+                        {item.detail && <span style={{ color: "var(--color-text-secondary)" }}>— {item.detail}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 操作按钮 */}
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", borderTop: `1px solid var(--color-border)`, paddingTop: 16 }}>
+                {(st === "pending" || st === "cooling") && (
+                  <>
+                    <button onClick={() => { setRejectId(detail.request.id); setDetailId(null); }} style={{ ...btnBase, background: "var(--color-danger-bg)", color: "var(--color-danger-text)", border: `1px solid #fecaca` }}>驳回</button>
+                    <ConfirmPopover title={`确定强制完成用户 #${detail.request.userId} 的注销？此操作不可逆。`} onConfirm={() => completeMutation.mutate(detail.request.id)}>
+                      <button style={{ ...btnBase, background: "var(--color-danger-text)", color: "#fff" }}>强制注销</button>
+                    </ConfirmPopover>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </Modal>
 
       {/* 驳回弹窗 */}

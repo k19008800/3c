@@ -60,3 +60,18 @@ export { ipBlacklist } from './ip-blacklist';
 export { dataRequests } from './data-requests';
 export { deletionRequests } from './deletion-requests';
 export { i18nEntries } from './i18n-entries';
+// 2026-08-15 裁决补齐
+export { adminWebhooks } from './admin-webhooks';
+export { adjustmentRecords, adjustmentStatusEnum } from './adjustment-records';
+// 2026-08 风控/审计/订阅缺失端点补齐（migration 0020/0021）
+export { contentModeration } from './content-moderation';
+export { subscriptionPlans } from './subscription-plans';
+// 2026-08-18 客服/运维类补齐（原型有、后端缺失）：知识库文章 + 在线客服会话/消息（migration 0022）
+export { knowledgeBaseArticles } from './knowledge-base';
+export { chatConversations, chatMessages } from './chat-support';
+// 2026-08-18 代理商报备审核补齐（原型有、后端缺失）：代理商客户报备审核队列（migration 0023）
+export { agentApprovals, agentApprovalsRelations } from './agent-approvals';
+// 2026-08-19 营销/争议/合规类补齐（原型有、后端缺失，migration 0024a/0024b/0024c）
+export { campaignParticipants } from './campaign-participants';
+export { disputes } from './disputes';
+export { consentPolicies, consentLogs } from './consent';

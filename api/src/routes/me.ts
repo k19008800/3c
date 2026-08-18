@@ -39,6 +39,17 @@ const REAL_NAME_STATUS_LABEL: Record<string, string> = {
 };
 const REAL_NAME_TYPE_LABEL: Record<string, string> = { individual: '个人', enterprise: '企业' };
 
+// ── 发票状态文案（邮件交付 2026-08-15）────────────────────
+const INVOICE_STATUS_LABEL: Record<string, string> = {
+  pending: '待审核',
+  issued: '已开票',
+  rejected: '已驳回',
+  void: '已作废',
+  cancelled: '已取消',
+  draft: '草稿',
+  paid: '已付款',
+};
+
 // ── Playground 默认模型目录（mock 回退接受的模型集）──────
 // context: 上下文窗口（单位 tokens），随模型信息一并返回供前端展示
 const DEFAULT_MODELS = [
@@ -646,7 +657,114 @@ export async function meRoutes(app: FastifyInstance) {
     return reply.send({ message: '邮箱已更新', data: { email: user.email } });
   });
 
-  // ═══ /me/invoices — 我的发票列表（P1-1）═══
+  // ═══ /me/invoices — 我的发票（P1-1 + 邮件交付 2026-08-15）═══
+
+  /** GET /api/v1/me/invoices/quota — 可开票额度（累计充值 - 已开票金额） */
+  app.get('/api/v1/me/invoices/quota', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+
+    // 累计已支付充值（仅 paid 订单）
+    const [rechargeRow] = await db
+      .select({ total: sql<string>`coalesce(sum(${schema.rechargeOrders.amount}), 0)` })
+      .from(schema.rechargeOrders)
+      .where(and(eq(schema.rechargeOrders.userId, uid), eq(schema.rechargeOrders.status, 'paid')));
+    // 已开票金额（issued 发票合计）
+    const [invoicedRow] = await db
+      .select({ total: sql<string>`coalesce(sum(${schema.invoices.totalAmount}), 0)` })
+      .from(schema.invoices)
+      .where(and(eq(schema.invoices.userId, uid), eq(schema.invoices.status, 'issued')));
+
+    const accumulated = Number(rechargeRow?.total ?? 0);
+    const totalInvoiced = Number(invoicedRow?.total ?? 0);
+    const available = Math.max(0, accumulated - totalInvoiced);
+
+    return reply.send({
+      data: {
+        available,
+        accumulated_recharge: accumulated,
+        total_invoiced: totalInvoiced,
+        applied: totalInvoiced,
+        consumed: accumulated,
+      },
+    });
+  });
+
+  /**
+   * POST /api/v1/me/invoices — 提交发票申请（邮件交付模式）
+   *
+   * body: amount(必), type(ordinary|special), title(必), email(必,收件邮箱),
+   *       tax_no / address / phone / bank / bank_account / remark(专票或可选)
+   * 校验：金额 ≥ 100 且 ≤ 可开票额度；专票必填税号/地址/电话/开户行/账号。
+   * 落库：status=pending，invoice_no 留空，待财务审核开票。
+   */
+  app.post('/api/v1/me/invoices', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const body = (request.body || {}) as Record<string, unknown>;
+    const amount = Number(body.amount);
+    const type = String(body.type || 'ordinary');
+    const title = String(body.title || '').trim();
+    const email = String(body.email || '').trim();
+
+    if (!Number.isFinite(amount) || amount <= 0) throw new ValidationError('开票金额需大于 0');
+    if (amount < 100) throw new ValidationError('最低开票金额 ¥100');
+    if (!['ordinary', 'special'].includes(type)) throw new ValidationError('发票类型不合法');
+    if (!title) throw new ValidationError('发票抬头不能为空');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ValidationError('收件邮箱不合法');
+
+    const isSpecial = type === 'special';
+    const taxNo = String(body.tax_no || '').trim();
+    const address = String(body.address || '').trim();
+    const phone = String(body.phone || '').trim();
+    const bankName = String(body.bank || '').trim();
+    const bankAccount = String(body.bank_account || '').trim();
+    if (isSpecial && (!taxNo || !address || !phone || !bankName || !bankAccount)) {
+      throw new ValidationError('专用发票需填写税号/地址/电话/开户行/账号');
+    }
+
+    // 额度校验（复用 quota 口径）
+    const [rechargeRow] = await db
+      .select({ total: sql<string>`coalesce(sum(${schema.rechargeOrders.amount}), 0)` })
+      .from(schema.rechargeOrders)
+      .where(and(eq(schema.rechargeOrders.userId, uid), eq(schema.rechargeOrders.status, 'paid')));
+    const [invoicedRow] = await db
+      .select({ total: sql<string>`coalesce(sum(${schema.invoices.totalAmount}), 0)` })
+      .from(schema.invoices)
+      .where(and(eq(schema.invoices.userId, uid), eq(schema.invoices.status, 'issued')));
+    const available = Math.max(0, Number(rechargeRow?.total ?? 0) - Number(invoicedRow?.total ?? 0));
+    if (amount > available) throw new ValidationError('开票金额超过可开票额度');
+
+    // 税率：普通发票 1%，专用发票 6%（可后续配置）
+    const taxRate = isSpecial ? 6 : 1;
+    const taxAmount = Number((amount * taxRate / 106).toFixed(2));
+    const totalAmount = Number(amount.toFixed(2));
+
+    const [inv] = await db
+      .insert(schema.invoices)
+      .values({
+        userId: uid,
+        type,
+        amount: amount.toFixed(2),
+        taxRate: String(taxRate),
+        taxAmount: taxAmount.toFixed(2),
+        totalAmount: totalAmount.toFixed(2),
+        status: 'pending',
+        title,
+        taxId: taxNo || null,
+        address: address || null,
+        phone: phone || null,
+        bankName: bankName || null,
+        bankAccount: bankAccount || null,
+        email,
+        remark: String(body.remark || '').trim() || null,
+      })
+      .returning();
+
+    return reply.status(201).send({
+      data: { id: inv!.id, status: inv!.status, message: '发票申请已提交，待财务审核开票' },
+    });
+  });
+
+  /** GET /api/v1/me/invoices — 我的发票列表（含类型/状态标签/收件邮箱） */
   app.get('/api/v1/me/invoices', { preHandler: [jwtAuth] }, async (request, reply) => {
     const uid = userId(request);
     const q = (request.query || {}) as Record<string, string>;
@@ -668,11 +786,20 @@ export async function meRoutes(app: FastifyInstance) {
       id: r.id,
       invoice_no: r.invoiceNo,
       amount: Number(r.amount ?? 0),
-      tax: Number(r.tax ?? 0),
+      tax: Number(r.taxAmount ?? 0),
+      tax_rate: Number(r.taxRate ?? 0),
+      total_amount: Number(r.totalAmount ?? r.amount ?? 0),
+      type: r.type,
+      type_label: r.type === 'special' ? '专用发票（电子）' : '普通发票（电子）',
       status: r.status,
+      status_label: INVOICE_STATUS_LABEL[r.status] ?? r.status,
+      reject_reason: r.rejectReason,
       title: r.title,
       tax_id: r.taxId,
       recipient: r.recipient,
+      email: r.email,
+      email_sent_at: r.emailSentAt,
+      email_status: r.emailStatus,
       issued_at: r.issuedAt,
       created_at: r.createdAt,
     }));
@@ -682,9 +809,7 @@ export async function meRoutes(app: FastifyInstance) {
     });
   });
 
-  // ═══ /me/invoices/:id/download — 发票下载（P1-1）═══
-  // 必须属于当前用户（越权一律 404 防枚举）；无真实 PDF 时返回结构化 JSON 详情
-  // + Content-Disposition 附件文件名。
+  /** GET /api/v1/me/invoices/:id/download — 发票下载（结构化 JSON 附件；PDF 交付经邮件） */
   app.get('/api/v1/me/invoices/:id/download', { preHandler: [jwtAuth] }, async (request, reply) => {
     const uid = userId(request);
     const id = parseInt(String((request.params as Record<string, unknown>).id), 10);
@@ -702,12 +827,17 @@ export async function meRoutes(app: FastifyInstance) {
     return reply.send({
       id: inv.id,
       invoice_no: inv.invoiceNo,
+      type: inv.type,
+      type_label: inv.type === 'special' ? '专用发票（电子）' : '普通发票（电子）',
       amount: Number(inv.amount ?? 0),
-      tax: Number(inv.tax ?? 0),
+      tax_rate: Number(inv.taxRate ?? 0),
+      tax: Number(inv.taxAmount ?? 0),
+      total_amount: Number(inv.totalAmount ?? inv.amount ?? 0),
       status: inv.status,
       title: inv.title,
       tax_id: inv.taxId,
       recipient: inv.recipient,
+      email: inv.email,
       issued_at: inv.issuedAt,
       created_at: inv.createdAt,
     });

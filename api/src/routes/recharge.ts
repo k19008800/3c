@@ -22,6 +22,7 @@ import { adjustLedgerAvailable, clearNegativeFlag } from '../services/billing/le
 // campaign_coupon_codes 未从 db/schema/index.ts 导出（该文件禁改），直接从表定义导入
 import { campaignCouponCodes } from '../db/schema/coupons';
 import { AppError, UnauthorizedError, ForbiddenError, ValidationError } from '../lib/errors';
+import { parsePaymentConfig } from './admin-payment';
 
 // ── auth ─────────────────────────────────────────────
 async function jwtAuth(request: any, _reply: any) {
@@ -43,8 +44,8 @@ function userId(request: any): number {
 }
 
 // ── 常量 ─────────────────────────────────────────────
-/** 对公收款账户（对应前端 RechargePage 静态展示 + BankModal） */
-const BANK_INFO = {
+/** 对公收款账户（默认值；后台支付配置可覆盖） */
+const DEFAULT_BANK_INFO = {
   account_name: '杭州灵通云智算科技有限公司',
   account_number: '5719020097201298888',
   bank_name: '招商银行杭州分行高新支行',
@@ -55,6 +56,7 @@ const METHOD_LABEL: Record<string, string> = {
   bank_transfer: '对公转账',
   alipay: '支付宝',
   wechat: '微信支付',
+  qq: 'QQ钱包',
   manual: '人工上账',
 };
 
@@ -77,7 +79,7 @@ function userStatus(s: string): string {
   return s;
 }
 
-const ALLOWED_METHODS = ['bank_transfer', 'alipay', 'wechat'];
+const ALLOWED_METHODS = ['bank_transfer', 'alipay', 'wechat', 'qq'];
 const MAX_AMOUNT = 1_000_000;
 
 /** 订单号：RC + yyyyMMddHHmmss + 4 位随机 */
@@ -125,15 +127,30 @@ export async function rechargeRoutes(app: FastifyInstance) {
 
     if (!order) throw new AppError('Failed to create order', 500, 'ORDER_CREATE_FAILED');
 
+    // 支付配置（后台可配置）：对公账户 + 通道启停
+    const payCfg = parsePaymentConfig((await db.select({ value: schema.systemConfig.value })
+      .from(schema.systemConfig)
+      .where(sql`${schema.systemConfig.key} = 'payment_config'`))[0]?.value);
+
     const data: Record<string, unknown> = {
       order_id: order.orderNo,
       status: order.status,
     };
     if (method === 'bank_transfer') {
-      data.bank_info = BANK_INFO;
+      const bank = payCfg.bank;
+      data.bank_info = {
+        account_name: bank.account_name || DEFAULT_BANK_INFO.account_name,
+        account_number: bank.account_number || DEFAULT_BANK_INFO.account_number,
+        bank_name: bank.bank_name || DEFAULT_BANK_INFO.bank_name,
+        branch_name: bank.branch_name || DEFAULT_BANK_INFO.branch_name,
+      };
     } else {
-      data.qr_code_url = ''; // 扫码支付未接支付渠道，前端展示「二维码加载中」
+      // 线上通道：渠道未启用时前端禁用，此处仅透传订单信息 + 支付参数占位
+      const channel = method === 'alipay' ? payCfg.alipay : method === 'wechat' ? payCfg.wechat : payCfg.qq;
+      const channelEnabled = method === 'qq' ? payCfg.qq.enabled : (channel as { enabled: boolean }).enabled;
+      data.qr_code_url = ''; // 真实支付网关对接后返回二维码/支付链接（见 docs 支付接入方案）
       data.expires_at = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+      data.channel_enabled = !!channelEnabled;
     }
     return reply.status(201).send({ data });
   });

@@ -1,47 +1,50 @@
 import { useState, useEffect } from "react";
-import { api } from "../lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api, extractError } from "../lib/api";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
+
+/* ───────── 税务银行（对齐后端 /admin/tax-banking 契约） ───────── */
 
 interface BankAccount { id: number; agent_id: number; agent_name: string; bank_name: string; account_number: string; account_holder: string; created_at: string; }
 interface TaxConfig { tax_rate: number; tax_threshold: number; vat_rate: number; effective_date: string; }
 interface TaxHistory { id: number; tax_rate: number; tax_threshold: number; vat_rate: number; effective_date: string; operator_name: string; created_at: string; }
 
-/* ───────── 演示数据（对齐原型 admin-tax-banking.html 分布） ───────── */
-
-const MOCK_TAX_HISTORY: TaxHistory[] = [
-  { id: 3, tax_rate: 20, tax_threshold: 800, vat_rate: 6, effective_date: "2026-01-01", operator_name: "财务王主管", created_at: "2026-01-01 00:00:00" },
-  { id: 2, tax_rate: 10, tax_threshold: 800, vat_rate: 6, effective_date: "2025-07-01", operator_name: "财务李经理", created_at: "2025-07-01 00:00:00" },
-  { id: 1, tax_rate: 10, tax_threshold: 500, vat_rate: 6, effective_date: "2025-01-01", operator_name: "系统初始化", created_at: "2025-01-01 00:00:00" },
-];
-const MOCK_BANK_ACCOUNTS: BankAccount[] = [
-  { id: 1, agent_id: 1, agent_name: "华东渠道代理", bank_name: "招商银行", account_number: "6225880212345678", account_holder: "张伟", created_at: "2026-03-12 10:20:00" },
-  { id: 2, agent_id: 2, agent_name: "华南代理-李华", bank_name: "工商银行", account_number: "6222021009098765", account_holder: "李华", created_at: "2026-04-02 14:35:00" },
-  { id: 3, agent_id: 3, agent_name: "京北代理王强", bank_name: "建设银行", account_number: "6217002211223344", account_holder: "王强", created_at: "2026-05-18 09:12:00" },
-];
-
 export default function AdminTaxBankingPage() {
   const { toast } = useToast();
+  const qc = useQueryClient();
   const [tab, setTab] = useState<"tax" | "bank">("tax");
   const [taxConfig, setTaxConfig] = useState<TaxConfig>({ tax_rate: 20, tax_threshold: 800, vat_rate: 6, effective_date: "" });
-  const [taxHistory, setTaxHistory] = useState<TaxHistory[]>(MOCK_TAX_HISTORY); // 演示数据兜底（后端未实现时展示）
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(MOCK_BANK_ACCOUNTS);
-  const [demo, setDemo] = useState(true);
   const [calcAmount, setCalcAmount] = useState(10000);
-  const [loading, setLoading] = useState(true);
 
+  const configQ = useQuery({
+    queryKey: ["admin-tax-config"],
+    queryFn: async () => (await api.get<{ data: TaxConfig }>("/admin/tax-banking/config")).data.data,
+  });
+  // 查询返回后同步到可编辑状态（v5 useQuery 无 onSuccess 回调，用 effect 同步）
   useEffect(() => {
-    setLoading(true);
-    Promise.all([
-      api.get("/admin/tax-banking/config").then(r => setTaxConfig(r.data?.data ?? taxConfig)),
-      api.get("/admin/tax-banking/history").then(r => { setTaxHistory(r.data?.data?.list ?? []); setDemo(false); }),
-      api.get("/admin/tax-banking/bank-accounts").then(r => setBankAccounts(r.data?.data?.list ?? [])),
-    ]).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+    if (configQ.data) setTaxConfig(configQ.data);
+  }, [configQ.data]);
+  const historyQ = useQuery({
+    queryKey: ["admin-tax-history"],
+    queryFn: async () => (await api.get<{ data: { list: TaxHistory[] } }>("/admin/tax-banking/history")).data.data.list,
+  });
+  const bankQ = useQuery({
+    queryKey: ["admin-tax-bank-accounts"],
+    queryFn: async () => (await api.get<{ data: { list: BankAccount[] } }>("/admin/tax-banking/bank-accounts")).data.data.list,
+  });
 
-  async function saveTaxConfig() {
-    try { await api.put("/admin/tax-banking/config", taxConfig); } catch {}
-    toast.success("税务配置已保存");
-  }
+  const saveConfigMut = useMutation({
+    mutationFn: async () => (await api.put("/admin/tax-banking/config", taxConfig)).data,
+    onSuccess: (d: any) => {
+      toast.success(d?.data?.message ?? "税务配置已保存");
+      qc.invalidateQueries({ queryKey: ["admin-tax-history"] });
+    },
+    onError: (e) => toast.error(extractError(e)),
+  });
+
+  const loading = configQ.isLoading || historyQ.isLoading || bankQ.isLoading;
+  const taxHistory = historyQ.data ?? [];
+  const bankAccounts = bankQ.data ?? [];
 
   const taxableIncome = Math.max(0, calcAmount - taxConfig.tax_threshold);
   const taxAmount = Math.round(taxableIncome * taxConfig.tax_rate / 100);
@@ -56,7 +59,6 @@ export default function AdminTaxBankingPage() {
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>税负与银行账户管理
           <HelpIcon text="配置代理商佣金个税、供应商增值税，管理代理商绑定银行账户，提供税务试算工具。" level="page" />
         </span>
-        {demo && <span style={{ fontSize: 11, color: "#ffe9a8" }}>⚠️ 演示数据（后端 /admin/tax-banking 待接入）</span>}
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
@@ -90,7 +92,7 @@ export default function AdminTaxBankingPage() {
           </div>
 
           <div style={{ background: "var(--color-panel)", borderRadius: 10, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,.06)", gridColumn: "1/-1" }}>
-            <button onClick={saveTaxConfig} style={{ padding: "8px 24px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, marginBottom: 16 }}>保存税务配置</button>
+            <button onClick={() => saveConfigMut.mutate()} disabled={saveConfigMut.isPending} style={{ padding: "8px 24px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, marginBottom: 16 }}>{saveConfigMut.isPending ? "保存中..." : "保存税务配置"}</button>
             <h3 style={{ margin: "0 0 12px", fontSize: 15 }}>税务试算 <HelpIcon text="输入佣金金额预览税前/个税/税后金额。" /></h3>
             <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
               <span style={{ fontSize: 13, color: "#666" }}>佣金金额 (¥)</span>

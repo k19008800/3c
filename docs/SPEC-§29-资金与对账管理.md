@@ -437,7 +437,7 @@ POST /api/v1/admin/finance/close/:period/unlock — 解锁（超管权限，限�
 | 对账差异全部处理 | 对账差异表中所有项已处理 | 0 项待处理 | 列出待处理差异数 |
 | 退款全部处理 | 退款表中无 pending 状态的退款 | 所有退款已确认 | 列出待处理退款 |
 | 发票全部开具 | 该月所有用户账单已生成 | 账单生成率 100% | 列出未生成账单的用户 |
-| 佣金全部结算 | 该月 commission_logs 全部 settled | 100% settled | 列出未结算项 |
+| 佣金全部结算 | 该月 agent_commissions 全部 settled | 100% settled | 列出未结算项 |
 | 会计恒等式 | 期初+收入-支出=期末 | 偏差 ≤ ¥10 | 显示恒等式偏差详情 |
 
 #### 锁账执行流程
@@ -802,7 +802,7 @@ withdrawSecondReviewRole: varchar("withdraw_second_review_role", { length: 20 })
 
 | 检查点 | 校验规则 | 频率 | 对齐方式 | 告警阈值 |
 |--------|---------|------|---------|---------|
-| 佣金计算 → 佣金记录 | SUM(下级用户消费 × 佣金率) == SUM(agent_commissions.amount) | 日结 | 代理ID | 偏差 ≥ ¥1 |
+| 佣金计算 → 佣金记录 | SUM(归属客户消费 × 佣金率) == SUM(agent_commissions.amount)（单级，按消费时刻归属） | 日结 | 代理ID | 偏差 ≥ ¥1 |
 | 佣金记录 → 平台总账 | SUM(agent_commissions.amount) == SUM(ledger.amount WHERE type=agent_commission) | T+1 | 日期 | 偏差 ≥ ¥1 |
 | 提现单 → 平台总账 | SUM(withdraw_orders.amount WHERE status=paid) == SUM(ledger.amount WHERE type=agent_withdraw) | 实时 | 流水号 | 偏差 ≥ ¥1 |
 

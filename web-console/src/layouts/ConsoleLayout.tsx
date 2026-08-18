@@ -91,6 +91,7 @@ const ADMIN_NAV: NavGroup[] = [
     { to: "/admin/settings/notification-policy", label: "通知策略", icon: "🔔" },
     { to: "/admin/settings/operator-dashboard", label: "运营看板", icon: "📊" },
     { to: "/admin/settings/user-permissions", label: "用户权限一览", icon: "👤" },
+    { to: "/admin/settings/payment", label: "支付通道设置", icon: "💳" },
     { to: "/admin/ops/activity", label: "实时活动流", icon: "📡" },
     { to: "/admin/subscription", label: "订阅计划", icon: "📦" },
     { to: "/admin/account-deletion", label: "账号注销审核", icon: "🗑️" },

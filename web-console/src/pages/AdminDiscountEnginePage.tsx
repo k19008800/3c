@@ -1,17 +1,11 @@
-import { useState, useEffect } from "react";
-import { api } from "../lib/api";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api, extractError } from "../lib/api";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
 
+/* ───────── 折扣规则（对齐后端 GET/POST/PUT /admin/discount-rules 契约） ───────── */
+
 interface DiscountRule { id: number; name: string; discount_type: string; discount_value: number; conditions: string; priority: number; enabled: boolean; start_date: string; end_date: string; }
-
-/* ───────── 演示数据（对齐原型 admin-discount-engine.html 分布） ───────── */
-
-const MOCK_RULES: DiscountRule[] = [
-  { id: 1, name: "新用户首充 9 折", discount_type: "percentage", discount_value: 10, conditions: '{"is_first_topup": true}', priority: 1, enabled: true, start_date: "2026-07-01", end_date: "2026-12-31" },
-  { id: 2, name: "大客户满 5000 减 300", discount_type: "threshold", discount_value: 300, conditions: '{"min_amount": 5000, "user_level": "vip"}', priority: 2, enabled: true, start_date: "2026-08-01", end_date: "" },
-  { id: 3, name: "代理商渠道固定折扣", discount_type: "fixed", discount_value: 50, conditions: '{"channel": "agent"}', priority: 3, enabled: true, start_date: "", end_date: "" },
-  { id: 4, name: "双十一全场 8.5 折", discount_type: "percentage", discount_value: 15, conditions: '{"date": "2026-11-11"}', priority: 4, enabled: false, start_date: "2026-11-01", end_date: "2026-11-11" },
-];
 
 const Toggle: React.FC<{ on: boolean; onChange: (v: boolean) => void }> = ({ on, onChange }) => (
   <div style={{ width: 44, height: 24, borderRadius: 12, background: on ? "#22c55e" : "#d9d9d9", position: "relative", cursor: "pointer", display: "inline-flex", alignItems: "center", flexShrink: 0 }} onClick={() => onChange(!on)}>
@@ -19,48 +13,48 @@ const Toggle: React.FC<{ on: boolean; onChange: (v: boolean) => void }> = ({ on,
   </div>
 );
 
+const EMPTY_FORM: Partial<DiscountRule> = { name: "", discount_type: "percentage", discount_value: 0, conditions: "{}", priority: 0, enabled: true, start_date: "", end_date: "" };
+
 export default function AdminDiscountEnginePage() {
   const { toast } = useToast();
-  const [rules, setRules] = useState<DiscountRule[]>(MOCK_RULES); // 演示数据兜底（后端 /admin/discount-rules 未实现时展示）
+  const qc = useQueryClient();
   const [editing, setEditing] = useState<DiscountRule | null>(null);
   const [showNew, setShowNew] = useState(false);
-  const [form, setForm] = useState<Partial<DiscountRule>>({ name: "", discount_type: "percentage", discount_value: 0, conditions: "{}", priority: 0, enabled: true, start_date: "", end_date: "" });
-  const [demo, setDemo] = useState(true);
+  const [form, setForm] = useState<Partial<DiscountRule>>(EMPTY_FORM);
 
-  useEffect(() => {
-    api.get("/admin/discount-rules").then(r => { setRules(r.data?.data?.list ?? []); setDemo(false); }).catch(() => {});
-  }, []);
+  const rulesQ = useQuery({
+    queryKey: ["admin-discount-rules"],
+    queryFn: async () => (await api.get<{ data: { list: DiscountRule[] } }>("/admin/discount-rules")).data.data.list,
+  });
 
-  async function toggleRule(id: number, enabled: boolean) {
-    // 演示模式：后端未实现时本地生效；接入后同步真实数据
-    try { await api.put(`/admin/discount-rules/${id}`, { enabled }); } catch {}
-    setRules(rules.map(r => r.id === id ? {...r, enabled} : r));
-    toast.success(enabled ? "规则已启用" : "规则已禁用");
-  }
+  const toggleMut = useMutation({
+    mutationFn: async ({ id, enabled }: { id: number; enabled: boolean }) => (await api.put(`/admin/discount-rules/${id}`, { enabled })).data,
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-discount-rules"] }); },
+    onError: (e) => toast.error(extractError(e)),
+  });
 
-  async function saveRule() {
-    if (editing) {
-      try { await api.put(`/admin/discount-rules/${editing.id}`, editing); } catch {}
-      toast.success("规则已更新");
-    } else {
-      try { await api.post("/admin/discount-rules", form); } catch {}
-      toast.success("规则已创建");
+  const saveMut = useMutation({
+    mutationFn: async (payload: { editing: DiscountRule | null; form: Partial<DiscountRule> }) =>
+      payload.editing
+        ? (await api.put(`/admin/discount-rules/${payload.editing.id}`, payload.form)).data
+        : (await api.post("/admin/discount-rules", payload.form)).data,
+    onSuccess: (d: any) => {
+      toast.success(d?.data?.message ?? "规则已保存");
       setShowNew(false);
-    }
-    setEditing(null);
-    try {
-      const r = await api.get("/admin/discount-rules");
-      setRules(r.data?.data?.list ?? []);
-      setDemo(false);
-    } catch {}
-  }
+      setEditing(null);
+      setForm(EMPTY_FORM);
+      qc.invalidateQueries({ queryKey: ["admin-discount-rules"] });
+    },
+    onError: (e) => toast.error(extractError(e)),
+  });
 
-  async function deleteRule(id: number) {
-    if (!confirm("确认删除此折扣规则？")) return;
-    try { await api.post(`/admin/discount-rules/${id}/delete`, {}); } catch {}
-    toast.success("已删除");
-    setRules(rules.filter(r => r.id !== id));
-  }
+  const deleteMut = useMutation({
+    mutationFn: async (id: number) => (await api.post(`/admin/discount-rules/${id}/delete`, {})).data,
+    onSuccess: () => { toast.success("已删除"); qc.invalidateQueries({ queryKey: ["admin-discount-rules"] }); },
+    onError: (e) => toast.error(extractError(e)),
+  });
+
+  const rules = rulesQ.data ?? [];
 
   return (
     <div>
@@ -69,17 +63,16 @@ export default function AdminDiscountEnginePage() {
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>折扣规则引擎
           <HelpIcon text="配置灵活的折扣规则（满减/百分比/固定折扣），按条件匹配自动计算折扣。支持多规则优先级排序。" level="page" />
         </span>
-        {demo && <span style={{ fontSize: 11, color: "#ffe9a8" }}>⚠️ 演示数据（后端 /admin/discount-rules 待接入）</span>}
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-        <button onClick={() => { setShowNew(true); setForm({ name: "", discount_type: "percentage", discount_value: 0, conditions: "{}", priority: 0, enabled: true, start_date: "", end_date: "" }); }}
+        <button onClick={() => { setEditing(null); setShowNew(true); setForm(EMPTY_FORM); }}
           style={{ padding: "6px 16px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ 新建规则</button>
       </div>
 
       {showNew && (
         <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, padding: 16, marginBottom: 16 }}>
-          <h4 style={{ margin: "0 0 12px" }}>新建折扣规则</h4>
+          <h4 style={{ margin: "0 0 12px" }}>{editing ? "编辑折扣规则" : "新建折扣规则"}</h4>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <input placeholder="规则名称" value={form.name} onChange={e => setForm({...form, name: e.target.value})} style={{ padding: "8px 12px", border: "1px solid var(--color-border)", borderRadius: 6 }} />
             <select value={form.discount_type} onChange={e => setForm({...form, discount_type: e.target.value})} style={{ padding: "8px 12px", border: "1px solid var(--color-border)", borderRadius: 6 }}>
@@ -96,8 +89,13 @@ export default function AdminDiscountEnginePage() {
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <button onClick={() => { setEditing({...form as DiscountRule, id: 0} as DiscountRule); saveRule(); }} style={{ padding: "6px 16px", background: "#22c55e", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>创建</button>
-            <button onClick={() => setShowNew(false)} style={{ padding: "6px 16px", background: "var(--color-border)", border: "none", borderRadius: 6, cursor: "pointer" }}>取消</button>
+            <button
+              onClick={() => saveMut.mutate({ editing, form })}
+              disabled={saveMut.isPending || !form.name}
+              style={{ padding: "6px 16px", background: "#22c55e", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>
+              {saveMut.isPending ? "保存中..." : editing ? "保存修改" : "创建"}
+            </button>
+            <button onClick={() => { setShowNew(false); setEditing(null); }} style={{ padding: "6px 16px", background: "var(--color-border)", border: "none", borderRadius: 6, cursor: "pointer" }}>取消</button>
           </div>
         </div>
       )}
@@ -128,11 +126,13 @@ export default function AdminDiscountEnginePage() {
                 <td style={{ padding: "8px 14px", textAlign: "center" }}>{r.priority}</td>
                 <td style={{ padding: "8px 14px", fontSize: 12 }}>{r.start_date ? `${r.start_date} ~ ${r.end_date || "永久"}` : "长期有效"}</td>
                 <td style={{ padding: "8px 14px", textAlign: "center" }}>
-                  <Toggle on={r.enabled} onChange={v => toggleRule(r.id, v)} />
+                  <Toggle on={r.enabled} onChange={v => toggleMut.mutate({ id: r.id, enabled: v })} />
                 </td>
                 <td style={{ padding: "8px 14px", textAlign: "center" }}>
-                  <button onClick={() => setEditing(r)} style={{ padding: "2px 10px", border: "1px solid var(--color-border)", borderRadius: 4, background: "var(--color-panel)", cursor: "pointer", marginRight: 4 }}>编辑</button>
-                  <button onClick={() => deleteRule(r.id)} style={{ padding: "2px 10px", border: "1px solid #e53935", borderRadius: 4, background: "var(--color-panel)", color: "#e53935", cursor: "pointer" }}>删除</button>
+                  <button onClick={() => { setEditing(r); setShowNew(true); setForm({ name: r.name, discount_type: r.discount_type, discount_value: r.discount_value, conditions: r.conditions, priority: r.priority, enabled: r.enabled, start_date: r.start_date, end_date: r.end_date }); }}
+                    style={{ padding: "2px 10px", border: "1px solid var(--color-border)", borderRadius: 4, background: "var(--color-panel)", cursor: "pointer", marginRight: 4 }}>编辑</button>
+                  <button onClick={() => { if (confirm("确认删除此折扣规则？")) deleteMut.mutate(r.id); }}
+                    style={{ padding: "2px 10px", border: "1px solid #e53935", borderRadius: 4, background: "var(--color-panel)", color: "#e53935", cursor: "pointer" }}>删除</button>
                 </td>
               </tr>
             ))}

@@ -1,78 +1,38 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
-import { HelpIcon, StatusBadge, Modal, useToast, ConfirmPopover } from "@3cloud/shared-ui";
+import { HelpIcon, StatusBadge, Modal, useToast, ConfirmPopover, Pagination } from "@3cloud/shared-ui";
 
 /**
  * 管理端 — 知识库文章管理
+ * 数据来自真实后端 /admin/knowledge-base（列表/创建/更新/删除）。
  * 对齐 docs/ref-10.2-knowledge-base.md
  */
 
 const card: React.CSSProperties = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
 
-/* ───────── 演示数据（后端 /admin/knowledge-base 待接入） ───────── */
-const MOCK_ARTICLES = [
-  { id: 1, title: "如何充值余额", category: "充值", status: "published", view_count: 1200, helpful_count: 45, unhelpful_count: 3, author_name: "客服部", tags: "充值,余额", content: "1. 登录控制台 → 充值中心\n2. 选择金额并完成支付\n3. 1-3 分钟内到账", updated_at: "2026-08-01T10:00:00" },
-  { id: 2, title: "API Key 使用指南", category: "开发", status: "published", view_count: 860, helpful_count: 32, unhelpful_count: 2, author_name: "技术部", tags: "API,Key", content: "创建 API Key 后通过 Authorization: Bearer 头调用。", updated_at: "2026-07-28T15:00:00" },
-  { id: 3, title: "常见报错处理", category: "技术", status: "draft", view_count: 0, helpful_count: 0, unhelpful_count: 0, author_name: "客服部", tags: "报错", content: "rate_limit_exceeded：请求过于频繁，请稍后重试。", updated_at: "2026-08-09T09:30:00" },
-];
-const MOCK_CATS = [
-  { id: 1, name: "充值", slug: "recharge", description: "充值相关", sort_order: 1 },
-  { id: 2, name: "开发", slug: "dev", description: "API 开发", sort_order: 2 },
-  { id: 3, name: "技术", slug: "tech", description: "技术问题", sort_order: 3 },
-];
-const MOCK_TPLS = [
-  { id: 1, name: "欢迎语", category: "greeting", content: "您好，欢迎咨询 3Cloud 客服，请问有什么可以帮您？", created_by_name: "admin@3cloud.dev", sort_order: 1 },
-  { id: 2, name: "余额说明", category: "billing", content: "您的当前余额为 ¥{balance}，如需充值可前往充值中心。", created_by_name: "admin@3cloud.dev", sort_order: 2 },
-];
-
 export default function AdminKnowledgeBasePage() {
   const { toast } = useToast();
-  const [tab, setTab] = useState<"articles" | "categories" | "templates">("articles");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [keyword, setKeyword] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const qc = useQueryClient();
 
   // —— 文章编辑弹窗 ——
   const [editArticle, setEditArticle] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ title: "", category: "", content: "", tags: "", status: "draft" });
+  const [editForm, setEditForm] = useState({ title: "", category: "", content: "", status: "draft" });
 
-  // —— 分类管理弹窗 ——
-  const [editCat, setEditCat] = useState<any>(null);
-  const [catForm, setCatForm] = useState({ name: "", slug: "", description: "", sort_order: 0 });
-
-  // —— 快捷回复模板弹窗 ——
-  const [editTemplate, setEditTemplate] = useState<any>(null);
-  const [tplForm, setTplForm] = useState({ name: "", category: "", content: "", sort_order: 0 });
-
-  // 演示兜底：本地可变列表（写操作在演示模式下直接改它）
-  const [localArticles, setLocalArticles] = useState<any[]>(MOCK_ARTICLES);
-  const [localCats, setLocalCats] = useState<any[]>(MOCK_CATS);
-  const [localTpls, setLocalTpls] = useState<any[]>(MOCK_TPLS);
-
-  // 查询：文章
+  // 查询：文章（keyword 搜索 + 分页）
   const listQ = useQuery({
-    queryKey: ["admin/knowledge-base", statusFilter, search],
-    queryFn: () =>
-      api.get("/admin/knowledge-base", { params: { status: statusFilter || undefined, search: search || undefined, limit: 50, offset: 0 } }).then((r) => r.data.data),
-    // 后端未实现时立即回退演示数据，避免 404 反复重试导致页面卡加载
+    queryKey: ["admin/knowledge-base", keyword, page, pageSize],
+    queryFn: async () => (await api.get<{ data: { list: any[]; total: number; page: number; pageSize: number } }>("/admin/knowledge-base", {
+      params: { keyword: keyword || undefined, page, pageSize },
+    })).data.data,
     retry: 0,
   });
-
-  // 查询：分类
-  const catsQ = useQuery({
-    queryKey: ["admin/knowledge-base/categories"],
-    queryFn: () => api.get("/admin/knowledge-base/categories").then((r) => r.data.data),
-    retry: 0,
-  });
-
-  // 查询：快捷回复
-  const tplsQ = useQuery({
-    queryKey: ["admin/quick-replies"],
-    queryFn: () => api.get("/admin/quick-replies").then((r) => r.data.data),
-    retry: 0,
-  });
+  const articles = listQ.data?.list ?? [];
 
   // —— 创建/更新文章 ——
   const saveArticleMut = useMutation({
@@ -86,118 +46,15 @@ export default function AdminKnowledgeBasePage() {
       setEditArticle(null);
       qc.invalidateQueries({ queryKey: ["admin/knowledge-base"] });
     },
-    onError: (err: any) => {
-      // 演示模式：后端未实现时本地生效
-      if (err?.response?.status === 404) {
-        if (editArticle) {
-          setLocalArticles(prev => prev.map(a => a.id === editArticle.id ? { ...a, title: editForm.title, category: editForm.category, content: editForm.content, tags: editForm.tags, status: editForm.status, updated_at: "2026-08-10T12:00:00" } : a));
-        } else {
-          setLocalArticles(prev => [{ id: Date.now(), title: editForm.title, category: editForm.category, status: editForm.status, view_count: 0, helpful_count: 0, unhelpful_count: 0, author_name: "当前管理员", tags: editForm.tags, content: editForm.content, updated_at: "2026-08-10T12:00:00" }, ...prev]);
-        }
-        toast.success(editArticle ? "文章已更新（演示）" : "文章已创建（演示）");
-        setEditArticle(null);
-      } else {
-        toast.error(extractError(err));
-      }
-    },
+    onError: (err: any) => toast.error(extractError(err)),
   });
 
   // —— 删除文章 ——
   const delArticleMut = useMutation<any, unknown, number>({
     mutationFn: (id: number) => api.delete(`/admin/knowledge-base/${id}`),
     onSuccess: () => { toast.success("文章已删除"); qc.invalidateQueries({ queryKey: ["admin/knowledge-base"] }); },
-    onError: (err: any, id?: number) => {
-      // 演示模式：后端未实现时本地生效
-      if (err?.response?.status === 404 && id != null) {
-        setLocalArticles(prev => prev.filter(a => a.id !== id));
-        toast.success("文章已删除（演示）");
-      } else {
-        toast.error(extractError(err));
-      }
-    },
+    onError: (err: any) => toast.error(extractError(err)),
   });
-
-  // —— 创建/更新分类 ——
-  const saveCatMut = useMutation({
-    mutationFn: () => {
-      if (editCat) return api.put(`/admin/knowledge-base/categories/${editCat.id}`, catForm);
-      return api.post("/admin/knowledge-base/categories", catForm);
-    },
-    onSuccess: () => { toast.success(editCat ? "分类已更新" : "分类已创建"); setEditCat(null); qc.invalidateQueries({ queryKey: ["admin/knowledge-base/categories"] }); },
-    onError: (err: any) => {
-      // 演示模式：后端未实现时本地生效
-      if (err?.response?.status === 404) {
-        if (editCat) {
-          setLocalCats(prev => prev.map(c => c.id === editCat.id ? { ...c, ...catForm } : c));
-        } else {
-          setLocalCats(prev => [...prev, { id: Date.now(), ...catForm }]);
-        }
-        toast.success(editCat ? "分类已更新（演示）" : "分类已创建（演示）");
-        setEditCat(null);
-      } else {
-        toast.error(extractError(err));
-      }
-    },
-  });
-
-  // —— 删除分类 ——
-  const delCatMut = useMutation<any, unknown, number>({
-    mutationFn: (id: number) => api.delete(`/admin/knowledge-base/categories/${id}`),
-    onSuccess: () => { toast.success("分类已删除"); qc.invalidateQueries({ queryKey: ["admin/knowledge-base/categories"] }); },
-    onError: (err: any, id?: number) => {
-      // 演示模式：后端未实现时本地生效
-      if (err?.response?.status === 404 && id != null) {
-        setLocalCats(prev => prev.filter(c => c.id !== id));
-        toast.success("分类已删除（演示）");
-      } else {
-        toast.error(extractError(err));
-      }
-    },
-  });
-
-  // —— 创建/更新模板 ——
-  const saveTplMut = useMutation({
-    mutationFn: () => {
-      if (editTemplate) return api.put(`/admin/quick-replies/${editTemplate.id}`, tplForm);
-      return api.post("/admin/quick-replies", tplForm);
-    },
-    onSuccess: () => { toast.success(editTemplate ? "模板已更新" : "模板已创建"); setEditTemplate(null); qc.invalidateQueries({ queryKey: ["admin/quick-replies"] }); },
-    onError: (err: any) => {
-      // 演示模式：后端未实现时本地生效
-      if (err?.response?.status === 404) {
-        if (editTemplate) {
-          setLocalTpls(prev => prev.map(t => t.id === editTemplate.id ? { ...t, ...tplForm } : t));
-        } else {
-          setLocalTpls(prev => [...prev, { id: Date.now(), ...tplForm, created_by_name: "当前管理员" }]);
-        }
-        toast.success(editTemplate ? "模板已更新（演示）" : "模板已创建（演示）");
-        setEditTemplate(null);
-      } else {
-        toast.error(extractError(err));
-      }
-    },
-  });
-
-  // —— 删除模板 ——
-  const delTplMut = useMutation<any, unknown, number>({
-    mutationFn: (id: number) => api.delete(`/admin/quick-replies/${id}`),
-    onSuccess: () => { toast.success("模板已删除"); qc.invalidateQueries({ queryKey: ["admin/quick-replies"] }); },
-    onError: (err: any, id?: number) => {
-      // 演示模式：后端未实现时本地生效
-      if (err?.response?.status === 404 && id != null) {
-        setLocalTpls(prev => prev.filter(t => t.id !== id));
-        toast.success("模板已删除（演示）");
-      } else {
-        toast.error(extractError(err));
-      }
-    },
-  });
-
-  // 后端未实现时回退到演示数据（未来接入真实端点后此兜底自动失效）
-  const articles = listQ.data?.list != null ? listQ.data.list : localArticles;
-  const cats = catsQ.data?.list != null ? catsQ.data.list : localCats;
-  const tpls = tplsQ.data?.list != null ? tplsQ.data.list : localTpls;
-  const demo = listQ.data?.list == null || catsQ.data?.list == null || tplsQ.data?.list == null;
 
   const statusLabel = (s: string) => ({ draft: "草稿", published: "已发布", archived: "已归档" }[s] ?? s);
   const articleStatus = (s: string): "success" | "warning" | "danger" | "info" | "default" => {
@@ -210,262 +67,109 @@ export default function AdminKnowledgeBasePage() {
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <h2 style={{ marginBottom: 4 }}>
         客服支撑
-        <HelpIcon text="管理端知识库：管理已发布/草稿/归档的文章，可创建编辑和删除。分类管理。快捷回复模板管理。" level="page" />
-        {demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/knowledge-base 待接入）</span>}
+        <HelpIcon text="管理端知识库：管理已发布/草稿文章，可创建、编辑、删除与关键词搜索。" level="page" />
       </h2>
-      <p style={{ color: "#94a3b8", marginTop: 0, fontSize: 13 }}>知识库 · 分类 · 快捷回复模板管理</p>
-
-      {/* Tab 切换 */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {[
-          { key: "articles" as const, label: "文章管理" },
-          { key: "categories" as const, label: "分类管理" },
-          { key: "templates" as const, label: "快捷回复" },
-        ].map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} style={{ ...btnBase, background: tab === t.key ? "var(--color-primary)" : "var(--color-panel)", color: tab === t.key ? "#fff" : "#475569", border: `1px solid var(--color-border)` }}>{t.label}</button>
-        ))}
-      </div>
+      <p style={{ color: "#94a3b8", marginTop: 0, fontSize: 13 }}>知识库文章管理</p>
 
       {/* ────────── 文章列表 ────────── */}
-      {tab === "articles" && (
-        <>
-          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="搜索文章标题或标签..." style={{ flex: 1, padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14, maxWidth: 320 }} />
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 13 }}>
-              <option value="">全部状态</option>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { setKeyword(search.trim()); setPage(1); } }}
+          placeholder="搜索文章标题/分类/内容，回车确认..."
+          style={{ flex: 1, padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14, maxWidth: 360 }}
+        />
+        <button onClick={() => { setKeyword(search.trim()); setPage(1); }} style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-text)", border: `1px solid var(--color-border)` }}>搜索</button>
+        <button onClick={() => { setEditArticle({}); setEditForm({ title: "", category: "", content: "", status: "draft" }); }} style={{ ...btnBase, background: "#059669", color: "#fff", marginLeft: "auto" }}>
+          + 新建文章
+          <HelpIcon text="新建一篇知识库文章并选择状态" />
+        </button>
+      </div>
+
+      <div style={{ ...card, padding: 0, overflow: "hidden" }}>
+        {listQ.isLoading ? (
+          <p style={{ padding: 20, color: "#94a3b8" }}>加载中...</p>
+        ) : listQ.isError ? (
+          <p style={{ padding: 20, color: "var(--color-danger-text)" }}>加载失败：{extractError(listQ.error)}</p>
+        ) : articles.length === 0 ? (
+          <p style={{ padding: 20, color: "#94a3b8" }}>暂无文章。点击"新建文章"创建第一篇。</p>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: "var(--color-bg)", borderBottom: `1px solid var(--color-border)` }}>
+                <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>ID</th>
+                <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>标题</th>
+                <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>分类</th>
+                <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>状态</th>
+                <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>内容预览</th>
+                <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>更新</th>
+                <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {articles.map((a: any, i: number) => (
+                <tr key={a.id} style={{ borderBottom: `1px solid var(--color-border)`, background: i % 2 === 0 ? "var(--color-panel)" : "#fafafa" }}>
+                  <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", fontSize: 12 }}>#{a.id}</td>
+                  <td style={{ padding: "10px 16px", color: "var(--color-text)", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</td>
+                  <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", fontSize: 12 }}>{a.category ?? "-"}</td>
+                  <td style={{ padding: "10px 16px" }}>
+                    <StatusBadge status={articleStatus(a.status)}>{statusLabel(a.status)}</StatusBadge>
+                  </td>
+                  <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", fontSize: 12, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.content ?? ""}</td>
+                  <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", fontSize: 12 }}>{a.updated_at ? new Date(a.updated_at).toLocaleString("zh-CN") : "-"}</td>
+                  <td style={{ padding: "10px 16px" }}>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button onClick={() => { setEditArticle(a); setEditForm({ title: a.title, category: a.category ?? "", content: a.content ?? "", status: a.status }); }} style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-text)", border: `1px solid var(--color-border)`, fontSize: 12 }}>编辑</button>
+                      <ConfirmPopover title="确认删除？" description="删除后不可恢复" onConfirm={() => delArticleMut.mutate(a.id)}>
+                        <button style={{ ...btnBase, background: "var(--color-danger-bg)", color: "var(--color-danger-text)", border: `1px solid #fca5a5`, fontSize: 12 }}>删除</button>
+                      </ConfirmPopover>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+      {listQ.data && (
+        <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+          <Pagination
+            current={page}
+            total={listQ.data.total}
+            pageSize={pageSize}
+            onChange={(p, size) => { setPage(p); setPageSize(size); }}
+          />
+        </div>
+      )}
+
+      {/* 文章编辑 Modal */}
+      <Modal open={editArticle !== null} onClose={() => setEditArticle(null)} title={editArticle ? "编辑文章" : "新建文章"} width={560}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>标题 *</label>
+            <input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14 }} />
+          </div>
+          <div>
+            <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>分类</label>
+            <input value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })} placeholder="如：充值 / 开发 / 技术" style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14 }} />
+          </div>
+          <div>
+            <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>内容 *</label>
+            <textarea value={editForm.content} onChange={(e) => setEditForm({ ...editForm, content: e.target.value })} rows={10} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14, fontFamily: "monospace" }} />
+          </div>
+          <div>
+            <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>状态</label>
+            <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14 }}>
               <option value="draft">草稿</option>
-              <option value="published">已发布</option>
-              <option value="archived">已归档</option>
+              <option value="published">发布</option>
             </select>
-            <button onClick={() => { setEditArticle({}); setEditForm({ title: "", category: "", content: "", tags: "", status: "draft" }); }} style={{ ...btnBase, background: "#059669", color: "#fff" }}>
-              + 新建文章
-              <HelpIcon text="新建一篇知识库文章并选择状态" />
-            </button>
           </div>
-
-          <div style={{ ...card, padding: 0, overflow: "hidden" }}>
-            {listQ.isLoading ? (
-              <p style={{ padding: 20, color: "#94a3b8" }}>加载中...</p>
-            ) : articles.length === 0 ? (
-              <p style={{ padding: 20, color: "#94a3b8" }}>暂无文章。点击"新建文章"创建第一篇。</p>
-            ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
-                  <tr style={{ background: "var(--color-bg)", borderBottom: `1px solid var(--color-border)` }}>
-                    <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>标题</th>
-                    <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>分类</th>
-                    <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>状态</th>
-                    <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>浏览</th>
-                    <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>有帮助</th>
-                    <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>作者</th>
-                    <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>更新</th>
-                    <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {articles.map((a: any, i: number) => (
-                    <tr key={a.id} style={{ borderBottom: `1px solid var(--color-border)`, background: i % 2 === 0 ? "var(--color-panel)" : "#fafafa" }}>
-                      <td style={{ padding: "10px 16px", color: "var(--color-text)", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</td>
-                      <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", fontSize: 12 }}>{a.category ?? "-"}</td>
-                      <td style={{ padding: "10px 16px" }}>
-                        <StatusBadge status={articleStatus(a.status)}>{statusLabel(a.status)}</StatusBadge>
-                      </td>
-                      <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", fontSize: 12 }}>{a.view_count ?? 0}</td>
-                      <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", fontSize: 12 }}>{a.helpful_count ?? 0}/{a.unhelpful_count ?? 0}</td>
-                      <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", fontSize: 12 }}>{a.author_name ?? "-"}</td>
-                      <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", fontSize: 12 }}>{a.updated_at ? new Date(a.updated_at).toLocaleDateString("zh-CN") : "-"}</td>
-                      <td style={{ padding: "10px 16px" }}>
-                        <div style={{ display: "flex", gap: 4 }}>
-                          <button onClick={() => { setEditArticle(a); setEditForm({ title: a.title, category: a.category ?? "", content: a.content ?? "", tags: a.tags ?? "", status: a.status }); }} style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-text)", border: `1px solid var(--color-border)`, fontSize: 12 }}>编辑</button>
-                          <ConfirmPopover title="确认删除？" description="删除后不可恢复" onConfirm={() => delArticleMut.mutate(a.id)}>
-                            <button style={{ ...btnBase, background: "var(--color-danger-bg)", color: "var(--color-danger-text)", border: `1px solid #fca5a5`, fontSize: 12 }}>删除</button>
-                          </ConfirmPopover>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-          {/* 文章编辑 Modal */}
-          <Modal open={editArticle !== null} onClose={() => setEditArticle(null)} title={editArticle ? "编辑文章" : "新建文章"} width={560}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div>
-                <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>标题 *</label>
-                <input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14 }} />
-              </div>
-              <div style={{ display: "flex", gap: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>分类</label>
-                  <select value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14 }}>
-                    <option value="">无</option>
-                    {cats.map((c: any) => <option key={c.id} value={c.name}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>标签（逗号分隔）</label>
-                  <input value={editForm.tags} onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14 }} />
-                </div>
-              </div>
-              <div>
-                <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>内容</label>
-                <textarea value={editForm.content} onChange={(e) => setEditForm({ ...editForm, content: e.target.value })} rows={10} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14, fontFamily: "monospace" }} />
-              </div>
-              <div>
-                <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>状态</label>
-                <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14 }}>
-                  <option value="draft">草稿</option>
-                  <option value="published">发布</option>
-                  <option value="archived">归档</option>
-                </select>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
-              <button onClick={() => { saveArticleMut.mutate(); }} disabled={saveArticleMut.isPending} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", opacity: saveArticleMut.isPending ? 0.6 : 1 }}>{saveArticleMut.isPending ? "保存中..." : "保存"}</button>
-            </div>
-          </Modal>
-        </>
-      )}
-
-      {/* ────────── 分类管理 ────────── */}
-      {tab === "categories" && (
-        <>
-          <div style={{ marginBottom: 16 }}>
-            <button onClick={() => { setEditCat({}); setCatForm({ name: "", slug: "", description: "", sort_order: 0 }); }} style={{ ...btnBase, background: "#059669", color: "#fff" }}>+ 新建分类</button>
-          </div>
-          <div style={{ ...card, padding: 0, overflow: "hidden" }}>
-            {cats.length === 0 ? (
-              <p style={{ padding: 20, color: "#94a3b8" }}>暂无分类。</p>
-            ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
-                  <tr style={{ background: "var(--color-bg)", borderBottom: `1px solid var(--color-border)` }}>
-                    <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>名称</th>
-                    <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>别名</th>
-                    <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>描述</th>
-                    <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>排序</th>
-                    <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {cats.map((c: any, i: number) => (
-                    <tr key={c.id} style={{ borderBottom: `1px solid var(--color-border)`, background: i % 2 === 0 ? "var(--color-panel)" : "#fafafa" }}>
-                      <td style={{ padding: "10px 16px", color: "var(--color-text)" }}>{c.name}</td>
-                      <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)" }}>{c.slug}</td>
-                      <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)" }}>{c.description ?? "-"}</td>
-                      <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)" }}>{c.sort_order}</td>
-                      <td style={{ padding: "10px 16px" }}>
-                        <div style={{ display: "flex", gap: 4 }}>
-                          <button onClick={() => { setEditCat(c); setCatForm({ name: c.name, slug: c.slug, description: c.description ?? "", sort_order: c.sort_order }); }} style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-text)", border: `1px solid var(--color-border)`, fontSize: 12 }}>编辑</button>
-                          <ConfirmPopover title="删除此分类？" description="已有文章的分类不会删除" onConfirm={() => delCatMut.mutate(c.id)}>
-                            <button style={{ ...btnBase, background: "var(--color-danger-bg)", color: "var(--color-danger-text)", border: `1px solid #fca5a5`, fontSize: 12 }}>删除</button>
-                          </ConfirmPopover>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-          {/* 分类编辑 Modal */}
-          <Modal open={editCat !== null} onClose={() => setEditCat(null)} title={editCat ? "编辑分类" : "新建分类"} width={460}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div>
-                <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>名称 *</label>
-                <input value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14 }} />
-              </div>
-              <div>
-                <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>别名（slug）*</label>
-                <input value={catForm.slug} onChange={(e) => setCatForm({ ...catForm, slug: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14 }} />
-              </div>
-              <div>
-                <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>描述</label>
-                <input value={catForm.description} onChange={(e) => setCatForm({ ...catForm, description: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14 }} />
-              </div>
-              <div>
-                <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>排序</label>
-                <input type="number" value={catForm.sort_order} onChange={(e) => setCatForm({ ...catForm, sort_order: Number(e.target.value) })} style={{ width: 100, padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14 }} />
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
-              <button onClick={() => { saveCatMut.mutate(); }} disabled={saveCatMut.isPending} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", opacity: saveCatMut.isPending ? 0.6 : 1 }}>{saveCatMut.isPending ? "保存中..." : "保存"}</button>
-            </div>
-          </Modal>
-        </>
-      )}
-
-      {/* ────────── 快捷回复模板 ────────── */}
-      {tab === "templates" && (
-        <>
-          <div style={{ marginBottom: 16 }}>
-            <button onClick={() => { setEditTemplate({}); setTplForm({ name: "", category: "", content: "", sort_order: 0 }); }} style={{ ...btnBase, background: "#059669", color: "#fff" }}>+ 新建模板</button>
-          </div>
-          <div style={{ ...card, padding: 0, overflow: "hidden" }}>
-            {tpls.length === 0 ? (
-              <p style={{ padding: 20, color: "#94a3b8" }}>暂无快捷回复模板。</p>
-            ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
-                  <tr style={{ background: "var(--color-bg)", borderBottom: `1px solid var(--color-border)` }}>
-                    <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>名称</th>
-                    <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>分类</th>
-                    <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>内容</th>
-                    <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>创建者</th>
-                    <th style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)" }}>操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tpls.map((tpl: any, i: number) => (
-                    <tr key={tpl.id} style={{ borderBottom: `1px solid var(--color-border)`, background: i % 2 === 0 ? "var(--color-panel)" : "#fafafa" }}>
-                      <td style={{ padding: "10px 16px", color: "var(--color-text)" }}>{tpl.name}</td>
-                      <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", fontSize: 12 }}>{tpl.category ?? "通用"}</td>
-                      <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", fontSize: 12, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tpl.content}</td>
-                      <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", fontSize: 12 }}>{tpl.created_by_name ?? "-"}</td>
-                      <td style={{ padding: "10px 16px" }}>
-                        <div style={{ display: "flex", gap: 4 }}>
-                          <button onClick={() => { setEditTemplate(tpl); setTplForm({ name: tpl.name, category: tpl.category ?? "", content: tpl.content, sort_order: tpl.sort_order }); }} style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-text)", border: `1px solid var(--color-border)`, fontSize: 12 }}>编辑</button>
-                          <ConfirmPopover title="确认删除？" onConfirm={() => delTplMut.mutate(tpl.id)}>
-                            <button style={{ ...btnBase, background: "var(--color-danger-bg)", color: "var(--color-danger-text)", border: `1px solid #fca5a5`, fontSize: 12 }}>删除</button>
-                          </ConfirmPopover>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-          {/* 模板编辑 Modal */}
-          <Modal open={editTemplate !== null} onClose={() => setEditTemplate(null)} title={editTemplate ? "编辑模板" : "新建模板"} width={480}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div>
-                <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>名称 *</label>
-                <input value={tplForm.name} onChange={(e) => setTplForm({ ...tplForm, name: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14 }} />
-              </div>
-              <div>
-                <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>分类</label>
-                <select value={tplForm.category} onChange={(e) => setTplForm({ ...tplForm, category: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14 }}>
-                  <option value="">通用</option>
-                  <option value="greeting">问候</option>
-                  <option value="billing">计费</option>
-                  <option value="tech">技术</option>
-                  <option value="other">其他</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>内容 *</label>
-                <textarea value={tplForm.content} onChange={(e) => setTplForm({ ...tplForm, content: e.target.value })} rows={6} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14, fontFamily: "monospace" }} />
-                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>支持变量：{`{username}`} {`{balance}`} {`{api_key}`} </div>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
-              <button onClick={() => { saveTplMut.mutate(); }} disabled={saveTplMut.isPending} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", opacity: saveTplMut.isPending ? 0.6 : 1 }}>{saveTplMut.isPending ? "保存中..." : "保存"}</button>
-            </div>
-          </Modal>
-        </>
-      )}
+        </div>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
+          <button onClick={() => { saveArticleMut.mutate(); }} disabled={saveArticleMut.isPending || !editForm.title || !editForm.content} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", opacity: saveArticleMut.isPending ? 0.6 : 1 }}>{saveArticleMut.isPending ? "保存中..." : "保存"}</button>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -165,6 +165,37 @@
   box-shadow: 0 0 0 2px rgba(79, 110, 247, 0.1);
 }
 .c3-filter-input--w200 { width: 200px; }
+.c3-filter-input--w100 { width: 110px; }
+
+/* ==== 批量操作栏（原型 batch-bar） ==== */
+.c3-batch-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: #fafafa;
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.c3-batch-bar__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #555;
+  cursor: pointer;
+}
+.c3-batch-bar input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+
+/* 行内小 tag（邮箱/余额旁的未认证/余额不足） */
+.c3-tag--inline {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  font-size: 11px;
+  vertical-align: middle;
+}
 
 .c3-filter-select {
   height: 36px;
