@@ -318,6 +318,33 @@ pnpm build                             # 三端构建通过
 
 ---
 
+## P3 — 工程与可观测性 ✅ 已完成（2026-08-18）
+
+> **P3 验收结果**：3 项全部交付；回归 Gate 全绿：三端 typecheck 0 错、**全量单测 808/808**（792 基线 + 16 P3 新增）、verify 17/17、E2E 10/10、三端 build 通过、记账一致性精确通过 → **宣告 P3 完成** ✅（P0–P3 全部完成，进入部署准备阶段，受部署闸门约束）。
+
+### P3 交付明细（提交见 git log）
+
+- **P3-1 压测与分区** ✅
+  - migration `0025_partition_big_tables.sql`：`consumption_records` / `balance_transactions` 按月 RANGE 分区（PG 原生分区，pg_partman 本地不可用故改原生方案），复合主键 `(id, created_at)`、`request_id` 复合唯一 `(request_id, created_at)`、高频查询索引（user_created / type_created）
+  - `partition-maintenance.ts`：月度子表维护（预建/清理，供 cron 调用）
+  - 幂等 L2 兜底适配：`idempotency.ts` 约束名正则兼容新旧两种形态（父表复合唯一 / 子表索引），单测覆盖
+  - 压测 `node scripts/stress-chat.cjs 10 2`：**9/9 断言通过**（20/20 请求、余额扣减==消费、request_id 零重复、无冻结残留）；分区表下行为验证通过（数据落 2026_08 子表、幂等兜底生效）
+  - 报告：`test-reports/stress-20260818.md`
+- **P3-2 可观测性** ✅
+  - `lib/gateway-log.ts`：网关结构化日志（requestId/model/supplier/keyId/latencyMs/usage/cost/status）+ 慢查询 onResponse hook（阈值 3000ms 可注入）
+  - `app.ts`：`requestIdHeader:'x-request-id'` + `genReqId(UUID)` + pino req serializer；chat/anthropic 路由 finally 统一输出网关日志
+  - ⚠️ **修复 fastify 5 同步 hook 挂起 bug**：`requestIdOnRequestHook` 初始为同步函数，fastify 5.11.2 的 hookRunnerGenerator 对非 thenable 返回值不自动 next() → 所有请求永久挂起；已改 async（详见 memory/2026-08-18-p3.md）
+  - 延迟指标确认已接入健康聚合（聚合 Worker 消费 completed_at−occurred_at → latencyHist → p50/p99），补测试确认口径
+  - 测试：`gateway-log.test.ts` 11 用例 + `model-health-aggregator.test.ts` 3 用例
+- **P3-3 部署准备** ✅（不实际部署，受闸门约束）
+  - `deploy/deploy.sh`（pnpm monorepo 版，含部署闸门标记检查）
+  - `deploy/ecosystem.config.js`（api 单实例 fork，调度器内嵌防 OOM）
+  - `deploy/gen-prod-config.cjs`（生产密钥生成器：JWT/加密密钥）
+  - `deploy/deployment-checklist.md`（上线检查清单）
+  - `docs/ops-guide.md` 部署章节更新为 pnpm 版
+
+---
+
 ## 执行顺序与依赖图
 
 ```

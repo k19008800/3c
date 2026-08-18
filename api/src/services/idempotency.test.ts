@@ -382,6 +382,23 @@ describe('isIdempotencyUniqueViolation', () => {
     })).toBe(true);
   });
 
+  it('分区表父表复合唯一约束名（consumption_records_request_id_created_at_unique）→ true', () => {
+    expect(isIdempotencyUniqueViolation({
+      message: 'duplicate key value violates unique constraint "consumption_records_request_id_created_at_unique"',
+    })).toBe(true);
+  });
+
+  it('分区表子表唯一索引名（consumption_records_2026_08_request_id_created_at_key）→ true', () => {
+    // P3-1 分区改造：PG 按「子表名_列名_key」命名分区子表唯一索引，
+    // 幂等 L2 DB 兜底必须识别该形态（migration 0025）
+    expect(isIdempotencyUniqueViolation({
+      message: 'duplicate key value violates unique constraint "consumption_records_2026_08_request_id_created_at_key"',
+    })).toBe(true);
+    expect(isIdempotencyUniqueViolation({
+      message: 'duplicate key value violates unique constraint "consumption_records_2026_09_request_id_created_at_key"',
+    })).toBe(true);
+  });
+
   it('其他错误 / 非对象 → false', () => {
     expect(isIdempotencyUniqueViolation({ code: '42P01', message: 'relation not found' })).toBe(false);
     expect(isIdempotencyUniqueViolation(new Error('boom'))).toBe(false);

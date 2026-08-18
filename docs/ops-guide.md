@@ -69,79 +69,37 @@ flowchart TD
     N -->|否| P[回滚 + 排查]
 ```
 
-### 2.2 部署脚本（deploy.sh）
+### 2.2 部署脚本（deploy.sh）— pnpm monorepo 版（P3-3 更新）
+
+> **2026-08-18 P3-3**：部署脚本已按新 monorepo 结构重写，见 `deploy/deploy.sh`（pnpm workspace + 手工 migration 直跑 + PM2 单实例）。要点：
+> - 前置：`.deploy-gate-approved` 标记（部署闸门，本地全量验收通过后由调度-agent 创建）
+> - 构建：`pnpm build`（shared → api → web-console → web-portal）
+> - 迁移：`node run-migrations-0017-0022.cjs`（分区 DDL 等手工 SQL 直跑，勿用 db:push）
+> - 进程：`deploy/ecosystem.config.js`（api 单实例 fork，内嵌全部调度器，防 1.7G 内存 OOM）
 
 ```bash
 #!/bin/bash
-# 3cloud 自动化部署脚本
+# 3cloud 自动化部署脚本（详见 deploy/deploy.sh）
 # 使用方法: ./deploy.sh [branch=main]
-
-set -e
-
-BRANCH=${1:-main}
-PROJECT_DIR="/root/3cloud"
-API_DIR="$PROJECT_DIR/api"
-WEB_DIR="$PROJECT_DIR/web"
-
-echo "=== 3cloud 部署开始 ==="
-echo "分支: $BRANCH"
-echo "时间: $(date)"
-
-# 1. 拉取最新代码
-cd $PROJECT_DIR
-git fetch origin
-git checkout $BRANCH
-git pull origin $BRANCH
-
-# 2. 前端构建
-echo "--- 构建前端 ---"
-cd $WEB_DIR
-npm ci
-npm run build
-
-# 3. 后端依赖安装
-echo "--- 安装后端依赖 ---"
-cd $API_DIR
-npm ci --production
-
-# 4. 数据库迁移
-echo "--- 执行数据库迁移 ---"
-npx drizzle-kit push
-
-# 5. 重启后端
-echo "--- 重启 API 服务 ---"
-pm2 reload ecosystem.config.js --update-env
-
-# 6. 更新前端静态文件
-echo "--- 更新前端静态文件 ---"
-cp -r $WEB_DIR/dist/* /var/www/3cloud/
-
-# 7. 验证
-echo "--- 验证部署 ---"
-sleep 3
-curl -s http://localhost:3000/health | grep -q "ok" && echo "✅ 健康检查通过" || echo "❌ 健康检查失败"
-
-echo "=== 部署完成 ==="
 ```
 
-### 2.3 PM2 配置（ecosystem.config.js）
+### 2.3 PM2 配置（ecosystem.config.js）— pnpm monorepo 版
+
+> 完整配置见 `deploy/ecosystem.config.js`。核心：api 单实例 fork 模式（调度器内嵌，无需独立 worker 进程），`max_memory_restart: '1G'` 防 OOM。
 
 ```javascript
 module.exports = {
   apps: [{
     name: '3cloud-api',
-    script: 'dist/index.js',
-    instances: 2,  // cluster mode
-    exec_mode: 'cluster',
-    env: {
-      NODE_ENV: 'production',
-      PORT: 3000,
-    },
+    cwd: '/root/3cloud',
+    script: 'api/dist/index.js',
+    instances: 1,  // 1.7G 内存不跑 cluster
+    exec_mode: 'fork',
+    env: { NODE_ENV: 'production', PORT: 3000, HOST: '0.0.0.0' },
     max_memory_restart: '1G',
     log_date_format: 'YYYY-MM-DD HH:mm:ss',
     error_file: '/var/log/3cloud/api-error.log',
     out_file: '/var/log/3cloud/api-out.log',
-    merge_logs: true,
   }]
 };
 ```

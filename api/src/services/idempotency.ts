@@ -3,7 +3,8 @@
  *
  * 三层架构（见 coding-standards-control-logic.md §三）：
  *   L1: Redis SETNX（同 request_id 立即去重，带 TTL）→ 命中直接回放
- *   L2: consumption_records.request_id 唯一约束（DB 层兜底已存在，无需 migration）
+ *   L2: consumption_records.request_id 唯一约束（DB 层兜底；P3-1 分区改造后为复合
+ *       (request_id, created_at)，migration 0025，见 IDEMPOTENCY_UNIQUE_MSG_RE）
  *   L3: 幂等命中返回首次处理结果、不重复扣费
  *
  * 幂等键来源：优先 Idempotency-Key 请求头；无则用服务端生成的 requestId
@@ -45,6 +46,19 @@ export const IDEMPOTENCY_RESP_KEY_PREFIX = 'idem:resp:';
 
 /** consumption_records.request_id 为 varchar(100)，超长截断避免 DB 报错 */
 const MAX_REQUEST_ID_LENGTH = 100;
+
+/**
+ * 匹配 consumption_records.request_id 唯一约束名（23505 错误消息里）。
+ *
+ * 兼容两种命名（P3-1 分区改造后并存）：
+ *   - 旧（非分区表唯一约束）：consumption_records_request_id_unique
+ *   - 新（分区表子表唯一索引，PG 按「子表名_列名_key」命名）：
+ *     consumption_records_2026_08_request_id_created_at_key
+ *
+ * 两者共同前缀为 consumption_records_（可选中间月份）_request_id，
+ * 因此用 /consumption_records(?:_\d{4}_\d{2})?_request_id/ 一次匹配两种形态。
+ */
+const IDEMPOTENCY_UNIQUE_MSG_RE = /consumption_records(?:_\d{4}_\d{2})?_request_id/i;
 
 /**
  * 释放锁的 Lua 脚本：仅当锁值等于调用方持有的 token 时才删除。
@@ -229,6 +243,8 @@ export async function getCachedIdempotentResponse(key: string): Promise<Idempote
  * consumption_records（agent_commissions 为异步 fire-and-forget、对话留痕为
  * 旁路写入且自带 catch），故 code=23505 即可判定为幂等冲突。
  *
+ * P3-1 分区改造后约束名形态见 IDEMPOTENCY_UNIQUE_MSG_RE（新旧两种都匹配）。
+ *
  * @param err - 捕获的异常
  * @returns true = 幂等唯一约束冲突
  */
@@ -241,7 +257,7 @@ export function isIdempotencyUniqueViolation(err: unknown): boolean {
     if (cur.code === '23505') return true;
     if (typeof cur.message === 'string'
       && /duplicate key value violates unique constraint/i.test(cur.message)
-      && /consumption_records_request_id/i.test(cur.message)) {
+      && IDEMPOTENCY_UNIQUE_MSG_RE.test(cur.message)) {
       return true;
     }
     e = cur.cause;

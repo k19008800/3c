@@ -589,9 +589,12 @@ async function main() {
     userId: u1, keyHash: `demo_key_${u1}`, keyPrefix: 'sk-demo1', name: '默认密钥', status: 'active', rateLimitPerMinute: 60,
   }).onConflictDoNothing({ target: schema.apiKeys.keyHash });
   const u2 = await ensureUser({ email: 'newbie@example.com', name: '郑十一', customerType: 'personal', realNameStatus: 'unverified', balance: '0' }); // 曾调用
+  // ⚠️ P3-1 分区改造（migration 0025）：request_id 唯一约束改为复合 (request_id, created_at)
+  // → ON CONFLICT 目标同步为两列，且 createdAt 固定以便重跑幂等（否则每次 now() 不同会插入重复）
   await db.insert(schema.consumptionRecords).values({
     userId: u2, requestId: `req_demo_${u2}`, model: 'gpt-4o', inputTokens: 1200, outputTokens: 300, totalTokens: 1500, cost: '0.015', errorCode: 'not_verified',
-  }).onConflictDoNothing({ target: schema.consumptionRecords.requestId });
+    createdAt: new Date('2026-08-01T00:00:00Z'),
+  }).onConflictDoNothing({ target: [schema.consumptionRecords.requestId, schema.consumptionRecords.createdAt] });
   const u3 = await ensureUser({ email: 'hello@toy-project.cn', name: '冯十二', customerType: 'personal', realNameStatus: 'unverified', balance: '0' }); // 仅注册
   const [hasInvite] = await db
     .select({ id: schema.realNameInvites.id }).from(schema.realNameInvites)

@@ -73,6 +73,7 @@ import {
 import type { PipelineContext } from '../services/pipeline';
 import type { SelectedChannel } from '../services/upstream/routing';
 import { estimateInputTokens } from './chat';
+import { logGatewayRequest, type GatewayLogFields } from '../lib/gateway-log';
 import { anthropicStreamRelay } from '../services/anthropic/stream-relay';
 import { getPricingForModel, computeCost, computeEstimatedCost, buildPricingContext } from '../services/billing/pricing';
 import { settleBilling } from '../services/billing/settle';
@@ -278,7 +279,7 @@ export async function anthropicRoutes(app: FastifyInstance) {
 
     // ── 幂等守卫（P0-3）：键 = Idempotency-Key 头 || 服务端生成 requestId ──
     // pipelineCtx.requestId 统一为幂等键（见 chat.ts 同款注释：保证 L2 DB 兜底同键）。
-    const idemKey = resolveIdempotencyKey(request, crypto.randomUUID());
+    const idemKey = resolveIdempotencyKey(request, request.requestId ?? crypto.randomUUID());
     const isStreamRequest = bodyAny?.stream === true;
 
     // Build pipeline context（request/reply 注入供 steps 使用；身份字段由 auth step 同步）
@@ -318,6 +319,21 @@ export async function anthropicRoutes(app: FastifyInstance) {
       userAgent: (request.headers?.['user-agent'] as string | undefined) ?? null,
       occurredAt: new Date(),
       completedAt: null,
+    };
+
+    // ── P3-2 网关结构化日志累加器：各步骤/错误分支补充字段，finally 统一输出 ──
+    // 字段口径见 lib/gateway-log.ts（requestId/model/supplier/keyId/latencyMs/usage/cost/status）。
+    const startedAt = Date.now();
+    const gatewayLog: GatewayLogFields = {
+      requestId: pipelineCtx.requestId,
+      model: typeof bodyAny.model === 'string' ? bodyAny.model : undefined,
+      supplier: null,
+      keyId: null,
+      latencyMs: 0,
+      usage: undefined,
+      cost: null,
+      status: 'success',
+      stream: isStreamRequest,
     };
 
     try {
@@ -604,9 +620,11 @@ export async function anthropicRoutes(app: FastifyInstance) {
     } catch (err) {
       trace.completedAt = new Date();
       trace.status = 'failed';
+      gatewayLog.status = 'failure';
 
       // 幂等锁重复（L1 命中）：回放首次结果，不重复扣费
       if (err instanceof IdempotencyConflictError) {
+        gatewayLog.status = 'idempotency_hit';
         const replayed = await replayIdempotentRequest(reply, err.key, err.isStream);
         if (replayed) return reply;
         // 首次请求仍在处理中（无缓存、无消费记录）→ 409 幂等提示，而非 500
@@ -615,12 +633,16 @@ export async function anthropicRoutes(app: FastifyInstance) {
 
       // 幂等 DB 兜底命中：Redis 首层失效时重复 insert → 409 幂等提示，而非 500
       if (isIdempotencyUniqueViolation(err)) {
+        gatewayLog.status = 'idempotency_hit';
+        gatewayLog.error = 'IDEMPOTENCY_CONFLICT';
         trace.errorCode = 'IDEMPOTENCY_CONFLICT';
         return sendAnthropicError(reply, 409, 'Duplicate request with the same idempotency key', 'idempotency_conflict');
       }
 
       // 上游 4xx/5xx：透传上游状态码 + 错误体（rollback 已自动解冻预扣 + 释放幂等锁）
       if (err instanceof UpstreamPassthroughError) {
+        gatewayLog.statusCode = err.statusCode || 502;
+        gatewayLog.error = `UPSTREAM_ERROR:${err.statusCode}`;
         trace.errorCode = String(err.statusCode);
         trace.responseText = err.upstreamBody.slice(0, 20000);
         reply.status(err.statusCode || 502);
@@ -633,16 +655,36 @@ export async function anthropicRoutes(app: FastifyInstance) {
       }
 
       if (err instanceof InsufficientBalanceError) {
+        gatewayLog.error = 'INSUFFICIENT_BALANCE';
         trace.errorCode = 'INSUFFICIENT_BALANCE';
         return sendAnthropicError(reply, 402, err.message, 'insufficient_balance');
       }
       if (err instanceof AppError) {
+        gatewayLog.error = err.code.toLowerCase();
         trace.errorCode = err.code.toLowerCase();
         return sendAnthropicError(reply, err.statusCode, err.message);
       }
       throw err;
     } finally {
       trace.completedAt = new Date();
+
+      // P3-2：输出网关结构化日志（成功/失败/幂等命中统一在此输出，字段见 lib/gateway-log.ts）
+      const channel = getStepResult<SelectedChannel | null>(pipelineCtx, STEP_KEYS.channel);
+      if (channel) {
+        gatewayLog.supplier = channel.supplier.name;
+        gatewayLog.keyId = channel.key.id;
+      }
+      gatewayLog.latencyMs = Date.now() - startedAt;
+      if (trace.inputTokens > 0 || trace.outputTokens > 0) {
+        gatewayLog.usage = {
+          input: trace.inputTokens,
+          output: trace.outputTokens,
+          total: trace.inputTokens + trace.outputTokens,
+        };
+      }
+      gatewayLog.cost = trace.cost ?? null;
+      logGatewayRequest(request.log, gatewayLog);
+
       // 旁路写入：记录失败只打日志，不改变请求结果
       await recordConversationContext(trace).catch(() => { /* 已由服务内部兜底 */ });
     }

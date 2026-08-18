@@ -3,7 +3,12 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import crypto from 'crypto';
 import { db } from './db';
+import {
+  requestIdOnRequestHook,
+  slowRequestOnResponseHook,
+} from './lib/gateway-log';
 import { loadEnv, type Env } from './lib/env';
 import { healthRoutes } from './routes/health';
 import { internalAssetsRoutes } from './routes/internal-assets';
@@ -79,9 +84,27 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
       transport: env.NODE_ENV === 'development'
         ? { target: 'pino-pretty', options: { colorize: true } }
         : undefined,
+      // P3-2: 在 Fastify 默认 req 序列化基础上补充 requestId（= request.id，
+      // 由 requestIdHeader + genReqId 保证 = x-request-id 透传或服务端生成），
+      // 使每条请求日志（含 Fastify 自带的 incoming/request completed）都可按 requestId 检索。
+      serializers: {
+        req: (req: any) => ({
+          method: req.method,
+          url: req.url,
+          version: req.headers && req.headers['accept-version'],
+          host: req.host,
+          remoteAddress: req.ip,
+          remotePort: req.socket ? req.socket.remotePort : undefined,
+          requestId: req.id,
+        }),
+      },
     },
     // 多模态大 base64 预处理（P0-4）需要 >1MB 请求体；默认 64MB（env BODY_LIMIT_MB 可调）
     bodyLimit: env.BODY_LIMIT_MB * 1024 * 1024,
+    // P3-2 请求链路标识：request.id = x-request-id 头（客户端透传）|| 服务端生成 UUID。
+    // request.log 的 reqId 绑定与响应头 x-request-id 均以 request.id 为准，保证全链路一致。
+    requestIdHeader: 'x-request-id',
+    genReqId: () => crypto.randomUUID(),
   });
 
   // Plugins
@@ -100,6 +123,13 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   // Decorate with deps
   app.decorate('db', db);
   app.decorate('env', env);
+
+  // ═══ P3-2 请求链路标识 + 慢查询日志 ═══
+  // onRequest：生成/透传 x-request-id（request.id 已由 requestIdHeader + genReqId 保证），
+  // 注入 request.requestId 供路由与日志复用；放在 IP 黑名单之前，被拦请求也带 requestId。
+  app.addHook('onRequest', requestIdOnRequestHook);
+  // onResponse：耗时 > SLOW_REQUEST_THRESHOLD_MS 的请求记慢查询日志（含路径/耗时/requestId）。
+  app.addHook('onResponse', slowRequestOnResponseHook());
 
   // ═══ IP 黑名单网关拦截（P2-4）═══
   // 对所有 AI 网关路径（/v1/*、/anthropic/v1/*、/api/v1/v1/* 别名，scope ∈ {api, all}）
