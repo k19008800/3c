@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Rerank 兼容端点单元测试 — POST /v1/rerank
  *
  * 纯单测风格（对齐 openai-compat.test.ts）：
@@ -372,5 +372,37 @@ describe('POST /v1/rerank', () => {
       inputTokens: 15,
       outputTokens: 0,
     }));
+  });
+
+  it('usage 缺 prompt_tokens 但带缓存字段 → 归一化补全后缓存计费（R-B3 重点位）', async () => {
+    mocks.routing.selectChannel.mockResolvedValue(makeChannel());
+    // prompt_tokens 缺失 + DeepSeek 缓存字段：billingUsage 补全 prompt_tokens=total_tokens 后走缓存计费
+    const upstreamPayload = {
+      id: 'rerank-upstream-5',
+      results: [{ index: 0, relevance_score: 0.6, document: { text: 'doc a' } }],
+      usage: { total_tokens: 1500, prompt_cache_hit_tokens: 1000, prompt_cache_miss_tokens: 500 },
+    };
+    mocks.fetch.mockResolvedValue(new Response(JSON.stringify(upstreamPayload), { status: 200 }));
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/rerank',
+      payload: { model: 'test-model', query: 'what is 3cloud', documents: ['doc a'] },
+    });
+
+    expect(res.statusCode).toBe(200);
+    // 归一化补全：prompt_tokens 缺失 → 以 total_tokens 计输入；缓存命中 1000 落库（P0 T5）
+    expect(mocks.consumption.recordConsumption).toHaveBeenCalledWith(expect.objectContaining({
+      trustUpstream: true,
+      fallback: false,
+      inputTokens: 1500,
+      outputTokens: 0,
+      cacheHitTokens: 1000,
+      cacheWriteTokens: 0,
+      cacheDiscount: expect.any(Number),
+      cacheReadInputPrice: expect.any(Number),
+    }));
+    const call = mocks.consumption.recordConsumption.mock.calls.at(-1)![0] as Record<string, unknown>;
+    expect(Number(call.cacheDiscount)).toBeGreaterThan(0);
   });
 });

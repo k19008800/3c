@@ -3,6 +3,7 @@ import { pgTable, serial, varchar, pgEnum, timestamp, boolean } from 'drizzle-or
 export const userRoleEnum = pgEnum('user_role', [
   'customer',
   'agent',
+  'sales',
   'admin',
   'super_admin',
 ]);

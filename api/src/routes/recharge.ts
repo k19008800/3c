@@ -7,7 +7,7 @@
  *   GET  /me/recharge-orders   我的充值订单（前端 RechargePage 契约）
  *   GET  /me/promotions        促销列表（空）
  *
- * 管理端（adminAuth，/api/v1/admin/*）：
+ * 管理端（requirePerm('finance.topup')，/api/v1/admin/*）：
  *   GET  /admin/recharge-orders              充值订单列表（AdminRechargeOrdersPage 契约）
  *   POST /admin/recharge-orders/:id/audit    审核通过 → 加余额 + 写 balance_transactions
  *   POST /admin/recharge-orders/:id/reject   驳回
@@ -15,13 +15,24 @@
 
 import type { FastifyInstance } from 'fastify';
 import { db, schema } from '../db';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import { verifyToken } from '../services/auth/jwt';
-import { getBalance } from '../services/billing/balance';
+import { getBalance, creditBalance } from '../services/billing/balance';
 import { adjustLedgerAvailable, clearNegativeFlag } from '../services/billing/ledger';
+import { notifyUser } from '../services/notify';
+import { requirePerm } from '../middleware/require-perm';
+import { requireOperation2fa } from '../middleware/require-operation-2fa';
+import { calcApprovalTier, getApprovalRules } from '../lib/finance-rules';
+import { AppError, UnauthorizedError, ValidationError, ForbiddenError } from '../lib/errors';
+import {
+  buildApprovalMeta,
+  resolveOrderApproval,
+  nextPhaseAfterApprove,
+  approveStagePatch,
+  type RechargeApprovalPhase,
+} from '../services/billing/recharge-approval';
 // campaign_coupon_codes 未从 db/schema/index.ts 导出（该文件禁改），直接从表定义导入
 import { campaignCouponCodes } from '../db/schema/coupons';
-import { AppError, UnauthorizedError, ForbiddenError, ValidationError } from '../lib/errors';
 import { parsePaymentConfig } from './admin-payment';
 
 // ── auth ─────────────────────────────────────────────
@@ -31,12 +42,6 @@ async function jwtAuth(request: any, _reply: any) {
   const payload = verifyToken(token);
   if (!payload) throw new UnauthorizedError('Invalid token');
   request.userContext = payload;
-}
-
-async function adminAuth(request: any, reply: any) {
-  await jwtAuth(request, reply);
-  const { role } = request.userContext as { role: string };
-  if (role !== 'admin' && role !== 'super_admin') throw new ForbiddenError('Admin access required');
 }
 
 function userId(request: any): number {
@@ -112,6 +117,11 @@ export async function rechargeRoutes(app: FastifyInstance) {
 
     const uid = userId(request);
     const orderNo = genOrderNo();
+    // R5（ARCH v1.1 §2.2.2）：用户自助充值单创建时按金额定级并固化（B18 提交时点，
+    // Q12 用户自助单同样分级）；不计入 R6 限额（B10/Q8：充值审核不计入任何维度），
+    // 因此 limit_check 为 null、limit_escalated=false。
+    const approvalRules = await getApprovalRules();
+    const level = calcApprovalTier(amount, 'increase', approvalRules);
     const [order] = await db
       .insert(schema.rechargeOrders)
       .values({
@@ -121,7 +131,13 @@ export async function rechargeRoutes(app: FastifyInstance) {
         currency: 'CNY',
         method,
         status: 'pending',
-        metadata: { source: 'web' },
+        metadata: {
+          source: 'web',
+          approval: buildApprovalMeta(level, null),
+          approval_level: level,
+          approval_phase: 'level1_pending',
+          limit_escalated: false,
+        },
       })
       .returning();
 
@@ -257,30 +273,18 @@ export async function rechargeRoutes(app: FastifyInstance) {
         .set({ usedCount: sql`${schema.couponCodes.usedCount} + 1`, updatedAt: new Date() })
         .where(eq(schema.couponCodes.id, row.batchId));
 
-      // 余额入账（amount = face_value，元）
-      const upd = await tx.execute(sql`
-        UPDATE customer_balances
-        SET available_balance = available_balance + ${row.faceValue}::numeric,
-            total_balance = total_balance + ${row.faceValue}::numeric,
-            version = version + 1,
-            updated_at = NOW()
-        WHERE user_id = ${uid}
-        RETURNING available_balance AS "balanceAfter"
-      `);
-      const bal = upd[0] as unknown as { balanceAfter: string };
-      if (!bal) throw new AppError('Balance account not found', 404, 'BALANCE_NOT_FOUND');
-
-      await tx.insert(schema.balanceTransactions).values({
+      // 余额入账：统一收口 creditBalance（无余额行自动建户兜底 + 原子增额 + 资金流水，同事务）
+      // 对齐充值审核路径（R1-USER-DRILL-002）：历史/异常用户（无 customer_balances 行）不再 404。
+      const { balanceAfter } = await creditBalance(tx, {
         userId: uid,
-        type: 'recharge',
         amount: row.faceValue,
-        balanceAfter: bal.balanceAfter,
+        type: 'recharge',
         referenceType: 'redemption',
         referenceId: String(claimed.id),
         description: `兑换码 ${code} 充值`,
       });
 
-      return { claimedId: claimed.id, balanceAfter: bal.balanceAfter };
+      return { claimedId: claimed.id, balanceAfter };
     });
 
     if (!result) throw new AppError('兑换码已被使用', 409, 'CODE_ALREADY_USED');
@@ -301,8 +305,12 @@ export async function rechargeRoutes(app: FastifyInstance) {
 
   // ═══ 管理端 ═══
 
-  /** GET /api/v1/admin/recharge-orders — 充值订单列表 */
-  app.get('/api/v1/admin/recharge-orders', { preHandler: [adminAuth] }, async (request, reply) => {
+  /** GET /api/v1/admin/recharge-orders — 充值订单列表
+   * 鉴权：requirePerm('finance.topup')（修复 P1-3，调度裁决）——A4 已放行 finance
+   * 审核充值订单，列表必须可看（D2 财务导航闭环）；列表仅返回订单 + 用户基本信息，
+   * 无敏感字段。
+   */
+  app.get('/api/v1/admin/recharge-orders', { preHandler: [requirePerm('finance.topup')] }, async (request, reply) => {
     const q = (request.query || {}) as { status?: string; search?: string; page?: string; page_size?: string };
     const page = Math.max(parseInt(q.page ?? '1', 10) || 1, 1);
     const pageSize = Math.min(Math.max(parseInt(q.page_size ?? '20', 10) || 20, 1), 200);
@@ -330,6 +338,7 @@ export async function rechargeRoutes(app: FastifyInstance) {
           paidAt: schema.rechargeOrders.paidAt,
           createdAt: schema.rechargeOrders.createdAt,
           note: schema.rechargeOrders.note,
+          metadata: schema.rechargeOrders.metadata,
           email: schema.users.email,
           name: schema.users.name,
         })
@@ -346,20 +355,60 @@ export async function rechargeRoutes(app: FastifyInstance) {
         .where(whereClause),
     ]);
 
-    const list = rows.map((r) => ({
-      id: r.id,
-      order_no: r.orderNo,
-      user_id: r.userId,
-      username: r.name,
-      email: r.email,
-      amount: Number(r.amount),
-      payment_method: r.method,
-      payment_method_label: METHOD_LABEL[r.method] ?? r.method,
-      status: adminStatus(r.status),
-      status_label: ADMIN_STATUS_LABEL[r.status] ?? r.status,
-      created_at: r.createdAt,
-      completed_at: r.paidAt,
-    }));
+    // 审批人姓名/邮箱回显（frontend 需求）：批量查 users
+    const reviewerIds = new Set<number>();
+    for (const r of rows) {
+      const approval = (((r.metadata ?? {}) as Record<string, unknown>).approval ?? {}) as Record<string, unknown>;
+      for (const key of ['first_reviewer', 'second_reviewer', 'super_reviewer']) {
+        const vid = approval[key];
+        if (vid != null && Number.isFinite(Number(vid))) reviewerIds.add(Number(vid));
+      }
+    }
+    const reviewerRows = reviewerIds.size > 0
+      ? await db.select({ id: schema.users.id, email: schema.users.email, name: schema.users.name })
+          .from(schema.users).where(inArray(schema.users.id, [...reviewerIds]))
+      : [];
+    const reviewerMap = new Map(reviewerRows.map((u) => [u.id, u]));
+
+    const list = rows.map((r) => {
+      const meta = (r.metadata ?? {}) as Record<string, unknown>;
+      const approval = (meta.approval ?? {}) as Record<string, unknown>;
+      // R5 审批字段（ARCH §2.5.4，纯增量向后兼容）：终态按 status 推导，在途读顶层/嵌套键
+      const approvalPhase: RechargeApprovalPhase | 'rejected' = r.status === 'paid'
+        ? 'approved'
+        : r.status === 'failed'
+          ? 'rejected'
+          : (String(meta.approval_phase ?? approval.phase ?? 'level1_pending') as RechargeApprovalPhase);
+      const reviewerEmail = (key: string): string | null => {
+        const vid = approval[key];
+        if (vid == null || !Number.isFinite(Number(vid))) return null;
+        return reviewerMap.get(Number(vid))?.email ?? null;
+      };
+      return {
+        id: r.id,
+        order_no: r.orderNo,
+        user_id: r.userId,
+        username: r.name,
+        email: r.email,
+        amount: Number(r.amount),
+        payment_method: r.method,
+        payment_method_label: METHOD_LABEL[r.method] ?? r.method,
+        status: adminStatus(r.status),
+        status_label: ADMIN_STATUS_LABEL[r.status] ?? r.status,
+        // R5 审批进度（前端据此展示"待一级/待二级/待终审"并控制按钮）
+        approval_level: meta.approval_level ?? approval.level ?? null,
+        approval_phase: approvalPhase,
+        first_reviewer_id: approval.first_reviewer ?? null,
+        second_reviewer_id: approval.second_reviewer ?? null,
+        super_reviewer_id: approval.super_reviewer ?? null,
+        // 审批人姓名/邮箱回显（frontend 展示用；缺失返回 null）
+        first_reviewer_email: reviewerEmail('first_reviewer'),
+        second_reviewer_email: reviewerEmail('second_reviewer'),
+        super_reviewer_email: reviewerEmail('super_reviewer'),
+        created_at: r.createdAt,
+        completed_at: r.paidAt,
+      };
+    });
 
     return reply.send({
       data: {
@@ -369,47 +418,178 @@ export async function rechargeRoutes(app: FastifyInstance) {
     });
   });
 
-  /** POST /api/v1/admin/recharge-orders/:id/audit — 审核通过（确认到账） */
-  app.post('/api/v1/admin/recharge-orders/:id/audit', { preHandler: [adminAuth] }, async (request, reply) => {
+  /** POST /api/v1/admin/recharge-orders/:id/audit — 审核通过（R5 多阶段，确认到账）
+   *
+   * 契约（ARCH §2.5.3）：
+   *   - tier1 → 200 { id, order_no, status:'paid', balanceAfter }（单审路径零变化）
+   *   - 多阶段 → 200 { id, order_no, status:'pending', approval_level, approval_phase }
+   *   - 职责分离：仅 metadata.created_by 存在（manual 单）时校验"审核人 ≠ 创建人"；
+   *     用户自助单（source='web'，创建人是用户本人）天然满足，跳过检查（ARCH §2.5.3）
+   *   - 双签 B10/Q8：充值订单审核完全不计入限额（操作人/被入账用户维度均不计），
+   *     因此 audit 不做限额预检/复核/计数（支付渠道风控 + Q12 分级审批已兜底）
+   *   - 错误码：400 VALIDATION_ERROR（职责分离/阶段不匹配）、403 FORBIDDEN（终审非 super_admin）、
+   *     409 ORDER_ALREADY_PROCESSED（并发重复审核/阶段守卫 0 行）、403/429 OPERATION_2FA_*（R7）
+   */
+  app.post('/api/v1/admin/recharge-orders/:id/audit', { preHandler: [requirePerm('finance.topup'), requireOperation2fa] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const orderId = parseInt(id, 10);
     if (!Number.isInteger(orderId) || orderId <= 0) throw new ValidationError('Invalid order id');
+    const operatorId = ((request as any).userContext as { userId: number }).userId;
+    const operatorRole = ((request as any).userContext as { role: string }).role;
 
-    // 事务：原子置 paid + 加余额 + 写流水，防重复审核
+    // 多阶段状态机（与人工上账 review 同构，ARCH §2.4.2）
     const result = await db.transaction(async (tx) => {
-      const [order] = await tx
-        .update(schema.rechargeOrders)
-        .set({ status: 'paid', paidAt: new Date(), updatedAt: new Date() })
-        .where(and(eq(schema.rechargeOrders.id, orderId), eq(schema.rechargeOrders.status, 'pending')))
-        .returning();
+      const [order] = await tx.select().from(schema.rechargeOrders).where(eq(schema.rechargeOrders.id, orderId)).limit(1);
       if (!order) return null;
 
-      const upd = await tx.execute(sql`
-        UPDATE customer_balances
-        SET available_balance = available_balance + ${order.amount}::numeric,
-            total_balance = total_balance + ${order.amount}::numeric,
-            version = version + 1,
-            updated_at = NOW()
-        WHERE user_id = ${order.userId}
-        RETURNING available_balance AS "balanceAfter"
-      `);
-      const row = upd[0] as unknown as { balanceAfter: string };
-      if (!row) throw new AppError('Balance account not found', 404, 'BALANCE_NOT_FOUND');
+      // 审批态解析：存量 pending 单无 approval → 沿用提交时级别（B18 = 单审，不重算）
+      const approval = resolveOrderApproval(order.metadata, Number(order.amount));
+      const { level, phase, meta: approvalMeta } = approval;
+      if (order.status !== 'pending' || phase === 'approved') {
+        throw new AppError('订单不存在或已处理', 409, 'ORDER_ALREADY_PROCESSED');
+      }
 
-      await tx.insert(schema.balanceTransactions).values({
+      // ── 职责分离（仅 manual 单校验；用户自助单跳过，ARCH §2.6） ──
+      // B4：manual 单创建人=审批人时，仅 super_admin 且带 escalation_reason 可降级代审
+      const body = (request.body ?? {}) as { escalation_reason?: string };
+      const escalationReason = String(body.escalation_reason ?? '').trim() || null;
+      let degradedReview = false;
+      const assertNotCreator = (stage: string) => {
+        if (approval.createdBy != null && operatorId === approval.createdBy) {
+          if (operatorRole === 'super_admin' && escalationReason) {
+            degradedReview = true;
+            return;
+          }
+          throw new ValidationError(`${stage}不能是创建人（职责分离）`);
+        }
+      };
+      if (phase === 'level1_pending') {
+        assertNotCreator('审核人');
+      } else if (phase === 'level2_pending') {
+        assertNotCreator('二级审批人');
+        if (approvalMeta && operatorId === approvalMeta.first_reviewer) {
+          throw new ValidationError('二级审批人不能是一级审批人（职责分离）');
+        }
+      } else if (phase === 'super_pending') {
+        if (operatorRole !== 'super_admin') {
+          throw new ForbiddenError('终审仅 super_admin 角色可执行');
+        }
+        assertNotCreator('终审人');
+        if (approvalMeta && (operatorId === approvalMeta.first_reviewer || operatorId === approvalMeta.second_reviewer)) {
+          throw new ValidationError('终审人不能是前两级审批人（职责分离）');
+        }
+      }
+
+      // ── 阶段推进：next='approved' 表示最终批准（置 paid + 入账）；否则仍 pending ──
+      const next = nextPhaseAfterApprove(phase, level);
+      const now = new Date();
+      const patch = approveStagePatch(order.metadata, level, phase, operatorId, next, now);
+      const guardPhase = phase === 'level1_pending'
+        ? sql`(metadata->>'approval_phase' IS NULL OR metadata->>'approval_phase' = 'level1_pending')`
+        : sql`metadata->>'approval_phase' = ${phase}`;
+      const [updated] = await tx.update(schema.rechargeOrders)
+        .set({
+          status: next === 'approved' ? 'paid' : 'pending',
+          paidAt: next === 'approved' ? now : null,
+          metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify(patch)}::jsonb`,
+          updatedAt: now,
+        })
+        .where(and(eq(schema.rechargeOrders.id, orderId), eq(schema.rechargeOrders.status, 'pending'), guardPhase))
+        .returning();
+      if (!updated) throw new AppError('订单不存在或已处理', 409, 'ORDER_ALREADY_PROCESSED');
+
+      if (next !== 'approved') {
+        return { kind: 'stage' as const, order, level, phase: next };
+      }
+
+      // 最终批准：R2 收口入账（无余额行自动建户 + 原子增额 + 资金流水，同事务）
+      const { balanceAfter } = await creditBalance(tx, {
         userId: order.userId,
-        type: 'recharge',
         amount: order.amount,
-        balanceAfter: row.balanceAfter,
+        type: 'recharge',
         referenceType: 'recharge_order',
         referenceId: String(order.id),
         description: `对公/线上充值审核通过 ${order.orderNo}`,
       });
 
-      return { order, balanceAfter: row.balanceAfter };
+      // 审核人落库（裁决 A8 语义：顶层 reviewer_id；充值审核同构）
+      await tx.update(schema.rechargeOrders)
+        .set({ metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({ reviewer_id: operatorId })}::jsonb` })
+        .where(eq(schema.rechargeOrders.id, orderId));
+
+      return { kind: 'final' as const, order, balanceAfter, level, degradedReview, escalationReason };
     });
 
     if (!result) throw new AppError('订单不存在或已处理', 409, 'ORDER_ALREADY_PROCESSED');
+
+    // 阶段推进（非最终）：不入账、不通知；写审计 recharge_order.audit_stage
+    if (result.kind === 'stage') {
+      await db.insert(schema.auditLogs).values({
+        userId: operatorId,
+        action: 'recharge_order.audit_stage',
+        resource: 'recharge_order',
+        resourceId: String(result.order.id),
+        details: {
+          userId: result.order.userId,
+          order_no: result.order.orderNo,
+          approval_level: result.level,
+          approval_phase: result.phase,
+        } as any,
+        ipAddress: request.ip ?? null,
+        userAgent: request.headers['user-agent'] ?? null,
+      });
+      return reply.send({
+        data: {
+          id: result.order.id,
+          order_no: result.order.orderNo,
+          status: 'pending',
+          approval_level: result.level,
+          approval_phase: result.phase,
+        },
+        message: result.phase === 'level2_pending' ? '一级审批通过，等待二级审批' : '二级审批通过，等待终审',
+      });
+    }
+
+    // 事务提交后：同步 Redis 热账本 available + 充值回正清除负余额标记（尽力而为，不阻塞主响应）
+    await adjustLedgerAvailable(result.order.userId, Number(result.order.amount));
+    await clearNegativeFlag(result.order.userId);
+
+    // R4：入账通知（站内信必发 + 邮件按偏好；绝不进资金事务）
+    const notification = await notifyUser({
+      userId: result.order.userId,
+      event: 'recharge_success',
+      title: '充值到账通知',
+      content: `您的账户已入账 ¥${Number(result.order.amount).toFixed(2)}，当前余额 ¥${Number(result.balanceAfter).toFixed(2)}`,
+      templateName: 'recharge_success',
+      templateVars: {
+        amount: Number(result.order.amount).toFixed(2),
+        balance_after: Number(result.balanceAfter).toFixed(2),
+        order_no: result.order.orderNo,
+      },
+      metadata: { orderId: result.order.id, orderNo: result.order.orderNo },
+    });
+
+    // 审计（本期新增：充值审核入账留痕，含通知状态；资金写操作 P3 审计要求）
+    await db.insert(schema.auditLogs).values({
+      userId: operatorId,
+      action: 'recharge_order.audit',
+      resource: 'recharge_order',
+      resourceId: String(result.order.id),
+      details: {
+        userId: result.order.userId,
+        amount: Number(result.order.amount),
+        order_no: result.order.orderNo,
+        // 审计 details 对齐 ARCH §6.3：notification: { in_app, email }（snake_case）
+        notification: { in_app: notification.inApp, email: notification.email },
+        // R7：二次确认标记（E30）
+        confirmed: true,
+        // B4：降级代审审计标记
+        degraded: result.degradedReview,
+        escalation_reason: result.degradedReview ? result.escalationReason : null,
+      } as any,
+      ipAddress: request.ip ?? null,
+      userAgent: request.headers['user-agent'] ?? null,
+    });
 
     return reply.send({
       data: {
@@ -417,23 +597,56 @@ export async function rechargeRoutes(app: FastifyInstance) {
         order_no: result.order.orderNo,
         status: 'paid',
         balanceAfter: result.balanceAfter,
+        approval_level: result.level,
+        approval_phase: 'approved',
       },
     });
   });
 
-  /** POST /api/v1/admin/recharge-orders/:id/reject — 驳回 */
-  app.post('/api/v1/admin/recharge-orders/:id/reject', { preHandler: [adminAuth] }, async (request, reply) => {
+  /** POST /api/v1/admin/recharge-orders/:id/reject — 驳回（R5：任意阶段可驳回；manual 单创建人 ≠ 驳回人）
+   * P2-3（评审）：驳回原因必填并落库 metadata.review_note（对齐 manual-topup reject 语义） */
+  app.post('/api/v1/admin/recharge-orders/:id/reject', { preHandler: [requirePerm('finance.topup'), requireOperation2fa] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const orderId = parseInt(id, 10);
     if (!Number.isInteger(orderId) || orderId <= 0) throw new ValidationError('Invalid order id');
+    const operatorId = ((request as any).userContext as { userId: number }).userId;
+    const rejectNote = String((request.body as { note?: string } | undefined)?.note ?? '').trim();
+    if (!rejectNote) throw new ValidationError('请填写驳回原因');
 
-    const [order] = await db
-      .update(schema.rechargeOrders)
-      .set({ status: 'failed', updatedAt: new Date() })
-      .where(and(eq(schema.rechargeOrders.id, orderId), eq(schema.rechargeOrders.status, 'pending')))
-      .returning();
+    const result = await db.transaction(async (tx) => {
+      const [order] = await tx.select({ id: schema.rechargeOrders.id, metadata: schema.rechargeOrders.metadata, userId: schema.rechargeOrders.userId, orderNo: schema.rechargeOrders.orderNo })
+        .from(schema.rechargeOrders).where(eq(schema.rechargeOrders.id, orderId)).limit(1);
+      if (!order) return null;
+      const meta = (order.metadata ?? {}) as Record<string, unknown>;
+      const createdBy = meta.created_by != null && Number.isFinite(Number(meta.created_by)) ? Number(meta.created_by) : null;
+      if (createdBy != null && createdBy === operatorId) {
+        throw new ValidationError('创建人不能驳回自己发起的单据（职责分离）');
+      }
+      const [updated] = await tx
+        .update(schema.rechargeOrders)
+        .set({
+          status: 'failed',
+          metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({ approval_phase: 'rejected', review_note: rejectNote })}::jsonb`,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(schema.rechargeOrders.id, orderId), eq(schema.rechargeOrders.status, 'pending')))
+        .returning({ id: schema.rechargeOrders.id, userId: schema.rechargeOrders.userId, orderNo: schema.rechargeOrders.orderNo });
+      if (!updated) throw new AppError('订单不存在或已处理', 409, 'ORDER_ALREADY_PROCESSED');
+      return { userId: updated.userId, orderNo: updated.orderNo };
+    });
 
-    if (!order) throw new AppError('订单不存在或已处理', 409, 'ORDER_ALREADY_PROCESSED');
-    return reply.send({ data: { id: order.id, order_no: order.orderNo, status: 'failed' } });
+    if (!result) throw new AppError('订单不存在或已处理', 409, 'ORDER_ALREADY_PROCESSED');
+
+    // 审计（修复 D-04，P3 顺手）：充值订单驳回留痕，对齐 manual-topup reject 的写审计行为
+    await db.insert(schema.auditLogs).values({
+      userId: operatorId,
+      action: 'recharge_order.reject',
+      resource: 'recharge_order',
+      resourceId: String(orderId),
+      details: { userId: result.userId, order_no: result.orderNo } as any,
+      ipAddress: request.ip ?? null,
+      userAgent: request.headers['user-agent'] ?? null,
+    });
+    return reply.send({ data: { id: orderId, order_no: result.orderNo, status: 'failed' } });
   });
 }

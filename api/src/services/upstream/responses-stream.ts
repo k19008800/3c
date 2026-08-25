@@ -27,6 +27,7 @@ import type { FastifyReply } from 'fastify';
 import type { PipelineContext } from '../pipeline/types.js';
 import { parseSSELines } from './sse-parser.js';
 import type { StreamState, TokenUsage } from './proxy.js';
+import { parseCacheTokens } from '../billing/usage-parser.js';
 import { mapResponsesStatus } from './responses-adapter.js';
 
 // ============================================================
@@ -217,10 +218,16 @@ export function chatChunkToResponsesEvents(
     state.finishReason = finishReason;
     if (chunk.usage && typeof chunk.usage === 'object') {
       const u = chunk.usage as Record<string, unknown>;
+      // 经 parseCacheTokens 归一化缓存字段（D-11/D-14：流式缓存计费依赖；
+      // 注意与 toResponsesUsage 的 cached_tokens 客户透传字段分离——一个计费、一个透传）
+      const cache = parseCacheTokens(chunk.usage);
       state.lastValidUsage = {
         prompt_tokens: Number(u.prompt_tokens) || 0,
         completion_tokens: Number(u.completion_tokens) || 0,
         total_tokens: Number(u.total_tokens) || 0,
+        ...(cache.hasCacheInfo
+          ? { cacheHitTokens: cache.cacheHitTokens, cacheWriteTokens: cache.cacheWriteTokens, cacheMissTokens: cache.cacheMissTokens }
+          : {}),
       };
     }
   }

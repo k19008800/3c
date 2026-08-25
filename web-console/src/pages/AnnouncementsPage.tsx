@@ -31,8 +31,9 @@ export default function AnnouncementsPage() {
   });
   const unreadQ = useQuery({
     queryKey: ["me-announcements-unread"],
+    // 与 ConsoleLayout 顶栏共用同一 queryKey，返回值必须同为数字（否则缓存形状冲突 → React #31）
     queryFn: async () =>
-      (await api.get<{ data: { unread: number } }>("/me/announcements/unread-count")).data.data,
+      ((await api.get<{ data: { unread: number } }>("/me/announcements/unread-count")).data.data?.unread) ?? 0,
   });
   const readMut = useMutation({
     mutationFn: async (id: number) =>
@@ -62,7 +63,7 @@ export default function AnnouncementsPage() {
           公告
           <HelpIcon text="查看平台发布的系统公告、维护通知、活动信息和安全提醒。点击公告可标记为已读。" level="page" />
         </h2>
-        {unreadQ.data?.unread ? (
+        {unreadQ.data ? (
           <span
             style={{
               marginLeft: 12,
@@ -73,7 +74,7 @@ export default function AnnouncementsPage() {
               fontSize: 12,
             }}
           >
-            {unreadQ.data.unread} 条未读
+            {unreadQ.data} 条未读
           </span>
         ) : null}
         <button

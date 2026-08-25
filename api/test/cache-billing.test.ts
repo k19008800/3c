@@ -1,14 +1,19 @@
 /**
- * 缓存命中打折计费单元测试 — Cache Billing（newapi-gap-analysis.md Batch 3 任务 3.2）
+ * 缓存命中打折计费单元测试 — Cache Billing（newapi-gap-analysis.md Batch 3 任务 3.2 + P0 缓存定价）
  *
  * 纯单测，无 db / redis 依赖（cache-billing 与 usage-parser 均为纯函数）。
  *
  * 覆盖：
- * - parseCacheTokens：Anthropic（cache_read_input_tokens）/ DeepSeek（hit+miss）/ OpenAI（cached_tokens）
- * - parseCacheTokens：无缓存字段 → hasCacheInfo=false；null/undefined 防御；单边字段推断
+ * - parseCacheTokens：Anthropic（cache_read + cache_creation → cacheWriteTokens，D-14）/ DeepSeek（hit+miss）/ OpenAI（cached_tokens）
+ * - parseCacheTokens：无缓存字段 → hasCacheInfo=false；null/undefined 防御；单边字段推断；read 优先收敛（D-11）
  * - computeCacheDiscountedCost：无缓存信息 → 全价；有命中 → 命中 10% 价 + discountAmount 正确；命中超 input 收敛
  * - parseAndDiscount：DeepSeek 混合、100% 命中最低价、Anthropic 端到端
  * - 回归：无缓存字段时输出与旧 computeCost 完全一致
+ * - D-14 对照断言：discount_rate 模式下"仅 cache_creation"金额与旧版全价一致（归属/审计口径不同，金额不变）
+ *
+ * ⚠️ 既有 2 个 Anthropic 断言已按方案 §5 刻意行为变更更新（D-14 获准，非回归）：
+ *   ① cache_creation_input_tokens 现提取为 cacheWriteTokens（不再计入 miss）；
+ *   ② 仅 cache_creation 时 hasCacheInfo 由 false → true。
  */
 
 import { describe, it, expect } from 'vitest';
@@ -38,23 +43,24 @@ function oldComputeCost(inputTokens: number, outputTokens: number): number {
 // ============================================================
 
 describe('parseCacheTokens - Anthropic 格式', () => {
-  it('cache_read_input_tokens → 命中按该字段，miss = input - hit', () => {
+  it('cache_read + cache_creation → read 提取为命中、creation 提取为写入（D-14 行为变更）', () => {
     const usage = {
       prompt_tokens: 1500,
       completion_tokens: 100,
       total_tokens: 1600,
       cache_read_input_tokens: 1200,
-      cache_creation_input_tokens: 200, // 写入缓存：全价，不计入命中
+      cache_creation_input_tokens: 200, // 写入缓存：独立按缓存写入价计费（不再计入 miss）
     };
 
     const result = parseCacheTokens(usage);
 
     expect(result.hasCacheInfo).toBe(true);
     expect(result.cacheHitTokens).toBe(1200);
-    expect(result.cacheMissTokens).toBe(300); // 1500 - 1200（含 cache_creation 全价部分）
+    expect(result.cacheWriteTokens).toBe(200);
+    expect(result.cacheMissTokens).toBe(100); // 1500 - 1200 - 200（既非读取也非写入）
   });
 
-  it('只有 cache_creation_input_tokens（无读取命中）→ 无缓存打折信息', () => {
+  it('只有 cache_creation_input_tokens（无读取命中）→ cacheWriteTokens 提取、hasCacheInfo=true（D-14 行为变更）', () => {
     const usage = {
       prompt_tokens: 1000,
       completion_tokens: 100,
@@ -64,9 +70,10 @@ describe('parseCacheTokens - Anthropic 格式', () => {
 
     const result = parseCacheTokens(usage);
 
-    expect(result.hasCacheInfo).toBe(false);
+    expect(result.hasCacheInfo).toBe(true); // 旧版为 false → 方案 §5 刻意变更（D-14）
     expect(result.cacheHitTokens).toBe(0);
-    expect(result.cacheMissTokens).toBe(0);
+    expect(result.cacheWriteTokens).toBe(900);
+    expect(result.cacheMissTokens).toBe(100); // 1000 - 0 - 900
   });
 });
 
@@ -143,9 +150,9 @@ describe('parseCacheTokens - 无缓存信息', () => {
   });
 
   it('usage 为 null / undefined → hasCacheInfo=false，不抛错', () => {
-    expect(parseCacheTokens(null)).toEqual({ cacheHitTokens: 0, cacheMissTokens: 0, hasCacheInfo: false });
-    expect(parseCacheTokens(undefined)).toEqual({ cacheHitTokens: 0, cacheMissTokens: 0, hasCacheInfo: false });
-    expect(parseCacheTokens('not-an-object')).toEqual({ cacheHitTokens: 0, cacheMissTokens: 0, hasCacheInfo: false });
+    expect(parseCacheTokens(null)).toEqual({ cacheHitTokens: 0, cacheWriteTokens: 0, cacheMissTokens: 0, hasCacheInfo: false });
+    expect(parseCacheTokens(undefined)).toEqual({ cacheHitTokens: 0, cacheWriteTokens: 0, cacheMissTokens: 0, hasCacheInfo: false });
+    expect(parseCacheTokens('not-an-object')).toEqual({ cacheHitTokens: 0, cacheWriteTokens: 0, cacheMissTokens: 0, hasCacheInfo: false });
   });
 });
 
@@ -157,6 +164,7 @@ describe('computeCacheDiscountedCost', () => {
   it('无缓存信息 → 全价，discountAmount=0', () => {
     const result = computeCacheDiscountedCost(1000, 200, pricing, {
       cacheHitTokens: 0,
+      cacheWriteTokens: 0,
       cacheMissTokens: 0,
       hasCacheInfo: false,
     });
@@ -189,6 +197,7 @@ describe('computeCacheDiscountedCost', () => {
   it('命中数超过 input → 收敛到 input，避免 (input - hit) 为负', () => {
     const result = computeCacheDiscountedCost(100, 0, pricing, {
       cacheHitTokens: 150,
+      cacheWriteTokens: 0,
       cacheMissTokens: 0,
       hasCacheInfo: true,
     });
@@ -298,7 +307,7 @@ describe('可配置折扣率 - computeCacheDiscountedCost', () => {
   it('自定义折扣率 0.5 → 命中部分按 50% 计费', () => {
     const result = computeCacheDiscountedCost(
       1000, 200, pricing,
-      { cacheHitTokens: 600, cacheMissTokens: 400, hasCacheInfo: true },
+      { cacheHitTokens: 600, cacheWriteTokens: 0, cacheMissTokens: 400, hasCacheInfo: true },
       0.5,
     );
 
@@ -310,7 +319,7 @@ describe('可配置折扣率 - computeCacheDiscountedCost', () => {
   it('折扣率 1 → 命中部分全价（等价关闭缓存优惠）', () => {
     const result = computeCacheDiscountedCost(
       1000, 200, pricing,
-      { cacheHitTokens: 600, cacheMissTokens: 400, hasCacheInfo: true },
+      { cacheHitTokens: 600, cacheWriteTokens: 0, cacheMissTokens: 400, hasCacheInfo: true },
       1,
     );
 
@@ -321,7 +330,7 @@ describe('可配置折扣率 - computeCacheDiscountedCost', () => {
   it('缺省 discountRate → 仍用默认 0.1（回归安全）', () => {
     const result = computeCacheDiscountedCost(
       1000, 200, pricing,
-      { cacheHitTokens: 600, cacheMissTokens: 400, hasCacheInfo: true },
+      { cacheHitTokens: 600, cacheWriteTokens: 0, cacheMissTokens: 400, hasCacheInfo: true },
     );
 
     expect(result.cost).toBeCloseTo(0.86, 9);
@@ -392,6 +401,54 @@ describe('resolveCacheDiscountRate', () => {
   it('pricing 为空 / 全局缺省 → 返回默认常量', async () => {
     expect(await resolveCacheDiscountRate(null, 0.2)).toBe(0.2);
     expect(await resolveCacheDiscountRate(null, 0)).toBe(CACHE_HIT_DISCOUNT);
+  });
+});
+
+// ============================================================
+// D-14/R-B5 对照断言 — discount_rate 模式"仅 cache_creation"金额与旧版全价一致
+// ============================================================
+
+describe('discount_rate 模式对照断言（D-14/R-B5）', () => {
+  it('仅 cache_creation（无读取命中）→ cacheWriteTokens 提取，金额与旧版全价一致', () => {
+    const usage = {
+      prompt_tokens: 1000,
+      completion_tokens: 0,
+      total_tokens: 1000,
+      cache_creation_input_tokens: 900,
+    };
+
+    const parsed = parseCacheTokens(usage);
+    expect(parsed.hasCacheInfo).toBe(true);
+    expect(parsed.cacheHitTokens).toBe(0);
+    expect(parsed.cacheWriteTokens).toBe(900);
+    expect(parsed.cacheMissTokens).toBe(100); // 1000 - 0 - 900
+
+    // discount_rate 模式（旧版公式）：creation 归入全价 miss（input - hit），金额 = prompt × input 全价。
+    // 与旧版"creation 全价、不计入命中"的金额完全一致（归属/审计口径不同，金额不变）。
+    // 注：cacheHitTokens=0 时 computeCacheDiscountedCost 早返回（命中为 0 → 全价、无折扣），
+    //     与旧版"仅 creation 无缓存打折信息 → 全价"行为一致。
+    const result = computeCacheDiscountedCost(1000, 0, pricing, parsed);
+    expect(result.cost).toBeCloseTo(1.0, 9); // 1000/1000 × 1（全价）
+    expect(result.discountAmount).toBeCloseTo(0, 9);
+    expect(result.cacheHitTokens).toBe(0);
+    expect(result.cacheMissTokens).toBe(0); // 命中 0 → 早返回，miss 不展开（全价口径）
+  });
+
+  it('cache_read + cache_creation 混合（discount_rate 模式）→ 金额与旧版一致（creation 全价）', () => {
+    const usage = {
+      prompt_tokens: 1500,
+      completion_tokens: 100,
+      total_tokens: 1600,
+      cache_read_input_tokens: 1200,
+      cache_creation_input_tokens: 200,
+    };
+
+    const parsed = parseCacheTokens(usage);
+    const result = computeCacheDiscountedCost(1500, 100, pricing, parsed);
+
+    // 折后 = 1200×1×0.1/1000 + 300×1/1000 + 100×2/1000 = 0.12 + 0.3 + 0.2（creation 200 含在 300 全价内）
+    expect(result.cost).toBeCloseTo(0.62, 9);
+    expect(result.discountAmount).toBeCloseTo(1.08, 9); // 1.7 - 0.62
   });
 });
 

@@ -24,6 +24,7 @@ import {
   querySupplierBalances,
 } from '../services/supplier-ops';
 import { validatePricingUnit, PRICE_UNIT_SUSPECT_MESSAGE } from '../services/billing/pricing';
+import { requirePerm } from '../middleware/require-perm';
 
 /* ───────── helpers ───────── */
 
@@ -74,6 +75,33 @@ function assertPricingUnitValid(
     return false;
   }
   throw new ValidationError(result.error ?? '价格参数非法');
+}
+
+/**
+ * 解析可选缓存价字段（P0，D-12 / product Q3 裁定）
+ *
+ * - undefined（未提交）→ undefined（不写入）；
+ * - null / '' → null（清空，回退折扣率/全价）；
+ * - 数字/数字字符串 ≥ 0 → 字符串（numeric(18,6) 列写入口径）；
+ * - 负数 / NaN → 400 ValidationError。
+ *
+ * ⚠️ product Q3 裁定：**不做"写入价 ≤ 输入价"上限校验**（允许写入溢价，
+ * cache_discount 可为负）；校验只做 ≥0 与格式。
+ *
+ * @param raw - 请求体字段原始值
+ * @param field - 字段名（错误信息用）
+ * @returns string（合法值）/ null（清空）/ undefined（未提交）
+ */
+function parseCachePriceField(raw: unknown, field: string): string | null | undefined {
+  if (raw === undefined) return undefined;
+  if (raw === null || raw === '') return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) {
+    throw new ValidationError(
+      `${field} 必须是非负数字（¥/1K tokens；0 合法 = 免费读缓存；写入价可大于输入价、无上限，product Q3 裁定）；清空请传空字符串或 null`,
+    );
+  }
+  return String(n);
 }
 
 interface PaginationQuery {
@@ -573,10 +601,14 @@ export async function supplierRoutes(app: FastifyInstance) {
    * GET /api/v1/admin/pricing — 定价列表（价格管理页）
    *
    * 返回 { data: { list, total, page, pageSize } }，list 每项含模型/供应商名、
-   * 输入/输出单价（¥/1K）与模型级缓存命中折扣率 cache_discount_rate（null = 用全局）。
+   * 输入/输出单价（¥/1K）、模型级缓存命中折扣率 cache_discount_rate（null = 用全局）与
+   * 显式缓存价 cache_read_input_price / cache_write_input_price（P0，D-8/D-12）。
    * 支持 search（模型名模糊）/ status 筛选。
+   *
+   * 鉴权（ARCH D-5 定稿）：requirePerm('supplier.pricing') — admin/super_admin/finance 以上；
+   * finance 角色已授予 supplier.pricing（与 model-price 既有权限口径一致，ops 无权限）。
    */
-  app.get('/api/v1/admin/pricing', { preHandler: [adminAuth] }, async (request, reply) => {
+  app.get('/api/v1/admin/pricing', { preHandler: [requirePerm('supplier.pricing')] }, async (request, reply) => {
     const q = (request.query || {}) as PaginationQuery;
     const { page, pageSize, offset } = parsePagination(q);
 
@@ -596,6 +628,8 @@ export async function supplierRoutes(app: FastifyInstance) {
       input_price_per_1k: schema.vendorPricing.inputPrice,
       output_price_per_1k: schema.vendorPricing.outputPrice,
       cache_discount_rate: schema.vendorPricing.cacheDiscountRate,
+      cache_read_input_price: schema.vendorPricing.cacheReadInputPrice,
+      cache_write_input_price: schema.vendorPricing.cacheWriteInputPrice,
       currency: schema.vendorPricing.currency,
       status: schema.vendorPricing.status,
       effective_from: schema.vendorPricing.effectiveFrom,
@@ -619,6 +653,9 @@ export async function supplierRoutes(app: FastifyInstance) {
       input_price_per_1k: Number(r.input_price_per_1k) || 0,
       output_price_per_1k: Number(r.output_price_per_1k) || 0,
       cache_discount_rate: r.cache_discount_rate != null ? Number(r.cache_discount_rate) : null,
+      // P0 显式缓存价（numeric(18,6)，DTO 统一转 number；null 保留 = 回退折扣率/全价）
+      cache_read_input_price: r.cache_read_input_price != null ? Number(r.cache_read_input_price) : null,
+      cache_write_input_price: r.cache_write_input_price != null ? Number(r.cache_write_input_price) : null,
       status_label: PRICING_STATUS_LABEL[r.status] ?? r.status,
     }));
 
@@ -627,8 +664,8 @@ export async function supplierRoutes(app: FastifyInstance) {
     });
   });
 
-  /** POST /api/v1/admin/pricing — 创建定价 */
-  app.post('/api/v1/admin/pricing', { preHandler: [adminAuth] }, async (request, reply) => {
+  /** POST /api/v1/admin/pricing — 创建定价（D-5：requirePerm('supplier.pricing')，finance 以上） */
+  app.post('/api/v1/admin/pricing', { preHandler: [requirePerm('supplier.pricing')] }, async (request, reply) => {
     const body = request.body as Record<string, unknown>;
 
     const supplierModelId = body.supplierModelId ? Number(body.supplierModelId) : null;
@@ -637,6 +674,12 @@ export async function supplierRoutes(app: FastifyInstance) {
     const outputPriceVal = body.output_price_per_1k !== undefined ? body.output_price_per_1k : body.outputPrice;
     const inputPrice = inputPriceVal === undefined ? '' : String(inputPriceVal);
     const outputPrice = outputPriceVal === undefined ? '' : String(outputPriceVal);
+
+    // P0 显式缓存价（D-8/D-12，product Q3 无上限）：可选字段，≥0 数字或空=null；写入价可空
+    const cacheReadRaw = body.cache_read_input_price;
+    const cacheWriteRaw = body.cache_write_input_price;
+    const cacheReadInputPrice = parseCachePriceField(cacheReadRaw, 'cache_read_input_price');
+    const cacheWriteInputPrice = parseCachePriceField(cacheWriteRaw, 'cache_write_input_price');
     const pricingGroup = String(body.pricingGroup || 'default');
     const outputMultiplier = String(body.outputMultiplier ?? '1.0');
     const currency = String(body.currency || 'CNY');
@@ -656,6 +699,8 @@ export async function supplierRoutes(app: FastifyInstance) {
       pricingGroup,
       inputPrice,
       outputPrice,
+      ...(cacheReadInputPrice !== undefined ? { cacheReadInputPrice } : {}),
+      ...(cacheWriteInputPrice !== undefined ? { cacheWriteInputPrice } : {}),
       outputMultiplier,
       currency,
       status: status as any,
@@ -665,8 +710,8 @@ export async function supplierRoutes(app: FastifyInstance) {
     return reply.status(201).send({ pricing });
   });
 
-  /** PUT /api/v1/admin/pricing/:id — 更新定价（销售价变更时写入价格变更日志） */
-  app.put('/api/v1/admin/pricing/:id', { preHandler: [adminAuth] }, async (request, reply) => {
+  /** PUT /api/v1/admin/pricing/:id — 更新定价（销售价变更时写入价格变更日志；D-5：requirePerm('supplier.pricing')） */
+  app.put('/api/v1/admin/pricing/:id', { preHandler: [requirePerm('supplier.pricing')] }, async (request, reply) => {
     const id = intParam(request.params as Record<string, unknown>, 'id');
     const body = request.body as Record<string, unknown>;
 
@@ -674,11 +719,13 @@ export async function supplierRoutes(app: FastifyInstance) {
     const inputPriceVal = body.input_price_per_1k !== undefined ? body.input_price_per_1k : body.inputPrice;
     const outputPriceVal = body.output_price_per_1k !== undefined ? body.output_price_per_1k : body.outputPrice;
 
-    // 变更前读取旧价 + 关联模型/供应商
+    // 变更前读取旧价 + 关联模型/供应商（P0 增加显式缓存价旧值，用于校验上下文）
     const [existing] = await db.select({
       inputPrice: schema.vendorPricing.inputPrice,
       outputPrice: schema.vendorPricing.outputPrice,
       cacheDiscountRate: schema.vendorPricing.cacheDiscountRate,
+      cacheReadInputPrice: schema.vendorPricing.cacheReadInputPrice,
+      cacheWriteInputPrice: schema.vendorPricing.cacheWriteInputPrice,
       supplierModelId: schema.vendorPricing.supplierModelId,
     })
       .from(schema.vendorPricing)
@@ -724,6 +771,15 @@ export async function supplierRoutes(app: FastifyInstance) {
         setData.cacheDiscountRate = String(rate);
       }
     }
+    // P0 显式缓存价（D-8/D-12/product Q3）：≥0 数字或空=null（清空回退折扣率/全价）；写入价无上限
+    if (body.cache_read_input_price !== undefined) {
+      const parsed = parseCachePriceField(body.cache_read_input_price, 'cache_read_input_price');
+      setData.cacheReadInputPrice = parsed ?? null;
+    }
+    if (body.cache_write_input_price !== undefined) {
+      const parsed = parseCachePriceField(body.cache_write_input_price, 'cache_write_input_price');
+      setData.cacheWriteInputPrice = parsed ?? null;
+    }
 
     if (Object.keys(setData).length <= 1) {
       throw new ValidationError('No fields to update');
@@ -737,6 +793,9 @@ export async function supplierRoutes(app: FastifyInstance) {
     if (!pricing) throw new NotFoundError('Pricing', id);
 
     // ── 价格变更捕获（销售价为准）──
+    // D-6 衔接：缓存价（cache_read/write_input_price）变更暂不纳入 priceChanged 判定与
+    // price_change_logs（P0 仅 input/output 变更触发）；P1 通知面落地时扩展为
+    // "变更字段 JSON"形态（old/new 按字段记录，含缓存读取/写入价 × 成本侧/售价侧），见评审 D-6。
     const oldInput = Number(existing.inputPrice);
     const oldOutput = Number(existing.outputPrice);
     const newInput = inputPriceVal !== undefined ? Number(inputPriceVal) : oldInput;
@@ -772,7 +831,7 @@ export async function supplierRoutes(app: FastifyInstance) {
   // 5. 公开接口
   // ═══════════════════════════════════════════
 
-  /** GET /api/v1/public/pricing — 公开模型定价（无需认证） */
+  /** GET /api/v1/public/pricing — 公开模型定价（无需认证；P0 增加显式缓存价，供 P1 价目展示） */
   app.get('/api/v1/public/pricing', async (request, reply) => {
     const pricing = await db.select({
       id: schema.vendorPricing.id,
@@ -780,6 +839,8 @@ export async function supplierRoutes(app: FastifyInstance) {
       inputPrice: schema.vendorPricing.inputPrice,
       outputPrice: schema.vendorPricing.outputPrice,
       cacheDiscountRate: schema.vendorPricing.cacheDiscountRate,
+      cacheReadInputPrice: schema.vendorPricing.cacheReadInputPrice,
+      cacheWriteInputPrice: schema.vendorPricing.cacheWriteInputPrice,
       currency: schema.vendorPricing.currency,
       modelName: schema.supplierModels.modelName,
       supplierName: schema.suppliers.name,
@@ -789,7 +850,14 @@ export async function supplierRoutes(app: FastifyInstance) {
       .innerJoin(schema.suppliers, eq(schema.supplierModels.supplierId, schema.suppliers.id))
       .where(eq(schema.vendorPricing.status, 'active' as any));
 
-    return reply.send({ pricing });
+    return reply.send({
+      pricing: pricing.map((r) => ({
+        ...r,
+        // P0 显式缓存价统一转 number（numeric 列 Drizzle 返回 string；null 保留 = 回退折扣率/全价）
+        cacheReadInputPrice: r.cacheReadInputPrice != null ? Number(r.cacheReadInputPrice) : null,
+        cacheWriteInputPrice: r.cacheWriteInputPrice != null ? Number(r.cacheWriteInputPrice) : null,
+      })),
+    });
   });
 
   /** GET /api/v1/public/stats — 公开统计（无需认证） */

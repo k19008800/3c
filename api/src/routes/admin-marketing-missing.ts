@@ -695,7 +695,9 @@ export async function adminMarketingMissingRoutes(app: FastifyInstance) {
     const patch: Record<string, unknown> = {
       version: sql`${schema.consentPolicies.version} + 1`,
       updatedBy: (request as any).userContext?.userId ?? null,
-      updatedAt: new Date(),
+      // 用 PG now() 而非 JS new Date()：postgres-js 在会话时区（本机 Asia/Shanghai）下
+      // 会把 JS Date 序列化偏移 8h，导致与 consent_logs.created_at（PG now()）比较错乱
+      updatedAt: sql`now()`,
     };
 
     if (body.name !== undefined) {

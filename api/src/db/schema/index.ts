@@ -63,6 +63,8 @@ export { i18nEntries } from './i18n-entries';
 // 2026-08-15 裁决补齐
 export { adminWebhooks } from './admin-webhooks';
 export { adjustmentRecords, adjustmentStatusEnum } from './adjustment-records';
+// 2026-08-19 阶段二 P1 风控（R5–R7）：R6 24h 滚动加钱事件 PG 权威表（migration 0029）
+export { creditLimitEvents } from './credit-limit-events';
 // 2026-08 风控/审计/订阅缺失端点补齐（migration 0020/0021）
 export { contentModeration } from './content-moderation';
 export { subscriptionPlans } from './subscription-plans';
@@ -75,3 +77,5 @@ export { agentApprovals, agentApprovalsRelations } from './agent-approvals';
 export { campaignParticipants } from './campaign-participants';
 export { disputes } from './disputes';
 export { consentPolicies, consentLogs } from './consent';
+// 2026-08-18 原型差距补齐（migration 0026）：公告已读/退款申请/跟进提醒/客户标签/联系记录/客服测试Key/知识库反馈
+export { announcementReads, refundRequests, followReminders, customerTags, customerNotes, supportTestKeys, knowledgeBaseFeedback } from './gap-fix-2026-08';

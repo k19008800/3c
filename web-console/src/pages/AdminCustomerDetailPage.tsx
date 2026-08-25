@@ -231,8 +231,11 @@ export default function AdminCustomerDetailPage() {
                 >
                   {c.status === "disabled" ? "启用" : "禁用"}
                 </button>
+                <button type="button" className="c3-btn c3-btn--default c3-btn--sm" onClick={() => navigate(`/admin/finance/orders?search=${encodeURIComponent(c.email)}`)}>
+                  去充值 <HelpIcon text="跳转到「充值订单」页并按该客户邮箱预置搜索，查看其充值订单并审核（确认到账后余额增加）；对公转账在「财务 → 人工上账」审核。" />
+                </button>
                 <button type="button" className="c3-btn c3-btn--default c3-btn--sm" onClick={() => navigate(`/admin/customers/quotas?customer=${c.user_id}`)}>
-                  编辑额度
+                  编辑额度 <HelpIcon text="配置该客户 × 模型的 RPM/TPM 限流配额例外（非货币充值，仅调整调用速率上限）。" />
                 </button>
               </div>
             </header>

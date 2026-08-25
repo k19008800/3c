@@ -20,7 +20,7 @@ import {
 } from '../lib/errors';
 import { sendMail, getSmtpConfig } from '../services/mailer';
 import { invalidateThresholdCache } from '../services/billing/pre-consume';
-import { invalidateCacheDiscountCache } from '../services/billing/cache-discount';
+import { invalidateCacheDiscountCache, invalidateCachePricingCache } from '../services/billing/cache-discount';
 
 /* ───────── helpers ───────── */
 
@@ -80,6 +80,9 @@ const SETTING_DEFAULTS: Record<string, { value: string; type: 'string' | 'number
   // billing — 缓存命中折扣率（0-1）：上游返回缓存命中 token 时，命中部分按全价 × 此比例计费。
   // 默认 0.1（DeepSeek 官方口径）；模型级 vendor_pricing.cache_discount_rate 可逐模型覆盖。
   'billing.cache_hit_discount': { value: '0.1', type: 'number' },
+  // billing — 缓存计费模式（P0，ARCH 评审 D-13）：explicit = 显式缓存价优先（默认）；
+  // discount_rate = 兼容旧折扣率行为（读取按折扣率、写入按全价），作灰度/回退开关。
+  'billing.cache_pricing_mode': { value: 'explicit', type: 'string' },
   // smtp
   smtp_enabled: { value: 'false', type: 'bool' },
   smtp_host: { value: '', type: 'string' },
@@ -231,14 +234,15 @@ export async function adminSettingsRoutes(app: FastifyInstance) {
   });
 
   /**
-   * PUT /api/v1/admin/settings/billing — 计费设置（P0-1 阈值旁路 + 缓存命中折扣率）
+   * PUT /api/v1/admin/settings/billing — 计费设置（P0-1 阈值旁路 + 缓存命中折扣率 + 缓存计费模式）
    *
    * 写 system_config `billing.balance_threshold`（默认 ¥100）+ `billing.cache_hit_discount`
-   * （默认 0.1）+ 写审计 + 失效 Redis 缓存（判定即时生效）。
+   * （默认 0.1）+ `billing.cache_pricing_mode`（默认 explicit，D-13）+ 写审计 + 失效 Redis 缓存
+   * （判定即时生效）。
    */
   app.put('/api/v1/admin/settings/billing', { preHandler: [adminAuth] }, async (request: any, reply) => {
     const b = (request.body || {}) as Record<string, unknown>;
-    const allowed = ['billing.balance_threshold', 'billing.cache_hit_discount'];
+    const allowed = ['billing.balance_threshold', 'billing.cache_hit_discount', 'billing.cache_pricing_mode'];
     const values: Record<string, string> = {};
     for (const k of allowed) {
       if (b[k] !== undefined) values[k] = String(b[k]);
@@ -257,11 +261,19 @@ export async function adminSettingsRoutes(app: FastifyInstance) {
         throw new ValidationError('billing.cache_hit_discount 必须是 (0, 1] 区间的数字（如 0.1 = 命中按 10% 计费）');
       }
     }
+    // 缓存计费模式只能取 explicit / discount_rate（ARCH 评审 D-13）
+    if (values['billing.cache_pricing_mode'] !== undefined) {
+      const mode = values['billing.cache_pricing_mode'];
+      if (mode !== 'explicit' && mode !== 'discount_rate') {
+        throw new ValidationError('billing.cache_pricing_mode 只能是 explicit 或 discount_rate（explicit=显式价优先，discount_rate=兼容旧折扣率行为）');
+      }
+    }
     await setConfigs(request.userContext?.userId ?? null, values);
     await writeAudit(request, 'billing', values);
-    // 失效阈值 + 折扣率 Redis 缓存（60s）→ 网关旁路判定 / 缓存计费即时生效
+    // 失效阈值 + 折扣率 + 模式 Redis 缓存（60s）→ 网关旁路判定 / 缓存计费即时生效
     await invalidateThresholdCache();
     await invalidateCacheDiscountCache();
+    await invalidateCachePricingCache();
     return reply.send({ data: { ok: true } });
   });
 

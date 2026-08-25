@@ -37,6 +37,18 @@ export interface SettleOptions {
   errorCode?: string;
   cacheHitTokens?: number;
   cacheDiscount?: number;
+  /** 缓存写入 token 数（Anthropic cache_creation；P0 显式价，D-8） */
+  cacheWriteTokens?: number;
+  /** 缓存读取计费金额（¥） */
+  cacheHitCost?: number;
+  /** 缓存写入计费金额（¥） */
+  cacheWriteCost?: number;
+  /** 本次调用实际采用的缓存读取单价快照（¥/1K，D-8 定价快照列） */
+  cacheReadInputPrice?: number;
+  /** 本次调用实际采用的缓存写入单价快照（¥/1K） */
+  cacheWriteInputPrice?: number;
+  /** 写入价来源标识（D-4）：explicit / full_price（经 metadata 落库，P2 透出） */
+  cacheWritePriceSource?: 'explicit' | 'full_price';
   /**
    * P0-1 预扣结果：mode='frozen' → 冻结结算（settlePreConsume）；
    * mode='bypass' → 普通扣费 + 允许记负兜底；未传（豁免路径）→ 普通严格扣费。
@@ -94,9 +106,15 @@ export async function settleBilling(
     finishReason: opts.finishReason,
     errorCode: opts.errorCode,
     requestId: ctx.requestId,
-    // 缓存命中打折信息：表无对应列时 recordConsumption 内部跳过，不报错
+    // 缓存计费信息（P0 显式价，D-8/D-4）：表无对应列时 recordConsumption 内部跳过，不报错
     cacheHitTokens: opts.cacheHitTokens,
     cacheDiscount: opts.cacheDiscount,
+    cacheWriteTokens: opts.cacheWriteTokens,
+    cacheHitCost: opts.cacheHitCost,
+    cacheWriteCost: opts.cacheWriteCost,
+    cacheReadInputPrice: opts.cacheReadInputPrice,
+    cacheWriteInputPrice: opts.cacheWriteInputPrice,
+    cacheWritePriceSource: opts.cacheWritePriceSource,
   });
 
   // 实时佣金结算（异步，不阻塞响应）：消费产生即结算；无代理绑定则内部跳过。

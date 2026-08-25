@@ -35,6 +35,22 @@ export const consumptionRecords = pgTable('consumption_records', {
   cacheHitTokens: integer('cache_hit_tokens'),
   /** 缓存命中打折省下的金额（全价 - 折后价，元）；无缓存信息场景为 NULL */
   cacheDiscount: numeric('cache_discount', { precision: 18, scale: 8 }),
+  /**
+   * 缓存写入 token 数（Anthropic cache_creation_input_tokens；0031 迁移新增，D-8）。
+   * 写入缓存（首次写入）的输入 token，按缓存写入价（显式价或生效 input 全价）计费。
+   */
+  cacheWriteTokens: integer('cache_write_tokens'),
+  /** 缓存读取计费金额（元，numeric(18,8)，D-8/D-1）；无缓存读取场景为 NULL */
+  cacheHitCost: numeric('cache_hit_cost', { precision: 18, scale: 8 }),
+  /** 缓存写入计费金额（元，numeric(18,8)）；无缓存写入场景为 NULL */
+  cacheWriteCost: numeric('cache_write_cost', { precision: 18, scale: 8 }),
+  /**
+   * 本次调用实际采用的缓存读取单价快照（¥/1K，numeric(18,6)，D-8 定价快照并入本表）。
+   * 审计/对账口径：逐笔记录实际计费用单价（显式价或回退链结果）。
+   */
+  cacheReadInputPrice: numeric('cache_read_input_price', { precision: 18, scale: 6 }),
+  /** 本次调用实际采用的缓存写入单价快照（¥/1K；显式价缺失时为生效 input 全价） */
+  cacheWriteInputPrice: numeric('cache_write_input_price', { precision: 18, scale: 6 }),
   currency: varchar('currency', { length: 10 }).default('CNY'),
   trustUpstream: boolean('trust_upstream').notNull().default(false),
   fallback: boolean('fallback').notNull().default(false),

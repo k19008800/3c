@@ -12,16 +12,23 @@
 import type { FastifyReply } from 'fastify';
 import type { PipelineContext } from '../pipeline/types.js';
 import { parseSSELines } from './sse-parser.js';
+import { parseCacheTokens } from '../billing/usage-parser.js';
 
 // ============================================================
 // Types
 // ============================================================
 
-/** OpenAI 兼容的 Token 用量对象 */
+/** OpenAI 兼容的 Token 用量对象（P0 扩展：携带归一化缓存字段，供流式/非流式缓存计费，D-11/D-14） */
 export interface TokenUsage {
   prompt_tokens: number;
   completion_tokens: number;
   total_tokens: number;
+  /** 归一化缓存读取（命中）token 数（parseCacheTokens 结果；无缓存字段时为 undefined） */
+  cacheHitTokens?: number;
+  /** 归一化缓存写入 token 数（Anthropic cache_creation；无缓存字段时为 undefined） */
+  cacheWriteTokens?: number;
+  /** 归一化缓存未命中 token 数（公式用；无缓存字段时为 undefined） */
+  cacheMissTokens?: number;
 }
 
 /** SSE 流式转发后返回的状态 */
@@ -135,12 +142,17 @@ export async function streamRelay(
           if (finishReason) {
             state.finishReason = finishReason;
 
-            // 有 usage → 保存（这是最终/最可靠的值）
+            // 有 usage → 保存（这是最终/最可靠的值）；同时经 parseCacheTokens 归一化缓存字段
+            // （D-11/D-14：流式缓存计费依赖，上游未返回缓存字段时缓存字段为 undefined → 全价）
             if (parsed.usage) {
+              const cache = parseCacheTokens(parsed.usage);
               state.lastValidUsage = {
                 prompt_tokens: Number(parsed.usage.prompt_tokens) || 0,
                 completion_tokens: Number(parsed.usage.completion_tokens) || 0,
                 total_tokens: Number(parsed.usage.total_tokens) || 0,
+                ...(cache.hasCacheInfo
+                  ? { cacheHitTokens: cache.cacheHitTokens, cacheWriteTokens: cache.cacheWriteTokens, cacheMissTokens: cache.cacheMissTokens }
+                  : {}),
               };
             }
           }
@@ -197,13 +209,17 @@ export async function relayNonStream(
     parsedBody = { raw: rawBody };
   }
 
-  // 提取 usage
+  // 提取 usage（经 parseCacheTokens 归一化缓存字段，供非流式缓存计费，D-11/D-14）
   if (parsedBody.usage) {
     const u = parsedBody.usage as Record<string, unknown>;
+    const cache = parseCacheTokens(parsedBody.usage);
     usage = {
       prompt_tokens: Number(u.prompt_tokens) || 0,
       completion_tokens: Number(u.completion_tokens) || 0,
       total_tokens: Number(u.total_tokens) || 0,
+      ...(cache.hasCacheInfo
+        ? { cacheHitTokens: cache.cacheHitTokens, cacheWriteTokens: cache.cacheWriteTokens, cacheMissTokens: cache.cacheMissTokens }
+        : {}),
     };
   }
 

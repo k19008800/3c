@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OpenAI 兼容端点单元测试 — /v1/embeddings、/v1/completions、/v1/models
  *
  * 纯单测风格（对齐 key-selector.test.ts / sse-stream.test.ts / circuit-breaker.test.ts）：
@@ -349,6 +349,82 @@ describe('POST /v1/completions', () => {
         fallback: false,
         inputTokens: 5,
         outputTokens: 2,
+      }));
+    });
+  });
+
+  it('非流式 + DeepSeek 缓存 usage → 显式价计费（P0 T5：cacheHitTokens/cacheDiscount/快照价落库）', async () => {
+    mocks.routing.selectChannel.mockResolvedValue(makeChannel());
+    const upstreamPayload = {
+      id: 'cmpl-cache-1',
+      object: 'text_completion',
+      choices: [{ index: 0, text: 'ok', finish_reason: 'stop' }],
+      usage: {
+        prompt_tokens: 1500, completion_tokens: 100, total_tokens: 1600,
+        prompt_cache_hit_tokens: 1000, prompt_cache_miss_tokens: 500,
+      },
+    };
+    mocks.fetch.mockResolvedValue(new Response(JSON.stringify(upstreamPayload), { status: 200 }));
+
+    const res = await app.inject({ method: 'POST', url: '/v1/completions', payload: { model: 'test-model', prompt: 'x' } });
+    expect(res.statusCode).toBe(200);
+
+    // computeUsageCost（默认 explicit，mock pricing → L1 默认价 + 折扣率兜底链）：
+    // read=1000 → cacheHitTokens；快照价/来源标识落库（D-4/D-8）
+    expect(mocks.consumption.recordConsumption).toHaveBeenCalledWith(expect.objectContaining({
+      streamed: false,
+      inputTokens: 1500,
+      outputTokens: 100,
+      cacheHitTokens: 1000,
+      cacheWriteTokens: 0,
+      cacheDiscount: expect.any(Number),
+      cacheReadInputPrice: expect.any(Number),
+      cacheWriteInputPrice: expect.any(Number),
+    }));
+    // 有缓存命中 → 折扣金额 > 0（read 部分按折扣价）
+    const call = mocks.consumption.recordConsumption.mock.calls.at(-1)![0] as Record<string, unknown>;
+    expect(Number(call.cacheDiscount)).toBeGreaterThan(0);
+  });
+
+  it('流式 → 上游请求体注入 stream_options.include_usage（D-9/R-B4）+ 流式缓存结算落库', async () => {
+    mocks.routing.selectChannel.mockResolvedValue(makeChannel());
+    const sse = [
+      'data: {"choices":[{"text":"Hello","index":0,"finish_reason":null}]}\n\n',
+      'data: {"choices":[{"text":" world","index":0,"finish_reason":"stop"}],"usage":{"prompt_tokens":1500,"completion_tokens":100,"total_tokens":1600,"prompt_cache_hit_tokens":1000,"prompt_cache_miss_tokens":500}}\n\n',
+      'data: [DONE]\n\n',
+    ].join('');
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(sse));
+        controller.close();
+      },
+    });
+    mocks.fetch.mockResolvedValue(new Response(stream, { status: 200, headers: { 'Content-Type': 'text/event-stream' } }));
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/completions',
+      payload: { model: 'test-model', prompt: 'Say hi', stream: true },
+    });
+    expect(res.statusCode).toBe(200);
+
+    // 上游请求体含 include_usage（A9：末帧 usage 计费的前提）
+    const [url, init] = mocks.fetch.mock.calls[0]!;
+    expect(url).toMatch(/\/v1\/completions$/);
+    const sentBody = JSON.parse((init as RequestInit).body as string);
+    expect(sentBody.stream).toBe(true);
+    expect(sentBody.stream_options).toEqual({ include_usage: true });
+
+    // 流式结算：末帧 usage 缓存字段透传 → 显式价计费落库（A9：计费时点 = 末帧 usage）
+    await vi.waitFor(() => {
+      expect(mocks.consumption.recordConsumption).toHaveBeenCalledWith(expect.objectContaining({
+        streamed: true,
+        trustUpstream: true,
+        inputTokens: 1500,
+        outputTokens: 100,
+        cacheHitTokens: 1000,
+        cacheWriteTokens: 0,
+        cacheReadInputPrice: expect.any(Number),
       }));
     });
   });

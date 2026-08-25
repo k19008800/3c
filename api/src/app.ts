@@ -10,6 +10,7 @@ import {
   slowRequestOnResponseHook,
 } from './lib/gateway-log';
 import { loadEnv, type Env } from './lib/env';
+import { AppError } from './lib/errors';
 import { healthRoutes } from './routes/health';
 import { internalAssetsRoutes } from './routes/internal-assets';
 import { chatRoutes } from './routes/chat';
@@ -64,6 +65,17 @@ import { dataRequestsRoutes } from './routes/data-requests';
 import { deletionRoutes } from './routes/deletion';
 import { adminSecurityRoutes } from './routes/admin-security';
 import { adminI18nRoutes } from './routes/admin-i18n';
+// 2026-08-18 原型差距补齐（gap-fix-spec-2026-08-18.md）：工单/审计/风控/财务统计/公告/用户端/业务员/供应商别名
+import { adminTicketsRoutes } from './routes/admin-tickets';
+import { adminRiskRoutes } from './routes/admin-risk';
+import { adminFinanceStatsRoutes } from './routes/admin-finance-stats';
+import { adminFinanceRulesRoutes } from './routes/admin-finance-rules';
+import { adminAnnouncementsRoutes } from './routes/admin-announcements';
+import { meGapRoutes } from './routes/me-gap';
+import { adminSupportExtraRoutes } from './routes/admin-support-extra';
+import { meSalesRoutes } from './routes/me-sales';
+import { adminVendorAliasRoutes } from './routes/admin-vendor-alias';
+import { startTempCleanupScheduler } from './services/upstream/temp-cleanup';
 import { startPriceNotificationScheduler } from './services/price-notification';
 import { startCommissionBackfillScheduler } from './services/agent/commission-backfill';
 import { startRetentionScheduler } from './services/audit/retention';
@@ -153,6 +165,39 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
     }
   });
 
+  // ═══ R4-USER-DRILL-002：空 JSON body 兼容 ═══
+  // Fastify 5 对 `Content-Type: application/json` + 空 body 抛 FST_ERR_CTP_EMPTY_JSON_BODY，
+  // 导致 9+ 个无体端点（工单 resolve / read-all / 2FA setup / webhook test|regenerate|delete /
+  // 数据导出 cancel / logout 等）在外部客户端（curl/Postman/SDK 带 JSON 头）下 400。
+  // 此处对 content-length=0 的 JSON 请求剥离 content-type，使 Fastify 按空 body 处理；
+  // 不动默认 content-type parser（保留 secure-json-parse 原型污染防护）。
+  app.addHook('preParsing', async (request) => {
+    const ct = request.headers['content-type'];
+    if (
+      typeof ct === 'string'
+      && ct.startsWith('application/json')
+      && Number(request.headers['content-length'] ?? 0) === 0
+    ) {
+      delete request.headers['content-type'];
+    }
+  });
+
+  // ═══ R6-USER-DRILL-002：统一错误响应序列化（AppError.context → details）═══
+  // 默认 Fastify 序列化丢弃 AppError.context，导致 EXISTS 等错误不携带 requestId，
+  // 客户端无法定位进行中的申请。此处附加 details 字段（向后兼容：仅新增键）。
+  app.setErrorHandler((err, _request, reply) => {
+    if (err instanceof AppError) {
+      return reply.status(err.statusCode).send({
+        statusCode: err.statusCode,
+        code: err.code,
+        error: err.name,
+        message: err.message,
+        ...(err.context && Object.keys(err.context).length > 0 ? { details: err.context } : {}),
+      });
+    }
+    return reply.send(err);
+  });
+
   // Routes
   await app.register(healthRoutes);
   await app.register(internalAssetsRoutes);
@@ -207,6 +252,16 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   await app.register(deletionRoutes);
   await app.register(adminSecurityRoutes);
   await app.register(adminI18nRoutes);
+  // 2026-08-18 原型差距补齐路由
+  await app.register(adminTicketsRoutes);
+  await app.register(adminRiskRoutes);
+  await app.register(adminFinanceStatsRoutes);
+  await app.register(adminFinanceRulesRoutes);
+  await app.register(adminAnnouncementsRoutes);
+  await app.register(meGapRoutes);
+  await app.register(adminSupportExtraRoutes);
+  await app.register(meSalesRoutes);
+  await app.register(adminVendorAliasRoutes);
 
   return app;
 }
@@ -239,6 +294,8 @@ export async function startApp(opts?: { envOverrides?: Record<string, string> })
   startTaskPollingScheduler(app.log);
   // P0-1 预扣超时清理：扫描过期未结算的 Redis 冻结（TTL 兜底 + PG 镜像自愈），每 60s
   startFreezeCleanupScheduler(60_000);
+  // 多模态临时资产 TTL 清理：按 media.temp_ttl_hours 删除过期文件 + 超限紧急清理（2026-08-18 补齐）
+  startTempCleanupScheduler(app);
 
   return app;
 }

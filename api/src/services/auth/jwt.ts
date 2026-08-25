@@ -33,6 +33,22 @@ export interface TwoFactorTempPayload {
 }
 
 /**
+ * 操作级 2FA 令牌 payload（R7，ARCH v1.1 §4.3）：purpose 恒为 'operation'。
+ *
+ * 与登录 2FA 临时令牌（purpose='2fa'）通过 purpose 字段隔离，交叉使用即无效；
+ * 5 分钟窗口内同一操作者多次资金写操作可复用（双签 B11/Q4：不单次消费）。
+ * `seq` = 签发序号（Redis `op2fa:issued_seq:{userId}` 递增；E27 失效联动：2FA 禁用后
+ * 旧令牌 seq ≤ revoked 版本 → 中间件 403 OPERATION_2FA_EXPIRED）。
+ */
+export interface OperationTokenPayload {
+  purpose: 'operation';
+  userId: number;
+  email: string;
+  role: string;
+  seq: number;
+}
+
+/**
  * Generate an access token (short-lived, 15 min)
  *
  * 带 jti（随机 UUID）保证同秒内同 payload 多次签发 token 唯一：
@@ -97,6 +113,51 @@ export function verify2faTempToken(token: string, secret?: string): TwoFactorTem
     return payload.purpose === '2fa' ? payload : null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * 签发操作级 2FA 令牌（无状态 JWT，token_ttl_seconds 过期，仿 generate2faTempToken）。
+ *
+ * @param payload - userId / email / role / seq（purpose 自动置 'operation'；seq 由
+ *                  operation-verify 端点从 Redis op2fa:issued_seq 递增取号，E27 失效联动）
+ * @param secret - 可选覆盖 JWT_SECRET（测试用）
+ * @param expiresInSeconds - 有效期（秒，默认 300 = token_ttl_seconds）
+ * @returns 操作令牌字符串
+ */
+export function generateOperationToken(
+  payload: Omit<OperationTokenPayload, 'purpose'>,
+  secret?: string,
+  expiresInSeconds: number = 300,
+): string {
+  return jwt.sign(
+    { ...payload, purpose: 'operation' },
+    secret || process.env.JWT_SECRET || DEFAULT_SECRET,
+    { expiresIn: `${expiresInSeconds}s` },
+  );
+}
+
+/**
+ * 校验操作级 2FA 令牌；purpose 必须为 'operation'。
+ *
+ * @param token - 待校验令牌
+ * @param secret - 可选覆盖 JWT_SECRET（测试用）
+ * @returns { ok: true, payload } 有效；
+ *          { ok: false, reason: 'expired' } 已过期（前端据此重开 2FA 弹窗）；
+ *          { ok: false, reason: 'invalid' } 无效（签名错误/伪造 purpose/损坏）
+ */
+export function verifyOperationToken(
+  token: string,
+  secret?: string,
+): { ok: true; payload: OperationTokenPayload } | { ok: false; reason: 'expired' | 'invalid' } {
+  try {
+    const payload = jwt.verify(token, secret || process.env.JWT_SECRET || DEFAULT_SECRET) as OperationTokenPayload;
+    if (payload.purpose !== 'operation') return { ok: false, reason: 'invalid' };
+    return { ok: true, payload };
+  } catch (err) {
+    // jsonwebtoken：TokenExpiredError → 过期；其余（签名/格式/算法）→ 无效
+    const isExpired = err instanceof jwt.TokenExpiredError;
+    return { ok: false, reason: isExpired ? 'expired' : 'invalid' };
   }
 }
 

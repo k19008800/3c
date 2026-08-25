@@ -22,6 +22,8 @@
  * @see docs/api-contract.md（Anthropic 兼容入口说明）
  */
 
+import { parseCacheTokens } from '../billing/usage-parser.js';
+
 // ============================================================
 // 类型
 // ============================================================
@@ -324,23 +326,41 @@ export function anthropicMessageStop(): AnthropicStreamEvent {
   return { type: 'message_stop' };
 }
 
-/** 从 OpenAI 流式 chunk 提取增量文本 / finish_reason / usage */
+/** 从 OpenAI 流式 chunk 提取增量文本 / finish_reason / usage（usage 携带归一化缓存字段，D-11/D-14） */
 export function extractOpenAIChunk(chunk: Record<string, unknown>): {
   text: string | null;
   finishReason: string | null;
-  usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } | null;
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+    cacheHitTokens?: number;
+    cacheWriteTokens?: number;
+    cacheMissTokens?: number;
+  } | null;
 } {
   const choice = (chunk.choices as Array<Record<string, unknown>> | undefined)?.[0];
   const delta = (choice?.delta ?? {}) as Record<string, unknown>;
   const text = typeof delta.content === 'string' ? delta.content : null;
   const finishReason = typeof choice?.finish_reason === 'string' ? choice.finish_reason : null;
-  let usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } | null = null;
+  let usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+    cacheHitTokens?: number;
+    cacheWriteTokens?: number;
+    cacheMissTokens?: number;
+  } | null = null;
   if (chunk.usage && typeof chunk.usage === 'object') {
     const u = chunk.usage as Record<string, unknown>;
+    const cache = parseCacheTokens(chunk.usage);
     usage = {
       prompt_tokens: Number(u.prompt_tokens) || 0,
       completion_tokens: Number(u.completion_tokens) || 0,
       total_tokens: Number(u.total_tokens) || 0,
+      ...(cache.hasCacheInfo
+        ? { cacheHitTokens: cache.cacheHitTokens, cacheWriteTokens: cache.cacheWriteTokens, cacheMissTokens: cache.cacheMissTokens }
+        : {}),
     };
   }
   return { text, finishReason, usage };

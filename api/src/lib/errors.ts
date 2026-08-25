@@ -76,7 +76,7 @@ export class RateLimitError extends AppError {
 export class InsufficientBalanceError extends AppError {
   constructor(currentBalance: string, requiredCost: string) {
     super(
-      `Insufficient balance: have ${currentBalance}, need ${requiredCost}`,
+      `余额不足：当前 ¥${Number(currentBalance || 0).toFixed(2)}，本次调用约需 ¥${Number(requiredCost || 0).toFixed(2)}，请充值后重试`,
       402,
       'INSUFFICIENT_BALANCE',
       { currentBalance, requiredCost },
@@ -97,10 +97,14 @@ export class InsufficientBalanceError extends AppError {
 export class PreConsumeFailedError extends AppError {
   constructor(currentBalance?: string, requiredCost?: string) {
     super(
-      '余额不足，请充值',
+      '余额不足，请充值后重试',
       402,
       'PRE_CONSUME_FAILED',
-      { currentBalance, requiredCost },
+      {
+        currentBalance,
+        requiredCost,
+        guidance: '请前往「充值」页充值；新用户可领取体验金',
+      },
     );
     this.name = 'PreConsumeFailedError';
   }

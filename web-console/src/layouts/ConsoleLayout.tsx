@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink, Outlet, useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
+import { usePerm } from "../lib/permissions";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import ConsentBanner from "../components/ConsentBanner";
@@ -39,6 +40,7 @@ const ADMIN_NAV: NavGroup[] = [
     { to: "/admin/finance/settlement", label: "结算对账", icon: "⚖️" },
     { to: "/admin/finance/profit", label: "利润分析", icon: "📈" },
     { to: "/admin/finance/pricing", label: "价格管理", icon: "🏷️" },
+    { to: "/admin/finance/risk-config", label: "风控规则配置", icon: "🛡️" },
   ]},
   { group: "供应商管理", icon: "🔌", items: [
     // 注：详情由列表进入，不挂参数化菜单 /admin/suppliers/:id
@@ -139,6 +141,19 @@ const SALES_NAV: NavItem[] = [
   { to: "/sales/performance", label: "业绩看板", icon: "📊" },
 ];
 
+/**
+ * 财务角色最小导航（ARCH §12.4 D2 裁决：P0-3"假授权"前端残留修复）
+ * 逐项按权限点 usePerm 过滤；完整权限菜单收敛随 SPEC-§30 动态权限二期统一。
+ */
+const FINANCE_NAV: (NavItem & { permKey: string })[] = [
+  { to: "/admin/finance/manual-topup", label: "人工上账", icon: "✋", permKey: "finance.topup" },
+  { to: "/admin/finance/orders", label: "充值订单", icon: "🧾", permKey: "finance.topup" },
+  { to: "/admin/finance/refunds", label: "退款审核", icon: "↩️", permKey: "finance.refund" },
+  { to: "/admin/finance/invoices", label: "发票审核", icon: "📄", permKey: "finance.invoice" },
+  { to: "/admin/finance/reconciliation", label: "对账报表", icon: "📊", permKey: "finance.reconciliation" },
+  { to: "/admin/customers", label: "客户列表", icon: "📋", permKey: "customer.view" },
+];
+
 const PORTAL_NAV: NavItem[] = [
   { to: "/", label: "仪表盘", icon: "📊" },
   { to: "/api-keys", label: "API Keys", icon: "🔑" },
@@ -197,7 +212,17 @@ export default function ConsoleLayout() {
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
   const isSales = user?.role === "sales";
   const isAgent = user?.role === "agent";
-  const roleLabel = isAdmin ? "ADMIN" : isAgent ? "AGENT" : isSales ? "SALES" : "";
+  const isFinance = user?.role === "finance";
+  const roleLabel = isAdmin ? "ADMIN" : isAgent ? "AGENT" : isSales ? "SALES" : isFinance ? "FINANCE" : "";
+
+  // 财务导航逐项权限点（usePerm 为 hook，固定次数顶层调用，避免条件调用）
+  const finPerms: Record<string, boolean> = {
+    "finance.topup": usePerm("finance.topup"),
+    "finance.refund": usePerm("finance.refund"),
+    "finance.invoice": usePerm("finance.invoice"),
+    "finance.reconciliation": usePerm("finance.reconciliation"),
+    "customer.view": usePerm("customer.view"),
+  };
 
   const handleLogout = () => { logout(); navigate("/login"); };
 
@@ -234,14 +259,22 @@ export default function ConsoleLayout() {
             {SALES_NAV.map(item => <SidebarLink key={item.to} to={item.to} icon={item.icon} label={item.label} />)}
           </>}
 
+          {/* ── Finance（最小财务导航，逐项权限点过滤） ── */}
+          {isFinance && <>
+            <div style={{ padding: "16px 20px 6px", fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>财务工作台</div>
+            {FINANCE_NAV.filter(item => finPerms[item.permKey] ?? false).map(item => (
+              <SidebarLink key={item.to} to={item.to} icon={item.icon} label={item.label} />
+            ))}
+          </>}
+
           {/* ── User portal ── */}
-          {!isAdmin && !isAgent && !isSales && PORTAL_NAV.map(item => <SidebarLink key={item.to} to={item.to} icon={item.icon} label={item.label} />)}
+          {!isAdmin && !isAgent && !isSales && !isFinance && PORTAL_NAV.map(item => <SidebarLink key={item.to} to={item.to} icon={item.icon} label={item.label} />)}
         </nav>
       </aside>
 
       <div style={{ marginLeft: 220, flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         <PageHeaderProvider>
-          <TopbarAndOutlet userEmail={user?.email ?? ""} roleLabel={roleLabel} balance={user?.balance ?? 0} unread={unreadQ.data} isAdmin={isAdmin} onLogout={handleLogout} />
+          <TopbarAndOutlet userEmail={user?.email ?? ""} roleLabel={roleLabel} balance={user?.balance ?? 0} unread={unreadQ.data} isAdmin={isAdmin || isFinance} onLogout={handleLogout} />
         </PageHeaderProvider>
       </div>
     </div>

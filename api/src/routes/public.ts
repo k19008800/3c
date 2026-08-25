@@ -97,6 +97,9 @@ export async function publicRoutes(app: FastifyInstance) {
       vendor: schema.suppliers.name,
       cost_input_price: schema.supplierModels.inputPrice,
       cost_output_price: schema.supplierModels.outputPrice,
+      // F09：公开价目缓存价透明（D-8 显式缓存价列；可空）
+      cache_read_input_price: schema.vendorPricing.cacheReadInputPrice,
+      cache_write_input_price: schema.vendorPricing.cacheWriteInputPrice,
     })
       .from(schema.vendorPricing)
       .innerJoin(
@@ -104,7 +107,15 @@ export async function publicRoutes(app: FastifyInstance) {
         eq(schema.vendorPricing.supplierModelId, schema.supplierModels.id),
       )
       .innerJoin(schema.suppliers, eq(schema.supplierModels.supplierId, schema.suppliers.id))
-      .where(eq(schema.vendorPricing.status, 'active' as any))
+      .where(and(
+        eq(schema.vendorPricing.status, 'active' as any),
+        // R8-USER-DRILL-002：用户端目录过滤测试模型（供应商同步/测试脚本产物），
+        // 避免 900+ 条 market-test-*/alias-*/compat-*/verify-* 污染门户与定价页。
+        sql`${schema.supplierModels.modelName} NOT LIKE 'market-test-%'
+            AND ${schema.supplierModels.modelName} NOT LIKE 'alias-%'
+            AND ${schema.supplierModels.modelName} NOT LIKE 'compat-%'
+            AND ${schema.supplierModels.modelName} NOT LIKE 'verify-%'`,
+      ))
       .orderBy(schema.supplierModels.modelName);
 
     return reply.send({ list: models });

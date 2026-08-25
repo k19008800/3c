@@ -17,6 +17,7 @@ describe('Supplier Management API', () => {
   let modelId: number;
   let keyId: number;
   let pricingId: number;
+  let cachePricingId: number; // P0 T6：含显式缓存价的定价行（缓存价 CRUD 测试专用）
 
   // Unique test data to avoid collisions across runs
   const ts = Date.now();
@@ -493,6 +494,111 @@ describe('Supplier Management API', () => {
         payload: { cache_discount_rate: '2' },
       });
       expect(res.statusCode).toBe(400);
+    });
+
+    // ── P0 T6：显式缓存价 CRUD（D-8/D-12/product Q3 无上限）──
+
+    it('POST /api/v1/admin/pricing — 创建含显式缓存价（写入价 > 输入价合法，Q3 无上限）', async () => {
+      const res = await app.inject({
+        method: 'POST', url: '/api/v1/admin/pricing',
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: {
+          supplierModelId: modelId,
+          inputPrice: '0.06', outputPrice: '0.16', status: 'active',
+          cache_read_input_price: '0.03',
+          cache_write_input_price: '0.5', // 写入溢价合法（product Q3 裁定）
+        },
+      });
+      expect(res.statusCode).toBe(201);
+      const body = JSON.parse(res.payload);
+      // numeric(18,6) 列 Drizzle 返回全精度字符串（'0.030000'）→ 按数值断言
+      expect(Number(body.pricing.cacheReadInputPrice)).toBe(0.03);
+      expect(Number(body.pricing.cacheWriteInputPrice)).toBe(0.5);
+      cachePricingId = body.pricing.id as number;
+    });
+
+    it('GET /api/v1/admin/pricing — 列表返回显式缓存价字段（DTO 转 number|null）', async () => {
+      const res = await app.inject({
+        method: 'GET', url: '/api/v1/admin/pricing?status=active&pageSize=100',
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.payload);
+      expect(body.data.list.length).toBeGreaterThan(0);
+      // 每条都带缓存价字段，值为 number（DTO 转换；无缓存价为 null）
+      for (const item of body.data.list) {
+        expect('cache_read_input_price' in item).toBe(true);
+        expect('cache_write_input_price' in item).toBe(true);
+        expect(item.cache_read_input_price === null || typeof item.cache_read_input_price === 'number').toBe(true);
+      }
+    });
+
+    it('PUT /api/v1/admin/pricing/:id — 缓存写入价清空（回退全价），读取价保留', async () => {
+      const res = await app.inject({
+        method: 'PUT', url: `/api/v1/admin/pricing/${cachePricingId}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { cache_write_input_price: '' },
+      });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.payload);
+      expect(body.pricing.cacheWriteInputPrice).toBeNull(); // 清空 → 回退全价
+      expect(Number(body.pricing.cacheReadInputPrice)).toBe(0.03); // 读取价保留（numeric 全精度字符串）
+    });
+
+    it('PUT /api/v1/admin/pricing/:id — 缓存价负数 → 400（校验 ≥0，Q3 无上限仅约束下限）', async () => {
+      const res = await app.inject({
+        method: 'PUT', url: `/api/v1/admin/pricing/${cachePricingId}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { cache_read_input_price: '-0.01' },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('PUT /api/v1/admin/pricing/:id — 仅改缓存价不触发 price_change_logs（D-6 衔接：P1 通知面再扩展）', async () => {
+      const { db, schema } = await import('../src/db');
+      const { sql } = await import('drizzle-orm');
+      const [before] = await db.select({ c: sql<number>`count(*)::int` })
+        .from(schema.priceChangeLogs).where(sql`${schema.priceChangeLogs.supplierModelId} = ${modelId}`);
+      // 仅改缓存写入价（input/output 不变）
+      await app.inject({
+        method: 'PUT', url: `/api/v1/admin/pricing/${cachePricingId}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { cache_write_input_price: '0.4' },
+      });
+      const [after] = await db.select({ c: sql<number>`count(*)::int` })
+        .from(schema.priceChangeLogs).where(sql`${schema.priceChangeLogs.supplierModelId} = ${modelId}`);
+      expect(Number(after.c)).toBe(Number(before.c)); // 缓存价变更不写 price_change_logs
+    });
+
+    it('GET /api/v1/public/pricing — 公开价目含显式缓存价（P0 数据就绪，P1 展示用）', async () => {
+      const res = await app.inject({ method: 'GET', url: '/api/v1/public/pricing' });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.payload);
+      // 公开端点无分页 → 全量返回，可按 id 命中本测试创建的缓存价行
+      const item = body.pricing.find((p: { id: number }) => p.id === cachePricingId);
+      expect(item).toBeDefined();
+      // 公开端点沿用既有 camelCase 键风格
+      expect('cacheReadInputPrice' in item).toBe(true);
+      expect(typeof item.cacheWriteInputPrice).toBe('number');
+      expect(Number(item.cacheReadInputPrice)).toBe(0.03);
+    });
+
+    it('无 supplier.pricing 权限点的角色（sales）配置缓存售价 → 403（D-5 定稿）', async () => {
+      const { db, schema } = await import('../src/db');
+      const { eq } = await import('drizzle-orm');
+      const salesEmail = `sales-supp-${Date.now()}@test.com`;
+      await app.inject({ method: 'POST', url: '/api/v1/auth/register', payload: { email: salesEmail, password: 'Sales12345', name: 'Sales Test' } });
+      await db.update(schema.users).set({ role: 'sales' }).where(eq(schema.users.email, salesEmail));
+      const salesLogin = await app.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { email: salesEmail, password: 'Sales12345' } });
+      const salesToken = JSON.parse(salesLogin.payload).accessToken;
+      const denied = await app.inject({
+        method: 'PUT', url: `/api/v1/admin/pricing/${cachePricingId}`,
+        headers: { authorization: `Bearer ${salesToken}` },
+        payload: { cache_read_input_price: '0.02' },
+      });
+      expect(denied.statusCode).toBe(403);
+      // finance 以上权限由 require-perm.test.ts hasPerm('finance','supplier.pricing') 单测覆盖
+      // （users.role 枚举无 finance，DB 不可直设；JWT 假造方案见 admin-adjust.test.ts 注释）
     });
 
     it('PUT /api/v1/admin/pricing/:id — 404 on missing', async () => {

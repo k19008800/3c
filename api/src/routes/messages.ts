@@ -36,8 +36,7 @@ import { apiKeyAuth } from '../services/auth/apikey';
 import { enforceRateLimitPreHandler } from '../services/rate-limit';
 import { claudeToOpenAI, openAIToClaude, type ClaudeMessage, type ClaudeContentBlock } from '../services/upstream/claude-adapter';
 import { countTokens } from '../services/billing/token-counter';
-import { parseAndDiscount } from '../services/billing/cache-billing';
-import { resolveCacheDiscountRate } from '../services/billing/cache-discount';
+import { computeUsageCost, computeStreamCost, STREAM_INCLUDE_USAGE_ENABLED } from '../services/billing/cache-billing';
 import { determineStreamBilling } from '../services/billing/settle-stream';
 import { getBalance } from '../services/billing/balance';
 import { recordChannelResult } from '../services/upstream/circuit-breaker';
@@ -70,7 +69,7 @@ import {
 } from '../services/pipeline';
 import type { PipelineContext } from '../services/pipeline';
 import type { SelectedChannel } from '../services/upstream/routing';
-import { getPricingForModel, computeCost, computeEstimatedCost, buildPricingContext } from '../services/billing/pricing';
+import { getPricingForModel, computeCost, computeEstimatedCost, buildPricingContext, type ModelPricing } from '../services/billing/pricing';
 import { settleBilling } from '../services/billing/settle';
 import { releasePreConsume } from '../services/billing/pre-consume';
 import { preprocessRequestBody } from '../services/upstream/body-preprocessor';
@@ -92,8 +91,7 @@ interface MessagesRequest {
   [key: string]: unknown;
 }
 
-/** getPricingForModel 返回的定价结构（validate step 写入共享存储，结算步骤读取） */
-type ModelPricing = { input: number; output: number; cacheDiscountRate: number | null };
+/** getPricingForModel 返回的定价结构（validate step 写入共享存储，结算步骤读取；共享类型见 pricing.ts） */
 
 /** validate step 写回共享存储的请求结果（校验后的请求 + 转换后的上游 OpenAI body） */
 interface MessagesValidateResult {
@@ -327,6 +325,9 @@ export async function messagesRoutes(app: FastifyInstance) {
             const channel = requireStepResult<SelectedChannel>(c, STEP_KEYS.channel);
             const upstreamUrl = `${channel.supplier.baseUrl}/v1/chat/completions`;
             const upstreamBody = { ...openAIBody, model: channel.modelMapping.platformModel };
+            // P0 流式缓存计费（D-9/R-B4）：注入 stream_options.include_usage（messages 端点天然带 usage，双保险）
+            // openAIBody 类型收窄为固定字段，注入扩展字段经 Record 断言（在途改造，保持类型最小触碰）
+            if (STREAM_INCLUDE_USAGE_ENABLED && c.stream) (upstreamBody as Record<string, unknown>).stream_options = { include_usage: true };
             // P0-4 多模态预处理：大 base64（>10MB）→ 临时文件 + 内网 URL；小 base64 原样转发
             const processed = await preprocessRequestBody(upstreamBody);
             return {
@@ -406,7 +407,9 @@ export async function messagesRoutes(app: FastifyInstance) {
             if (c.stream) {
               const state = requireStepResult<StreamState>(c, STEP_KEYS.streamState);
               const billing = determineStreamBilling(state, false, requireStepResult<number>(c, STEP_KEYS.estimatedInputTokens), c.model);
-              const cost = computeCost(c.model, billing.promptTokens, billing.completionTokens, pricing);
+              // P0 缓存计费（A9：计费时点 = 末帧 usage；fallback 无缓存字段 → 全价；discount_rate 兼容旧公式）
+              const usageCost = await computeStreamCost(billing, pricing);
+              const cost = usageCost.cost;
 
               try {
                 await settleBilling(
@@ -415,7 +418,18 @@ export async function messagesRoutes(app: FastifyInstance) {
                   billing.completionTokens,
                   cost,
                   channel,
-                  { streamed: true, trustUpstream: billing.trustUpstream, fallback: billing.fallback, finishReason: state.finishReason ?? undefined, preConsume: readPreConsume(c) },
+                  {
+                    streamed: true, trustUpstream: billing.trustUpstream, fallback: billing.fallback, finishReason: state.finishReason ?? undefined,
+                    cacheHitTokens: usageCost.cacheHitTokens,
+                    cacheDiscount: usageCost.discountAmount,
+                    cacheWriteTokens: usageCost.cacheWriteTokens,
+                    cacheHitCost: usageCost.cacheHitCost,
+                    cacheWriteCost: usageCost.cacheWriteCost,
+                    cacheReadInputPrice: usageCost.cacheReadPrice,
+                    cacheWriteInputPrice: usageCost.cacheWritePrice,
+                    cacheWritePriceSource: usageCost.cacheWritePriceSource,
+                    preConsume: readPreConsume(c),
+                  },
                 );
                 // 幂等：结算成功才缓存流式摘要（失败不缓存，避免回放未计费的"成功"）
                 await cacheIdempotentResponse(c.requestId, {
@@ -447,11 +461,11 @@ export async function messagesRoutes(app: FastifyInstance) {
             const totalTokens = Number(u.total_tokens) || 0;
             const hasUsage = totalTokens > 0;
 
-            // 缓存命中打折：上游返回缓存字段时按命中价计费；无缓存字段行为与 computeCost 一致
-            // 折扣率 = 模型级 vendor_pricing.cache_discount_rate → 全局 billing.cache_hit_discount → 默认 0.1
-            const { cost, discountAmount, cacheHitTokens } = hasUsage
-              ? parseAndDiscount(parsedBody.usage, pricing, await resolveCacheDiscountRate(pricing))
-              : { cost: computeCost(c.model, requireStepResult<number>(c, STEP_KEYS.estimatedInputTokens), 0, pricing), discountAmount: 0, cacheHitTokens: 0 };
+            // P0 缓存计费（统一入口）：explicit 走显式价；discount_rate 兼容旧公式；无缓存字段/无 usage → 全价
+            const usageCost = hasUsage ? await computeUsageCost(parsedBody.usage, pricing) : null;
+            const cost = usageCost
+              ? usageCost.cost
+              : computeCost(c.model, requireStepResult<number>(c, STEP_KEYS.estimatedInputTokens), 0, pricing);
 
             const choices = (parsedBody.choices as Array<{ finish_reason?: string }> | undefined);
             const finishReason = String(choices?.[0]?.finish_reason ?? 'stop');
@@ -467,8 +481,14 @@ export async function messagesRoutes(app: FastifyInstance) {
                 trustUpstream: hasUsage,
                 fallback: !hasUsage,
                 finishReason,
-                cacheHitTokens,
-                cacheDiscount: discountAmount,
+                cacheHitTokens: usageCost?.cacheHitTokens,
+                cacheDiscount: usageCost?.discountAmount,
+                cacheWriteTokens: usageCost?.cacheWriteTokens,
+                cacheHitCost: usageCost?.cacheHitCost,
+                cacheWriteCost: usageCost?.cacheWriteCost,
+                cacheReadInputPrice: usageCost?.cacheReadPrice,
+                cacheWriteInputPrice: usageCost?.cacheWritePrice,
+                cacheWritePriceSource: usageCost?.cacheWritePriceSource,
                 preConsume: readPreConsume(c),
               },
             );

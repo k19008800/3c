@@ -24,6 +24,112 @@ export interface DeductOptions {
   allowNegative?: boolean;
 }
 
+/** Drizzle 事务上下文（与现有 db.transaction 回调参数一致，供 creditBalance 使用） */
+type TxContext = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * 统一入账收口：余额账户兜底 + 原子增额 + 资金流水（必须在调用方事务内执行）
+ *
+ * 解决 P0-2：入账统一 UPDATE customer_balances ... RETURNING 无行即 404，
+ * 历史/异常用户（无余额行）直接失败。本函数先 INSERT ON CONFLICT DO NOTHING
+ * 复用 initBalance 语义兜底建行，再原子增额 + 写流水，保证任意入账路径
+ * （人工上账审核 / 调账生效 / 充值订单审核）行为一致。
+ *
+ * 自动建户（实际插入）时同事务写 audit_logs（action='balance.auto_create'，
+ * details.source='auto_create'，PRD §3.2.1-6 / 修复 D-06），供对账定位账户来源；
+ * 已存在余额行的路径不产生该审计。
+ *
+ * 事务提交后由调用方路由层同步 Redis 热账本（adjustLedgerAvailable /
+ * clearNegativeFlag，对齐 coding-standards-api-db-test.md §2.5「事务内不做 Redis」）。
+ *
+ * 兑换码 redeem 路径（recharge.ts）本期未收口（裁决 Q6），为未来统一入口预留本函数。
+ *
+ * @param tx - 调用方已开启的 Drizzle 事务（db.transaction 的 tx 参数）
+ * @param params.userId - 入账用户 ID（必须已存在，调用方负责校验；FK 违约由事务回滚）
+ * @param params.amount - 入账金额（元，正数；内部 toFixed(8) 对齐 numeric(18,8)）
+ * @param params.type - 流水类型：'recharge' | 'adjustment'（balance_transactions.type 枚举）
+ * @param params.referenceType - 引用类型：'recharge_order' | 'adjustment' 等
+ * @param params.referenceId - 引用 ID：订单/调账记录 ID（字符串）
+ * @param params.description - 流水描述（含单号/科目，便于审计）
+ * @returns { balanceAfter: string } 入账后可用余额（元，字符串）
+ * @throws {AppError} 500 BALANCE_CREDIT_FAILED — UPDATE 意外命中 0 行（理论不可达）
+ *
+ * @example
+ * const { balanceAfter } = await creditBalance(tx, {
+ *   userId: order.userId, amount: order.amount, type: 'recharge',
+ *   referenceType: 'recharge_order', referenceId: String(order.id),
+ *   description: `人工上账审核通过 ${order.orderNo}`,
+ * });
+ */
+export async function creditBalance(
+  tx: TxContext,
+  params: {
+    userId: number;
+    amount: string | number;
+    type: 'recharge' | 'adjustment';
+    referenceType: string;
+    referenceId: string;
+    description: string;
+  },
+): Promise<{ balanceAfter: string }> {
+  const amountStr = Number(params.amount).toFixed(8);
+
+  // a. 兜底建行（复用 initBalance 语义，幂等）：并发 N 事务仅 1 个生效，其余 no-op。
+  //    RETURNING 判空区分"本次实际建户"与"已存在行"（ON CONFLICT DO NOTHING 冲突时返回空）。
+  const [inserted] = await tx.insert(schema.customerBalances).values({
+    userId: params.userId,
+    totalBalance: '0',
+    availableBalance: '0',
+    frozenBalance: '0',
+    currency: 'CNY',
+  }).onConflictDoNothing().returning({ id: schema.customerBalances.id });
+  if (inserted) {
+    // 自动建户审计（PRD §3.2.1-6 / 修复 D-06）：来源标识 auto_create，供对账定位账户来源。
+    // 与建户同事务（失败整体回滚）；audit_logs 列均可空，插入失败概率趋零。
+    await tx.insert(schema.auditLogs).values({
+      userId: params.userId,
+      action: 'balance.auto_create',
+      resource: 'customer_balance',
+      resourceId: String(params.userId),
+      details: {
+        user_id: params.userId,
+        source: 'auto_create',
+        reference_type: params.referenceType,
+        reference_id: params.referenceId,
+      } as any,
+    });
+  }
+
+  // b. 原子增额（a 保证必命中；行级锁串行化并发增额不丢更新）
+  const upd = await tx.execute(sql`
+    UPDATE customer_balances
+    SET available_balance = available_balance + ${amountStr}::numeric,
+        total_balance = total_balance + ${amountStr}::numeric,
+        version = version + 1,
+        updated_at = NOW()
+    WHERE user_id = ${params.userId}
+    RETURNING available_balance AS "balanceAfter"
+  `);
+  const row = upd[0] as unknown as { balanceAfter: string } | undefined;
+  if (!row) {
+    // 理论不可达（a 已保证有行）；防御性抛出，由调用方事务整体回滚
+    throw new AppError('Balance credit failed', 500, 'BALANCE_CREDIT_FAILED');
+  }
+
+  // c. 资金流水（与余额更新同事务，失败整体回滚，杜绝"钱加了没流水"）
+  await tx.insert(schema.balanceTransactions).values({
+    userId: params.userId,
+    type: params.type,
+    amount: amountStr,
+    balanceAfter: row.balanceAfter,
+    referenceType: params.referenceType,
+    referenceId: params.referenceId,
+    description: params.description,
+  });
+
+  return { balanceAfter: row.balanceAfter };
+}
+
 /**
  * 扣减余额（事后扣费）
  *

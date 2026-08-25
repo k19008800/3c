@@ -7,15 +7,27 @@
  *   GET    /admin/sys/cache/keys?pattern=  — 键列表（SCAN 匹配 + 键数/内存估算）
  *   DELETE /admin/sys/cache/key            — 删除指定键（body: { key }）
  *   POST   /admin/sys/cache/flush          — 清理业务缓存（删除 billing:* 等前缀）
+ *   GET    /admin/sys/cache/temp-stats     — 临时资产磁盘缓存统计（§11，扫描 MULTIMODAL_TMP_DIR）
+ *   GET    /admin/sys/cache/config         — 临时资产缓存配置（system_config media.*）
+ *   PUT    /admin/sys/cache/config         — 保存配置（写 audit_logs）
  *
  * 安全：Redis 不可用时返回空列表/降级提示，不抛错（与 lib/redis 降级语义一致）。
- * 仅 super_admin 可写（删除/清理），admin 只读。
+ * 仅 super_admin 可写（删除/清理），admin 只读；§11 新增的 config 写端点按规格
+ * 要求 adminAuth（全部 admin），superAdminOnly 仅约束既有 Redis 写端点。
  */
 
 import type { FastifyInstance } from 'fastify';
 import { getRedis } from '../lib/redis';
+import { db, schema } from '../db';
 import { verifyToken } from '../services/auth/jwt';
 import { UnauthorizedError, ForbiddenError, ValidationError } from '../lib/errors';
+import {
+  getTempCacheStats,
+  readTempCacheConfig,
+  saveTempCacheConfig,
+  type TempCacheConfig,
+} from '../services/upstream/temp-cleanup';
+import { getTempAssetDir } from '../services/upstream/temp-asset-store';
 
 async function adminAuth(request: any, _reply: any) {
   const authHeader = request.headers.authorization;
@@ -26,6 +38,37 @@ async function adminAuth(request: any, _reply: any) {
   request.userContext = payload;
   const { role } = payload as { role: string };
   if (role !== 'admin' && role !== 'super_admin') throw new ForbiddenError('Admin access required');
+}
+
+/** 管理端操作审计写库（新增端点专用，不影响既有端点） */
+async function writeAudit(request: any, action: string, resourceId: string | number | null, details: Record<string, unknown>) {
+  const ctx = request.userContext ?? {};
+  await db.insert(schema.auditLogs).values({
+    userId: ctx.userId ?? null,
+    action,
+    resource: 'sys_cache',
+    resourceId: resourceId != null ? String(resourceId) : null,
+    details: details as any,
+    ipAddress: request.ip ?? null,
+    userAgent: request.headers['user-agent'] ?? null,
+  });
+}
+
+/** 校验并归一化缓存配置（数字为正数，非法值抛 400） */
+function parseCacheConfig(body: Record<string, unknown>): TempCacheConfig {
+  const num = (key: string, fallback: number): number => {
+    if (body[key] === undefined) return fallback;
+    const n = Number(body[key]);
+    if (!Number.isFinite(n) || n <= 0) throw new ValidationError(`${key} 必须为正数`);
+    return n;
+  };
+  return {
+    temp_ttl_hours: num('temp_ttl_hours', 24),
+    cleanup_interval_minutes: num('cleanup_interval_minutes', 60),
+    max_total_size_gb: num('max_total_size_gb', 20),
+    emergency_cleanup_ttl_minutes: num('emergency_cleanup_ttl_minutes', 5),
+    audit_retention_days: num('audit_retention_days', 180),
+  };
 }
 
 async function superAdminOnly(request: any) {
@@ -111,5 +154,44 @@ export async function adminSysCacheRoutes(app: FastifyInstance) {
       }
     }
     return reply.send({ data: { ok: true, removed: total }, message: `已清理 ${total} 个业务缓存键` });
+  });
+
+  /**
+   * GET /api/v1/admin/sys/cache/temp-stats — 临时资产磁盘缓存统计（§11）
+   *
+   * file_count / dir_size / usage_pct 实时扫描 MULTIMODAL_TMP_DIR；
+   * hit_count / last_cleanup_at / freed_today 来自 temp-cleanup 内存统计
+   * （进程重启后为 0 / null）。目录不存在时全部回退 0，不报错。
+   */
+  app.get('/api/v1/admin/sys/cache/temp-stats', { preHandler: [adminAuth] }, async (_request, reply) => {
+    const stats = await getTempCacheStats();
+    return reply.send({ data: { ...stats, dir_path: getTempAssetDir() } });
+  });
+
+  /**
+   * GET /api/v1/admin/sys/cache/config — 临时资产缓存配置
+   *
+   * 数据源 system_config media.*（temp_ttl_hours / cleanup_interval_minutes /
+   * max_total_size_gb / emergency_cleanup_ttl_minutes / audit_retention_days），
+   * 缺省回退默认值（24 / 60 / 20 / 5 / 180）。
+   */
+  app.get('/api/v1/admin/sys/cache/config', { preHandler: [adminAuth] }, async (_request, reply) => {
+    const cfg = await readTempCacheConfig();
+    return reply.send({ data: cfg });
+  });
+
+  /**
+   * PUT /api/v1/admin/sys/cache/config — 保存临时资产缓存配置
+   *
+   * body 可传全部或部分字段（未传字段保留现值）；写入 system_config media.* +
+   * audit_logs。调度器每个 tick 重新读取配置，变更即时生效。
+   */
+  app.put('/api/v1/admin/sys/cache/config', { preHandler: [adminAuth] }, async (request: any, reply) => {
+    const body = (request.body ?? {}) as Record<string, unknown>;
+    const current = await readTempCacheConfig();
+    const next = parseCacheConfig({ ...current, ...body });
+    await saveTempCacheConfig(request.userContext?.userId ?? null, next);
+    await writeAudit(request, 'sys_cache.config.update', null, { ...next });
+    return reply.send({ data: next, message: '临时资产缓存配置已保存' });
   });
 }

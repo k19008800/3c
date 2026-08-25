@@ -22,6 +22,9 @@ import { db, schema } from '../db';
 import { eq, sql, and, desc } from 'drizzle-orm';
 import { verifyToken } from '../services/auth/jwt';
 import { UnauthorizedError, ForbiddenError, ValidationError, NotFoundError } from '../lib/errors';
+// 权限树（PERM_GROUPS）与角色权限映射（ROLE_PERMS/effectivePerms）统一由
+// lib/permissions.ts 提供（R3 裁决 §5.1：权限树展示与路由鉴权单源一致，本文件不再维护副本）
+import { PERM_GROUPS, effectivePerms } from '../lib/permissions';
 
 async function adminAuth(request: any, _reply: any) {
   const authHeader = request.headers.authorization;
@@ -45,46 +48,6 @@ const ROLES = [
 ];
 
 const ROLE_BY_NAME: Record<string, number> = Object.fromEntries(ROLES.map((r) => [r.name, r.id]));
-
-const PERM_GROUPS: { group: string; permissions: { key: string; label: string }[] }[] = [
-  { group: '客户管理', permissions: [
-    { key: 'customer.view', label: '查看客户' },
-    { key: 'customer.edit', label: '编辑客户' },
-    { key: 'customer.credit', label: '额度管理' },
-    { key: 'customer.verify', label: '实名审核' },
-  ]},
-  { group: '财务', permissions: [
-    { key: 'finance.refund', label: '退款审核' },
-    { key: 'finance.topup', label: '人工上账' },
-    { key: 'finance.invoice', label: '发票管理' },
-    { key: 'finance.reconciliation', label: '对账报表' },
-  ]},
-  { group: '供应商', permissions: [
-    { key: 'supplier.view', label: '查看供应商' },
-    { key: 'supplier.edit', label: '编辑供应商' },
-    { key: 'supplier.pricing', label: '定价管理' },
-  ]},
-  { group: '系统', permissions: [
-    { key: 'sys.config', label: '系统配置' },
-    { key: 'sys.users', label: '用户权限' },
-    { key: 'sys.cache', label: '缓存管理' },
-    { key: 'sys.audit', label: '审计日志' },
-  ]},
-];
-
-/** 角色 → 权限 key 集合（与前端 MOCK_PERMS_TREE 口径一致的简化映射） */
-const ROLE_PERMS: Record<string, string[]> = {
-  super_admin: ['*'],
-  admin: ['customer.view', 'customer.edit', 'customer.credit', 'customer.verify', 'finance.refund', 'finance.topup', 'finance.invoice', 'finance.reconciliation', 'supplier.view', 'supplier.edit', 'supplier.pricing', 'sys.config', 'sys.users', 'sys.audit'],
-  finance: ['finance.refund', 'finance.topup', 'finance.invoice', 'finance.reconciliation', 'customer.view'],
-  agent: ['customer.view', 'customer.credit'],
-  sales: ['customer.view', 'customer.edit'],
-};
-
-function effectivePerms(roleName: string): string[] {
-  if (ROLE_PERMS[roleName]?.includes('*')) return PERM_GROUPS.flatMap((g) => g.permissions.map((p) => p.key));
-  return ROLE_PERMS[roleName] ?? [];
-}
 
 function permTree(roleName: string) {
   const eff = effectivePerms(roleName);
@@ -217,6 +180,11 @@ export async function adminPermissionRoutes(app: FastifyInstance) {
   /** GET /api/v1/admin/roles — 角色列表 */
   app.get('/api/v1/admin/roles', { preHandler: [adminAuth] }, async (_request, reply) => {
     return reply.send({ data: { list: ROLES } });
+  });
+
+  /** GET /api/v1/admin/roles/permissions/list — 权限树（AdminRolesPage 依赖；静态 PERM_GROUPS 单源） */
+  app.get('/api/v1/admin/roles/permissions/list', { preHandler: [adminAuth] }, async (_request, reply) => {
+    return reply.send({ data: { tree: PERM_GROUPS } });
   });
 
   /* ───────── API Key 安全策略 ───────── */

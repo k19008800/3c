@@ -2,16 +2,18 @@ import React, { useState } from "react";
 import "../../admin-system.css";
 
 /**
- * 时间范围选项 — 对应原型「今日/昨日/本周/本月/自定义」
+ * 时间范围选项 — 对应原型「全部/今日/昨日/本周/本月/自定义」
  *
- * 语义（均按客户注册时间 / 记录创建时间过滤）：
- * - 今日   ：今天 00:00:00 ~ 今天 23:59:59
- * - 昨日   ：昨天 00:00:00 ~ 昨天 23:59:59
- * - 本周   ：本周一 00:00:00 ~ 今天 23:59:59
- * - 本月   ：本月 1 日 00:00:00 ~ 今天 23:59:59
+ * 语义（均按客户注册时间 / 记录创建时间过滤；「全部」= 不过滤时间）：
+ * - 全部    ：不按时间过滤（默认）
+ * - 今日    ：今天 00:00:00 ~ 今天 23:59:59
+ * - 昨日    ：昨天 00:00:00 ~ 昨天 23:59:59
+ * - 本周    ：本周一 00:00:00 ~ 今天 23:59:59
+ * - 本月    ：本月 1 日 00:00:00 ~ 今天 23:59:59
  * - 自定义 ：所选起始日 00:00:00 ~ 所选结束日 23:59:59
  */
 export const TIME_RANGE_OPTIONS = [
+  { key: "all", label: "全部" },
   { key: "today", label: "今日" },
   { key: "yesterday", label: "昨日" },
   { key: "week", label: "本周" },
@@ -21,6 +23,7 @@ export const TIME_RANGE_OPTIONS = [
 
 /** 每个选项的悬停帮助文案 */
 export const TIME_RANGE_HELP: Record<TimeRangeKey, string> = {
+  all: "不按时间过滤，展示全部记录",
   today: "今天 00:00:00 ~ 今天 23:59:59 内创建（注册）的记录",
   yesterday: "昨天 00:00:00 ~ 昨天 23:59:59 内创建（注册）的记录",
   week: "本周一 00:00:00 ~ 今天 23:59:59 内创建（注册）的记录",
@@ -30,7 +33,10 @@ export const TIME_RANGE_HELP: Record<TimeRangeKey, string> = {
 
 export type TimeRangeKey = (typeof TIME_RANGE_OPTIONS)[number]["key"];
 
-/** 解析后的起止时间（本地时区，YYYY-MM-DD HH:mm:ss） */
+/**
+ * 解析后的起止时间（本地时区，YYYY-MM-DD HH:mm:ss）。
+ * 「全部」时 start/end 均为空字符串，表示不按时间过滤。
+ */
 export interface ResolvedRange {
   start: string;
   end: string;
@@ -54,14 +60,19 @@ function startOfDay(d: Date): string {
 
 /**
  * 把时间范围 key（+自定义日期）解析为具体起止时间。
- * 用于：前端展示解析区间、向后端传 date_from / date_to。
+ * 「全部」返回 { start: "", end: "" }，调用方应据此不传时间过滤参数。
  *
  * @example
  * resolveTimeRange("week")
  * // => { start: "2026-07-27 00:00:00", end: "2026-08-02 23:59:59" }
+ * resolveTimeRange("all")
+ * // => { start: "", end: "" }
  */
 export function resolveTimeRange(key: TimeRangeKey, custom?: { start?: string; end?: string }): ResolvedRange {
   const now = new Date();
+  if (key === "all") {
+    return { start: "", end: "" };
+  }
   if (key === "today") {
     return { start: startOfDay(now), end: endOfDay(now) };
   }
@@ -106,13 +117,13 @@ export interface TimeRangeFilterProps {
 /**
  * TimeRangeFilter — 原型「时间范围」筛选组
  *
- * 对应原型 filter-group：今日/昨日/本周/本月 按钮 + 自定义（日期起止 + 确定）。
+ * 对应原型 filter-group：全部/今日/昨日/本周/本月 按钮 + 自定义（日期起止 + 确定）。
  * 选中「自定义」时展开两个 date 输入框，点「确定」提交。
  * 每个按钮带 tooltip 说明该时间范围的具体定义。
+ * 默认「全部」= 不按时间过滤，由调用方在 resolveTimeRange 返回空起止时跳过时间参数。
  *
  * @example
- * ```tsx
- * const [range, setRange] = useState<TimeRangeKey>("today");
+ * const [range, setRange] = useState<TimeRangeKey>("all");
  * const [customRange, setCustomRange] = useState<{ start?: string; end?: string }>();
  * <TimeRangeFilter
  *   value={range}
@@ -121,7 +132,7 @@ export interface TimeRangeFilterProps {
  * ```
  */
 export const TimeRangeFilter: React.FC<TimeRangeFilterProps> = ({
-  value = "today",
+  value = "all",
   onChange,
   disabled = false,
   disabledHint = "该页面当前不支持按时间范围筛选",

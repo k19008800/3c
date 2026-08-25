@@ -20,6 +20,10 @@ import { countTokens } from './token-counter.js';
 
 /**
  * 流式结算决策结果
+ *
+ * P0 扩展（ARCH 评审 D-9/D-11，A9 时序）：
+ * - 采信上游 usage（分支 A/B）时透传归一化缓存字段（cacheHitTokens/cacheWriteTokens/cacheMissTokens）；
+ * - fallback 分支（C/D，本地计数/仅输入费）缓存字段恒 undefined → 全价计费（预扣-回滚口径见任务书 §4.4）。
  */
 export interface StreamBillingResult {
   /** 最终确认的总 token 数 */
@@ -28,6 +32,12 @@ export interface StreamBillingResult {
   promptTokens: number;
   /** 输出 token 数 */
   completionTokens: number;
+  /** 归一化缓存读取（命中）token 数（采信上游 usage 时透传；fallback 分支为 undefined） */
+  cacheHitTokens?: number;
+  /** 归一化缓存写入 token 数（采信上游 usage 时透传；fallback 分支为 undefined） */
+  cacheWriteTokens?: number;
+  /** 归一化缓存未命中 token 数（采信上游 usage 时透传；fallback 分支为 undefined） */
+  cacheMissTokens?: number;
   /** 是否采信上游 usage */
   trustUpstream: boolean;
   /** 是否使用了本地 tiktoken fallback */
@@ -73,6 +83,9 @@ export function determineStreamBilling(
       totalTokens: state.lastValidUsage.total_tokens,
       promptTokens: state.lastValidUsage.prompt_tokens,
       completionTokens: state.lastValidUsage.completion_tokens,
+      cacheHitTokens: state.lastValidUsage.cacheHitTokens,
+      cacheWriteTokens: state.lastValidUsage.cacheWriteTokens,
+      cacheMissTokens: state.lastValidUsage.cacheMissTokens,
       trustUpstream: true,
       fallback: false,
     };
@@ -84,12 +97,15 @@ export function determineStreamBilling(
       totalTokens: state.lastValidUsage.total_tokens,
       promptTokens: state.lastValidUsage.prompt_tokens,
       completionTokens: state.lastValidUsage.completion_tokens,
+      cacheHitTokens: state.lastValidUsage.cacheHitTokens,
+      cacheWriteTokens: state.lastValidUsage.cacheWriteTokens,
+      cacheMissTokens: state.lastValidUsage.cacheMissTokens,
       trustUpstream: true,
       fallback: false,
     };
   }
 
-  // C. 异常终止 + 无 usage + 有生成文本 → 本地计算
+  // C. 异常终止 + 无 usage + 有生成文本 → 本地计算（缓存字段 undefined → 全价）
   if (isAbnormalEnd && state.generatedText.length > 0) {
     const localOutputTokens = countTokens(state.generatedText, model);
     const totalTokens = estimatedInputTokens + localOutputTokens;
@@ -103,7 +119,7 @@ export function determineStreamBilling(
     };
   }
 
-  // D. 异常终止 + 无 usage + 无文本 → 只收输入 token
+  // D. 异常终止 + 无 usage + 无文本 → 只收输入 token（缓存字段 undefined → 全价）
   return {
     totalTokens: estimatedInputTokens,
     promptTokens: estimatedInputTokens,

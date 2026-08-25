@@ -123,6 +123,7 @@ import AdminBalanceAlertPage from "./pages/admin/AdminBalanceAlertPage";
 import AdminOperatorDashboardPage from "./pages/admin/AdminOperatorDashboardPage";
 import AdminPaymentPage from "./pages/AdminPaymentPage";
 import AdminAdjustPage from "./pages/AdminAdjustPage";
+import AdminFinanceRiskConfigPage from "./pages/AdminFinanceRiskConfigPage";
 import AdminOperationDiffPage from "./pages/admin/AdminOperationDiffPage";
 import AdminConversionFunnelPage from "./pages/admin/AdminConversionFunnelPage";
 import AdminCustomerSuccessPage from "./pages/admin/AdminCustomerSuccessPage";
@@ -220,6 +221,7 @@ export default function App() {
         <Route path="admin/finance/close" element={<AdminClosePage />} />
         <Route path="admin/finance/manual-topup" element={<AdminManualRechargePage />} />
         <Route path="admin/finance/adjust" element={<AdminAdjustPage />} />
+        <Route path="admin/finance/risk-config" element={<AdminFinanceRiskConfigPage />} />
         <Route path="admin/finance/orders" element={<AdminRechargeOrdersPage />} />
         <Route path="admin/finance/commissions" element={<AdminCommissionFlowPage />} />
         <Route path="admin/finance/refunds" element={<AdminRefundReviewPage />} />

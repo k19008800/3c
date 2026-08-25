@@ -20,6 +20,7 @@ import { createStep } from '../executor';
 import { AppError } from '../../../lib/errors';
 import { streamRelay } from '../../upstream/proxy';
 import { recordChannelResult } from '../../upstream/circuit-breaker';
+import { classifyUpstreamError, UpstreamAuthError } from '../../upstream/errors';
 import type { SelectedChannel } from '../../upstream/routing';
 import type { PipelineContext } from '../types';
 import {
@@ -106,6 +107,11 @@ export function proxyStep(opts: ProxyStepOptions) {
       }
       let errorBody = '';
       try { errorBody = await upstreamResp.text(); } catch { /* ignore */ }
+      // R2-USER-DRILL-002：上游鉴权类故障（401/403）→ 平台侧故障，返回友好 502，
+      // 不透传上游原始错误体（避免 `Authentication Fails, Your api key: ****xxxx` 误导用户）。
+      if (classifyUpstreamError(upstreamResp.status || 502) === 'auth') {
+        throw new UpstreamAuthError(upstreamResp.status || 502);
+      }
       throw new UpstreamPassthroughError(upstreamResp.status || 502, errorBody);
     }
 

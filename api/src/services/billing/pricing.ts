@@ -64,8 +64,25 @@ export const DEFAULT_AGENT_DISCOUNT_RATE = 1;
 /** L5 活动价扫描上限：进行中活动超过该数时只取最近开始的 N 个（防御异常数据膨胀） */
 export const CAMPAIGN_PRICE_SCAN_LIMIT = 5;
 
+/**
+ * 上游缓存 usage 字段支持矩阵（ARCH 评审 D-7，P0 定义常量，P1 展示层使用）。
+ *
+ * DeepSeek / Anthropic / OpenAI 的 chat/completions 类端点支持缓存 usage 字段；
+ * embedding / rerank 类不支持（上游无缓存语义）。
+ *
+ * P0 计费归一化层以 `hasCacheInfo` 运行时判定为准（不依赖本静态矩阵）；
+ * 本常量仅供 P1「缓存价展示判定」= 解析后存在有效缓存读取单价 && 上游支持 使用。
+ */
+export const SUPPORTED_CACHE_USAGE_VENDORS = ['deepseek', 'anthropic', 'openai'] as const;
+
 /** 兜底默认定价（L1） */
-const DEFAULT_PRICING = { input: DEFAULT_INPUT_PRICE, output: DEFAULT_OUTPUT_PRICE };
+const DEFAULT_PRICING: ModelPricing = {
+  input: DEFAULT_INPUT_PRICE,
+  output: DEFAULT_OUTPUT_PRICE,
+  cacheDiscountRate: null,
+  cacheReadInputPrice: null,
+  cacheWriteInputPrice: null,
+};
 
 // ============================================================
 // 类型
@@ -73,7 +90,7 @@ const DEFAULT_PRICING = { input: DEFAULT_INPUT_PRICE, output: DEFAULT_OUTPUT_PRI
 
 /** 定价结果（getPricingForModel 返回值；computeCost 等消费的单价结构） */
 export interface ModelPricing {
-  /** 输入单价（¥ / 1K tokens） */
+  /** 输入单价（¥ / 1K tokens）——请求最终生效输入单价（经 L5/L4/L3/L2/L1 后的 input，D-3 语义） */
   input: number;
   /** 输出单价（¥ / 1K tokens） */
   output: number;
@@ -82,6 +99,17 @@ export interface ModelPricing {
    * L5/L3 为折扣推导价 → 恒为 null（跟随全局）。
    */
   cacheDiscountRate: number | null;
+  /**
+   * 显式缓存读取售价（¥ / 1K tokens；P0，D-10/D-12）。
+   * 价格解析级 2（vendor_pricing.cache_read_input_price，default 组即 L2 覆盖载体）；
+   * 未配置（null）→ 回退折扣率/全局/兜底。L5/L3 为折扣推导价 → 恒为 null（D-3：显式缓存价独立于折扣类优惠）。
+   */
+  cacheReadInputPrice: number | null;
+  /**
+   * 显式缓存写入售价（¥ / 1K tokens；可空，仅 Anthropic 系使用）。
+   * 未配置（null）→ 写入按生效 input 全价（D-3 保守口径）。
+   */
+  cacheWriteInputPrice: number | null;
 }
 
 /**
@@ -211,14 +239,23 @@ function toPricing(rows: Array<{
   inputPrice: string | number | null;
   outputPrice: string | number | null;
   cacheDiscountRate: string | number | null;
+  cacheReadInputPrice: string | number | null;
+  cacheWriteInputPrice: string | number | null;
 }>): ModelPricing | null {
   if (rows.length === 0) return null;
   const input = Number(rows[0]!.inputPrice);
   const output = Number(rows[0]!.outputPrice);
   const rate = Number(rows[0]!.cacheDiscountRate);
   const cacheDiscountRate = Number.isFinite(rate) && rate > 0 && rate <= 1 ? rate : null;
+  // 显式缓存价（D-12：numeric(18,6)，与既有 varchar 混合类型在入口统一 Number()）：
+  // 合法判定 ≥ 0（0 = 免费读缓存，T6 校验口径）；非法/缺失 → null 回退。
+  // ⚠️ 必须先判 null 再 Number()：Number(null) === 0 会把"未配置"误判为"免费价"。
+  const readRaw = rows[0]!.cacheReadInputPrice == null ? null : Number(rows[0]!.cacheReadInputPrice);
+  const writeRaw = rows[0]!.cacheWriteInputPrice == null ? null : Number(rows[0]!.cacheWriteInputPrice);
+  const cacheReadInputPrice = readRaw !== null && Number.isFinite(readRaw) && readRaw >= 0 ? readRaw : null;
+  const cacheWriteInputPrice = writeRaw !== null && Number.isFinite(writeRaw) && writeRaw >= 0 ? writeRaw : null;
   if (!Number.isNaN(input) && !Number.isNaN(output) && input > 0 && output > 0) {
-    return { input, output, cacheDiscountRate };
+    return { input, output, cacheDiscountRate, cacheReadInputPrice, cacheWriteInputPrice };
   }
   return null;
 }
@@ -229,6 +266,8 @@ async function queryPricingByGroup(model: string, groupName: string): Promise<Mo
     inputPrice: schema.vendorPricing.inputPrice,
     outputPrice: schema.vendorPricing.outputPrice,
     cacheDiscountRate: schema.vendorPricing.cacheDiscountRate,
+    cacheReadInputPrice: schema.vendorPricing.cacheReadInputPrice,
+    cacheWriteInputPrice: schema.vendorPricing.cacheWriteInputPrice,
   })
     .from(schema.vendorPricing)
     .innerJoin(schema.supplierModels, eq(schema.vendorPricing.supplierModelId, schema.supplierModels.id))
@@ -276,7 +315,7 @@ async function queryCampaignPricing(model: string, now: Date = new Date()): Prom
     const rule = parseCampaignPricing(row.config, model);
     if (!rule) continue;
     if (rule.kind === 'model') {
-      return { input: rule.input, output: rule.output, cacheDiscountRate: null };
+      return { input: rule.input, output: rule.output, cacheDiscountRate: null, cacheReadInputPrice: null, cacheWriteInputPrice: null };
     }
     // 全局折扣：作用于 L2 模型覆盖价（未配置 → L1 平台标准价）
     const base = (await queryDefaultPricing(model)) ?? DEFAULT_PRICING;
@@ -284,6 +323,8 @@ async function queryCampaignPricing(model: string, now: Date = new Date()): Prom
       input: base.input * rule.discount,
       output: base.output * rule.discount,
       cacheDiscountRate: null,
+      cacheReadInputPrice: null, // L5 折扣推导价：无显式缓存价（D-3）
+      cacheWriteInputPrice: null,
     };
   }
   return null;
@@ -440,6 +481,8 @@ export async function getPricingForModel(model: string, ctx?: PricingContext): P
           input: base.input * rate,
           output: base.output * rate,
           cacheDiscountRate: null,
+          cacheReadInputPrice: null, // L3 折扣推导价：无显式缓存价（D-3，代理折扣只乘总费用）
+          cacheWriteInputPrice: null,
         };
       }
     } catch {

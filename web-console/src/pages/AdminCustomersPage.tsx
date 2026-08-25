@@ -17,6 +17,7 @@ import {
   resolveTimeRange,
   Modal,
   HelpIcon,
+  SearchBar,
   useToast,
 } from "@3cloud/shared-ui";
 import type { ColumnDef, TimeRangeKey } from "@3cloud/shared-ui";
@@ -86,8 +87,7 @@ export default function AdminCustomersPage() {
   const qc = useQueryClient();
 
   const [searchInput, setSearchInput] = useState("");
-  const [keyword, setKeyword] = useState("");
-  const [range, setRange] = useState<TimeRangeKey>("today");
+  const [range, setRange] = useState<TimeRangeKey>("all");   // 全部 = 不按时间过滤（默认）
   const [customRange, setCustomRange] = useState<{ start?: string; end?: string }>({});
   const [fStatus, setFStatus] = useState("");          // 全部 / active / disabled
   const [fMin, setFMin] = useState("");                // 累计消费最低（¥）
@@ -101,13 +101,15 @@ export default function AdminCustomersPage() {
   const resolved = resolveTimeRange(range, customRange);
 
   const q = useQuery({
-    queryKey: ["admin-customers", keyword, range, customRange, fStatus, fMin, fMax, fBound, page, pageSize],
+    queryKey: ["admin-customers", searchInput, range, customRange, fStatus, fMin, fMax, fBound, page, pageSize],
     queryFn: async () => {
       const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
-      if (keyword) params.set("search", keyword);
-      // 时间范围 → 注册时间（created_at）过滤；date_to 含当天 23:59:59
-      params.set("date_from", resolved.start);
-      params.set("date_to", resolved.end);
+      if (searchInput.trim()) params.set("search", searchInput.trim());
+      // 时间范围 → 注册时间（created_at）过滤；默认「全部」= 不传时间参数（不限注册时间）
+      if (range !== "all") {
+        params.set("date_from", resolved.start);
+        params.set("date_to", resolved.end);
+      }
       if (fStatus) params.set("status", fStatus);
       if (fMin) params.set("consumption_min", fMin);
       if (fMax) params.set("consumption_max", fMax);
@@ -121,8 +123,32 @@ export default function AdminCustomersPage() {
   const total = q.data?.pagination?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  const applySearch = () => {
-    setKeyword(searchInput.trim());
+  /** 当前是否有任何生效的筛选/搜索条件（用于区分空态文案：无匹配 vs 无数据） */
+  const hasActiveFilters =
+    searchInput.trim() !== "" ||
+    range !== "all" ||
+    !!customRange.start ||
+    !!customRange.end ||
+    fStatus !== "" ||
+    fMin !== "" ||
+    fMax !== "" ||
+    fBound !== "";
+
+  /** 搜索应用：回车/点击搜索图标/输入防抖结束后触发，回到第 1 页 */
+  const applySearch = (v: string) => {
+    setSearchInput(v);
+    setPage(1);
+  };
+
+  /** 重置：一键清空搜索关键词与全部筛选条件，恢复默认列表（时间范围回到「全部」= 不限注册时间） */
+  const resetFilters = () => {
+    setSearchInput("");
+    setRange("all");
+    setCustomRange({});
+    setFStatus("");
+    setFMin("");
+    setFMax("");
+    setFBound("");
     setPage(1);
   };
 
@@ -399,8 +425,8 @@ export default function AdminCustomersPage() {
               </button>
             )}
             {s.label === "余额不足" && (
-              <button type="button" className="c3-btn c3-btn--text" onClick={(e) => { e.stopPropagation(); navigate(`/admin/customers/quotas?customer=${r.id}`); }}>
-                充值
+              <button type="button" className="c3-btn c3-btn--text" onClick={(e) => { e.stopPropagation(); navigate(`/admin/customers/${r.id}`); }}>
+                充值 <HelpIcon text="该客户余额不足（可用余额低于 ¥10,000）。点击进入客户详情页查看余额与充值记录，并通过「去充值」入口处理充值（充值订单审核 / 人工上账 / 调账）。" />
               </button>
             )}
             {s.label === "已禁用" && (
@@ -416,7 +442,7 @@ export default function AdminCustomersPage() {
 
   return (
     <>
-      <PageHeader title="客户列表" help="管理所有客户账户，支持时间范围/状态/累计消费/绑定代理商筛选、搜索导出、批量操作（冻结/解冻、重置密码、绑定代理商、强制认证）。" />
+      <PageHeader title="客户列表" help="管理所有客户账户，支持时间范围（默认「全部」= 不限注册时间）/状态/累计消费/绑定代理商筛选、关键词搜索（邮箱/名称模糊匹配，输入停顿 300ms 自动搜索，可与筛选叠加）、一键重置、导出 CSV、批量操作（冻结/解冻、重置密码、绑定代理商、强制认证）。" />
 
       {/* 筛选栏 — 原型 filter-bar：时间范围 + 状态 + 累计消费 + 绑定代理商 + 搜索 + 导出 */}
       <div className="c3-filter-bar">
@@ -428,13 +454,17 @@ export default function AdminCustomersPage() {
             setPage(1);
           }}
         />
-        <span className="c3-filter-range-hint" title="时间范围按客户注册时间（created_at）过滤，解析结果如下">
-          注册时间：{resolved.start} ~ {resolved.end}
-          <HelpIcon text="时间范围按客户「注册时间」过滤：今日=今天 00:00~23:59；昨日=昨天全天；本周=本周一 00:00~今天 23:59；本月=本月 1 日 00:00~今天 23:59；自定义=所选起止日期全天。此处展示的是当前选中的具体起止时间。" />
+        <span className="c3-filter-range-hint" title={range === "all" ? "默认全部：不按注册时间过滤，展示全部客户" : "时间范围按客户注册时间（created_at）过滤，解析结果如下"}>
+          {range === "all" ? (
+            <>注册时间：全部 <HelpIcon text="默认「全部」= 不按注册时间过滤，展示全部客户（搜索也不会被时间范围限制）；选择今日/昨日/本周/本月/自定义后按所选范围过滤。" /></>
+          ) : (
+            <>注册时间：{resolved.start} ~ {resolved.end}
+            <HelpIcon text="时间范围按客户「注册时间」过滤：今日=今天 00:00~23:59；昨日=昨天全天；本周=本周一 00:00~今天 23:59；本月=本月 1 日 00:00~今天 23:59；自定义=所选起止日期全天。此处展示的是当前选中的具体起止时间。" /></>
+          )}
         </span>
 
         <div className="c3-filter-group">
-          <span className="c3-filter-label">状态</span>
+          <span className="c3-filter-label">状态 <HelpIcon text="按客户账户状态筛选：正常=启用中；冻结=已禁用。默认「全部」不过滤。" /></span>
           <select
             className="c3-filter-input"
             value={fStatus}
@@ -447,7 +477,7 @@ export default function AdminCustomersPage() {
         </div>
 
         <div className="c3-filter-group">
-          <span className="c3-filter-label">累计消费</span>
+          <span className="c3-filter-label">累计消费 <HelpIcon text="按客户累计消费金额（¥）区间筛选，可只填最低或最高；与搜索及其他筛选条件叠加生效。" /></span>
           <input
             type="number"
             className="c3-filter-input c3-filter-input--w100"
@@ -466,7 +496,7 @@ export default function AdminCustomersPage() {
         </div>
 
         <div className="c3-filter-group">
-          <span className="c3-filter-label">绑定代理商</span>
+          <span className="c3-filter-label">绑定代理商 <HelpIcon text="按「已绑定 / 未绑定」过滤客户列表，快速定位有归属 / 无归属客户。" /></span>
           <select
             className="c3-filter-input"
             value={fBound}
@@ -480,20 +510,18 @@ export default function AdminCustomersPage() {
 
         <div className="c3-filter-spacer" />
         <div className="c3-filter-group">
-          <span className="c3-filter-label">搜索</span>
-          <input
-            className="c3-filter-input c3-filter-input--w200"
-            type="text"
-            placeholder="请输入关键词"
+          <span className="c3-filter-label">搜索 <HelpIcon text="按客户邮箱或名称模糊匹配（不区分大小写），与上方筛选条件叠加生效；输入后停顿 300ms 自动搜索，也可按回车或点击搜索图标立即搜索。" /></span>
+          <SearchBar
+            placeholder="搜索邮箱/名称"
             value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") applySearch(); }}
+            onChange={applySearch}
+            onSearch={applySearch}
           />
-          <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" onClick={applySearch}>
-            搜索
+          <button type="button" className="c3-btn c3-btn--default c3-btn--sm" onClick={resetFilters}>
+            重置 <HelpIcon text="一键清空搜索关键词与全部筛选条件（时间范围/状态/累计消费/绑定代理商），恢复默认列表。" />
           </button>
           <button type="button" className="c3-btn c3-btn--default c3-btn--sm" onClick={() => exportCsv(rows)}>
-            📥 导出
+            📥 导出 <HelpIcon text="将当前筛选结果导出为 CSV 文件（邮箱/名称/状态/余额/累计消费/注册时间/绑定代理商）。注意：仅导出当前页数据。" />
           </button>
         </div>
       </div>
@@ -538,7 +566,11 @@ export default function AdminCustomersPage() {
         {q.isLoading ? (
           <SkeletonGroup lines={6} />
         ) : rows.length === 0 ? (
-          <EmptyState title="暂无客户" description="还没有客户记录" />
+          hasActiveFilters ? (
+            <EmptyState title="未找到匹配的客户" description="请尝试更换搜索关键词或放宽筛选条件" />
+          ) : (
+            <EmptyState title="暂无客户" description="还没有客户记录" />
+          )
         ) : (
           <>
             <Table columns={columns} dataSource={rows} rowKey="id" onRowClick={(r) => navigate(`/admin/customers/${r.id}`)} />

@@ -38,8 +38,7 @@ import { apiKeyAuth } from '../services/auth/apikey';
 import { enforceRateLimitPreHandler } from '../services/rate-limit';
 import { countTokens } from '../services/billing/token-counter';
 import { determineStreamBilling } from '../services/billing/settle-stream';
-import { parseAndDiscount } from '../services/billing/cache-billing';
-import { resolveCacheDiscountRate } from '../services/billing/cache-discount';
+import { computeUsageCost, computeStreamCost } from '../services/billing/cache-billing';
 import { getBalance } from '../services/billing/balance';
 import { recordChannelResult } from '../services/upstream/circuit-breaker';
 import { recordConversationContext, fingerprintKey } from '../services/audit/conversation-context';
@@ -75,7 +74,7 @@ import type { SelectedChannel } from '../services/upstream/routing';
 import { estimateInputTokens } from './chat';
 import { logGatewayRequest, type GatewayLogFields } from '../lib/gateway-log';
 import { anthropicStreamRelay } from '../services/anthropic/stream-relay';
-import { getPricingForModel, computeCost, computeEstimatedCost, buildPricingContext } from '../services/billing/pricing';
+import { getPricingForModel, computeCost, computeEstimatedCost, buildPricingContext, type ModelPricing } from '../services/billing/pricing';
 import { settleBilling } from '../services/billing/settle';
 import { releasePreConsume } from '../services/billing/pre-consume';
 import { preprocessRequestBody } from '../services/upstream/body-preprocessor';
@@ -443,7 +442,7 @@ export async function anthropicRoutes(app: FastifyInstance) {
         // 8. settle — 记账扣费（mock/流式/非流式三态）+ 幂等响应缓存 + 留痕
         settleStep({
           implement: async (c) => {
-            const pricing = requireStepResult<{ input: number; output: number; cacheDiscountRate: number | null }>(c, STEP_KEYS.pricing);
+            const pricing = requireStepResult<ModelPricing>(c, STEP_KEYS.pricing);
             const mock = getStepResult<MockStepResult>(c, STEP_KEYS.mockResult);
 
             // ── mock 回退路径（无可用渠道，同样记账扣费）──
@@ -508,7 +507,9 @@ export async function anthropicRoutes(app: FastifyInstance) {
             if (c.stream) {
               const state = requireStepResult<StreamState>(c, STEP_KEYS.streamState);
               const billing = determineStreamBilling(state, false, requireStepResult<number>(c, STEP_KEYS.estimatedInputTokens), c.model);
-              const cost = computeCost(c.model, billing.promptTokens, billing.completionTokens, pricing);
+              // P0 缓存计费（A9：计费时点 = 末帧 usage；fallback 无缓存字段 → 全价；discount_rate 兼容旧公式）
+              const usageCost = await computeStreamCost(billing, pricing);
+              const cost = usageCost.cost;
 
               try {
                 await settleBilling(
@@ -517,7 +518,18 @@ export async function anthropicRoutes(app: FastifyInstance) {
                   billing.completionTokens,
                   cost,
                   channel,
-                  { streamed: true, trustUpstream: billing.trustUpstream, fallback: billing.fallback, finishReason: state.finishReason ?? undefined, preConsume: readPreConsume(c) },
+                  {
+                    streamed: true, trustUpstream: billing.trustUpstream, fallback: billing.fallback, finishReason: state.finishReason ?? undefined,
+                    cacheHitTokens: usageCost.cacheHitTokens,
+                    cacheDiscount: usageCost.discountAmount,
+                    cacheWriteTokens: usageCost.cacheWriteTokens,
+                    cacheHitCost: usageCost.cacheHitCost,
+                    cacheWriteCost: usageCost.cacheWriteCost,
+                    cacheReadInputPrice: usageCost.cacheReadPrice,
+                    cacheWriteInputPrice: usageCost.cacheWritePrice,
+                    cacheWritePriceSource: usageCost.cacheWritePriceSource,
+                    preConsume: readPreConsume(c),
+                  },
                 );
                 // 幂等：结算成功才缓存流式摘要（失败不缓存，避免回放未计费的"成功"）
                 await cacheIdempotentResponse(c.requestId, {
@@ -556,10 +568,9 @@ export async function anthropicRoutes(app: FastifyInstance) {
             const totalTokens = Number(u.total_tokens) || 0;
             const hasUsage = totalTokens > 0;
 
-            // 缓存命中打折：usage 存在时按缓存字段打折计费；无缓存字段时与 computeCost 一致
-            // 折扣率 = 模型级 vendor_pricing.cache_discount_rate → 全局 billing.cache_hit_discount → 默认 0.1
-            const discount = hasUsage ? parseAndDiscount(parsedBody.usage, pricing, await resolveCacheDiscountRate(pricing)) : null;
-            const cost = discount ? discount.cost : computeCost(c.model, requireStepResult<number>(c, STEP_KEYS.estimatedInputTokens), 0, pricing);
+            // P0 缓存计费（统一入口）：explicit 走显式价；discount_rate 兼容旧公式；无缓存字段/无 usage → 全价
+            const usageCost = hasUsage ? await computeUsageCost(parsedBody.usage, pricing) : null;
+            const cost = usageCost ? usageCost.cost : computeCost(c.model, requireStepResult<number>(c, STEP_KEYS.estimatedInputTokens), 0, pricing);
 
             const choices = (parsedBody.choices as Array<{ finish_reason?: string }> | undefined);
             const finishReason = String(choices?.[0]?.finish_reason ?? 'stop');
@@ -575,8 +586,14 @@ export async function anthropicRoutes(app: FastifyInstance) {
                 trustUpstream: hasUsage,
                 fallback: !hasUsage,
                 finishReason,
-                cacheHitTokens: discount?.cacheHitTokens,
-                cacheDiscount: discount?.discountAmount,
+                cacheHitTokens: usageCost?.cacheHitTokens,
+                cacheDiscount: usageCost?.discountAmount,
+                cacheWriteTokens: usageCost?.cacheWriteTokens,
+                cacheHitCost: usageCost?.cacheHitCost,
+                cacheWriteCost: usageCost?.cacheWriteCost,
+                cacheReadInputPrice: usageCost?.cacheReadPrice,
+                cacheWriteInputPrice: usageCost?.cacheWritePrice,
+                cacheWritePriceSource: usageCost?.cacheWritePriceSource,
                 preConsume: readPreConsume(c),
               },
             );

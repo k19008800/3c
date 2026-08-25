@@ -75,7 +75,14 @@ async function createUser(prefix = 'user'): Promise<number> {
 const modelSupplierModelIds = new Map<string, number>();
 
 /** 建供应商 + 模型（每模型一次）+ 定价记录（可对同一模型建多个 pricing_group） */
-async function createModelPricing(model: string, input: string, output: string, group = 'default'): Promise<void> {
+async function createModelPricing(
+  model: string,
+  input: string,
+  output: string,
+  group = 'default',
+  cacheRead?: string,
+  cacheWrite?: string,
+): Promise<void> {
   let modelId = modelSupplierModelIds.get(model);
   if (modelId === undefined) {
     const [sup] = await db.insert(schema.suppliers).values({
@@ -101,6 +108,9 @@ async function createModelPricing(model: string, input: string, output: string, 
     pricingGroup: group,
     inputPrice: input,
     outputPrice: output,
+    // P0 显式缓存价（D-10/D-12）：可选，未传 → null（回退折扣率/全价）
+    ...(cacheRead !== undefined ? { cacheReadInputPrice: cacheRead } : {}),
+    ...(cacheWrite !== undefined ? { cacheWriteInputPrice: cacheWrite } : {}),
     status: 'active',
   });
 }
@@ -540,5 +550,54 @@ describe('computeCost / computeEstimatedCost / computeTaskCost 回归', () => {
 
   it('computeTaskCost = 模型 outputPrice（1 次任务 = 1000 output tokens）', () => {
     expect(computeTaskCost('m', { input: 0.002, output: 0.008 })).toBeCloseTo(0.008, 10);
+  });
+});
+
+// ============================================================
+// 10. P0 显式缓存价字段贯通（T3，D-10/D-12）
+// ============================================================
+
+describe('P0 显式缓存价字段贯通（T3）', () => {
+  it('L2 default 组配置显式缓存价 → ModelPricing 返回 cacheReadInputPrice/cacheWriteInputPrice', async () => {
+    const model = `cachep-${uid()}`;
+    await createModelPricing(model, '0.5', '1.5', 'default', '0.05', '0.3');
+    const pricing = await getPricingForModel(model);
+    expect(pricing.input).toBe(0.5);
+    expect(pricing.cacheReadInputPrice).toBe(0.05);
+    expect(pricing.cacheWriteInputPrice).toBe(0.3);
+    expect(pricing.cacheDiscountRate).toBeNull();
+  });
+
+  it('L2 default 组未配置显式缓存价 → 新字段为 null（回退折扣率/全价）', async () => {
+    const model = `cachep-null-${uid()}`;
+    await createModelPricing(model, '0.5', '1.5', 'default');
+    const pricing = await getPricingForModel(model);
+    expect(pricing.input).toBe(0.5);
+    expect(pricing.cacheReadInputPrice).toBeNull();
+    expect(pricing.cacheWriteInputPrice).toBeNull();
+  });
+
+  it('L2 配置显式读取价、写入价留空 → cacheReadInputPrice 有值、cacheWriteInputPrice 为 null', async () => {
+    const model = `cachep-readonly-${uid()}`;
+    await createModelPricing(model, '0.5', '1.5', 'default', '0.05');
+    const pricing = await getPricingForModel(model);
+    expect(pricing.cacheReadInputPrice).toBe(0.05);
+    expect(pricing.cacheWriteInputPrice).toBeNull();
+  });
+
+  it('L1 兜底（无定价记录）→ 新字段恒 null', async () => {
+    const pricing = await getPricingForModel(`cachep-missing-${uid()}`);
+    expect(pricing.input).toBe(DEFAULT_INPUT_PRICE);
+    expect(pricing.cacheReadInputPrice).toBeNull();
+    expect(pricing.cacheWriteInputPrice).toBeNull();
+  });
+
+  it('L5 活动价（模型级覆盖）→ 新字段恒 null（D-3：活动价无显式缓存价）', async () => {
+    const model = `cachep-l5-${uid()}`;
+    await createCampaign({ pricing: { models: { [model]: { input: 1.5, output: 4.5 } } } }, 'active', -3600_000, 3600_000);
+    const pricing = await getPricingForModel(model);
+    expect(pricing.input).toBe(1.5);
+    expect(pricing.cacheReadInputPrice).toBeNull();
+    expect(pricing.cacheWriteInputPrice).toBeNull();
   });
 });

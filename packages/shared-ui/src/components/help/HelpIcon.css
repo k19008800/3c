@@ -172,4 +172,7 @@
   font-size: var(--font-size-md, 14px);
   line-height: 1.7;
   color: var(--color-text, #333);
+  /* 支持多行页面帮助（PRD §7 结构化内容），单行文案不受影响 */
+  white-space: pre-wrap;
+  word-break: break-word;
 }

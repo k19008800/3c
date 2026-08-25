@@ -20,6 +20,7 @@ import { initBalance, addBalance, getBalance } from '../services/billing/balance
 import { sendMail } from '../services/mailer';
 import { getRedis } from '../lib/redis';
 import { findInviteByCode, consumeInviteCode } from '../services/agent/settlement';
+import { validatePasswordStrength } from '../lib/password';
 
 // ============================================================
 // Helpers
@@ -59,6 +60,9 @@ export async function authRoutes(app: FastifyInstance) {
     if (password.length < 8) {
       throw new ValidationError('Password must be at least 8 characters');
     }
+    // R7-USER-DRILL-002：密码强度校验（弱口令拒绝）
+    const strengthError = validatePasswordStrength(password);
+    if (strengthError) throw new ValidationError(strengthError);
 
     // Check existing
     const existing = await db.select({ id: schema.users.id })
@@ -303,6 +307,9 @@ export async function authRoutes(app: FastifyInstance) {
 
     if (!email || !token) throw new ValidationError('Email and token are required');
     if (newPassword.length < 8) throw new ValidationError('Password must be at least 8 characters');
+    // R7-USER-DRILL-002：密码强度校验
+    const strengthError = validatePasswordStrength(newPassword);
+    if (strengthError) throw new ValidationError(strengthError);
 
     // 从 email_logs 中匹配「该邮箱 + 该令牌 + 10 分钟内」的最近一条（令牌已随邮件内容落库）
     const logs = await db.select({ id: schema.emailLogs.id })

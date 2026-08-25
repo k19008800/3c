@@ -103,6 +103,7 @@ async function main() {
   const BILLING_CONFIGS: Array<[string, string, string]> = [
     ['billing.balance_threshold', '100', '余额预扣阈值（元）：余额 > 此值走旁路事后扣费，≤ 此值走 Redis Lua 预扣'],
     ['billing.cache_hit_discount', '0.1', '缓存命中折扣率（0-1）：上游返回缓存命中 token 时按全价 × 此比例计费；模型级 vendor_pricing.cache_discount_rate 可覆盖'],
+    ['billing.cache_pricing_mode', 'explicit', '缓存计费模式（explicit=显式价优先/discount_rate=兼容旧折扣率行为，灰度/回退开关；ARCH 评审 D-13 默认 explicit）'],
   ];
   for (const [key, value, description] of BILLING_CONFIGS) {
     await db.insert(schema.systemConfig)

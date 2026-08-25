@@ -27,8 +27,8 @@
  * - 输入为 query + documents（而非 input/prompt），token 估算两者求和
  * - 上游响应 usage 常见只有 total_tokens（Cohere/Jina rerank），prompt_tokens 缺失时
  *   以 total_tokens 视为输入 token 计费（详见计费段注释）
- * - 记账：streamed=false；model 用用户请求模型；透传 cacheHitTokens/cacheDiscount
- *   （parseAndDiscount 处理，接入方式同 messages.ts）
+ * - 记账：streamed=false；model 用用户请求模型；透传缓存计费字段（cacheHitTokens 等）
+ *   （computeUsageCost 统一入口处理，接入方式同 messages.ts）
  *
  * 说明：rerank 无流式（stream 恒 false）；本文件不保留 trace/finally 留痕
  * （原实现即无对话留痕，仅保留 X-Request-Id 与错误映射）。
@@ -43,8 +43,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { apiKeyAuth } from '../services/auth/apikey';
 import { enforceRateLimitPreHandler } from '../services/rate-limit';
 import { countTokens } from '../services/billing/token-counter';
-import { parseAndDiscount } from '../services/billing/cache-billing';
-import { resolveCacheDiscountRate } from '../services/billing/cache-discount';
+import { computeUsageCost } from '../services/billing/cache-billing';
 import { getBalance } from '../services/billing/balance';
 import { recordChannelResult } from '../services/upstream/circuit-breaker';
 import { AppError, InsufficientBalanceError } from '../lib/errors';
@@ -76,7 +75,7 @@ import {
 } from '../services/pipeline';
 import type { PipelineContext } from '../services/pipeline';
 import type { SelectedChannel } from '../services/upstream/routing';
-import { getPricingForModel, computeCost, computeEstimatedCost, buildPricingContext } from '../services/billing/pricing';
+import { getPricingForModel, computeCost, computeEstimatedCost, buildPricingContext, type ModelPricing } from '../services/billing/pricing';
 import { settleBilling } from '../services/billing/settle';
 import crypto from 'crypto';
 
@@ -98,8 +97,7 @@ interface RerankRequest {
   [key: string]: unknown;
 }
 
-/** getPricingForModel 返回的定价结构（validate step 写入共享存储，结算步骤读取） */
-type ModelPricing = { input: number; output: number; cacheDiscountRate: number | null };
+/** getPricingForModel 返回的定价结构（validate step 写入共享存储，结算步骤读取；共享类型见 pricing.ts） */
 
 // ============================================================
 // 校验与估算
@@ -386,14 +384,13 @@ export async function rerankRoutes(app: FastifyInstance) {
             const hasUsage = totalTokens > 0;
             const billedInputTokens = hasUsage ? (promptTokens > 0 ? promptTokens : totalTokens) : requireStepResult<number>(c, STEP_KEYS.estimatedInputTokens);
 
-            // 缓存命中打折：usage 存在时按缓存字段打折计费；无缓存字段时与旧 computeCost 完全一致（回归安全）。
-            // parseAndDiscount 依赖 prompt_tokens，缺失时折后价恒为 0 → 先归一化补全（只用于计费，不改透传响应体）
-            // 折扣率 = 模型级 vendor_pricing.cache_discount_rate → 全局 billing.cache_hit_discount → 默认 0.1
+            // P0 缓存计费（统一入口）：computeUsageCost 依赖 prompt_tokens，缺失时先归一化补全
+            // （只用于计费，不改透传响应体）；无缓存字段/无 usage → 全价（与旧 computeCost 一致）
             const billingUsage = hasUsage && promptTokens === 0
               ? { ...(parsedBody.usage as Record<string, unknown>), prompt_tokens: totalTokens }
               : parsedBody.usage;
-            const discount = hasUsage ? parseAndDiscount(billingUsage, pricing, await resolveCacheDiscountRate(pricing)) : null;
-            const cost = discount ? discount.cost : computeCost(c.model, billedInputTokens, 0, pricing);
+            const usageCost = hasUsage ? await computeUsageCost(billingUsage, pricing) : null;
+            const cost = usageCost ? usageCost.cost : computeCost(c.model, billedInputTokens, 0, pricing);
 
             await settleBilling(
               c,
@@ -405,8 +402,14 @@ export async function rerankRoutes(app: FastifyInstance) {
                 streamed: false,
                 trustUpstream: hasUsage,
                 fallback: !hasUsage,
-                cacheHitTokens: discount?.cacheHitTokens,
-                cacheDiscount: discount?.discountAmount,
+                cacheHitTokens: usageCost?.cacheHitTokens,
+                cacheDiscount: usageCost?.discountAmount,
+                cacheWriteTokens: usageCost?.cacheWriteTokens,
+                cacheHitCost: usageCost?.cacheHitCost,
+                cacheWriteCost: usageCost?.cacheWriteCost,
+                cacheReadInputPrice: usageCost?.cacheReadPrice,
+                cacheWriteInputPrice: usageCost?.cacheWritePrice,
+                cacheWritePriceSource: usageCost?.cacheWritePriceSource,
                 preConsume: readPreConsume(c),
               },
             );

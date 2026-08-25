@@ -22,6 +22,32 @@ export {
 } from './pricing';
 export { settleBilling, type SettleOptions } from './settle';
 export {
+  computeCacheCost,
+  computeUsageCost,
+  computeStreamCost,
+  computeCacheDiscountedCost,
+  parseAndDiscount,
+  CACHE_HIT_DISCOUNT,
+  STREAM_INCLUDE_USAGE_ENABLED,
+  type CacheCostResult,
+  type CacheBillingResult,
+  type TokenPricing,
+  type ExplicitTokenPricing,
+} from './cache-billing';
+export {
+  getCachePricingMode,
+  invalidateCachePricingCache,
+  getGlobalCacheDiscount,
+  invalidateCacheDiscountCache,
+  resolveCacheDiscountRate,
+  resolveCachePricing,
+  DEFAULT_CACHE_PRICING_MODE,
+  CACHE_PRICING_MODE_CONFIG_KEY,
+  CACHE_DISCOUNT_CONFIG_KEY,
+  type CachePricingMode,
+  type ResolvedCachePricing,
+} from './cache-discount';
+export {
   shouldBypass,
   preConsume,
   settlePreConsume,

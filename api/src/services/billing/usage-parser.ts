@@ -5,7 +5,8 @@
  * - 从流式 StreamState 中提取最后有效 usage
  * - 从非流式响应 body 中提取 usage
  * - 统一返回 TokenUsage 格式
- * - 提取缓存命中/未命中 token（Anthropic / DeepSeek / OpenAI 三种格式归一化）
+ * - 提取缓存读取/写入/未命中 token（Anthropic / DeepSeek / OpenAI 三种格式归一化；P0 新增
+ *   Anthropic cache_creation_input_tokens → cacheWriteTokens，见 D-14）
  *
  * @module services/billing
  */
@@ -17,14 +18,21 @@ import type { TokenUsage, StreamState } from '../upstream/proxy.js';
 // ============================================================
 
 /**
- * 缓存 token 信息（归一化后的缓存命中/未命中数量）
+ * 缓存 token 信息（归一化后的缓存读取/写入/未命中数量）
+ *
+ * P0 扩展（ARCH 评审 D-14/D-11）：
+ * - 新增 cacheWriteTokens：Anthropic `cache_creation_input_tokens`（缓存写入，独立计价）；
+ * - hasCacheInfo 语义升级：read 或 write 任一存在即为 true（D-14：方案刻意行为变更，非回归）；
+ * - 收敛规则（D-11）：cacheReadTokens + cacheWriteTokens ≤ prompt_tokens，超出优先保留 read。
  */
 export interface CacheTokenInfo {
-  /** 缓存命中 token 数（按 10% 打折计费的部分） */
+  /** 缓存读取（命中）token 数（按缓存读取价计费的部分） */
   cacheHitTokens: number;
-  /** 缓存未命中 token 数（按全价计费的部分） */
+  /** 缓存写入 token 数（Anthropic cache_creation_input_tokens；按缓存写入价/全价计费） */
+  cacheWriteTokens: number;
+  /** 缓存未命中 token 数（既非读取也非写入，按全价计费的部分） */
   cacheMissTokens: number;
-  /** usage 中是否含缓存字段（上游支持缓存计费） */
+  /** usage 中是否含缓存字段（read 或 write 任一） */
   hasCacheInfo: boolean;
 }
 
@@ -42,18 +50,24 @@ export function toNonNegativeInt(value: unknown): number {
 }
 
 /**
- * 从 usage 中提取缓存命中/未命中 token（支持三种上游格式归一化）
+ * 从 usage 中提取缓存读取/写入/未命中 token（支持三种上游格式归一化）
  *
  * 格式对照：
- * - Anthropic：`cache_read_input_tokens`（读取命中，打折）；`cache_creation_input_tokens`（写入缓存，全价，不计入命中）
+ * - Anthropic：`cache_read_input_tokens`（读取命中，按缓存读取价计费）；
+ *   `cache_creation_input_tokens`（写入缓存，独立按缓存写入价计费——P0 新增，D-14）
  * - DeepSeek：`prompt_cache_hit_tokens` / `prompt_cache_miss_tokens`（两者成对出现）
- * - OpenAI：`prompt_tokens_details.cached_tokens`（缓存命中）
+ * - OpenAI：`prompt_tokens_details.cached_tokens`（缓存读取）
  *
  * 归一化规则（hit + miss 合计应等于 input_tokens，不一致时以显式字段为准，不强行对齐）：
  * - 显式给出 hit 和 miss → 原样采信（即使合计 ≠ prompt_tokens）
  * - 只给出 hit → miss = max(prompt_tokens - hit, 0)
  * - 只给出 miss → hit = max(prompt_tokens - miss, 0)
  * - 无任何缓存字段 → hasCacheInfo = false
+ *
+ * 收敛规则（D-11，归一化层与计费层双保险）：
+ * - cacheHitTokens + cacheWriteTokens ≤ prompt_tokens；超出时优先保留 read
+ *   （write = max(prompt_tokens − read, 0)）。写入是读取前置、read 价通常更低，
+ *   保留 read 对用户有利、平台口径保守。
  *
  * 格式优先级：DeepSeek（hit/miss 最完整）→ Anthropic → OpenAI。
  *
@@ -69,9 +83,10 @@ export function parseCacheTokens(usage: unknown): CacheTokenInfo {
   const dsMiss = toNonNegativeInt(u.prompt_cache_miss_tokens);
   const hasDeepSeek = u.prompt_cache_hit_tokens !== undefined || u.prompt_cache_miss_tokens !== undefined;
 
-  // Anthropic：cache_read_input_tokens（读取命中）
-  const anthropicHit = toNonNegativeInt(u.cache_read_input_tokens);
-  const hasAnthropic = u.cache_read_input_tokens !== undefined;
+  // Anthropic：cache_read_input_tokens（读取命中）/ cache_creation_input_tokens（写入缓存，独立计价）
+  const anthropicRead = toNonNegativeInt(u.cache_read_input_tokens);
+  const anthropicWrite = toNonNegativeInt(u.cache_creation_input_tokens);
+  const hasAnthropic = u.cache_read_input_tokens !== undefined || u.cache_creation_input_tokens !== undefined;
 
   // OpenAI：prompt_tokens_details.cached_tokens
   const details = (u.prompt_tokens_details && typeof u.prompt_tokens_details === 'object')
@@ -83,26 +98,36 @@ export function parseCacheTokens(usage: unknown): CacheTokenInfo {
   if (hasDeepSeek) {
     const hit = dsHit > 0 ? dsHit : Math.max(inputTokens - dsMiss, 0);
     const miss = dsMiss > 0 ? dsMiss : Math.max(inputTokens - hit, 0);
-    return { cacheHitTokens: hit, cacheMissTokens: miss, hasCacheInfo: true };
+    return {
+      cacheHitTokens: Math.min(hit, inputTokens),
+      cacheWriteTokens: 0,
+      cacheMissTokens: miss,
+      hasCacheInfo: true,
+    };
   }
 
   if (hasAnthropic) {
+    // D-11 收敛：优先保留 read，write 收敛到 prompt − read
+    const read = Math.min(anthropicRead, inputTokens);
+    const write = Math.min(anthropicWrite, Math.max(inputTokens - read, 0));
     return {
-      cacheHitTokens: anthropicHit,
-      cacheMissTokens: Math.max(inputTokens - anthropicHit, 0),
+      cacheHitTokens: read,
+      cacheWriteTokens: write,
+      cacheMissTokens: Math.max(inputTokens - read - write, 0),
       hasCacheInfo: true,
     };
   }
 
   if (hasOpenAI) {
     return {
-      cacheHitTokens: openaiHit,
+      cacheHitTokens: Math.min(openaiHit, inputTokens),
+      cacheWriteTokens: 0,
       cacheMissTokens: Math.max(inputTokens - openaiHit, 0),
       hasCacheInfo: true,
     };
   }
 
-  return { cacheHitTokens: 0, cacheMissTokens: 0, hasCacheInfo: false };
+  return { cacheHitTokens: 0, cacheWriteTokens: 0, cacheMissTokens: 0, hasCacheInfo: false };
 }
 
 // ============================================================

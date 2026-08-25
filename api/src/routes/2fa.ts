@@ -25,6 +25,7 @@ import {
   generateTokenPair,
   verifyToken,
   verify2faTempToken,
+  generateOperationToken,
   createSession,
 } from '../services/auth/jwt';
 import {
@@ -35,6 +36,8 @@ import {
   otpauthURL,
 } from '../services/auth/totp';
 import { AppError, UnauthorizedError, ValidationError } from '../lib/errors';
+import { getRedis } from '../lib/redis';
+import { getOperation2faConfig, type Operation2faConfig } from '../lib/finance-rules';
 
 /** setup 暂存态 TTL：10 分钟，超时需要重新 setup */
 const PENDING_SETUP_TTL_MS = 10 * 60 * 1000;
@@ -70,6 +73,89 @@ function getPendingSetup(userId: number): PendingSetup | undefined {
     return undefined;
   }
   return pending;
+}
+
+/* ───────── 操作级 2FA 失败计数 / 锁定（R7，双签 B14：与登录共享计数） ─────────
+ *
+ * 键：op2fa:fail:{userId} —— 登录 2FA 第二步（/2fa/verify）与操作级 2FA
+ * （/2fa/operation-verify）共用同一计数与锁定状态：任一链路连续失败达阈值，
+ * 两条链路同时锁定（防攻击者分链路分别试探）。Redis 不可用 → fail-open
+ * （跳过计数与锁定，仅影响暴力破解防护，不影响正常验证，与 lib/redis 降级一致）。
+ */
+
+const OP2FA_FAIL_KEY_PREFIX = 'op2fa:fail:';
+
+/** 读失败计数；Redis 不可用 → null（调用方跳过锁定检查，fail-open） */
+async function getOp2faFailCount(userId: number): Promise<number | null> {
+  const r = getRedis();
+  if (!r) return null;
+  try {
+    const raw = await r.get(`${OP2FA_FAIL_KEY_PREFIX}${userId}`);
+    if (raw == null) return 0;
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  } catch {
+    return null;
+  }
+}
+
+/** 失败计数 +1（首次 INCR 时 EXPIRE lockMinutes 分钟；达阈值写审计 operation_2fa.lock） */
+async function incrOp2faFail(userId: number, cfg: Operation2faConfig): Promise<void> {
+  const r = getRedis();
+  if (!r) return;
+  try {
+    const key = `${OP2FA_FAIL_KEY_PREFIX}${userId}`;
+    const n = await r.incr(key);
+    if (n === 1) await r.expire(key, cfg.lockMinutes * 60);
+    if (n >= cfg.lockThreshold) {
+      // 审计对齐 ARCH §4.5：达锁定阈值写 audit_logs（失败静默不影响主链路）
+      await db.insert(schema.auditLogs).values({
+        userId,
+        action: 'operation_2fa.lock',
+        resource: 'user_2fa',
+        resourceId: String(userId),
+        details: { threshold: cfg.lockThreshold, lockMinutes: cfg.lockMinutes } as any,
+      }).catch(() => { /* 审计写失败不阻断 */ });
+    }
+  } catch {
+    /* 计数失败静默（fail-open） */
+  }
+}
+
+/** 操作级 2FA 验证失败审计（P2-4：operation_2fa.fail；仅操作链路写，登录链路失败不混淆） */
+async function auditOp2faFail(userId: number, method: 'totp' | 'backup_code', ip: string | null): Promise<void> {
+  await db.insert(schema.auditLogs).values({
+    userId,
+    action: 'operation_2fa.fail',
+    resource: 'user_2fa',
+    resourceId: String(userId),
+    details: { method, scope: 'operation' } as any,
+    ipAddress: ip,
+  }).catch(() => { /* 审计写失败不阻断 */ });
+}
+
+/** 验证成功 → 清零计数（两条链路共享同一键） */
+async function clearOp2faFail(userId: number): Promise<void> {
+  const r = getRedis();
+  if (!r) return;
+  try {
+    await r.del(`${OP2FA_FAIL_KEY_PREFIX}${userId}`);
+  } catch {
+    /* 静默 */
+  }
+}
+
+/** 锁定检查：已锁 → 抛 429 OPERATION_2FA_LOCKED（Redis 不可用跳过，fail-open） */
+async function assertNotOp2faLocked(userId: number, cfg: Operation2faConfig): Promise<void> {
+  const n = await getOp2faFailCount(userId);
+  if (n !== null && n >= cfg.lockThreshold) {
+    throw new AppError(
+      '双因素验证失败次数过多，已锁定，请 15 分钟后再试',
+      429,
+      'OPERATION_2FA_LOCKED',
+      { remainingSeconds: cfg.lockMinutes * 60 },
+    );
+  }
 }
 
 export async function twoFactorRoutes(app: FastifyInstance) {
@@ -200,6 +286,19 @@ export async function twoFactorRoutes(app: FastifyInstance) {
       .set({ twoFactorEnabled: '0', updatedAt: new Date() })
       .where(eq(schema.users.id, userId));
 
+    // E27 失效联动：禁用 2FA → 记录 revoked seq，该用户全部未过期操作令牌立即失效
+    // （中间件校验 payload.seq <= op2fa:revoked:{userId} → 403 OPERATION_2FA_EXPIRED；
+    //  Redis 不可用 fail-open，跳过）
+    const r = getRedis();
+    if (r) {
+      try {
+        const issued = await r.get(`op2fa:issued_seq:${userId}`);
+        if (issued) await r.set(`op2fa:revoked:${userId}`, issued);
+      } catch {
+        /* 失效联动降级静默 */
+      }
+    }
+
     return reply.send({ message: '2FA disabled' });
   });
 
@@ -252,8 +351,13 @@ export async function twoFactorRoutes(app: FastifyInstance) {
     const row = rows[0]!;
     let usedBackupHash: string | null = null;
 
+    // 操作级 2FA 与登录 2FA 共享失败计数（双签 B14）：锁定期间登录第二步也拒绝
+    const cfg = await getOperation2faConfig();
+    await assertNotOp2faLocked(payload.userId, cfg);
+
     if (token) {
       if (!verifyTOTP(row.totpSecret, token)) {
+        await incrOp2faFail(payload.userId, cfg);
         throw new UnauthorizedError('Invalid 2FA token');
       }
     } else {
@@ -264,6 +368,7 @@ export async function twoFactorRoutes(app: FastifyInstance) {
         }
       }
       if (!usedBackupHash) {
+        await incrOp2faFail(payload.userId, cfg);
         throw new UnauthorizedError('Invalid backup code');
       }
       // 备用码一次性：从哈希数组中移除已使用的
@@ -272,6 +377,9 @@ export async function twoFactorRoutes(app: FastifyInstance) {
         .set({ backupCodes: remaining, updatedAt: new Date() })
         .where(eq(schema.user2fa.userId, payload.userId));
     }
+
+    // 验证通过 → 清零共享失败计数（下次验证从 0 开始）
+    await clearOp2faFail(payload.userId);
 
     // 校验通过 → 签发正式 JWT + 建会话（与未启用 2FA 用户的 login 行为对齐）
     const tokens = generateTokenPair({ userId: payload.userId, email: payload.email, role: payload.role });
@@ -301,5 +409,108 @@ export async function twoFactorRoutes(app: FastifyInstance) {
 
     const enabled = rows.length > 0 && rows[0]!.totpEnabled === true;
     return reply.send({ enabled });
+  });
+
+  // POST /api/v1/auth/2fa/operation-verify — 操作级 2FA（R7，资金写操作前置验证）
+  //
+  // 契约（ARCH §4.2 / 双签 §10.2-4）：
+  //   鉴权：Authorization: Bearer <登录 JWT>（jwtAuth；登录态失效 401 允许——本就该登出）
+  //   请求体：{ "token"?: string, "backup_code"?: string }  // 至少一个；都传时 token 优先
+  //   成功 200：{ "data": { "op_token": "<jwt>", "expires_in": 300 }, "message": "验证通过" }
+  //   未启用 2FA → 403 OPERATION_2FA_NOT_ENABLED（强制策略，双签 B12/Q3）
+  //   锁定 → 429 OPERATION_2FA_LOCKED（连续 lockThreshold 次失败锁 lockMinutes 分钟，
+  //          与登录 2FA 共享计数，双签 B14）
+  //   验证失败 → 400 INVALID_OPERATION_2FA（TOTP 或备用码错误，每次失败计数 +1）
+  //   参数缺失/非法 → 400 VALIDATION_ERROR
+  //   成功 → DEL 失败计数 + 签发 purpose:'operation' 令牌（5 分钟，窗口内可复用，双签 B11/Q4）
+  //   错误码全部避开 401（登录 JWT 校验放行路径除外），防前端 axios 401 拦截器误登出。
+  app.post('/api/v1/auth/2fa/operation-verify', { preHandler: [jwtAuth] }, async (request: any, reply) => {
+    const { userId, email, role } = request.userContext as { userId: number; email: string; role: string };
+    const body = (request.body ?? {}) as { token?: string; backup_code?: string };
+    const token = String(body.token ?? '').trim();
+    const backupCode = String(body.backup_code ?? '').trim();
+
+    if (!token && !backupCode) {
+      throw new ValidationError('token 与 backup_code 至少提供一个');
+    }
+
+    const cfg = await getOperation2faConfig();
+
+    // 1. 操作者 2FA 启用状态（user_2fa.totp_enabled 权威）
+    const rows = await db.select({
+      totpSecret: schema.user2fa.totpSecret,
+      totpEnabled: schema.user2fa.totpEnabled,
+      backupCodes: schema.user2fa.backupCodes,
+    })
+      .from(schema.user2fa)
+      .where(eq(schema.user2fa.userId, userId))
+      .limit(1);
+    if (rows.length === 0 || rows[0]!.totpEnabled !== true) {
+      throw new AppError('执行资金操作需先启用双因素认证（2FA），请前往安全中心启用', 403, 'OPERATION_2FA_NOT_ENABLED');
+    }
+    const row = rows[0]!;
+
+    // 2. 锁定检查（与登录共享计数；Redis 不可用 fail-open）
+    await assertNotOp2faLocked(userId, cfg);
+
+    // 3. 校验（token 优先；备用码一次性）
+    let usedBackupHash: string | null = null;
+    if (token) {
+      if (!verifyTOTP(row.totpSecret, token)) {
+        await incrOp2faFail(userId, cfg);
+        await auditOp2faFail(userId, 'totp', request.ip ?? null);
+        throw new AppError('操作验证码错误', 400, 'INVALID_OPERATION_2FA');
+      }
+    } else {
+      if (!cfg.allowBackupCode) {
+        throw new ValidationError('当前策略不允许使用备用码，请使用认证器验证');
+      }
+      for (const hash of row.backupCodes ?? []) {
+        if (await verifyBackupCode(hash, backupCode)) {
+          usedBackupHash = hash;
+          break;
+        }
+      }
+      if (!usedBackupHash) {
+        await incrOp2faFail(userId, cfg);
+        await auditOp2faFail(userId, 'backup_code', request.ip ?? null);
+        throw new AppError('备用码错误或已用尽', 400, 'INVALID_OPERATION_2FA');
+      }
+      // 备用码一次性：从哈希数组移除（与登录链路同语义）
+      const remaining = (row.backupCodes ?? []).filter((h) => h !== usedBackupHash);
+      await db.update(schema.user2fa)
+        .set({ backupCodes: remaining, updatedAt: new Date() })
+        .where(eq(schema.user2fa.userId, userId));
+    }
+
+    // 4. 成功：清零计数 + 递增签发序号 + 签发操作令牌（E27 失效联动：disable 时 SET
+    //    op2fa:revoked:{userId} = 当前 seq，旧令牌 seq ≤ revoked → 中间件 403 EXPIRED）
+    await clearOp2faFail(userId);
+    const issuedSeqKey = `op2fa:issued_seq:${userId}`;
+    const r = getRedis();
+    let seq = 1;
+    if (r) {
+      try {
+        seq = Number(await r.incr(issuedSeqKey)) || 1;
+      } catch {
+        /* Redis 不可用 → seq 回退 1（fail-open，失效联动降级） */
+      }
+    }
+    const opToken = generateOperationToken({ userId, email, role, seq }, undefined, cfg.tokenTtlSeconds);
+
+    // P2-4 审计：操作令牌签发留痕（method：totp / backup_code；seq：令牌序号）
+    await db.insert(schema.auditLogs).values({
+      userId,
+      action: 'operation_2fa.issue',
+      resource: 'user_2fa',
+      resourceId: String(userId),
+      details: { method: usedBackupHash ? 'backup_code' : 'totp', scope: 'operation', seq } as any,
+      ipAddress: request.ip ?? null,
+    }).catch(() => { /* 审计写失败不阻断 */ });
+
+    return reply.send({
+      data: { op_token: opToken, expires_in: cfg.tokenTtlSeconds },
+      message: '验证通过',
+    });
   });
 }

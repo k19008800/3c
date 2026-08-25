@@ -40,8 +40,7 @@ import { responsesToChat, chatToResponses, type ResponsesRequest, type Responses
 import { relayResponsesStream } from '../services/upstream/responses-stream';
 import { countTokens } from '../services/billing/token-counter';
 import { determineStreamBilling } from '../services/billing/settle-stream';
-import { parseAndDiscount } from '../services/billing/cache-billing';
-import { resolveCacheDiscountRate } from '../services/billing/cache-discount';
+import { computeUsageCost, computeStreamCost } from '../services/billing/cache-billing';
 import { getBalance } from '../services/billing/balance';
 import { recordChannelResult } from '../services/upstream/circuit-breaker';
 import { AppError, InsufficientBalanceError } from '../lib/errors';
@@ -73,7 +72,7 @@ import {
 } from '../services/pipeline';
 import type { PipelineContext } from '../services/pipeline';
 import type { SelectedChannel } from '../services/upstream/routing';
-import { getPricingForModel, computeCost, computeEstimatedCost, buildPricingContext } from '../services/billing/pricing';
+import { getPricingForModel, computeCost, computeEstimatedCost, buildPricingContext, type ModelPricing } from '../services/billing/pricing';
 import { settleBilling } from '../services/billing/settle';
 import { releasePreConsume } from '../services/billing/pre-consume';
 import { preprocessRequestBody } from '../services/upstream/body-preprocessor';
@@ -88,8 +87,7 @@ import crypto from 'crypto';
 // 已抽取至共享服务 services/billing/{pricing,settle}.ts（P0-1），本文件直接 import。
 // @see docs/iteration-plan-v2.md P0-1 关键约束（8 处重复实现 → 共享服务）
 
-/** getPricingForModel 返回的定价结构（validate step 写入共享存储，结算步骤读取） */
-type ModelPricing = { input: number; output: number; cacheDiscountRate: number | null };
+/** getPricingForModel 返回的定价结构（validate step 写入共享存储，结算步骤读取；共享类型见 pricing.ts） */
 
 /** validate step 写回共享存储的请求结果（校验后的请求 + 转换后的上游 OpenAI chat body） */
 interface ResponsesValidateResult {
@@ -523,7 +521,9 @@ export async function responsesRoutes(app: FastifyInstance) {
             if (c.stream) {
               const state = requireStepResult<StreamState>(c, STEP_KEYS.streamState);
               const billing = determineStreamBilling(state, false, requireStepResult<number>(c, STEP_KEYS.estimatedInputTokens), c.model);
-              const cost = computeCost(c.model, billing.promptTokens, billing.completionTokens, pricing);
+              // P0 缓存计费（A9：计费时点 = 末帧 usage；fallback 无缓存字段 → 全价；discount_rate 兼容旧公式）
+              const usageCost = await computeStreamCost(billing, pricing);
+              const cost = usageCost.cost;
 
               try {
                 await settleBilling(
@@ -532,7 +532,18 @@ export async function responsesRoutes(app: FastifyInstance) {
                   billing.completionTokens,
                   cost,
                   channel,
-                  { streamed: true, trustUpstream: billing.trustUpstream, fallback: billing.fallback, finishReason: state.finishReason ?? undefined, preConsume: readPreConsume(c) },
+                  {
+                    streamed: true, trustUpstream: billing.trustUpstream, fallback: billing.fallback, finishReason: state.finishReason ?? undefined,
+                    cacheHitTokens: usageCost.cacheHitTokens,
+                    cacheDiscount: usageCost.discountAmount,
+                    cacheWriteTokens: usageCost.cacheWriteTokens,
+                    cacheHitCost: usageCost.cacheHitCost,
+                    cacheWriteCost: usageCost.cacheWriteCost,
+                    cacheReadInputPrice: usageCost.cacheReadPrice,
+                    cacheWriteInputPrice: usageCost.cacheWritePrice,
+                    cacheWritePriceSource: usageCost.cacheWritePriceSource,
+                    preConsume: readPreConsume(c),
+                  },
                 );
                 // 幂等：结算成功才缓存流式摘要（失败不缓存，避免回放未计费的"成功"）
                 await cacheIdempotentResponse(c.requestId, {
@@ -564,11 +575,11 @@ export async function responsesRoutes(app: FastifyInstance) {
             const totalTokens = Number(u.total_tokens) || 0;
             const hasUsage = totalTokens > 0;
 
-            // 缓存命中打折：上游返回缓存字段时按命中价计费；无缓存字段行为与 computeCost 一致
-            // 折扣率 = 模型级 vendor_pricing.cache_discount_rate → 全局 billing.cache_hit_discount → 默认 0.1
-            const { cost, discountAmount, cacheHitTokens } = hasUsage
-              ? parseAndDiscount(parsedBody.usage, pricing, await resolveCacheDiscountRate(pricing))
-              : { cost: computeCost(c.model, requireStepResult<number>(c, STEP_KEYS.estimatedInputTokens), 0, pricing), discountAmount: 0, cacheHitTokens: 0 };
+            // P0 缓存计费（统一入口）：explicit 走显式价；discount_rate 兼容旧公式；无缓存字段/无 usage → 全价
+            const usageCost = hasUsage ? await computeUsageCost(parsedBody.usage, pricing) : null;
+            const cost = usageCost
+              ? usageCost.cost
+              : computeCost(c.model, requireStepResult<number>(c, STEP_KEYS.estimatedInputTokens), 0, pricing);
 
             const choices = (parsedBody.choices as Array<{ finish_reason?: string }> | undefined);
             const finishReason = String(choices?.[0]?.finish_reason ?? 'stop');
@@ -584,8 +595,14 @@ export async function responsesRoutes(app: FastifyInstance) {
                 trustUpstream: hasUsage,
                 fallback: !hasUsage,
                 finishReason,
-                cacheHitTokens,
-                cacheDiscount: discountAmount,
+                cacheHitTokens: usageCost?.cacheHitTokens,
+                cacheDiscount: usageCost?.discountAmount,
+                cacheWriteTokens: usageCost?.cacheWriteTokens,
+                cacheHitCost: usageCost?.cacheHitCost,
+                cacheWriteCost: usageCost?.cacheWriteCost,
+                cacheReadInputPrice: usageCost?.cacheReadPrice,
+                cacheWriteInputPrice: usageCost?.cacheWritePrice,
+                cacheWritePriceSource: usageCost?.cacheWritePriceSource,
                 preConsume: readPreConsume(c),
               },
             );

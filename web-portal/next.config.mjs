@@ -52,6 +52,8 @@ const nextConfig = {
       ["/vendor/login", "/app/vendor/login"],
       ["/vendor/register", "/app/vendor/register"],
       ["/vendor", "/app/vendor"],
+      // R10-USER-DRILL-002：/app/ 尾斜杠规范化（Next 默认 308 → /app 后再命中 rewrite，多一跳）
+      ["/app/", "/app"],
     ];
     return map.map(([source, destination]) => ({ source, destination, permanent: true }));
   },

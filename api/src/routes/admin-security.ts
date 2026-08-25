@@ -7,6 +7,7 @@
  *   POST /api/v1/admin/security/ip-blacklist/batch      — 批量导入（逐条校验，返回成功/失败数）
  *   PUT  /api/v1/admin/security/ip-blacklist/:id        — 编辑（reason/scope/expires_at/status）
  *   POST /api/v1/admin/security/ip-blacklist/:id/unblock — 解禁（status → unblocked）
+ *   DELETE /api/v1/admin/security/ip-blacklist/:id       — 删除记录（§12 补充）
  *
  * 合规报告（services/compliance/report.ts）：
  *   GET  /api/v1/admin/compliance/report?type=export_audit|data_access&format=json|csv&days=N
@@ -359,6 +360,29 @@ export async function adminSecurityRoutes(app: FastifyInstance) {
       return reply.send({ data: toDTO(updated), message: `IP ${row.ip} 已解禁` });
     }
     return reply.send({ data: toDTO(row), message: `IP ${row.ip} 已是解禁状态` });
+  });
+
+  /**
+   * DELETE /api/v1/admin/security/ip-blacklist/:id — 删除黑名单记录（§12 补充）
+   *
+   * 物理删除 ip_blacklist 记录并写 audit（与 PUT/unblock 的软处理不同：
+   * 本端点用于彻底移除误加/过期条目）。记录不存在 → 404。
+   */
+  app.delete('/api/v1/admin/security/ip-blacklist/:id', { preHandler: [adminAuth] }, async (request: any, reply) => {
+    const id = parseInt(String(request.params.id), 10);
+    if (isNaN(id) || id <= 0) throw new ValidationError('Invalid id');
+
+    const [row] = await db.select().from(schema.ipBlacklist).where(eq(schema.ipBlacklist.id, id)).limit(1);
+    if (!row) throw new NotFoundError('IpBlacklist', id);
+
+    const [deleted] = await db
+      .delete(schema.ipBlacklist)
+      .where(eq(schema.ipBlacklist.id, id))
+      .returning({ id: schema.ipBlacklist.id, ip: schema.ipBlacklist.ip });
+    if (!deleted) throw new NotFoundError('IpBlacklist', id);
+
+    await writeAudit(request, 'security.ip_blacklist.delete', id, { ip: row.ip });
+    return reply.send({ data: { ok: true, id: deleted.id }, message: `IP ${deleted.ip} 已从黑名单删除` });
   });
 
   /**

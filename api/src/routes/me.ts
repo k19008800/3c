@@ -15,6 +15,9 @@ import { verifyToken } from '../services/auth/jwt';
 import { getBalance } from '../services/billing/balance';
 import { getUserGroup } from '../services/groups';
 import { AppError, UnauthorizedError, ValidationError, NotFoundError } from '../lib/errors';
+import { validatePasswordStrength } from '../lib/password';
+import { getPricingForModel } from '../services/billing/pricing';
+import { resolveCachePricing, getCachePricingMode } from '../services/billing/cache-discount';
 
 // ── JWT auth ─────────────────────────────────────────────
 async function jwtAuth(request: any, reply: any) {
@@ -141,9 +144,51 @@ export async function meRoutes(app: FastifyInstance) {
     return reply.send(keys);
   });
 
-  // ═══ /me/models — Playground 模型下拉 ═══
+  // ═══ /me/models — Playground 模型下拉（F09：列表项增加 cache_read_input_price，可空）═══
   app.get('/api/v1/me/models', { preHandler: [jwtAuth] }, async (_request, reply) => {
-    return reply.send(DEFAULT_MODELS);
+    // 轻量透出：逐模型解析生效缓存读取价；无缓存计费能力 → null（P4 空态）
+    const items = await Promise.all(DEFAULT_MODELS.map(async (m) => {
+      let cache_read_input_price: number | null = null;
+      try {
+        const pricing = await getPricingForModel(m.name);
+        const resolved = await resolveCachePricing(pricing);
+        if (resolved.cacheReadPrice != null && Number.isFinite(resolved.cacheReadPrice) && resolved.cacheReadPrice > 0) {
+          cache_read_input_price = Number(resolved.cacheReadPrice.toFixed(8));
+        }
+      } catch {
+        // 解析失败（无定价记录/DB 抖动）→ 该项缓存价为空，不阻断列表
+      }
+      return { ...m, cache_read_input_price };
+    }));
+    return reply.send(items);
+  });
+
+  // ═══ /me/models/:id/price — 单模型定价查询（F09：prices 增加缓存读/写价 + 计费模式 + 回退来源）═══
+  app.get('/api/v1/me/models/:id/price', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const modelId = Number(id);
+    const model = DEFAULT_MODELS.find((m) => m.id === modelId);
+    if (!model) throw new NotFoundError('模型', modelId);
+
+    const pricing = await getPricingForModel(model.name);
+    const mode = await getCachePricingMode();
+    const resolved = await resolveCachePricing(pricing);
+    const num = (v: number) => (Number.isFinite(v) ? Number(v.toFixed(8)) : null);
+
+    return reply.send({
+      id: model.id,
+      model: model.name,
+      provider: model.provider,
+      cache_pricing_mode: mode,
+      prices: {
+        input_price: num(pricing.input),
+        output_price: num(pricing.output),
+        cache_read_input_price: num(resolved.cacheReadPrice),
+        cache_write_input_price: num(resolved.cacheWritePrice),
+      },
+      // 回退来源说明（D-4）：explicit | discount_rate | global_discount | fallback
+      cache_read_price_source: resolved.source,
+    });
   });
 
   // ═══ /me/logs — 调用日志 ═══
@@ -608,6 +653,9 @@ export async function meRoutes(app: FastifyInstance) {
 
     if (!oldPassword) throw new ValidationError('旧密码不能为空');
     if (newPassword.length < 8) throw new ValidationError('新密码至少 8 位');
+    // R7-USER-DRILL-002：密码强度校验（弱口令拒绝）
+    const strengthError = validatePasswordStrength(newPassword);
+    if (strengthError) throw new ValidationError(strengthError);
 
     const [user] = await db
       .select({ id: schema.users.id, passwordHash: schema.users.passwordHash })
