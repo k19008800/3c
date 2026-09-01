@@ -18,6 +18,7 @@ import type { FastifyInstance } from 'fastify';
 import { db, schema } from '../db';
 import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import { verifyToken } from '../services/auth/jwt';
+import { requireNotImpersonated } from '../middleware/require-perm';
 import {
   UnauthorizedError,
   ForbiddenError,
@@ -318,7 +319,7 @@ export async function adminCreditRoutes(app: FastifyInstance) {
    * body: { customerId, models: [{ model, rpm, tpm }], period, start?, end?, reason }
    * 同一 quota 批量下发给多个模型，每个模型一条规则 + 各写一条「开通」历史。
    */
-  app.post('/api/v1/admin/credit/rules', { preHandler: [adminAuth] }, async (request: any, reply) => {
+  app.post('/api/v1/admin/credit/rules', { preHandler: [requireNotImpersonated(), adminAuth] }, async (request: any, reply) => {
     const body = (request.body || {}) as {
       customerId: number;
       models: Array<{ model: string; rpm: number | null; tpm: number | null }>;
@@ -433,7 +434,7 @@ export async function adminCreditRoutes(app: FastifyInstance) {
    * PATCH /api/v1/admin/credit/rules/:id — 编辑例外
    * body: { rpm, tpm, period?, start?, end?, reason }
    */
-  app.patch('/api/v1/admin/credit/rules/:id', { preHandler: [adminAuth] }, async (request: any, reply) => {
+  app.patch('/api/v1/admin/credit/rules/:id', { preHandler: [requireNotImpersonated(), adminAuth] }, async (request: any, reply) => {
     const id = parseId(request.params.id);
     const body = (request.body || {}) as {
       rpm: number | null;
@@ -501,7 +502,7 @@ export async function adminCreditRoutes(app: FastifyInstance) {
   /**
    * POST /api/v1/admin/credit/rules/:id/toggle — 停用 / 启用
    */
-  app.post('/api/v1/admin/credit/rules/:id/toggle', { preHandler: [adminAuth] }, async (request: any, reply) => {
+  app.post('/api/v1/admin/credit/rules/:id/toggle', { preHandler: [requireNotImpersonated(), adminAuth] }, async (request: any, reply) => {
     const id = parseId(request.params.id);
     const [rule] = await db
       .select()

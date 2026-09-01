@@ -5,6 +5,50 @@ import {
   api,
   extractError,
 } from "../lib/api";
+import { useAuthStore, type User } from "../store/auth";
+
+/** 「以用户身份登录」按钮级帮助文案（PRD §5.2，须严格一致） */
+const IMPERSONATE_HELP =
+  "以该用户身份登录其后台，用于协助排障/演示。模拟期间敏感资金与权限写操作被禁用，操作全程留痕，可通过顶部横幅一键退出。";
+
+/**
+ * 发起模拟登录：POST /admin/customers/:id/impersonate → startImpersonation → 回首页
+ * 返回一个 useMutation，目标 user 的 role 为 'customer'（customer=用户后台）。
+ */
+function useImpersonate() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const startImpersonation = useAuthStore((s) => s.startImpersonation);
+  const currentUser = useAuthStore((s) => s.user);
+  return useMutation({
+    mutationFn: async (id: number) =>
+      (await api.post(`/admin/customers/${id}/impersonate`)).data as {
+        user: { id: number; email: string; name?: string | null; role: string };
+        accessToken: string;
+        impersonateBy?: { adminId: number; adminEmail: string };
+      },
+    onSuccess: (d) => {
+      // adminInfo：优先取后端返回的 impersonateBy，缺失时用 store 当前登录 user
+      const adminInfo = d.impersonateBy
+        ? { id: d.impersonateBy.adminId, email: d.impersonateBy.adminEmail }
+        : currentUser
+          ? { id: currentUser.id, email: currentUser.email }
+          : { id: 0, email: "" };
+      const target: User = {
+        id: d.user.id,
+        email: d.user.email,
+        username: d.user.name ?? null,
+        role: d.user.role,
+        status: "active",
+        balance: 0,
+        realNameStatus: null,
+      };
+      startImpersonation(d.accessToken, target, adminInfo);
+      navigate("/"); // DashboardRedirect 按 role=customer 自动进用户工作台
+    },
+    onError: (err) => toast.error(extractError(err)),
+  });
+}
 import {
   PageHeader,
   Panel,
@@ -85,6 +129,9 @@ export default function AdminCustomersPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const qc = useQueryClient();
+  const impersonatedBy = useAuthStore((s) => s.impersonatedBy);
+  const impersonateMut = useImpersonate();
+  const isImpersonating = !!impersonatedBy; // 模拟态下隐藏 admin 管理操作（防御性）
 
   const [searchInput, setSearchInput] = useState("");
   const [range, setRange] = useState<TimeRangeKey>("all");   // 全部 = 不按时间过滤（默认）
@@ -168,13 +215,13 @@ export default function AdminCustomersPage() {
   const toggleOne = (id: number) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
 
   const selectedIds = [...selected];
-  const selectedRows = rows.filter((r) => selected.has(r.id));
 
   const toggleMutation = useMutation({
     mutationFn: async (row: CustomerRow) => {
@@ -411,10 +458,28 @@ export default function AdminCustomersPage() {
       render: (_, r) => {
         // 原型 op：详情 / 冻结(解冻) / 充值 / 绑定代理商；另保留「编辑」（客户管理刚需）
         const s = displayStatus(r);
+        // 模拟态下隐藏「以用户身份登录」等 admin 管理操作（防御性；模拟态已是 customer 视角）
+        if (isImpersonating) {
+          return (
+            <div className="c3-btn-group">
+              <button type="button" className="c3-btn c3-btn--text" onClick={(e) => { e.stopPropagation(); navigate(`/admin/customers/${r.id}`); }}>
+                查看
+              </button>
+            </div>
+          );
+        }
         return (
           <div className="c3-btn-group">
             <button type="button" className="c3-btn c3-btn--text" onClick={(e) => { e.stopPropagation(); navigate(`/admin/customers/${r.id}`); }}>
               查看
+            </button>
+            <button
+              type="button"
+              className="c3-btn c3-btn--text"
+              disabled={impersonateMut.isPending}
+              onClick={(e) => { e.stopPropagation(); impersonateMut.mutate(r.id); }}
+            >
+              以用户身份登录 <HelpIcon text={IMPERSONATE_HELP} />
             </button>
             <button type="button" className="c3-btn c3-btn--text" onClick={(e) => { e.stopPropagation(); openEdit(r); }}>
               编辑

@@ -28,7 +28,7 @@ import type { FastifyInstance } from 'fastify';
 import { db, schema } from '../db';
 import { eq, and, desc, sql, ne, isNull, or, inArray } from 'drizzle-orm';
 import { AppError, ValidationError, NotFoundError, ForbiddenError } from '../lib/errors';
-import { requirePerm } from '../middleware/require-perm';
+import { requirePerm, requireNotImpersonated } from '../middleware/require-perm';
 import { requireOperation2fa } from '../middleware/require-operation-2fa';
 import { creditBalance } from '../services/billing/balance';
 import { adjustLedgerAvailable, clearNegativeFlag } from '../services/billing/ledger';
@@ -39,7 +39,6 @@ import {
   calcApprovalTier,
   calcEffectiveTier,
   isReviewExempt,
-  isLimitExempt,
   type ApprovalRules,
 } from '../lib/finance-rules';
 import {
@@ -260,7 +259,7 @@ export async function adminAdjustRoutes(app: FastifyInstance) {
    * R6：调增发起先预检（soft 升级审批 / hard 429 拒创建）；免审生效在事务内完成
    * 复核+入账+计数一次；待审单不计数（计入时点 = 生效）。调减不计入（B9）。
    */
-  app.post('/api/v1/admin/adjust', { preHandler: [requirePerm('finance.adjust'), requireOperation2fa] }, async (request, reply) => {
+  app.post('/api/v1/admin/adjust', { preHandler: [requireNotImpersonated(), requirePerm('finance.adjust'), requireOperation2fa] }, async (request, reply) => {
     const body = (request.body || {}) as Record<string, unknown>;
     const userId = Number(body.user_id);
     const direction = String(body.direction || '');
@@ -451,7 +450,7 @@ export async function adminAdjustRoutes(app: FastifyInstance) {
   /** POST /api/v1/admin/adjust/:id/approve — 一级审批通过
    *  level1 pending → approved（生效）；level2/level3 pending → pending_level2（进入二级复核）
    *  B4：申请人=审批人时，仅 super_admin 且带 escalation_reason 可降级代审（审计标记 degraded） */
-  app.post('/api/v1/admin/adjust/:id/approve', { preHandler: [requirePerm('finance.adjust'), requireOperation2fa] }, async (request, reply) => {
+  app.post('/api/v1/admin/adjust/:id/approve', { preHandler: [requireNotImpersonated(), requirePerm('finance.adjust'), requireOperation2fa] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const adjustId = parseInt(id, 10);
     if (!Number.isInteger(adjustId) || adjustId <= 0) throw new ValidationError('Invalid adjustment id');
@@ -513,7 +512,7 @@ export async function adminAdjustRoutes(app: FastifyInstance) {
    *  - pending_level2 + level3 → pending_super（进入终审待审，记录二级审批人）
    *  - pending_super（level3）→ approved（生效；强制 super_admin 且 ≠ 申请人/一级/二级）
    *  B4：申请人=审批人时，仅 super_admin 且带 escalation_reason 可降级代审 */
-  app.post('/api/v1/admin/adjust/:id/review', { preHandler: [requirePerm('finance.adjust'), requireOperation2fa] }, async (request, reply) => {
+  app.post('/api/v1/admin/adjust/:id/review', { preHandler: [requireNotImpersonated(), requirePerm('finance.adjust'), requireOperation2fa] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const adjustId = parseInt(id, 10);
     if (!Number.isInteger(adjustId) || adjustId <= 0) throw new ValidationError('Invalid adjustment id');
@@ -706,7 +705,7 @@ export async function adminAdjustRoutes(app: FastifyInstance) {
    * 0 行 → 409 `ORDER_ALREADY_PROCESSED` 整体回滚——防并发"驳回 × 通过"竞态：
    * approve 先提交生效（余额已入账）后，reject 不再命中该行覆盖为 rejected（账实矛盾无法自愈）。
    */
-  app.post('/api/v1/admin/adjust/:id/reject', { preHandler: [requirePerm('finance.adjust'), requireOperation2fa] }, async (request, reply) => {
+  app.post('/api/v1/admin/adjust/:id/reject', { preHandler: [requireNotImpersonated(), requirePerm('finance.adjust'), requireOperation2fa] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const adjustId = parseInt(id, 10);
     if (!Number.isInteger(adjustId) || adjustId <= 0) throw new ValidationError('Invalid adjustment id');
@@ -738,7 +737,7 @@ export async function adminAdjustRoutes(app: FastifyInstance) {
    *   - 扣钱方向（原调增被冲销）：**不计入、不回退**（原调增发起时已预占，红冲不释放）。
    * 本期不改造红冲审批链（P2-12 保持直接生效，approval_level='level1' + status='approved'，R12 范围）。
    */
-  app.post('/api/v1/admin/adjust/:id/reverse', { preHandler: [requirePerm('finance.adjust'), requireOperation2fa] }, async (request, reply) => {
+  app.post('/api/v1/admin/adjust/:id/reverse', { preHandler: [requireNotImpersonated(), requirePerm('finance.adjust'), requireOperation2fa] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const adjustId = parseInt(id, 10);
     if (!Number.isInteger(adjustId) || adjustId <= 0) throw new ValidationError('Invalid adjustment id');

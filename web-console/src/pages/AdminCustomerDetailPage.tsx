@@ -3,6 +3,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { PageHeader, HelpIcon, StatusBadge, SkeletonGroup, EmptyState, Modal, useToast } from "@3cloud/shared-ui";
+import { useAuthStore, type User } from "../store/auth";
+
+/** 「以用户身份登录」按钮级帮助文案（PRD §5.3，与列表页一致） */
+const IMPERSONATE_HELP =
+  "以该用户身份登录其后台，用于协助排障/演示。模拟期间敏感资金与权限写操作被禁用，操作全程留痕，可通过顶部横幅一键退出。";
 
 interface CustomerDetail {
   id: number; user_id: number; username: string; email: string;
@@ -110,6 +115,39 @@ export default function AdminCustomerDetailPage() {
   });
 
   const c = q.data;
+  const impersonatedBy = useAuthStore((s) => s.impersonatedBy);
+  const startImpersonation = useAuthStore((s) => s.startImpersonation);
+  const currentUser = useAuthStore((s) => s.user);
+  const isImpersonating = !!impersonatedBy;
+
+  /** 以用户身份登录（逻辑与列表页一致） */
+  const impersonateMut = useMutation({
+    mutationFn: async (id: number) =>
+      (await api.post(`/admin/customers/${id}/impersonate`)).data as {
+        user: { id: number; email: string; name?: string | null; role: string };
+        accessToken: string;
+        impersonateBy?: { adminId: number; adminEmail: string };
+      },
+    onSuccess: (d) => {
+      const adminInfo = d.impersonateBy
+        ? { id: d.impersonateBy.adminId, email: d.impersonateBy.adminEmail }
+        : currentUser
+          ? { id: currentUser.id, email: currentUser.email }
+          : { id: 0, email: "" };
+      const target: User = {
+        id: d.user.id,
+        email: d.user.email,
+        username: d.user.name ?? null,
+        role: d.user.role,
+        status: "active",
+        balance: 0,
+        realNameStatus: null,
+      };
+      startImpersonation(d.accessToken, target, adminInfo);
+      navigate("/");
+    },
+    onError: (err) => toast.error(extractError(err)),
+  });
 
   /* ── 编辑基本信息（弹窗） ── */
   const [editOpen, setEditOpen] = useState(false);
@@ -219,6 +257,16 @@ export default function AdminCustomerDetailPage() {
                 <HelpIcon text="查看客户完整信息：基本资料、消费记录、充值记录、API Key 列表、工单记录、操作日志。可编辑基本信息、重置密码、冻结/解冻。" level="page" />
               </h3>
               <div className="c3-btn-group">
+                {!isImpersonating && (
+                  <button
+                    type="button"
+                    className="c3-btn c3-btn--primary c3-btn--sm"
+                    disabled={impersonateMut.isPending}
+                    onClick={() => impersonateMut.mutate(c.user_id)}
+                  >
+                    {impersonateMut.isPending ? "登录中…" : "以用户身份登录"} <HelpIcon text={IMPERSONATE_HELP} />
+                  </button>
+                )}
                 <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" onClick={openEdit}>编辑</button>
                 <button type="button" className="c3-btn c3-btn--default c3-btn--sm" disabled={resetPwMut.isPending} onClick={openReset}>
                   {resetPwMut.isPending ? "重置中…" : "重置密码"}

@@ -16,6 +16,13 @@ export interface TokenPayload {
   /** 令牌唯一 ID：同秒内同 payload 的重复签发（如注册后立即登录）会产生相同 JWT，
    *  而 user_sessions.token 有唯一约束 → 500 重复键。jti 保证每次签发唯一。 */
   jti?: string;
+  /** 新增：模拟发起者信息（管理员以用户身份登录）。普通登录令牌无此字段；
+   *  带此字段 = 模拟令牌，用于「以用户身份登录」功能（见 kb/3cloud/admin-impersonate.md）。
+   *  敏感资金/权限写端点据此拒绝（403 IMPERSONATION_BLOCKED）。 */
+  impersonateBy?: {
+    adminId: number;
+    adminEmail: string;
+  };
 }
 
 export interface TokenPair {

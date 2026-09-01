@@ -23,7 +23,8 @@ import type { FastifyInstance } from 'fastify';
 import { db, schema } from '../db';
 import { eq, and, sql, desc, gte, lte, inArray } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
-import { verifyToken } from '../services/auth/jwt';
+import { verifyToken, generateTokenPair, createSession, invalidateSession } from '../services/auth/jwt';
+import { requireNotImpersonated } from '../middleware/require-perm';
 import {
   UnauthorizedError,
   ForbiddenError,
@@ -44,6 +45,17 @@ async function adminAuth(request: any, _reply: any) {
   if (role !== 'admin' && role !== 'super_admin') {
     throw new ForbiddenError('Admin access required');
   }
+}
+
+/** 轻量 JWT 鉴权 preHandler：仅校验登录态并注入 userContext，不校验角色。
+ *  供退出模拟端点使用（模拟令牌 role=customer，adminAuth 会误拒）。 */
+async function jwtAuth(request: any, _reply: any) {
+  const authHeader = request.headers.authorization;
+  const token = authHeader?.split(' ')[1];
+  if (!token) throw new UnauthorizedError('Missing token');
+  const payload = verifyToken(token);
+  if (!payload) throw new UnauthorizedError('Invalid or expired token');
+  request.userContext = payload;
 }
 
 interface PaginationQuery {
@@ -468,7 +480,7 @@ export async function adminCustomerRoutes(app: FastifyInstance) {
    * PATCH /api/v1/admin/customers/:id/status — 启用 / 禁用客户
    * body: { status: 'active' | 'disabled' }
    */
-  app.patch('/api/v1/admin/customers/:id/status', { preHandler: [adminAuth] }, async (request: any, reply) => {
+  app.patch('/api/v1/admin/customers/:id/status', { preHandler: [requireNotImpersonated(), adminAuth] }, async (request: any, reply) => {
     const id = parseInt(request.params.id, 10);
     if (isNaN(id)) throw new ValidationError('Invalid id');
 
@@ -520,7 +532,7 @@ export async function adminCustomerRoutes(app: FastifyInstance) {
    * body: { email?, name?, phone?, status? }
    * 校验邮箱唯一性（排除自身）；状态仅 active | disabled。
    */
-  app.put('/api/v1/admin/customers/:id', { preHandler: [adminAuth] }, async (request: any, reply) => {
+  app.put('/api/v1/admin/customers/:id', { preHandler: [requireNotImpersonated(), adminAuth] }, async (request: any, reply) => {
     const id = parseCustomerId(request.params.id);
     await requireCustomer(id);
 
@@ -613,7 +625,7 @@ export async function adminCustomerRoutes(app: FastifyInstance) {
    * body: { password? }  — 传 password（≥8 位）则手动指定；不传则自动生成随机密码。
    * 返回一次性明文密码（自动生成时），仅此响应可见。
    */
-  app.post('/api/v1/admin/customers/:id/reset-password', { preHandler: [adminAuth] }, async (request: any, reply) => {
+  app.post('/api/v1/admin/customers/:id/reset-password', { preHandler: [requireNotImpersonated(), adminAuth] }, async (request: any, reply) => {
     const id = parseCustomerId(request.params.id);
     const u = await requireCustomer(id);
 
@@ -728,7 +740,7 @@ export async function adminCustomerRoutes(app: FastifyInstance) {
    * POST /api/v1/admin/customers/batch/status — 批量启用/禁用客户
    * body: { ids: number[], status: 'active' | 'disabled' }
    */
-  app.post('/api/v1/admin/customers/batch/status', { preHandler: [adminAuth] }, async (request: any, reply) => {
+  app.post('/api/v1/admin/customers/batch/status', { preHandler: [requireNotImpersonated(), adminAuth] }, async (request: any, reply) => {
     const b = (request.body || {}) as { ids?: number[]; status?: string };
     const ids = Array.isArray(b.ids) ? b.ids.filter((n) => Number.isInteger(n) && n > 0) : [];
     if (ids.length === 0) throw new ValidationError('ids 不能为空');
@@ -774,7 +786,7 @@ export async function adminCustomerRoutes(app: FastifyInstance) {
    * body: { ids: number[] }
    * 返回每个客户的一次性明文密码，仅此响应可见。
    */
-  app.post('/api/v1/admin/customers/batch/reset-password', { preHandler: [adminAuth] }, async (request: any, reply) => {
+  app.post('/api/v1/admin/customers/batch/reset-password', { preHandler: [requireNotImpersonated(), adminAuth] }, async (request: any, reply) => {
     const b = (request.body || {}) as { ids?: number[] };
     const ids = Array.isArray(b.ids) ? b.ids.filter((n) => Number.isInteger(n) && n > 0) : [];
     if (ids.length === 0) throw new ValidationError('ids 不能为空');
@@ -811,7 +823,7 @@ export async function adminCustomerRoutes(app: FastifyInstance) {
     }
 
     return reply.send({
-      data: { list: results.map(({ hash, ...rest }) => rest) },
+      data: { list: results.map(({ id, email, name, newPassword }) => ({ id, email, name, newPassword })) },
       message: `已为 ${results.length} 个客户重置密码（自动生成）`,
     });
   });
@@ -820,7 +832,7 @@ export async function adminCustomerRoutes(app: FastifyInstance) {
    * POST /api/v1/admin/customers/batch/bind-agent — 批量绑定代理商
    * body: { ids: number[], agentId: number }
    */
-  app.post('/api/v1/admin/customers/batch/bind-agent', { preHandler: [adminAuth] }, async (request: any, reply) => {
+  app.post('/api/v1/admin/customers/batch/bind-agent', { preHandler: [requireNotImpersonated(), adminAuth] }, async (request: any, reply) => {
     const b = (request.body || {}) as { ids?: number[]; agentId?: number };
     const ids = Array.isArray(b.ids) ? b.ids.filter((n) => Number.isInteger(n) && n > 0) : [];
     const agentId = Number(b.agentId);
@@ -864,7 +876,7 @@ export async function adminCustomerRoutes(app: FastifyInstance) {
    * POST /api/v1/admin/customers/batch/verify — 批量强制实名认证
    * body: { ids: number[] }
    */
-  app.post('/api/v1/admin/customers/batch/verify', { preHandler: [adminAuth] }, async (request: any, reply) => {
+  app.post('/api/v1/admin/customers/batch/verify', { preHandler: [requireNotImpersonated(), adminAuth] }, async (request: any, reply) => {
     const b = (request.body || {}) as { ids?: number[] };
     const ids = Array.isArray(b.ids) ? b.ids.filter((n) => Number.isInteger(n) && n > 0) : [];
     if (ids.length === 0) throw new ValidationError('ids 不能为空');
@@ -895,5 +907,105 @@ export async function adminCustomerRoutes(app: FastifyInstance) {
       data: { verified: rows.length },
       message: `已强制认证 ${rows.length} 个客户`,
     });
+  });
+
+  /**
+   * POST /api/v1/admin/customers/:id/impersonate — 以用户身份登录（模拟）
+   *
+   * 仅 admin / super_admin 可发起（adminAuth）。目标用户须存在、customer 角色、status='active'。
+   * 签发带 impersonateBy 标记的模拟令牌对（role=目标用户 role），落库会话，写审计。
+   *
+   * @see kb/3cloud/admin-impersonate.md D3/D4
+   */
+  app.post('/api/v1/admin/customers/:id/impersonate', { preHandler: [adminAuth] }, async (request: any, reply) => {
+    const id = parseCustomerId(request.params.id);
+    const target = await requireCustomer(id);
+
+    if (target.status !== 'active') {
+      throw new ForbiddenError('仅 active 状态的用户可被模拟登录');
+    }
+
+    const admin = request.userContext as { userId: number; email: string; adminId?: number };
+    const adminId = admin.adminId ?? admin.userId ?? 0;
+    const adminEmail = admin.email ?? '';
+
+    const impersonateBy = { adminId, adminEmail };
+
+    // 签发模拟令牌对：role 用目标用户 role → /me、路由、权限判断天然按目标用户生效
+    const pair = generateTokenPair({
+      userId: target.id,
+      email: target.email,
+      role: target.role,
+      impersonateBy,
+    });
+
+    // 模拟会话同样纳入 user_sessions 管理（可失效）
+    await createSession(target.id, pair.accessToken, pair.refreshToken, request.ip, request.headers['user-agent'] ?? null);
+
+    // 审计留痕（D4 红线）：操作者 admin、目标用户、IP
+    await db.insert(schema.auditLogs).values({
+      userId: adminId,
+      action: 'impersonate_login',
+      resource: 'user',
+      resourceId: String(target.id),
+      details: {
+        adminId,
+        adminEmail,
+        targetId: target.id,
+        targetEmail: target.email,
+      },
+      ipAddress: request.ip ?? null,
+      userAgent: request.headers['user-agent'] ?? null,
+    });
+
+    return reply.send({
+      user: { id: target.id, email: target.email, name: target.name, role: target.role },
+      accessToken: pair.accessToken,
+      refreshToken: pair.refreshToken,
+      expiresIn: pair.expiresIn,
+      impersonateBy,
+    });
+  });
+
+  /**
+   * POST /api/v1/admin/customers/:id/impersonate/exit — 退出模拟
+   *
+   * 仅模拟令牌可调用（payload.impersonateBy 存在）；否则 400。
+   * 用轻量 jwtAuth（仅校验登录态，不校验 admin 角色）——因为模拟令牌 role=customer，
+   * adminAuth 会误拒。服务端使该模拟会话失效 + 写审计；
+   * 前端主要靠本地恢复 admin 令牌实现退出，此端点为服务端兜底撤销防止模拟令牌残留。
+   */
+  app.post('/api/v1/admin/customers/:id/impersonate/exit', { preHandler: [jwtAuth] }, async (request: any, reply) => {
+    const id = parseCustomerId(request.params.id);
+    await requireCustomer(id);
+
+    const payload = request.userContext as { userId: number; email: string; role: string; impersonateBy?: { adminId: number; adminEmail: string } };
+    if (!payload.impersonateBy) {
+      throw new ValidationError('仅模拟令牌可退出模拟（请使用模拟身份令牌调用）');
+    }
+
+    const authHeader = request.headers.authorization;
+    const accessToken = authHeader?.split(' ')[1];
+    if (accessToken) {
+      await invalidateSession(accessToken);
+    }
+
+    // 审计留痕（D4 红线）
+    await db.insert(schema.auditLogs).values({
+      userId: payload.impersonateBy.adminId,
+      action: 'impersonate_exit',
+      resource: 'user',
+      resourceId: String(id),
+      details: {
+        adminId: payload.impersonateBy.adminId,
+        adminEmail: payload.impersonateBy.adminEmail,
+        targetId: id,
+        targetEmail: payload.email,
+      },
+      ipAddress: request.ip ?? null,
+      userAgent: request.headers['user-agent'] ?? null,
+    });
+
+    return reply.send({ message: '已退出模拟' });
   });
 }
