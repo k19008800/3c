@@ -93,7 +93,7 @@ export const Perm = {
   TICKET_ASSIGN: 1 << 20,
   TICKET_DELETE: 1 << 21,
 
-  // 🏭 供应商管理
+  // 🏭 渠道管理
   VENDOR_CREATE: 1 << 22,
   VENDOR_EDIT: 1 << 23,
   VENDOR_DISABLE: 1 << 24,

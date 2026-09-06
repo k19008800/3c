@@ -12,15 +12,15 @@
 ModelCenter
 ├── ModelFilterBar
 │   ├── 分类页签（全部/文本生成/对话/图像/嵌入/代码/音频）
-│   ├── 搜索框（模糊匹配模型名/供应商名）
+│   ├── 搜索框（模糊匹配模型名/渠道名）
 │   └── 筛选面板
-│       ├── 供应商多选
+│       ├── 渠道多选
 │       ├── 价格范围
 │       └── 状态筛选
 │
 ├── ModelGrid
 │   ├── ModelCard × N（卡片网格，响应式 3-4 列）
-│   │   ├── 模型名 + 供应商
+│   │   ├── 模型名 + 渠道
 │   │   ├── 上下文窗口
 │   │   ├── 输入/输出价格
 │   │   └── 状态标签（可用/维护中/已下线）
@@ -28,7 +28,7 @@ ModelCenter
 │
 ├── PriceDetailModal（点击价格区域弹出）
 │   ├── 模型价格明细
-│   ├── 供应商原始价格
+│   ├── 渠道原始价格
 │   └── 平台加价率
 │
 └── Playground（在线测试）
@@ -61,7 +61,7 @@ interface ModelFilterBarProps {
 }
 
 interface ModelFilters {
-  vendors: string[];           // 供应商多选
+  vendors: string[];           // 渠道多选
   minPrice?: number;           // 最低价格
   maxPrice?: number;           // 最高价格
   status?: 'available' | 'maintenance' | 'all';
@@ -294,7 +294,7 @@ Response:
 
 | 维度 | 选项 | 交互 |
 |------|------|------|
-| 供应商 | 全部已接入供应商 | 多选下拉 |
+| 渠道 | 全部已接入渠道 | 多选下拉 |
 | 价格范围 | 不限 / ¥0-0.01 / ¥0.01-0.05 / ¥0.05-0.10 / ¥0.10+ | 单选 |
 | 状态 | 可用 / 维护中 / 全部 | 单选 |
 
@@ -353,7 +353,7 @@ sequenceDiagram
     participant MC as 模型中心页面
     participant API as 后端 API
     participant DB as 数据库
-    participant V as 供应商 API
+    participant V as 渠道 API
 
     Note over U,MC: 模型列表
     U->>MC: 访问模型中心
@@ -404,6 +404,6 @@ sequenceDiagram
 
 | 场景 | 恢复策略 |
 |------|---------|
-| Playground API 供应商超时 | 超时自动重试 1 次，重试仍失败则返回 504 并释放预扣款 |
+| Playground API 渠道超时 | 超时自动重试 1 次，重试仍失败则返回 504 并释放预扣款 |
 | 模型价格缓存过期 | 再次查询时重新从数据库加载，PriceDetailModal 展示「价格已更新」标记 |
 | 搜索接口响应过慢（> 3s） | 降级为仅本地搜索已加载的模型列表，不发起新 API 请求 |

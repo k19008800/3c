@@ -29,7 +29,7 @@
 | 6 | 30 日留存 | 用户分析模块 | 1h | 每日 | `retention_30d` |
 | 7 | 代理活跃度 | 代理模块 | 1h | 每日 | `agent_activity` |
 | 8 | Key 使用率 | `api_keys` + `call_logs` | 5min | 实时 | `key_usage_rate` |
-| 9 | 供应商健康度 | 健康检查模块 | 1min | 实时 | `vendor_health` |
+| 9 | 渠道健康度 | 健康检查模块 | 1min | 实时 | `vendor_health` |
 | 10 | 告警收敛率 | 告警模块 | 1h | 每日 | `alert_convergence` |
 | 11 | 自助结算率 | 结算模块 | 1h | 每日 | `self_settlement_rate` |
 | 12 | ARPU | 财务模块 | 24h(历史固定值) | 每月 | `arpu` |

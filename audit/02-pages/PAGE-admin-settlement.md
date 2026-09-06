@@ -1,0 +1,182 @@
+# 页面原子审计：管理端结算
+
+## 页面元数据
+
+- 页面编号：AUDIT-ADMIN-SETTLEMENT
+- 页面名称：管理端结算
+- 应用：console
+- 路由：`/admin/finance/settlement`
+- 源码：`web-console/src/pages/admin/AdminSettlementPage.tsx`
+- 原型：UNKNOWN
+- PRD：`3cloud/docs/SPEC-§29-资金与对账管理.md`
+- SPEC：`3cloud/docs/SPEC-§29-资金与对账管理.md`
+- 适用角色：finance / admin / super_admin
+- 审计轮次：首批 A；本文件为全新审计，不复用旧审计结论
+
+## 原子核对表
+
+| ID | 维度 | 单一核对断言 | 需求出处 | 需求摘录/核对目标 | 实现证据（文件:行号） | 测试证据 | 状态 | 优先级 | 备注 |
+|---|---|---|---|---|---|---|---|---|---|
+| ADMIN-SETTLEMENT-0001 | route | 页面可通过指定路由进入。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面可通过指定路由进入 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0002 | route | 页面路由与 route-inventory 中的目标一致。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面路由与 route-inventory 中的目标一致 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0003 | route | 未登录访问页面时执行统一鉴权。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：未登录访问页面时执行统一鉴权 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0004 | route | 直接刷新指定路由后页面可恢复。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：直接刷新指定路由后页面可恢复 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0005 | route | 未知子路径不会误渲染本页面。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：未知子路径不会误渲染本页面 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0006 | route | 页面入口在财务导航中可定位。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面入口在财务导航中可定位 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0007 | page | 页面显示明确的功能标题。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面显示明确的功能标题 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0008 | page | 页面标题旁显示页面级 [?] 帮助入口。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面标题旁显示页面级 [?] 帮助入口 | `web-console/src/pages/admin/AdminSettlementPage.tsx:30` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0009 | page | 页面级帮助说明适用角色。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面级帮助说明适用角色 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0010 | page | 页面级帮助说明功能定位。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面级帮助说明功能定位 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0011 | page | 页面级帮助说明核心操作。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面级帮助说明核心操作 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0012 | page | 页面级帮助说明注意事项。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面级帮助说明注意事项 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0013 | page | 页面级帮助说明常见问题。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面级帮助说明常见问题 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0014 | page | 页面级帮助内容与需求文档一致。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面级帮助内容与需求文档一致 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0015 | layout | 页面包含主要数据区域。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面包含主要数据区域 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0016 | layout | 页面包含操作区域。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面包含操作区域 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0017 | layout | 页面使用统一的页面间距。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面使用统一的页面间距 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0018 | layout | 页面使用统一的字体层级。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面使用统一的字体层级 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0019 | layout | 页面使用统一的颜色语义。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面使用统一的颜色语义 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0020 | layout | 页面在窄屏下不产生不可操作的横向溢出。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面在窄屏下不产生不可操作的横向溢出 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0021 | layout | 页面的主要操作在首屏可发现。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面的主要操作在首屏可发现 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0022 | layout | 页面的次要操作不遮挡主要数据。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面的次要操作不遮挡主要数据 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0023 | state | 首次进入页面显示初始状态。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：首次进入页面显示初始状态 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0024 | state | 数据加载中显示 loading 指示器。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：数据加载中显示 loading 指示器 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0025 | state | 数据为空时显示非空白说明。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：数据为空时显示非空白说明 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0026 | state | API 错误时显示错误提示。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：API 错误时显示错误提示 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0027 | state | 网络断开时显示可理解的错误提示。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：网络断开时显示可理解的错误提示 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0028 | state | 错误状态提供重试入口。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：错误状态提供重试入口 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0029 | state | 提交中显示进行中状态。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：提交中显示进行中状态 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0030 | state | 提交成功显示明确反馈。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：提交成功显示明确反馈 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0031 | state | 提交失败显示明确反馈。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：提交失败显示明确反馈 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0032 | state | 刷新后保留可恢复的页面状态。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：刷新后保留可恢复的页面状态 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0033 | permission | 无页面权限时不泄露业务数据。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：无页面权限时不泄露业务数据 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0034 | permission | 无页面权限时显示权限说明。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：无页面权限时显示权限说明 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0035 | permission | 有页面权限的角色可读取页面数据。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：有页面权限的角色可读取页面数据 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0036 | permission | 权限变化后页面不会继续执行失权操作。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：权限变化后页面不会继续执行失权操作 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0037 | permission | 越权写请求返回 403。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：越权写请求返回 403 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0038 | permission | 403 不被前端转换为成功状态。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：403 不被前端转换为成功状态 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0039 | permission | 权限拒绝不写业务成功审计。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：权限拒绝不写业务成功审计 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0040 | permission | 有效权限范围与需求角色矩阵一致。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：有效权限范围与需求角色矩阵一致 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0041 | data | 列表展示主业务标识。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：列表展示主业务标识 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0042 | data | 列表展示金额或核心数值。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：列表展示金额或核心数值 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0043 | data | 列表展示业务状态。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：列表展示业务状态 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0044 | data | 列表展示发生时间。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：列表展示发生时间 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0045 | data | 列表展示关联用户或主体。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：列表展示关联用户或主体 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0046 | data | 列表展示关联单据或流水标识。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：列表展示关联单据或流水标识 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0047 | data | 金额按人民币格式展示。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：金额按人民币格式展示 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0048 | data | 金额精度不会被无意四舍五入。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：金额精度不会被无意四舍五入 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0049 | data | 时间展示使用统一时区口径。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：时间展示使用统一时区口径 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0050 | data | 状态使用统一状态徽标。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：状态使用统一状态徽标 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0051 | data | 缺失可选字段显示占位符。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：缺失可选字段显示占位符 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0052 | data | 敏感字段不在列表中明文泄露。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：敏感字段不在列表中明文泄露 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0053 | data | 列表数据与接口响应字段映射一致。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：列表数据与接口响应字段映射一致 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0054 | data | 列表排序有明确默认顺序。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：列表排序有明确默认顺序 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0055 | data | 数据更新后列表可见最新状态。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：数据更新后列表可见最新状态 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0056 | query | 页面提供需求定义的筛选入口。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面提供需求定义的筛选入口 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0057 | query | 筛选值会传入查询请求。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：筛选值会传入查询请求 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0058 | query | 切换筛选后分页回到第一页。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：切换筛选后分页回到第一页 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0059 | query | 连续快速切换筛选不会展示过期结果。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：连续快速切换筛选不会展示过期结果 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0060 | query | 日期范围起点可被独立设置。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：日期范围起点可被独立设置 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0061 | query | 日期范围终点可被独立设置。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：日期范围终点可被独立设置 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0062 | query | 空筛选条件不会生成非法查询参数。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：空筛选条件不会生成非法查询参数 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0063 | query | 分页总数与接口分页元数据一致。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：分页总数与接口分页元数据一致 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0064 | query | 不存在的筛选值会得到友好反馈。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：不存在的筛选值会得到友好反馈 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0065 | query | 查询失败不会清空已有可用数据。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：查询失败不会清空已有可用数据 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0066 | api | 页面调用需求定义的读取接口。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面调用需求定义的读取接口 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0067 | api | 读取请求携带当前筛选条件。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：读取请求携带当前筛选条件 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0068 | api | 读取请求处理非 2xx 响应。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：读取请求处理非 2xx 响应 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0069 | api | 读取响应缺少列表时不会导致渲染崩溃。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：读取响应缺少列表时不会导致渲染崩溃 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0070 | api | 接口返回金额字段按字符串或安全数值处理。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：接口返回金额字段按字符串或安全数值处理 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0071 | api | 接口返回时间字段按统一格式处理。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：接口返回时间字段按统一格式处理 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0072 | api | 接口超时显示错误状态。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：接口超时显示错误状态 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0073 | api | 重复读取不会产生重复列表项。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：重复读取不会产生重复列表项 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0074 | api | 接口权限错误显示权限反馈。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：接口权限错误显示权限反馈 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0075 | api | 接口数据异常不会执行危险默认操作。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：接口数据异常不会执行危险默认操作 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0076 | api | 写接口仅在存在对应操作入口时调用。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：写接口仅在存在对应操作入口时调用 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0077 | api | 写请求成功后刷新相关查询。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：写请求成功后刷新相关查询 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0078 | api | 写请求失败后保留用户可修正的输入。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：写请求失败后保留用户可修正的输入 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0079 | security | 资金或财务写操作执行前进行二次确认。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：资金或财务写操作执行前进行二次确认 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0080 | security | 敏感操作记录操作者身份。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：敏感操作记录操作者身份 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0081 | security | 敏感操作记录操作时间。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：敏感操作记录操作时间 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0082 | security | 敏感操作记录操作结果。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：敏感操作记录操作结果 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0083 | security | 客户端不能单独决定资金状态。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：客户端不能单独决定资金状态 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0084 | security | 重复点击不会重复执行资金写操作。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：重复点击不会重复执行资金写操作 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0085 | security | 并发状态变更只有一个请求成功。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：并发状态变更只有一个请求成功 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0086 | security | 失败操作不会伪造成功反馈。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：失败操作不会伪造成功反馈 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0087 | security | 错误信息不暴露内部堆栈。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：错误信息不暴露内部堆栈 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0088 | security | 操作完成后可追溯关联单据。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：操作完成后可追溯关联单据 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0089 | test | 页面存在对应的组件测试证据。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面存在对应的组件测试证据 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0090 | test | 页面存在正常数据场景测试证据。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面存在正常数据场景测试证据 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0091 | test | 页面存在空数据场景测试证据。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面存在空数据场景测试证据 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0092 | test | 页面存在 API 错误场景测试证据。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面存在 API 错误场景测试证据 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0093 | test | 页面存在权限场景测试证据。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面存在权限场景测试证据 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0094 | test | 页面存在边界数据场景测试证据。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面存在边界数据场景测试证据 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0095 | test | 页面存在重复操作场景测试证据。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面存在重复操作场景测试证据 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0096 | test | 页面存在并发场景测试证据。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面存在并发场景测试证据 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0097 | test | 页面存在审计场景测试证据。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面存在审计场景测试证据 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0098 | test | 页面验收结果可由独立测试复核。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面验收结果可由独立测试复核 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0099 | field | 页面展示结算周期。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面展示结算周期 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0100 | field | 页面展示结算状态。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面展示结算状态 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0101 | field | 列表展示结算主体。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：列表展示结算主体 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0102 | field | 列表展示结算金额。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：列表展示结算金额 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0103 | field | 列表展示结算时间。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：列表展示结算时间 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0104 | query | 页面支持周期切换。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面支持周期切换 | `web-console/src/pages/admin/AdminSettlementPage.tsx:35` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0105 | query | 页面支持状态筛选。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：页面支持状态筛选 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0106 | action | 结算入口旁显示 [?] 帮助。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：结算入口旁显示 [?] 帮助 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0107 | action | 结算入口只在可结算状态出现。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：结算入口只在可结算状态出现 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0108 | action | 结算操作成功后刷新列表。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：结算操作成功后刷新列表 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0109 | security | 结算操作执行前二次确认。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：结算操作执行前二次确认 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0110 | audit | 结算操作写入审计日志。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：结算操作写入审计日志 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0111 | idempotency | 重复结算不会重复付款。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：重复结算不会重复付款 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0112 | concurrency | 并发结算不会重复处理。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：并发结算不会重复处理 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0113 | transaction | 结算状态与资金流水原子更新。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：结算状态与资金流水原子更新 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0114 | boundary | 无可结算记录显示空态。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：无可结算记录显示空态 | `UNKNOWN` | UNKNOWN | P1 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0115 | exception | 结算接口失败显示错误提示。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：结算接口失败显示错误提示 | `UNKNOWN` | UNKNOWN | P2 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+| ADMIN-SETTLEMENT-0116 | permission | 仅授权财务角色可执行结算。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | §29.5 结算/资金报表相关验收：仅授权财务角色可执行结算 | `UNKNOWN` | UNKNOWN | P0 | 首轮仅记录核对证据；未取得实现或测试证据不判 PASS。 |
+
+## 页面状态矩阵
+
+| 状态 | 单独核对断言 | 需求出处 | 实现证据 | 测试证据 | 状态 |
+|---|---|---|---|---|---|
+| 首次进入 | 页面首次进入显示默认内容。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | UNKNOWN | UNKNOWN | UNKNOWN |
+| 加载中 | 页面加载中显示 loading。 | `3cloud/docs/PRODUCT-DESIGN-PRINCIPLES.md` P4 | UNKNOWN | UNKNOWN | UNKNOWN |
+| 空数据 | 页面空数据状态显示说明。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | UNKNOWN | UNKNOWN | UNKNOWN |
+| 正常数据 | 页面正常数据状态显示业务数据。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | UNKNOWN | UNKNOWN | UNKNOWN |
+| API 错误 | API 错误状态显示提示。 | `3cloud/docs/PRODUCT-DESIGN-PRINCIPLES.md` P4 | UNKNOWN | UNKNOWN | UNKNOWN |
+| 权限不足 | 权限不足状态不泄露数据。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | UNKNOWN | UNKNOWN | UNKNOWN |
+| 网络断开 | 网络断开状态可理解。 | `3cloud/docs/PRODUCT-DESIGN-PRINCIPLES.md` P4 | UNKNOWN | UNKNOWN | UNKNOWN |
+| 重试 | 错误状态提供重试入口。 | `3cloud/docs/PRODUCT-DESIGN-PRINCIPLES.md` P4 | UNKNOWN | UNKNOWN | UNKNOWN |
+| 提交中 | 提交中阻止重复操作。 | `3cloud/docs/PRODUCT-DESIGN-PRINCIPLES.md` P4 | UNKNOWN | UNKNOWN | UNKNOWN |
+| 提交成功 | 成功状态展示明确反馈。 | `3cloud/docs/PRODUCT-DESIGN-PRINCIPLES.md` P4 | UNKNOWN | UNKNOWN | UNKNOWN |
+| 提交失败 | 失败状态展示明确反馈。 | `3cloud/docs/PRODUCT-DESIGN-PRINCIPLES.md` P4 | UNKNOWN | UNKNOWN | UNKNOWN |
+| 重复提交 | 重复提交不会重复产生业务结果。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | UNKNOWN | UNKNOWN | UNKNOWN |
+| 刷新后 | 刷新后页面状态与服务端一致。 | `SPEC-§29-资金与对账管理.md` §29.5 结算/资金报表相关验收 | UNKNOWN | UNKNOWN | UNKNOWN |
+
+## 操作入口矩阵
+
+本轮已从源码静态检索到的入口逐一列出；帮助、确认、权限、反馈、审计和测试证据分列，未核对项为 UNKNOWN。
+
+| ID | 入口文本/选择器 | 操作断言 | 按钮帮助 | 二次确认 | 权限 | 成功反馈 | 失败反馈 | 审计 | 测试 |
+|---|---|---|---|---|---|---|---|---|---|
+| ENTRY-01 | 页面级 [?] | 页面级帮助可打开。 | 已检索 | UNKNOWN | N/A — 页面帮助入口不执行业务写操作，不涉及二次确认。 | UNKNOWN | UNKNOWN | N/A — 页面帮助打开本身不产生敏感业务变更，不生成业务审计记录。 | UNKNOWN |
+| ENTRY-02 | 主要数据/筛选入口 | 入口可执行对应查询。 | UNKNOWN | N/A — 只读查询与筛选不产生不可逆业务变更，无需二次确认。 | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN |
+| ENTRY-03 | 主要写操作入口 | 入口仅在授权时可执行。 | UNKNOWN | 应有 | 应有 | UNKNOWN | UNKNOWN | 应有 | UNKNOWN |
+| ENTRY-04 | 状态/周期 tab | tab 切换会刷新对应数据。 | UNKNOWN | N/A — tab 切换仅改变查询视图，不提交业务操作。 | UNKNOWN | UNKNOWN | UNKNOWN | N/A — 视图切换不改变业务状态，不产生审计事件。 | UNKNOWN |
+| ENTRY-05 | 重试/空态操作 | 操作可恢复页面数据。 | UNKNOWN | N/A — 重试或空态恢复仅重新读取数据，不执行业务写入。 | UNKNOWN | UNKNOWN | UNKNOWN | N/A — 数据重试/空态恢复不改变业务状态，不产生审计事件。 | UNKNOWN |
+
+## API / 数据 / 权限矩阵
+
+| ID | 类型 | 单一断言 | 前端证据 | 后端证据 | DB证据 | 权限证据 | 测试证据 | 状态 |
+|---|---|---|---|---|---|---|---|---|
+| API-01 | read | 页面读取接口路径与需求一致。 | UNKNOWN | UNKNOWN | N/A — 读取接口不直接写入结算或流水数据，DB写入证据不适用。 | UNKNOWN | UNKNOWN | UNKNOWN |
+| API-02 | read | 读取请求错误可被页面处理。 | UNKNOWN | UNKNOWN | N/A — 读取错误处理不执行数据库变更，DB写入证据不适用。 | UNKNOWN | UNKNOWN | UNKNOWN |
+| API-03 | write | 写请求参数满足字段约束。 | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN |
+| API-04 | transaction | 资金状态与流水写入具备事务语义。 | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN |
+| API-05 | audit | 敏感操作具备审计证据。 | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN |
+| API-06 | permission | 写接口具备后端权限校验。 | UNKNOWN | UNKNOWN | N/A — 权限校验结论由应用层/权限证据验证，非数据库写入断言。 | UNKNOWN | UNKNOWN | UNKNOWN |
+
+## 差距清单
+
+| GAP ID | 原子项 ID | 差距描述 | 影响 | 优先级 | 建议 |
+|---|---|---|---|---|---|
+| GAP-ADMIN-SETTLEMENT-001 | 多个 UNKNOWN 项 | 本轮尚未取得对应实现或测试证据。 | 无法判定交付符合性。 | P0 | 后续补充源码、后端、数据库、运行及测试证据后复核。 |

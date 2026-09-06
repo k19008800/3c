@@ -127,15 +127,15 @@
 | 客户列表 | `/admin/customers` | ✅ AdminCustomersPage | Table, Pagination, SearchBar, FilterBar |
 | 客户详情 | `/admin/customers/:id`（弹窗） | 🔧 需改造 | Modal, FormField, StatusBadge |
 
-### F14. 用户选择厂商调用全链路
+### F14. 用户选择渠道调用全链路
 
 | 步骤 | 路由 | 现有页面 | 需要 UX 组件 |
 |------|------|:---:|------|
-| 厂商选择器 | Portal 内嵌组件 | 🔧 需新建 VendorSelector | Skeleton, StatusBadge |
-| 厂商资料 | `/admin/vendors` | ✅ AdminVendorsPage | Table, Modal |
-| 厂商定价 | `/admin/models`（合并） | ✅ AdminModelsPage | Table, Modal, FilterBar |
+| 渠道选择器 | Portal 内嵌组件 | 🔧 需新建 VendorSelector | Skeleton, StatusBadge |
+| 渠道资料 | `/admin/vendors` | ✅ AdminVendorsPage | Table, Modal |
+| 渠道售价 | `/admin/models`（合并） | ✅ AdminModelsPage | Table, Modal, FilterBar |
 
-### F15. 厂商定价→审批→生效
+### F15. 渠道售价→审批→生效
 
 | 步骤 | 路由 | 现有页面 | 需要 UX 组件 |
 |------|------|:---:|------|
@@ -155,7 +155,7 @@
 | 5 | `/admin/risk` | F10 风控 | P0 |
 | 6 | `/admin/dashboard`（嵌入页） | F10 数据看板 | P1 |
 | 7 | `/register`（独立注册页） | F1 注册 | ✅ 已完成（/app/register，RegisterPage 已挂载） |
-| 8 | Portal 厂商选择器组件 | F14 | P1 |
+| 8 | Portal 渠道选择器组件 | F14 | P1 |
 
 ---
 

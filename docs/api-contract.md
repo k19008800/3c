@@ -1,5 +1,9 @@
 # API 契约对齐（前端 253 端点 ↔ 后端 v3）
 
+> ⚠️ **历史汇总 / 迁移参考，非 canonical API 契约。** 本文保留 2026-08 的前后端对齐过程、旧响应形状和旧 alias 记录，仅用于迁移追溯；“前端路径即事实标准”等历史表述不再具有现行权威性。新开发与验收必须以 `docs/05-api/` 下的正式契约为准。
+>
+> **Canonical 路径**：[`05-api/README.md`](05-api/README.md)、[`05-api/conventions.md`](05-api/conventions.md)、[`05-api/errors.md`](05-api/errors.md)、[`05-api/idempotency.md`](05-api/idempotency.md)、[`05-api/user/recharge.md`](05-api/user/recharge.md)、[`05-api/admin/manual-topup.md`](05-api/admin/manual-topup.md)、[`05-api/admin/balance-adjustment.md`](05-api/admin/balance-adjustment.md)、[`05-api/admin/refund-and-reversal.md`](05-api/admin/refund-and-reversal.md)、[`05-api/admin/settlement-and-reconciliation.md`](05-api/admin/settlement-and-reconciliation.md)、[`05-api/admin/finance.md`](05-api/admin/finance.md)。公开兼容面使用 `/v1/*`、`/anthropic/v1/*`，平台业务面使用 `/api/v1/*`；`/api/v1/v1/*` 仅为按 ADR-0023 保留至 v1.x 的 deprecated alias。
+
 > 状态：`2026-08-09` 统一单前端+单后端后，前端 131 页共调用 **253 个 API 端点**，后端当时只注册 ~18 个。
 > `2026-08-14` 补「消费运营」整块后端接口（tracking/stream/anomaly/balance-alert），见 §2.4 消费运营行。
 > 本文档把契约一次性拉平：**前端路径即事实标准**，后端按此实现，不再出现"同一功能两套命名"。
@@ -76,7 +80,7 @@ client = Anthropic(base_url="https://api.<host>/anthropic", api_key="3c_xxx")
 - 注册自动建余额账户并赠送 `¥10.00` 体验金（无充值渠道下让"余额扣减"可演示）。
 - `/v1/chat/completions` 校验余额：不足 → `402 Insufficient Balance`，不调上游。
 - 成功后：`deductBalance`（乐观锁）+ `recordConsumption` + 更新 key 的 `last_used_at`。
-- 上游不可用（无供应商 key / 熔断 / 网络失败）→ **mock 回退**：返回模拟 completion，同样记账扣费，保证链路可演示。
+- 上游不可用（无渠道 key / 熔断 / 网络失败）→ **mock 回退**：返回模拟 completion，同样记账扣费，保证链路可演示。
 - 计费单价：优先取 `vendor_pricing` 该模型的定价；取不到用默认价（输入 ¥0.002/1K，输出 ¥0.008/1K）。
 
 ---
@@ -135,8 +139,8 @@ client = Anthropic(base_url="https://api.<host>/anthropic", api_key="3c_xxx")
 | /agent/ranking · /agent/reports | ✅（ranking 已实现，reports 待定） |
 
 ### 2.4 管理后台 `/admin/*`（体量最大，约 170 个）
-- **供应商/模型/定价**：/admin/vendors·/:id·/models·/keys、/admin/vendor-profiles、/admin/vendor-pricing·/:id·batch-adjust、/admin/vendor-models·/:id、/admin/vendor-costs·/:id、/admin/vendor-stats、/admin/vendor-performance、/admin/models·/:id、/admin/models/marketplace、/admin/multimodal-models·/:id、/admin/price-changes·/:id/notify — **⬜**（/admin/pricing 定价 CRUD ✅ 已实现；/admin/vendor-settlements/generate ✅ 已实现，见下方结算行）
-- **供应商→前端 `/admin/suppliers` 后端已有，但前端页面实际调的是 `/admin/vendors`** — 需后端按 `/admin/vendors` 对齐 ✅→（迁移后）
+- **渠道/模型/定价**：/admin/vendors·/:id·/models·/keys、/admin/vendor-profiles、/admin/vendor-pricing·/:id·batch-adjust、/admin/vendor-models·/:id、/admin/vendor-costs·/:id、/admin/vendor-stats、/admin/vendor-performance、/admin/models·/:id、/admin/models/marketplace、/admin/multimodal-models·/:id、/admin/price-changes·/:id/notify — **⬜**（/admin/pricing 定价 CRUD ✅ 已实现；/admin/vendor-settlements/generate ✅ 已实现，见下方结算行）
+- **渠道→前端 `/admin/suppliers` 后端已有，但前端页面实际调的是 `/admin/vendors`** — 需后端按 `/admin/vendors` 对齐 ✅→（迁移后）
 - **财务/资金**：/admin/finance/*、/admin/settlements、/admin/reconciliation·/diffs、/admin/cost/dashboard、/admin/cost/prediction、/admin/profit、/admin/manual-topup、/admin/finance/ledger/adjust — **⬜**（/admin/vendor-settlements/* + /admin/supplier-bill-match ✅ 已实现，见下方结算行）
 - **客户/工单/客服**：/admin/customers、/admin/agents·/:id·/assign·/level、/admin/tickets/:id/status·/reply·/note·/assign、/admin/chat/sessions/:id/transfer·/close、/admin/chat/status、/admin/support/*、/admin/quick-replies、/admin/knowledge-base·/:id·/categories — **⬜**
 - **运营/营销**：/admin/campaigns·/:id·/status·/grant、/admin/coupons/generate、/admin/discount-rules·/:id、/admin/affiliate/config·/records、/admin/announcements·/:id、/admin/redemption/batches·/:id/toggle — **⬜**
@@ -147,7 +151,7 @@ client = Anthropic(base_url="https://api.<host>/anthropic", api_key="3c_xxx")
 - **系统·已实现**：/admin/sys/logs·/logs/read、/admin/sys/version·/migrations、/admin/undo/records·/:id/execute(+config GET/PUT)、/admin/webhook-retry·/:id — **✅**（后端 `admin-ops.ts`，前端 `admin/config/logs·maintenance·undo·webhook-retry`）；/admin/email-templates(+/:name CRUD·/test)、/admin/email-logs — **✅ 已实现**（后端 `admin-email.ts`）
 - **系统·待实现**：/admin/sys/cache·/db、/admin/settings·/:id/versions、/admin/i18n/entries、/admin/subscription/plans·/subscribers、/admin/tax-banking/config·/history·/bank-accounts、/admin/notification-policies·/:id、/admin/webhooks·/:id·/logs·/test、/admin/roles — **⬜**
 - **看板/洞察**：/admin/performance — **✅ 已实现**（后端 `admin-ops.ts`，前端 `admin/config/performance`）；/admin/dashboard、/admin/cockpit（前端页面在但调用集中在以上端点）、/admin/commission/flow、/admin/competitive/monitor、/admin/conversion/funnel、/admin/operation/diff、/admin/operator/dashboard、/admin/price-changes — **⬜**（/admin/consumption/* 已实现，见上方消费运营行）
-- **供应商结算（P1-3）**：/admin/vendor-settlements/generate、/admin/vendor-settlements、/admin/vendor-settlements/:id、/admin/vendor-settlements/:id/download、/admin/vendor-settlements/:id/confirm、/admin/supplier-bill-match — **✅ 全部已实现**（后端 `admin-vendor-settlements.ts` + `services/finance/vendor-settlement.ts`，新表 vendor_settlements/vendor_settlement_items）
+- **渠道结算（P1-3）**：/admin/vendor-settlements/generate、/admin/vendor-settlements、/admin/vendor-settlements/:id、/admin/vendor-settlements/:id/download、/admin/vendor-settlements/:id/confirm、/admin/supplier-bill-match — **✅ 全部已实现**（后端 `admin-vendor-settlements.ts` + `services/finance/vendor-settlement.ts`，新表 vendor_settlements/vendor_settlement_items）
 - **公开**：/public/pricing ✅（后端已有）、/public/status · /public/stats ⬜、/health ✅
 
 ---
@@ -161,7 +165,7 @@ client = Anthropic(base_url="https://api.<host>/anthropic", api_key="3c_xxx")
 | 余额流水 | `balance_transactions` | user_id,type(consumption/recharge),amount,balance_after,reference_id |
 | API Key | `api_keys` | user_id,key_hash,key_prefix,name,status,last_used_at,expires_at |
 | 消费记录 | `consumption_records` | user_id,api_key_id,request_id,model,input/output/total_tokens,cost,status 派生 |
-| 模型/定价 | `supplier_models` + `vendor_pricing` + `suppliers` + `supplier_keys` | 供应商路由链 |
+| 模型/定价 | `supplier_models` + `vendor_pricing` + `suppliers` + `supplier_keys` | 渠道路由链 |
 | 对话留痕（新） | `conversation_context_records` | request_id,user_id,client_key_hash,requested_model,routed_model,supplier_id,supplier_key_fp,messages(jsonb),response_text,status,tokens,cost,occurred_at（保留策略存 `system_config` conv_retention） |
 | 消费异常（新） | `consumption_anomalies` | user_id,anomaly_type,amount,severity,status(pending/resolved/ignored),period_key,detail(jsonb)，unique(user_id,anomaly_type,period_key) |
 
@@ -184,7 +188,7 @@ client = Anthropic(base_url="https://api.<host>/anthropic", api_key="3c_xxx")
 ## 5. 后续切片建议（按依赖顺序）
 
 1. **交易切片**：充值（/me/recharge·订单+模拟支付回调）→ 发票 → 优惠券兑换 → 完整账单。
-2. **供应商管理切片**：/admin/vendors CRUD + 模型 + Key + 定价（后端已有 `/admin/suppliers` 骨架，迁移命名）。
+2. **渠道管理切片**：/admin/vendors CRUD + 模型 + Key + 定价（后端已有 `/admin/suppliers` 骨架，迁移命名）。
 3. **工单/通知切片**：/me/tickets + /admin/tickets + 站内通知 + email 模板。
 4. **代理商切片**：/agent/* + 佣金结算 + 提现。
 5. **风控/系统切片**：risk、audit、settings、sys。

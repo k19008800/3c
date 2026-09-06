@@ -810,7 +810,7 @@ POST /api/v1/admin/notifications/broadcast
   └── 外部依赖: 滑块验证码服务
 
 §21.8 系统状态页增强
-  ├── 后端: 公开状态 API + 供应商健康检查数据
+  ├── 后端: 公开状态 API + 渠道健康检查数据
   ├── 数据库: system_incidents + status_page_subscribers（新增表）
   ├── 邮件: 状态变更通知发送
   └── WebSocket: 实时状态推送（可选）

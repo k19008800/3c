@@ -1,0 +1,167 @@
+﻿# Page Coverage Report
+
+只读重建（2026-08-30）。本报告仅描述审计产物覆盖，不把页面文档存在视为业务实现通过。
+
+## 形式门禁
+
+- 基线页面数：151（以 `audit/00-baseline/page-inventory.csv` 为准）。
+- 页面审计明细：151 个非模板 `PAGE-*.md` 文件。
+- 原子行计数：150/151 达到每文件 100 行形式阈值。
+- 基线与报告文件差异：0 个页面未能通过当前报告文件名口径映射；该差异不等于页面实现缺失。
+- 形式门禁只检查文件、表格结构和计数；不等于功能验收。
+
+## 文件覆盖明细
+
+| 文件 | 原子行 | 形式结果 | 实质状态 |
+|---|---:|---|---|
+| `PAGE-about.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-activity.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-adjust.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-affiliate.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-agent-approvals.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-agents.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-announcements.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-apikey-security.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-audit-log.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-balance-alert.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-campaigns.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-chat.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-close.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-cockpit.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-commission-flow.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-competitive-monitor.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-consent.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-consumption-anomaly.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-consumption-stream.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-consumption-tracking.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-content-moderation.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-content.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-conversation-records.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-conversion-funnel.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-cost-dashboard.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-cost-prediction.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-coupon.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-credit.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-customer-detail.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-customer-success.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-customers.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-dashboard.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-data-request.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-deletion.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-discount-engine.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-dispute.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-email-templates.md` | 0 | 低于阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-finance-risk-config.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-finance.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-funds-accounts.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-groups.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-i18n.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-invoices.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-knowledge-base.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-manual-recharge.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-marketplace-health.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-marketplace.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-model-service.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-models.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-multimodal-models.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-notification-policy.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-operation-diff.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-operator-dashboard.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-payment.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-performance.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-permission-audit.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-price-change.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-pricing.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-profit.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-real-name.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-recharge-orders.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-reconciliation-diff.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-reconciliation.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-redemption.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-refund-review.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-risk-events.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-risk-rules.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-risk.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-roles.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-security-incident.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-security-ip-blacklist.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-settings.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-settlement.md` | 128 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-smtp-settings.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-subscription.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-supplier-bill-match.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-supplier-detail.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-supplier-list.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-support.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-sys-cache.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-sys-db.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-sys-logs.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-sys-version.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-tax-banking.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-tickets.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-undo.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-users-permission.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-vendor-cost.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-vendor-performance.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-vendor-pricing.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-vendor-profiles.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-vendor-settlements.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-vendor-stats.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-vendors.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-webhook-retry.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-webhooks.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-admin-withdrawals.md` | 144 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-agent-commission.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-agent-consumption.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-agent-customers.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-agent-dashboard.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-agent-invite.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-agent-ranking.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-agent-settings.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-agent-settlement.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-agent-withdraw.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-announcements-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-api-keys-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-billing-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-blog-slug.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-blog.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-consent.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-dashboard-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-deletion-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-forgot-password-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-help-center-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-home.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-invoices-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-login-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-logs-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-mj-suno-tasks.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-models.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-notification-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-notification-settings-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-o-auth-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-playground-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-pricing.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-real-name-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-recharge.md` | 134 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-redemption-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-register-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-sales-customer-detail.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-sales-customers.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-sales-performance.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-sales-reminders.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-security-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-statistics-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-status.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-tickets-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-topup-records-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-user-chat-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-user-groups-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-user-webhooks-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-ux-demo.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-vendor-dashboard.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-vendor-login.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-vendor-models.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-vendor-register.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-vendor-selector-page.md` | 111 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-vendor-settlements.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |
+| `PAGE-vendor-stats.md` | 158 | 达到阈值 | UNKNOWN（证据未成对确认） |

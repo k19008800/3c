@@ -29,16 +29,17 @@
 
 ### 1.3 用户角色
 
+> 当前 canonical 角色以 ADR-0024 和数据库 `user_role` 枚举为准。权限聚合（如财务权限）不得写成新的数据库角色。
+
 | 枚举值 | 显示名称 | 等级 | 说明 |
 |-------|---------|------|------|
-| `super_admin` | 超级管理员 | L5 | 全部权限，不可被管理 |
-| `admin` | 管理员 | L4 | 除财务放款/系统密钥外的全部管理权限 |
-| `finance_ops` | 财务专员 | L4 | 财务数据查看、充值审核、提现审核 |
-| `ops` | 运维工程师 | L4 | 配置管理、模型管理、日志查看 |
-| `support` | 客服/审核 | L4 | 用户管理（不含删除/改角色）、实名审核 |
-| `auditor` | 审计员 | L4 | 日志只读、审计查看 |
+| `super_admin` | 超级管理员 | L5 | 最高权限；最后一个不得删除、降权或锁定 |
+| `admin` | 管理员 | L4 | 管理权限，不含角色管理权限 |
 | `agent` | 代理商 | L3 | 名下用户管理、分佣数据、提现 |
-| `user` | 普通用户 | L2 | 基础用户功能 |
+| `sales` | 业务员 | L3 | 业务员功能，具体权限由权限点定义 |
+| `customer` | 普通用户 | L2 | 基础用户功能 |
+
+以下名称不是当前数据库角色枚举：`finance_ops`、`ops`、`support`、`auditor`、`user`。如未来启用，必须另行 ADR、迁移和权限矩阵。`finance` 只能作为权限聚合或权限点语义，不得作为 `users.role` 值。
 
 ### 1.4 用户类型
 
@@ -47,7 +48,7 @@
 | `personal` | 个人用户 |
 | `enterprise` | 企业用户 |
 
-### 1.5 供应商状态
+### 1.5 渠道状态
 
 | 枚举值 | 含义 | 路由影响 |
 |-------|------|---------|
@@ -76,7 +77,7 @@
 | 枚举值 | 含义 | 说明 |
 |-------|------|------|
 | `success` | 成功 | 正常返回 |
-| `failed` | 失败 | 供应商返回错误 |
+| `failed` | 失败 | 渠道返回错误 |
 | `timeout` | 超时 | 超过超时时间无响应 |
 | `cancelled` | 取消 | 请求中途取消 |
 | `rate_limited` | 被限流 | 命中限流规则 |
@@ -180,9 +181,9 @@
 | `ip_banned` | IP 封禁 | 命中黑名单规则 |
 | `user_banned` | 用户封禁 | 用户被禁用 |
 | `user_captcha` | 验证码触发 | 要求验证码 |
-| `circuit_trip` | 熔断触发 | 供应商熔断 |
-| `circuit_recovery` | 熔断恢复 | 供应商恢复 |
-| `vendor_failure` | 供应商失败 | 供应商连续失败 |
+| `circuit_trip` | 熔断触发 | 渠道熔断 |
+| `circuit_recovery` | 熔断恢复 | 渠道恢复 |
+| `vendor_failure` | 渠道失败 | 渠道连续失败 |
 | `test_alert` | 测试告警 | 系统测试告警 |
 
 ### 1.18 通知类型
@@ -233,7 +234,7 @@
 | `user_type` | 个人/企业 | 枚举：personal / enterprise | 决定发票类型 |
 | `role` | 用户角色 | 枚举，见 §1.3 | 权限判定依据 |
 | `status` | 用户状态 | 枚举，见 §1.1 | 登录/API 鉴权控制 |
-| `balance` | 可用余额 | 精度 18.6，单位 ¥ | 消费时扣减 |
+| `balance` | 历史兼容余额字段 | 不作为当前余额事实来源 | 新业务禁止引用；当前余额以 `customer_balances` 为准 |
 | `discount_rate` | 折扣率 | 范围 0-1，默认 1.0（无折扣）| 计费计算时乘以此值 |
 | `real_name_status` | 实名状态 | 枚举，见 §1.2 | 未实名不可调度 API |
 | `real_name` | 真实姓名 | 实名认证时填写 | 发票用 |
@@ -253,8 +254,8 @@
 | `user_id` | 调用用户 | NOT NULL | users.id |
 | `api_key_id` | 使用的 API Key | 可为 NULL（key 删除后保留记录）| api_keys.id |
 | `model_id` | 调用的模型 | 可为 NULL | models.id |
-| `vendor_model_id` | 供应商模型映射 | 记录实际使用的供应商 | vendor_models.id |
-| `vendor_name` | 供应商名称 | 冗余字段，避免关联查询 | 用于报表 |
+| `vendor_model_id` | 渠道模型映射 | 记录实际使用的渠道 | vendor_models.id |
+| `vendor_name` | 渠道名称 | 冗余字段，避免关联查询 | 用于报表 |
 | `model_name` | 模型名称 | 冗余字段 | 用于报表 |
 | `prompt_tokens` | 输入 Token 数 | 整数 | 计费依据 |
 | `completion_tokens` | 输出 Token 数 | 整数 | 计费依据 |
@@ -287,14 +288,14 @@
 | `last_used_at` | 最后使用时间 | 每次调用时更新 | 闲置检测 |
 | `created_at` | 创建时间 | 自动设置 | — |
 
-### 2.4 vendors（供应商表）
+### 2.4 vendors（渠道表）
 
 | 字段 | 业务含义 | 约束/规则 | 关联 |
 |------|---------|----------|------|
-| `id` | 供应商唯一标识 | 自增 | — |
-| `name` | 供应商名称 | 显示名称 | 前端展示 |
-| `api_base_url` | API 基础地址 | 供应商的 API 端点 | 转发请求 |
-| `status` | 供应商状态 | 枚举，见 §1.5 | 路由选择 |
+| `id` | 渠道唯一标识 | 自增 | — |
+| `name` | 渠道名称 | 显示名称 | 前端展示 |
+| `api_base_url` | API 基础地址 | 渠道的 API 端点 | 转发请求 |
+| `status` | 渠道状态 | 枚举，见 §1.5 | 路由选择 |
 | `priority` | 优先级 | 数值越小越优先 | 路由排序 |
 | `weight` | 权重 | 加权轮询时使用 | 路由负载均衡 |
 | `health_check_url` | 健康检查地址 | 可选，不同于 api_base_url | 健康检查 |
@@ -312,17 +313,17 @@
 | `description` | 模型描述 | 可选 | 模型详情页 |
 | `status` | 模型状态 | active / disabled | 可用性控制 |
 
-### 2.6 vendor_models（供应商模型映射表）
+### 2.6 vendor_models（渠道模型映射表）
 
 | 字段 | 业务含义 | 约束/规则 | 关联 |
 |------|---------|----------|------|
 | `id` | 映射唯一标识 | 自增 | — |
-| `vendor_id` | 供应商 | NOT NULL | vendors.id |
+| `vendor_id` | 渠道 | NOT NULL | vendors.id |
 | `model_id` | 模型 | NOT NULL | models.id |
-| `vendor_model_name` | 供应商侧的模型名 | 可能不同于 3cloud 的模型名 | 转发请求时使用 |
+| `vendor_model_name` | 渠道侧的模型名 | 可能不同于 3cloud 的模型名 | 转发请求时使用 |
 | `input_price` | 输入价格（¥/1K tokens）| 精度 18.6 | 用户计费依据 |
 | `output_price` | 输出价格（¥/1K tokens）| 精度 18.6 | 用户计费依据 |
-| `cost_input_price` | 输入成本价 | 精度 18.6，供应商结算价 | 毛利率计算 |
+| `cost_input_price` | 输入成本价 | 精度 18.6，渠道结算价 | 毛利率计算 |
 | `cost_output_price` | 输出成本价 | 精度 18.6 | 毛利率计算 |
 | `status` | 映射状态 | active / disabled | 可用性控制 |
 | `key_group_id` | 关联的 Key 资源池 | 可选 | 路由到具体 Key 池 |
@@ -434,7 +435,7 @@
 
 ### 2.14 conversation_context_records（对话上下文留痕表）
 
-> 每笔 `/v1/chat/completions` 请求落一条**完整上下文**（上文 messages + 响应原文 + 路由/Key/计费明细），后台查询/回放/导出，供交易纠纷举证与政府调证。内容全量原样存储、不脱敏；供应商 Key 只存 sha256 指纹。详见 [`ref-12.9-conversation-records.md`](ref-12.9-conversation-records.md)。
+> 每笔 `/v1/chat/completions` 请求落一条**完整上下文**（上文 messages + 响应原文 + 路由/Key/计费明细），后台查询/回放/导出，供交易纠纷举证与政府调证。内容全量原样存储、不脱敏；渠道 Key 只存 sha256 指纹。详见 [`ref-12.9-conversation-records.md`](ref-12.9-conversation-records.md)。
 
 | 字段 | 业务含义 | 约束/规则 | 关联 |
 |------|---------|----------|------|
@@ -444,10 +445,10 @@
 | `api_key_id` | 客户端 Key | 可空 | api_keys.id |
 | `client_key_hash` | 客户端 Key 指纹 | NOT NULL，复用 api_keys.key_hash | 溯源用哪个 Key |
 | `requested_model` | 用户请求模型 | NOT NULL | 如 gpt-4o |
-| `routed_model` | 实际路由模型 | 可空（未路由则空） | 供应商侧模型名 |
-| `supplier_id` | 实际供应商 | 可空 | suppliers.id |
-| `supplier_model_id` | 供应商模型 | 可空 | supplier_models.id |
-| `supplier_key_fp` | 供应商 Key 指纹 | 可空，sha256 前 32 位 | 不存明文 |
+| `routed_model` | 实际路由模型 | 可空（未路由则空） | 渠道侧模型名 |
+| `supplier_id` | 实际渠道 | 可空 | suppliers.id |
+| `supplier_model_id` | 渠道模型 | 可空 | supplier_models.id |
+| `supplier_key_fp` | 渠道 Key 指纹 | 可空，sha256 前 32 位 | 不存明文 |
 | `messages` | 请求上文 | NOT NULL，jsonb，**全量不脱敏** | 调证核心 |
 | `response_text` | 响应原文 | 可空（失败无响应） | 流式聚合全文 |
 | `finish_reason` | 结束原因 | stop / length / ... | 正常终止判断 |

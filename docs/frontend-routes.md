@@ -46,7 +46,7 @@
     ├── /data-export  → 数据导出授权
     ├── /account-deletion → 账号注销
     ├── /user-groups  → 用户分组
-    ├── /vendor-selector → 供应商选择器
+    ├── /vendor-selector → 渠道选择器
     ├── /topup-records→ 充值记录
     │
     ├── /admin/*      ← 管理后台（角色 L4+）
@@ -66,10 +66,10 @@
     │   │   ├── /cost-dashboard → 成本看板
     │   │   ├── /cost-prediction → 成本预测
     │   │   └── /profit → 利润分析
-    │   ├── /suppliers → 供应商管理
-    │   │   ├── /:id   → 供应商详情
-    │   │   ├── /vendor-profiles → 供应商档案
-    │   │   ├── /vendor-pricing → 供应商定价
+    │   ├── /suppliers → 渠道管理
+    │   │   ├── /:id   → 渠道详情
+    │   │   ├── /vendor-profiles → 渠道档案
+    │   │   ├── /vendor-pricing → 渠道售价
     │   │   └── /price-change → 价格变更
     │   ├── /agents    → 代理商管理
     │   │   └── /withdrawals → 提现审核
@@ -103,10 +103,10 @@
     │   ├── /withdraw  → 提现申请
     │   └── /settings  → 代理设置
     │
-    ├── /vendor/*     ← 供应商端（独立布局）
-    │   ├── /login    → 供应商登录
-    │   ├── /register → 供应商注册
-    │   ├── /dashboard → 供应商仪表盘
+    ├── /vendor/*     ← 渠道端（独立布局）
+    │   ├── /login    → 渠道登录
+    │   ├── /register → 渠道注册
+    │   ├── /dashboard → 渠道仪表盘
     │   ├── /models   → 模型管理
     │   ├── /stats    → 数据统计
     │   └── /settlements → 结算对账
@@ -194,12 +194,12 @@ AgentRoute (权限守卫)
         └── {children}
 ```
 
-### 2.5 Vendor 布局（供应商端）
+### 2.5 Vendor 布局（渠道端）
 
 ```
 VendorRoute (权限守卫)
 └── VendorLayout
-    ├── VendorSidebar（供应商侧导航）
+    ├── VendorSidebar（渠道侧导航）
     │   ├── 总览
     │   ├── 模型管理
     │   ├── API Key 管理
@@ -278,7 +278,7 @@ AdminDashboard
 ├── TopModels（热门模型排行）
 ├── ModelRankBar（模型排名）
 ├── TopUsersTable（活跃用户排行）
-├── VendorHealthPanel（供应商健康状态）
+├── VendorHealthPanel（渠道健康状态）
 ├── UsageChart（用量趋势图）
 ├── OverviewTrends（概览趋势）
 ├── ModelSchedulingRealtime（实时调度）
@@ -384,7 +384,7 @@ AgentDashboard
 | 应用 | 框架 | 端口 | 角色 | 路由范围 |
 |------|------|------|------|---------|
 | **web-portal** | Next.js 15 (App Router) | 5177 | 官网 + 代理/重定向层 | `/` 官网公开页；`/app/*`、`/api/*`、`/v1/*` rewrites 代理；旧 URL redirects |
-| **web-console** | Vite 6 + React Router 7 | 5175 (仅本机 dev) | **唯一业务应用** | `/app/` 基路径下全部页面（认证、用户端、管理后台、代理、供应商、业务员） |
+| **web-console** | Vite 6 + React Router 7 | 5175 (仅本机 dev) | **唯一业务应用** | `/app/` 基路径下全部页面（认证、用户端、管理后台、代理、渠道、业务员） |
 
 `5175` 只绑定 loopback（`host: "127.0.0.1"`），仅作为 web-portal 内部代理的 dev 服务，不对用户直连。
 
@@ -426,7 +426,7 @@ src/app/
 // web-console/src/App.tsx 路由结构
 
 <Routes>
-  {/* 供应商独立路由 */}
+  {/* 渠道独立路由 */}
   <Route path="/vendor/login" element={<VendorLoginPage />} />
   <Route path="/vendor/register" element={<VendorRegisterPage />} />
   <Route path="/vendor" element={<VendorLayout />}>
@@ -455,7 +455,7 @@ src/app/
     {/* 管理后台路由 /admin/* */}
     {/* 代理端路由 /agent/* */}
     {/* 业务员端路由 /sales/* */}
-    {/* 供应商端路由 /vendor/* */}
+    {/* 渠道端路由 /vendor/* */}
   </Route>
 </Routes>
 ```
@@ -491,7 +491,7 @@ location / {
 | 用户端 | 13 | Vite | `web-console/src/pages/` |
 | 管理后台 | 72 | Vite | `web-console/src/pages/admin/` + `web-console/src/pages/` |
 | 代理端 | 8 | Vite | `web-console/src/pages/Agent*.tsx` |
-| 供应商端 | 6 | Vite | `web-console/src/pages/vendor/` |
+| 渠道端 | 6 | Vite | `web-console/src/pages/vendor/` |
 | 业务员端 | 3 | Vite | `web-console/src/pages/Sales*.tsx` |
 | **合计** | **~106** | — | 单业务应用 web-console |
 

@@ -1,8 +1,10 @@
 # 3cloud 产品文档体系
 
-> 最后更新：2026-08-17
+> 最后更新：2026-08-31
 >
-> **阅读入口**：从 [`PRD-README.md`](PRD-README.md) 开始，它是唯一总纲，包含六章完整需求 + 非功能需求（§7）。
+> **正式准入入口**：[`00-index/README.md`](00-index/README.md)（治理规则见 [`00-index/governance-policy.md`](00-index/governance-policy.md)，五大资金主题交付追踪见 [`00-index/feature-package-matrix.md`](00-index/feature-package-matrix.md)，全量清单见 [`00-index/document-inventory.md`](00-index/document-inventory.md)）；只有满足治理准入条件的 `approved`/`accepted` 文档可作为开发与验收依据。
+>
+> **既有来源资料**：从 [`PRD-README.md`](PRD-README.md) 开始，它是运营级需求总纲（来源/需求资料，非唯一权威）。
 
 ---
 
@@ -10,7 +12,7 @@
 
 ```
 docs/
-├── PRD-README.md              ← 📌 唯一入口，七章需求总纲
+├── PRD-README.md              ← 来源总纲：运营级需求（非唯一权威，正式以 00-index 为准）
 │
 ├── ref-1-operational-summary.md    ← 深化：运营总纲（KPI + 用户分层）
 ├── ref-2.1-roles-permissions.md    ← 深化：角色权限体系（Bitset 矩阵）
@@ -23,14 +25,14 @@ docs/
 ├── ref-3-agent-system.md           ← 深化：代理商体系（等级/佣金/提现/结算）
 ├── ref-4.1-admin-dashboard.md      ← 深化：管理总览看板
 ├── ref-4.2-user-management.md     ← 深化：用户管理（列表/详情/批量/实名/导入导出）
-├── ref-4.3-vendor-model.md         ← 深化：供应商与模型管理
+├── ref-4.3-vendor-model.md         ← 深化：渠道与模型管理
 ├── ref-4.4-finance.md              ← 深化：财务管理（定价/充值/发票/对账）
 ├── ref-4.5-marketing.md            ← 深化：营销运营（活动/兑换码/公告）
 ├── ref-4.6-security.md             ← 深化：安全风控（5 层架构）
 ├── ref-4.7-monitor-logs.md         ← 深化：监控日志（7 种日志类型）
 ├── ref-4.8-system-config.md        ← 深化：系统配置（版本/快照/审批）
 ├── ref-4.9-report-testing.md       ← 深化：报告测试（导出/自定义报表）
-├── ref-4.10-vendor-self-service.md ← 深化：供应商自助管理（入驻/仪表盘/模型/结算）
+├── ref-4.10-vendor-self-service.md ← 深化：渠道自助管理（入驻/仪表盘/模型/结算）
 ├── ref-5.1-routing.md              ← 深化：智能路由系统
 ├── ref-5.2-billing.md              ← 深化：计费结算精化（价格层级/实时计费/账单/对账）
 ├── ref-5.3-rate-limiter.md         ← 深化：限流引擎（四级限流/算法/配额/可视化）
@@ -97,17 +99,25 @@ docs/
 
 ## 有效文档认定规则
 
-**只有被 `PRD-README.md` 引用的文件**才是当前有效的需求文档：
+> ⚠️ **2026-08-30 修订**：文档体系正在向正式化迁移。当前存在两套文档，其权威地位如下：
+>
+> - **正式（canonical）体系**：以 `00-index/README.md` 为**唯一准入入口**，其 `document-map.md`、`document-inventory.md` 登记全部正式文档。只有 `approved` 正文与 `accepted` ADR 可作为开发与验收依据。
+> - **既有来源体系**：`PRD-README.md` 及其引用的 `ref-*.md` 仍是有效的**来源/需求资料**，但不再作为唯一权威；需经迁移进入正式体系后才计入门禁。
+> - 二者**并存但层级分明**，禁止以 `README.md`（本文档）或 `PRD-README.md` 的引用范围覆盖正式体系的准入判定。
 
-- `PRD-README.md` 每个章节头部的 `📎 **深化参考**` 链接指向对应的 `ref-*.md`
-- `sprint-1/` 是独立的 Sprint 细化目录，由项目迭代管理
-- 不在上述范围的文件 → 全部已移入 `_archive/`
+具体判定规则（详见 `00-index/README.md`）：
+
+- **准入依据**：`00-index/` 的 `document-map.md`（第一批主题追溯）与 `document-inventory.md`（全量当前文档清单）。
+- **补充规格**：`supplement/`（01–09，重写前补充规格）已纳入 `document-inventory.md`，登记其补充对象与状态；在完成登记与评审前仍视为 `draft` 来源资料。
+- **Sprint 细化**：`sprint-1/` 是独立的 Sprint 细化目录，由项目迭代管理，已纳入 `document-inventory.md`。
+- **恢复草稿**：`_recovered/` 是临时工作区，非 canonical 需求源（自证见 `_recovered/*.notes.md`）；其内容须经人工恢复裁决并升格正式文档后，方可作为需求依据。
+- 不在上述清单范围的文件 → 应移入 `_archive/` 或登记到 `document-inventory.md`。
 
 ## 新增文档规范
 
 - 命名格式：`ref-{章节}-{功能名}.md`（如 `ref-4.6-security.md`）
 - 内容必须含：Drizzle Schema / API 接口 / 前端组件 Props / 交叉引用
-- 创建后必须在 `PRD-README.md` 对应章节头部添加 `📎` 链接
+- 创建后必须在 `00-index/document-inventory.md` 登记，并在 `PRD-README.md` 或对应正式章节添加链接
 
 ## 常见问题
 
@@ -118,4 +128,4 @@ docs/
 > A：不用。一次性的路由枚举和性能报告，代码已经迭代后它们不再准确。
 
 > **Q：如何确认我在看的最新文档？**
-> A：看 `README.md` 的"最后更新"日期。`PRD-README.md` + `ref-*.md` 是唯一当前版本。
+> A：以 `00-index/README.md` 为唯一准入入口，对照其 `document-map.md` 与 `document-inventory.md`。`PRD-README.md` + `ref-*.md` 为既有来源资料；两者层级以正式体系为准。

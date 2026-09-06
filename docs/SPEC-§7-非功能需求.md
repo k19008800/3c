@@ -41,7 +41,7 @@
 | 批量操作（万级） | < 3s | ✅ 已达标 |
 | API 并发 | 1000+ QPS | ✅ 经四级限流保护 |
 
-**可用性**：单机部署，PM2 cluster 自动重启，供应商故障自动熔断切换
+**可用性**：单机部署，PM2 cluster 自动重启，渠道故障自动熔断切换
 
 **安全**：HTTP Only Cookie 鉴权、bcrypt API Key hash、CORS 配置、IP 黑白名单、2FA
 

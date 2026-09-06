@@ -1,0 +1,407 @@
+=== 3cloud REAL timestamp ===
+generated: 2026-09-04T09:00:32.0453225+08:00
+workdir: C:\Users\ZH\.openclaw\workspace\3cloud
+
+######## EXEC: git status --short --branch ########
+## feat/impersonation
+ M .deploy-gate-approved
+ M api/package.json
+ M api/src/app.ts
+ M api/src/db/migrations/0019_adjustment_records.sql
+ M api/src/db/migrations/0027_recharge_orders_idempotency.sql
+ M api/src/db/migrations/0028_recharge_orders_transfer_no_unique.sql
+ M api/src/db/migrations/0029_credit_limit_events.sql
+ M api/src/db/migrations/0030_adjustment_pending_super.sql
+ M api/src/db/schema/agent-commissions.ts
+ M api/src/db/schema/announcements.ts
+ M api/src/db/schema/api-keys.ts
+ M api/src/db/schema/campaigns.ts
+ M api/src/db/schema/consumption-anomalies.ts
+ M api/src/db/schema/consumption-records.ts
+ M api/src/db/schema/coupons.ts
+ M api/src/db/schema/email-logs.ts
+ M api/src/db/schema/gap-fix-2026-08.ts
+ M api/src/db/schema/index.ts
+ M api/src/db/schema/price-change-logs.ts
+ M api/src/db/schema/suppliers.ts
+ M api/src/db/schema/users.ts
+ M api/src/db/seed.ts
+ M api/src/lib/errors.ts
+ M api/src/lib/finance-rules.ts
+ M api/src/lib/permissions.ts
+ M api/src/middleware/require-perm.test.ts
+ M api/src/routes/admin-adjust.test.ts
+ M api/src/routes/admin-analytics.ts
+ M api/src/routes/admin-consumption.ts
+ M api/src/routes/admin-conversation-records.ts
+ M api/src/routes/admin-credit.ts
+ M api/src/routes/admin-finance-missing.ts
+ M api/src/routes/admin-finance-stats.ts
+ M api/src/routes/admin-i18n.ts
+ M api/src/routes/admin-invoices.ts
+ M api/src/routes/admin-marketplace.ts
+ M api/src/routes/admin-misc-missing.ts
+ M api/src/routes/admin-payment.ts
+ M api/src/routes/admin-permissions.ts
+ M api/src/routes/admin-price-changes.ts
+ M api/src/routes/admin-recharge-orders.test.ts
+ M api/src/routes/admin-risk-finance.test.ts
+ M api/src/routes/admin-security.ts
+ M api/src/routes/admin-settings.ts
+ M api/src/routes/admin-support-extra.ts
+ M api/src/routes/admin-withdrawals.ts
+ M api/src/routes/agent.ts
+ M api/src/routes/announcements-gap.test.ts
+ M api/src/routes/anthropic.ts
+ M api/src/routes/apikeys.ts
+ M api/src/routes/auth.ts
+ M api/src/routes/chat.ts
+ M api/src/routes/data-requests.ts
+ M api/src/routes/me-gap-knowledge-base.test.ts
+ M api/src/routes/me-gap.ts
+ M api/src/routes/me-sales.ts
+ M api/src/routes/me.ts
+ M api/src/routes/public.ts
+ M api/src/routes/recharge.ts
+ M api/src/routes/suppliers.ts
+ M api/src/routes/task-relay.ts
+ M api/src/routes/ws.ts
+ M api/src/services/agent/commission-backfill.ts
+ M api/src/services/agent/settlement.ts
+ M api/src/services/auth/totp.ts
+ M api/src/services/billing/consumption-log.ts
+ M api/src/services/billing/credit-limit.test.ts
+ M api/src/services/billing/credit-limit.ts
+ M api/src/services/billing/ledger.ts
+ M api/src/services/billing/pricing.ts
+ M api/src/services/consumption/anomaly.ts
+ M api/src/services/finance/vendor-settlement.ts
+ M api/src/services/idempotency.ts
+ M api/src/services/pipeline/integration.test.ts
+ M api/src/services/pipeline/steps/proxy.ts
+ M api/src/services/pipeline/steps/route.ts
+ M api/src/services/pipeline/types.ts
+ M api/src/services/price-notification.ts
+ M api/src/services/upstream/proxy.ts
+ M api/src/services/upstream/responses-stream.ts
+ M api/src/services/upstream/ws-relay.ts
+ M api/test/2fa.test.ts
+ M api/test/agent-settlement.test.ts
+ M api/test/data-requests.test.ts
+ M api/test/idempotency-gateway.test.ts
+ M api/test/me-endpoints.test.ts
+ M deploy/deploy.sh
+ M deploy/deployment-checklist.md
+ M deploy/deployment-runbook.md
+ M deploy/ecosystem.config.js
+ M "docs/ARCH-\346\225\264\346\224\271R5-R7-\350\265\204\351\207\221\351\243\216\346\216\247.md"
+ M "docs/P0-\347\274\223\345\255\230\345\256\232\344\273\267\344\270\216\347\274\223\345\255\230\350\256\241\351\207\217-\345\274\200\345\217\221\344\273\273\345\212\241\344\271\246.md"
+ M docs/PRD-README.md
+ M "docs/PRD-\302\2475.5-\346\250\241\345\236\213\344\273\267\346\240\274\345\217\230\346\233\264\351\200\232\347\237\245.md"
+ M "docs/PRD-\346\225\264\346\224\271R5-R7-\350\265\204\351\207\221\351\243\216\346\216\247.md"
+ M "docs/PRD-\346\250\241\345\236\213\347\274\223\345\255\230\345\256\232\344\273\267\344\270\216\347\274\223\345\255\230\350\256\241\351\207\217.md"
+ M docs/PRODUCT-DESIGN-PRINCIPLES.md
+ M docs/README.md
+ M docs/SPEC-ref-notification-templates.md
+ M "docs/SPEC-\302\2471-\345\271\263\345\217\260\345\256\232\344\275\215\344\270\216\350\277\220\350\220\245\346\250\241\345\236\213.md"
+ M "docs/SPEC-\302\24712-\347\263\273\347\273\237\347\256\241\347\220\206\345\221\230\346\224\257\346\222\221.md"
+ M "docs/SPEC-\302\24713-\346\225\260\346\215\256\350\277\201\347\247\273\346\226\271\346\241\210.md"
+ M "docs/SPEC-\302\24718-\347\224\250\346\210\267\347\253\257\344\275\223\351\252\214\345\242\236\345\274\272.md"
+ M "docs/SPEC-\302\2472-\347\224\250\346\210\267\344\275\223\347\263\273.md"
+ M "docs/SPEC-\302\24720-\347\224\250\346\210\267\347\253\257\345\256\211\345\205\250\344\270\216\351\242\204\347\256\227\345\242\236\345\274\272.md"
+ M "docs/SPEC-\302\24721-Portal\351\227\250\346\210\267\345\242\236\345\274\272.md"
+ M "docs/SPEC-\302\24723-\347\263\273\347\273\237\347\272\247\350\203\275\345\212\233\345\242\236\345\274\272.md"
+ M "docs/SPEC-\302\24725-\344\276\233\345\272\224\345\225\206\345\242\236\345\274\272.md"
+ M "docs/SPEC-\302\24729-\350\265\204\351\207\221\344\270\216\345\257\271\350\264\246\347\256\241\347\220\206.md"
+ M "docs/SPEC-\302\24730-\346\235\203\351\231\220\347\256\241\347\220\206.md"
+ M "docs/SPEC-\302\24731-\344\276\233\345\272\224\345\225\206\346\225\205\351\232\234\346\274\224\347\273\203\344\270\216\345\244\232\347\216\257\345\242\203\347\256\241\347\220\206.md"
+ M "docs/SPEC-\302\24732-\347\254\254\344\270\211\346\226\271\351\233\206\346\210\220\344\270\216SSO.md"
+ M "docs/SPEC-\302\24733-\345\220\210\350\247\204\346\263\225\345\212\241\344\270\216\346\210\220\346\234\254\345\210\206\346\236\220.md"
+ M "docs/SPEC-\302\2474-\347\256\241\347\220\206\345\220\216\345\217\260.md"
+ M "docs/SPEC-\302\2475-\346\240\270\345\277\203\345\274\225\346\223\216.md"
+ M "docs/SPEC-\302\2476-Portal\351\227\250\346\210\267.md"
+ M "docs/SPEC-\302\2477-\351\235\236\345\212\237\350\203\275\351\234\200\346\261\202.md"
+ M "docs/SPEC-\351\252\214\350\257\201\346\212\245\345\221\212.md"
+ M docs/api-contract.md
+ M docs/api-reference.md
+ M docs/architecture.md
+ M docs/boundary-condition-audit-report.md
+ M docs/boundary-supplement.md
+ M docs/data-dictionary.md
+ M docs/flowcharts/04-vendor-status-switch.md
+ M docs/flowcharts/05-auto-reconciliation.md
+ M docs/flowcharts/README.md
+ M docs/frontend-routes.md
+ M docs/gap-fix-spec-2026-08-18.md
+ M docs/gap/code-vs-doc-api-gap.md
+ M docs/gap/gap-analysis-report.md
+ M "docs/gap/\351\207\215\346\236\204\347\274\272\345\217\243\345\210\206\346\236\220.md"
+ M docs/iteration-plan-v1.md
+ M docs/iteration-plan-v2.md
+ M docs/ops-business-plan.md
+ M docs/ops-guide.md
+ M docs/ops-manual.md
+ M "docs/ops-\350\241\245\345\205\205-\345\256\242\346\234\215\345\215\207\347\272\247\344\270\216\347\224\250\346\210\267\351\200\232\347\237\245.md"
+ M "docs/ops-\350\241\245\345\205\205-\346\225\260\346\215\256\350\277\201\347\247\273\350\277\220\350\220\245\345\275\261\345\223\215.md"
+ M docs/prototype-gap-mapping.md
+ M docs/ref-1-operational-summary.md
+ M docs/ref-11.7-sales-knowledge.md
+ M docs/ref-12.1-audit-console.md
+ M docs/ref-12.6-health-dashboard.md
+ M docs/ref-12.9-conversation-records.md
+ M docs/ref-2.1-roles-permissions.md
+ M docs/ref-2.2-user-dashboard.md
+ M docs/ref-2.2.2-model-center.md
+ M docs/ref-25-vendor-enhance.md
+ M docs/ref-28-smart-cs.md
+ M docs/ref-30-permission-management.md
+ M docs/ref-31-drill-multi-env.md
+ M docs/ref-4.10-vendor-self-service.md
+ M docs/ref-4.12-dashboard-pro.md
+ M docs/ref-4.14-report-push.md
+ M docs/ref-4.15-vendor-settlement.md
+ M docs/ref-4.17-template-library.md
+ M docs/ref-4.18-kpi-drill-healthcheck.md
+ M docs/ref-4.19-open-api-platform.md
+ M docs/ref-4.3-vendor-model.md
+ M docs/ref-4.4-finance.md
+ M docs/ref-4.4.5-reconciliation-prd.md
+ M docs/ref-4.6-security.md
+ M docs/ref-4.7-monitor-logs.md
+ M docs/ref-5.1-routing.md
+ M docs/ref-5.2-billing.md
+ M docs/ref-5.3-rate-limiter.md
+ M docs/ref-5.4-alert-rules.md
+ M docs/ref-5.5-open-api-platform.md
+ M docs/ref-5.5-user-quota-budget.md
+ M docs/ref-5.6-auto-ops.md
+ M docs/ref-5.7-load-test-design.md
+ M docs/ref-6-portal.md
+ M docs/ref-7-nfr.md
+ M "docs/supplement/01-\350\256\241\350\264\271\345\274\225\346\223\216\347\212\266\346\200\201\346\234\272.md"
+ M "docs/supplement/02-\345\257\271\350\264\246\345\267\256\345\274\202\345\244\204\347\220\206\345\256\232\351\207\217\350\247\204\345\210\231.md"
+ M "docs/supplement/05-\350\267\257\347\224\261\347\206\224\346\226\255\346\201\242\345\244\215\346\242\257\345\272\246.md"
+ M "docs/supplement/06-\345\205\250\351\223\276\350\267\257\344\270\200\350\207\264\346\200\247\345\245\221\347\272\246.md"
+ M "docs/supplement/07-Schema\351\207\215\350\256\276\350\256\241\345\273\272\350\256\256.md"
+ M "docs/supplement/08-\347\263\273\347\273\237\347\212\266\346\200\201\346\234\272\346\200\273\345\233\276.md"
+ M "docs/supplement/09-\351\201\227\346\274\217\350\241\245\344\270\201.md"
+ M docs/test-cases.md
+ M docs/user-vendor-selection.md
+ M docs/ux-flow-route-mapping.md
+ M "docs/\344\270\232\345\212\241\345\212\237\350\203\275\345\275\222\346\200\273.md"
+ M "docs/\345\216\237\345\236\213\345\256\236\347\216\260\345\257\271\347\205\247\345\256\241\350\256\241-2026-08-18.md"
+ M "docs/\346\225\264\346\224\271\346\226\271\346\241\210-\347\224\250\346\210\267\347\253\257\346\274\224\347\273\203\351\227\256\351\242\230\344\277\256\345\244\215-20260818.md"
+ M "docs/\346\226\271\346\241\210-\346\250\241\345\236\213\347\274\223\345\255\230\345\256\232\344\273\267\344\270\216\347\274\223\345\255\230\350\256\241\351\207\217.md"
+ M e2e/playwright.config.ts
+ M e2e/tests/console.spec.ts
+ M e2e/tests/fullflow.spec.ts
+ M kb/INDEX.md
+ M kb/infrastructure/credentials.md
+ M kb/obsidian/notes/infrastructure/INDEX.md
+ M kb/obsidian/notes/infrastructure/credentials.md
+ M package.json
+ M packages/shared-ui/src/admin-system.css
+ M pnpm-lock.yaml
+ M scripts/test-integration.cjs
+ M web-console/src/App.tsx
+ M web-console/src/components/playground/ChatTab.tsx
+ M web-console/src/components/playground/types.ts
+ M web-console/src/layouts/ConsoleLayout.tsx
+ M web-console/src/lib/permissions.ts
+ M web-console/src/main.tsx
+ M web-console/src/pages/AdminAffiliatePage.tsx
+ M web-console/src/pages/AdminCampaignsPage.tsx
+ M web-console/src/pages/AdminCreditPage.tsx
+ M web-console/src/pages/AdminDataRequestPage.tsx
+ M web-console/src/pages/AdminDeletionPage.tsx
+ M web-console/src/pages/AdminFinanceRiskConfigPage.tsx
+ M web-console/src/pages/AdminI18nPage.tsx
+ M web-console/src/pages/AdminRealNamePage.tsx
+ M web-console/src/pages/AdminRolesPage.tsx
+ M web-console/src/pages/AdminSupportPage.tsx
+ M web-console/src/pages/AdminSysDbPage.tsx
+ M web-console/src/pages/AdminUndoPage.tsx
+ M web-console/src/pages/AdminWebhookRetryPage.tsx
+ M web-console/src/pages/AgentInvitePage.tsx
+ M web-console/src/pages/AgentSettingsPage.tsx
+ M web-console/src/pages/AgentSettlementPage.tsx
+ M web-console/src/pages/ApiKeysPage.tsx
+ M web-console/src/pages/ConsentPage.tsx
+ M web-console/src/pages/DashboardPage.tsx
+ M web-console/src/pages/DeletionPage.tsx
+ M web-console/src/pages/ForgotPasswordPage.tsx
+ M web-console/src/pages/LoginPage.tsx
+ M web-console/src/pages/LogsPage.tsx
+ M web-console/src/pages/RealNamePage.tsx
+ M web-console/src/pages/RechargePage.tsx
+ M web-console/src/pages/RegisterPage.tsx
+ M web-console/src/pages/SalesCustomerDetailPage.tsx
+ M web-console/src/pages/SalesPerformancePage.tsx
+ M web-console/src/pages/SalesRemindersPage.tsx
+ M web-console/src/pages/SecurityPage.tsx
+ M web-console/src/pages/StatisticsPage.tsx
+ M web-console/src/pages/TopupRecordsPage.tsx
+ M web-console/src/pages/UserChatPage.tsx
+ M web-console/src/pages/UxDemoPage.tsx
+ M web-console/src/pages/VendorSelectorPage.tsx
+ M web-console/src/pages/admin/AdminCompetitiveMonitorPage.tsx
+ M web-console/src/pages/admin/AdminConsumptionStreamPage.tsx
+ M web-console/src/pages/admin/AdminModelServicePage.tsx
+ M web-console/src/pages/admin/AdminReconciliationDiffPage.tsx
+ M web-console/src/pages/admin/AdminRiskEventsPage.tsx
+ M web-console/src/pages/admin/AdminRiskPage.tsx
+ M web-console/src/pages/admin/AdminSettlementPage.tsx
+ M web-console/src/pages/admin/AdminVendorPricingPage.tsx
+ M web-console/src/pages/vendor/VendorLoginPage.tsx
+ M web-console/src/pages/vendor/VendorRegisterPage.tsx
+ M web-console/src/test/sharedUiMock.tsx
+ M web-portal/src/app/about/page.tsx
+ M web-portal/src/app/layout.tsx
+ M web-portal/src/app/page.tsx
+ M web-portal/src/app/pricing/page.tsx
+ M web-portal/src/components/LanguageSwitcher.tsx
+ M web-portal/src/lib/i18n.ts
+?? api/lib/
+?? api/run-manual-migrations.cjs
+?? api/run-migration-0032.cjs
+?? api/scripts/seed-wanyou-pricing.ts
+?? api/scripts/verify-wanyou-pricing.ts
+?? api/src/db/migrations/0032_user_language_i18n.sql
+?? api/src/db/migrations/0033_refund_hardening.sql
+?? api/src/db/migrations/0034_reconciliation.sql
+?? api/src/db/migrations/0035_login_history.sql
+?? api/src/db/migrations/0036_data_export_grants.sql
+?? api/src/db/schema/data-export-grants.ts
+?? api/src/db/schema/login-history.ts
+?? api/src/db/schema/reconciliation.ts
+?? api/src/lib/i18n-langs.test.ts
+?? api/src/lib/i18n-langs.ts
+?? api/src/routes/admin-affiliate-coupons.test.ts
+?? api/src/routes/admin-affiliate-coupons.ts
+?? api/src/routes/admin-competitive-marketplace.test.ts
+?? api/src/routes/admin-competitive.ts
+?? api/src/routes/admin-reconciliation.ts
+?? api/src/routes/agent-console.test.ts
+?? api/src/routes/agent-console.ts
+?? api/src/routes/data-export-grants.ts
+?? api/src/routes/me-gap-endpoints.test.ts
+?? api/src/routes/me-onboarding-tags.test.ts
+?? api/src/routes/me-onboarding.ts
+?? api/src/routes/me-recharge-endpoints.test.ts
+?? api/src/routes/models-endpoints.test.ts
+?? api/src/services/compliance/data-export-grant.service.ts
+?? api/src/services/finance/reconciliation.ts
+?? api/test/backup-restore.test.ts
+?? api/test/data-export-grants.test.ts
+?? api/test/i18n-scope.test.ts
+?? api/test/manual-migrations-runner.test.ts
+?? api/test/reconciliation-t04.test.ts
+?? api/tmp-check-db.mjs
+?? audit/
+?? docs/00-index/
+?? docs/01-product/
+?? docs/02-requirements/
+?? docs/03-functional-spec/
+?? docs/05-api/
+?? docs/06-data-and-architecture/
+?? docs/07-quality-and-acceptance/
+?? docs/08-operations-and-deployment/
+?? docs/09-decisions/
+?? "docs/PRD-\346\225\260\346\215\256\345\257\274\345\207\272\346\216\210\346\235\203\347\256\241\347\220\206.md"
+?? "docs/PRD-\346\270\240\351\201\223\345\214\226\346\234\257\350\257\255\347\273\237\344\270\200\344\270\216\347\224\250\346\210\267\350\207\252\351\200\211\346\270\240\351\201\223\345\256\232\344\273\267.md"
+?? "docs/SPEC-\346\270\240\351\201\223\345\214\226\346\234\257\350\257\255\347\273\237\344\270\200\344\270\216\347\224\250\346\210\267\350\207\252\351\200\211\346\270\240\351\201\223\345\256\232\344\273\267.md"
+?? "docs/_closeout-plan-\351\234\200\346\261\202\346\226\207\346\241\243\345\217\221\345\261\225\345\256\214\346\257\225-2026-09.md"
+?? docs/_draft-rulings-D01-D08-2026-09.md
+?? docs/_i18n-review-synthesis-draft.md
+?? docs/_recovered/
+?? docs/contract-gap-audit-2026-09.md
+?? docs/delivery-audit-worklog-2026-09.md
+?? "docs/gap/\346\270\240\351\201\223\345\214\226\346\224\271\351\200\240-\346\236\266\346\236\204\350\257\204\345\256\241.md"
+?? docs/implementation-spec-me-endpoints.md
+?? "docs/\345\244\232\350\257\255\350\250\200i18n\346\224\271\351\200\240\346\226\271\346\241\210.md"
+?? "docs/\345\273\272\350\256\256-Portal\351\227\250\346\210\267\345\244\232\350\257\255\350\250\200\346\226\271\346\241\210.md"
+?? "docs/\345\274\200\345\217\221\350\277\233\345\272\246\346\200\273\347\273\223.md"
+?? "docs/\346\226\271\346\241\210-\346\270\240\351\201\223\345\214\226\346\224\271\351\200\240\344\270\216\347\224\250\346\210\267\350\207\252\351\200\211\346\270\240\351\201\223\345\256\232\344\273\267.md"
+?? "docs/\346\234\257\350\257\255\345\257\271\347\205\247\350\241\250.md"
+?? "docs/\351\234\200\346\261\202\346\226\207\346\241\243\345\256\214\346\225\264\346\200\247\345\256\241\350\256\241-2026-08-30-\345\244\215\346\240\270\345\242\236\350\241\245\347\211\210.md"
+?? "docs/\351\234\200\346\261\202\346\226\207\346\241\243\345\256\214\346\225\264\346\200\247\345\256\241\350\256\241-2026-08-30.md"
+?? e2e/global-setup.cjs
+?? e2e/test-reports/
+?? e2e/tests/user-features.spec.ts
+?? e2e/tests/user-real-flow.spec.ts
+?? kb/infrastructure/dev-setup.md
+?? kb/obsidian/notes/infrastructure/dev-setup.md
+?? ops-check-result.txt
+?? ops/
+?? scripts/req-completeness-check.cjs
+?? test-reports/evidence/user-_account-deletion.png
+?? test-reports/evidence/user-_announcements.png
+?? test-reports/evidence/user-_api-keys.png
+?? test-reports/evidence/user-_app.png
+?? test-reports/evidence/user-_app_api-keys.png
+?? test-reports/evidence/user-_app_billing.png
+?? test-reports/evidence/user-_app_security.png
+?? test-reports/evidence/user-_app_tickets.png
+?? test-reports/evidence/user-_billing.png
+?? test-reports/evidence/user-_chat.png
+?? test-reports/evidence/user-_data-export.png
+?? test-reports/evidence/user-_help.png
+?? test-reports/evidence/user-_invoices.png
+?? test-reports/evidence/user-_logs.png
+?? test-reports/evidence/user-_mj-tasks.png
+?? test-reports/evidence/user-_notification.png
+?? test-reports/evidence/user-_playground.png
+?? test-reports/evidence/user-_real-name.png
+?? test-reports/evidence/user-_recharge.png
+?? test-reports/evidence/user-_redemption.png
+?? test-reports/evidence/user-_security.png
+?? test-reports/evidence/user-_settings_notifications.png
+?? test-reports/evidence/user-_statistics.png
+?? test-reports/evidence/user-_tickets.png
+?? test-reports/evidence/user-_topup-records.png
+?? test-reports/evidence/user-_user-groups.png
+?? test-reports/evidence/user-_vendor-selector.png
+?? test-reports/evidence/user-_webhooks.png
+?? test-reports/final-doccheck-00-index.txt
+?? test-reports/final-doccheck-07.txt
+?? test-reports/final-doccheck-08.txt
+?? test-reports/finance-rerun-2026-08-31.txt
+?? test-reports/user-feature-qa-2026-09-02.md
+?? web-console/src/components/ChannelPriceMatrixModal.tsx
+?? web-console/src/layouts/ConsoleLayout.dataExport.test.tsx
+?? web-console/src/lib/channelization.ts
+?? web-console/src/lib/fmt.ts
+?? web-console/src/lib/i18n-context.tsx
+?? web-console/src/lib/i18n-manifest.json
+?? web-console/src/lib/i18n.test.ts
+?? web-console/src/lib/i18n.ts
+?? web-console/src/pages/AdminDataExportGrantPage.test.tsx
+?? web-console/src/pages/AdminDataExportGrantPage.tsx
+
+######## EXEC: git branch -vv --all ########
++ claude/nice-mendeleev-68f539 e31ba8f (C:/Users/ZH/.openclaw/workspace/3cloud/.claude/worktrees/nice-mendeleev-68f539) refactor: 后端端口 3030 → 3000
+* feat/impersonation           1dd732b feat(api+console): 管理员以用户身份登录（Impersonation）安全能力
+  main                         97928c6 [origin/main] ﻿feat(api+console+docs): 用户演练整改 R1-R8 + 财务风控/额度/缓存定价收口
+  remotes/origin/HEAD          -> origin/main
+  remotes/origin/main          97928c6 ﻿feat(api+console+docs): 用户演练整改 R1-R8 + 财务风控/额度/缓存定价收口
+
+######## EXEC: git log -10 --decorate --oneline ########
+1dd732b (HEAD -> feat/impersonation) feat(api+console): 管理员以用户身份登录（Impersonation）安全能力
+97928c6 (origin/main, origin/HEAD, main) ﻿feat(api+console+docs): 用户演练整改 R1-R8 + 财务风控/额度/缓存定价收口
+bfb6f84 docs(deploy): P3-3 部署材料整理 — runbook + vhost 复核 + 闸门标记
+68fe3e2 feat(p3): 工程与可观测性收尾 — 大表分区 + 压测 + 结构化日志 + 部署准备
+166d2f2 feat(admin): admin 契约补齐批次收口 — 12 新路由 + 10 新表(migration 0017-0024c) + 2 新页面 + 30 页面增强
+2eb5e73 docs: P2 验收 — iteration-plan-v2 宣告 P2 完成（792/792 单测、verify 17/17、E2E 10/10、build 全过）
+1789c5f feat(api): P2-4 安全合规 — 数据导出/账号删除/IP 黑名单/合规报告
+04b3ec7 feat(api+portal+console): P2-3 Portal 商业化 — i18n / SEO / 博客
+a4e72bc feat(api+console): P2-2 代理增长机制 — 邀请注册闭环/排行榜增强/营销素材库
+bc862ba feat(api+console): P2-1 六层定价引擎 — L5活动→L4分组→L3代理→L2覆盖→L1标准
+
+######## EXEC: git rev-parse HEAD ########
+1dd732b1b60e18f6d9c6c32a88ae8343beb6c38b
+
+######## Environment ########
+node: v24.18.0
+npm: 11.16.0
+pnpm: 11.22.0
+os: Microsoft Windows NT 10.0.26200.0

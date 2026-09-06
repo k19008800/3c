@@ -95,8 +95,8 @@ Host 8.149.140.186 3cloud-ali
 
 | 服务 | 连接串 |
 |------|--------|
-| PostgreSQL | `postgres://postgres:postgres@localhost:5432/threecloud` |
-| Redis (Memurai) | `redis://localhost:6379` |
+| PostgreSQL | `postgres://postgres:postgres@localhost:5432/threecloud_v3` |
+| Redis (Docker Desktop 容器 redis) | `redis://localhost:6379` |
 
 ---
 

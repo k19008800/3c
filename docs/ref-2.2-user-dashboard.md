@@ -639,7 +639,7 @@ interface OptimizationSuggestionsProps {
 | 告警中心 | 5.4 通知与告警 | `ref-5.4-alert-rules.md` |
 | Onboarding | 新手任务 | `PRD-README.md` 补充 |
 | 成本预测 | 5.2 计费结算 | `PRD-README.md` §5.2 |
-| 优化建议 | 4.3 供应商模型 | `ref-4.3-vendor-model.md` |
+| 优化建议 | 4.3 渠道模型 | `ref-4.3-vendor-model.md` |
 | 模型分布 | 4.3.2 模型管理 | `ref-4.3-vendor-model.md` |
 | 账单概览 | 4.4 财务管理 | `PRD-README.md` §4.4 |
 | 登录记录 | 2.1 角色权限 | `PRD-README.md` §2.1 |
@@ -648,7 +648,7 @@ interface OptimizationSuggestionsProps {
 
 > **关联文档**
 > - `PRD-README.md` §2.2.1 — 用户端功能规格（本文件的基础）
-> - `ref-4.3-vendor-model.md` — 供应商与模型管理
+> - `ref-4.3-vendor-model.md` — 渠道与模型管理
 > - `ref-5.4-alert-rules.md` — 告警规则配置
 > - `PRD-README.md` §4.4 — 财务管理
 

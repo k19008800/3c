@@ -1,0 +1,31 @@
+﻿req_id,domain,bad_fields,current_prd_line,current_prd_heading,spec_reference_line,spec_reference_quote,spec_similarity,action,status
+UA2-00001,user-agent,source_quote;atomic_assertion,4,2: ### 2.1 瑙掕壊涓庢潈闄愪綋绯|,22,> **深化参考**：`ref-2.1-roles-permissions.md` + `ref-2.2-user-dashboard.md` + `ref-2.2.2-model-center.md` + `ref-2.2.3-api-keys.md` + `ref-2.2.4-call-logs.md` + `ref-2.2.6-recharge.md` + `ref-2.2.8-redemption-invoices.md`,0.281,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00004,user-agent,source_quote;atomic_assertion,10,6: #### 2.1.1 瑙掕壊鐭╅樀,552,| 查看详情 | 查看选中记录的完整信息 |,0.000,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00009,user-agent,source_quote;atomic_assertion,11,6: #### 2.1.1 瑙掕壊鐭╅樀,239,| Key 明文存储 | 不存在数据库中，仅存 bcrypt hash；创建时一次性展示 |,0.033,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00044,user-agent,source_quote;atomic_assertion,18,6: #### 2.1.1 瑙掕壊鐭╅樀,190,## 2.4 API Key 管理 `/console/api-keys`,0.245,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00049,user-agent,source_quote;atomic_assertion,19,6: #### 2.1.1 瑙掕壊鐭╅樀,140,user_quotas 表 → 免费额度,0.174,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00052,user-agent,source_quote;atomic_assertion,23,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,552,| 查看详情 | 查看选中记录的完整信息 |,0.000,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00078,user-agent,source_quote;atomic_assertion,35,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,552,| 查看详情 | 查看选中记录的完整信息 |,0.000,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00083,user-agent,source_quote;atomic_assertion,38,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,552,| 查看详情 | 查看选中记录的完整信息 |,0.000,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00102,user-agent,source_quote;atomic_assertion,47,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,475,| POST | /api/v1/account/deletion-request | 提交注销申请 |,0.159,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00103,user-agent,source_quote;atomic_assertion,48,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,290,## 2.7 充值 `/console/recharge`,0.196,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00104,user-agent,source_quote;atomic_assertion,50,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,552,| 查看详情 | 查看选中记录的完整信息 |,0.000,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00113,user-agent,source_quote;atomic_assertion,55,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,95,登录记录包含：时间、IP、归属地、设备信息/User-Agent。,0.200,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00116,user-agent,source_quote;atomic_assertion,56,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,140,user_quotas 表 → 免费额度,0.242,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00117,user-agent,source_quote;atomic_assertion,58,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,552,| 查看详情 | 查看选中记录的完整信息 |,0.000,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00136,user-agent,source_quote;atomic_assertion,70,68: #### 2.1.3 澶氱鐞嗗憳鍗忎綔涓庢搷浣滃璁|,77,└→ 角色模板预设（种子数据）→ 开箱即用,0.044,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00156,user-agent,source_quote;atomic_assertion,80,68: #### 2.1.3 澶氱鐞嗗憳鍗忎綔涓庢搷浣滃璁|,384,5. 不能覆盖 → 返回 402 `insufficient_balance`,0.215,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00158,user-agent,source_quote;atomic_assertion,81,68: #### 2.1.3 澶氱鐞嗗憳鍗忎綔涓庢搷浣滃璁|,384,5. 不能覆盖 → 返回 402 `insufficient_balance`,0.215,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00168,user-agent,source_quote;atomic_assertion,86,68: #### 2.1.3 澶氱鐞嗗憳鍗忎綔涓庢搷浣滃璁|,169,- 模型名称 + 渠道名称/Logo,0.043,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00169,user-agent,source_quote;atomic_assertion,101,68: #### 2.1.3 澶氱鐞嗗憳鍗忎綔涓庢搷浣滃璁|,552,| 查看详情 | 查看选中记录的完整信息 |,0.000,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00170,user-agent,source_quote;atomic_assertion,120,118: ### 2.2 鐢ㄦ埛绔姛鑳借鏍|,22,> **深化参考**：`ref-2.1-roles-permissions.md` + `ref-2.2-user-dashboard.md` + `ref-2.2.2-model-center.md` + `ref-2.2.3-api-keys.md` + `ref-2.2.4-call-logs.md` + `ref-2.2.6-recharge.md` + `ref-2.2.8-redemption-invoices.md`,0.303,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00171,user-agent,source_section,128,126: ##### 鍖哄煙 1锛氭杩庡崱鐗|,552,| 查看详情 | 查看选中记录的完整信息 |,0.000,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00172,user-agent,source_section,132,126: ##### 鍖哄煙 1锛氭杩庡崱鐗|,365,- **下载**：电子发票支持 PDF 在线下载,0.095,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00173,user-agent,source_section,132,126: ##### 鍖哄煙 1锛氭杩庡崱鐗|,170,- Context 窗口大小（128K/32K/8K 等）,0.320,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00174,user-agent,source_section,132,126: ##### 鍖哄煙 1锛氭杩庡崱鐗|,309,回调成功 → 更新 users.balance → 写入 recharge_logs,0.408,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00175,user-agent,source_section,132,126: ##### 鍖哄煙 1锛氭杩庡崱鐗|,552,| 查看详情 | 查看选中记录的完整信息 |,0.000,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00176,user-agent,source_section,132,126: ##### 鍖哄煙 1锛氭杩庡崱鐗|,552,| 查看详情 | 查看选中记录的完整信息 |,0.000,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00177,user-agent,source_section,133,126: ##### 鍖哄煙 1锛氭杩庡崱鐗|,552,| 查看详情 | 查看选中记录的完整信息 |,0.000,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00178,user-agent,source_section,133,126: ##### 鍖哄煙 1锛氭杩庡崱鐗|,45,| 10 快速接入引导 | 新用户 Onboarding 步骤条 | 新手引导 |,0.242,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00179,user-agent,source_section,133,126: ##### 鍖哄煙 1锛氭杩庡崱鐗|,140,user_quotas 表 → 免费额度,0.385,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN
+UA2-00181,user-agent,source_section,133,126: ##### 鍖哄煙 1锛氭杩庡崱鐗|,552,| 查看详情 | 查看选中记录的完整信息 |,0.000,人工重摘 source_quote/source_section；确认后再拆 atomic_assertion,OPEN

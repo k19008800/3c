@@ -18,6 +18,8 @@ function req(method, path, data, token, headers = {}) {
       hostname: u.hostname, port: u.port, path: u.pathname,
       method, headers: { 'Content-Type': 'application/json', ...headers },
     };
+    // 带 body 时需显式 Content-Length，否则 Fastify 返回 415（缺 body 边界）
+    if (data) opts.headers['Content-Length'] = Buffer.byteLength(JSON.stringify(data));
     if (token) opts.headers['Authorization'] = `Bearer ${token}`;
     const r = http.request(opts, (res) => {
       let body = '';
@@ -86,19 +88,22 @@ async function main() {
   const en = await req('PATCH', `/api/v1/me/api-keys/${keyId}`, { status: 'active' }, loginToken);
   check('Enable Key', en.status === 200, en.body?.message || '');
 
-  // 8. 调 chat（mock 回退，走 OpenAI 兼容路径）→ 记账 + 扣费
+  // 8. 调 chat（真实渠道优先；仅当明确无可用渠道时才允许 mock）→ 记账 + 扣费
   if (rawKey) {
     const chat = await req('POST', '/v1/chat/completions', {
-      model: 'deepseek-chat',
+      // 天翼云 Coding 是本地当前可用的真实测试渠道；模型名必须使用其路由映射名。
+      model: 'DeepSeek-V4-Flash-0731',
       messages: [{ role: 'user', content: '你好，介绍一下 3cloud' }],
       stream: false,
+      // 集成账号初始赠金为 ¥10；小上限避免预扣 4096 output tokens 超出测试余额。
+      max_tokens: 1,
     }, null, { Authorization: `Bearer ${rawKey}` });
-    const chatOk = chat.status === 200 && chat.body.choices?.[0]?.message?.content && chat.body.usage?.total_tokens > 0;
-    check('Chat completions (mock)', chatOk, chatOk
+    const chatOk = chat.status === 200 && chat.body.choices?.[0]?.message?.content && chat.body.usage?.total_tokens > 0 && chat.body.mock !== true;
+    check('Chat completions (real upstream)', chatOk, chatOk
       ? `${chat.body.usage.total_tokens} tokens · ${(chat.body.usage.completion_tokens)} out`
       : JSON.stringify(chat.body).slice(0, 120));
   } else {
-    check('Chat completions (mock)', false, 'no raw key');
+    check('Chat completions (real upstream)', false, 'no raw key');
   }
 
   // 9. 消费日志（/me/logs）

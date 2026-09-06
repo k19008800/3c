@@ -1,4 +1,4 @@
-# 数据库 Schema 重设计建议
+﻿# 数据库 Schema 重设计建议
 
 > **定位**：基于新文档（01-06）和现有 PRD 体系，重新设计 3cloud 整体数据库 Schema
 > **原则**：
@@ -21,10 +21,10 @@
 | **认证** | api_keys | API Key 管理 | P0 |
 | | login_logs | 登录日志 | P1 |
 | **模型** | models | AI 模型定义 | P0 |
-| | vendor_models | 供应商-模型映射（含成本价）| P0 |
-| **供应商** | vendors | 供应商 | P0 |
-| | vendor_api_keys | 供应商 API Key 管理 | P0 |
-| | vendor_health_logs | 供应商健康度日志 | P1 |
+| | vendor_models | 渠道-模型映射（含成本价）| P0 |
+| **渠道** | vendors | 渠道 | P0 |
+| | vendor_api_keys | 渠道 API Key 管理 | P0 |
+| | vendor_health_logs | 渠道健康度日志 | P1 |
 | **路由** | model_routes | 模型路由配置 | P0 |
 | | route_overrides | 覆盖规则 | P1 |
 | **调用记录** | call_logs | API 调用日志 | P0 |
@@ -213,7 +213,7 @@ export const loginLogs = pgTable("login_logs", {
 // - idx_ip_success: (ip, success)  // 异常检测
 ```
 
-### 2.3 模型与供应商域
+### 2.3 模型与渠道域
 
 ```typescript
 // === models ===
@@ -248,7 +248,7 @@ export const models = pgTable("models", {
 // === vendors ===
 export const vendors = pgTable("vendors", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).notNull().unique(),   // 供应商名
+  name: varchar("name", { length: 100 }).notNull().unique(),   // 渠道名
   displayName: varchar("display_name", { length: 100 }).notNull(),
 
   // API 配置
@@ -280,10 +280,10 @@ export const vendorModels = pgTable("vendor_models", {
   vendorId: integer("vendor_id").notNull().references(() => vendors.id),
   modelId: integer("model_id").notNull().references(() => models.id),
 
-  // 供应商侧的模型名（可能和平台不同）
+  // 渠道侧的模型名（可能和平台不同）
   vendorModelName: varchar("vendor_model_name", { length: 100 }).notNull(),
 
-  // 供应商成本价
+  // 渠道成本价
   costInputPrice: numeric("cost_input_price", { precision: 14, scale: 6 }).notNull(),
   costOutputPrice: numeric("cost_output_price", { precision: 14, scale: 6 }).notNull(),
   costInputUnit: integer("cost_input_unit").default(1000000),
@@ -301,7 +301,7 @@ export const vendorModels = pgTable("vendor_models", {
 
 // 约束
 // - (vendor_id, model_id) UNIQUE
-// - 一个模型可以有多个供应商映射
+// - 一个模型可以有多个渠道映射
 
 // === vendor_api_keys ===
 export const vendorApiKeys = pgTable("vendor_api_keys", {
@@ -351,7 +351,7 @@ export const vendorHealthLogs = pgTable("vendor_health_logs", {
 
 ```typescript
 // === model_routes ===
-// 模型路由配置——决定每个模型走哪个供应商
+// 模型路由配置——决定每个模型走哪个渠道
 export const modelRoutes = pgTable("model_routes", {
   id: serial("id").primaryKey(),
   modelId: integer("model_id").notNull().references(() => models.id),
@@ -378,7 +378,7 @@ export const modelRoutes = pgTable("model_routes", {
 });
 
 // === model_route_vendors ===
-// 模型路由的供应商映射
+// 模型路由的渠道映射
 export const modelRouteVendors = pgTable("model_route_vendors", {
   id: serial("id").primaryKey(),
   routeId: integer("route_id").notNull().references(() => modelRoutes.id),
@@ -431,7 +431,7 @@ export const callLogs = pgTable("call_logs", {
   // 请求响应
   requestBody: text("request_body"),                 // 原始请求（JSON，截断到 10KB）
   responseBody: text("response_body"),               // 原始响应（JSON，截断到 10KB）
-  responseStatus: integer("response_status"),         // 供应商 HTTP 状态码
+  responseStatus: integer("response_status"),         // 渠道 HTTP 状态码
   errorMessage: varchar("error_message", { length: 500 }),
 
   // 耗时
@@ -441,7 +441,7 @@ export const callLogs = pgTable("call_logs", {
   // 计费
   estimatedCost: numeric("estimated_cost", { precision: 14, scale: 6 }),  // 预扣金额
   actualCost: numeric("actual_cost", { precision: 14, scale: 6 }),        // 实际费用
-  vendorCost: numeric("vendor_cost", { precision: 14, scale: 6 }),        // 供应商成本
+  vendorCost: numeric("vendor_cost", { precision: 14, scale: 6 }),        // 渠道成本
 
   // 状态
   status: varchar("status", { length: 20 }).notNull().default("pending"),
@@ -500,7 +500,7 @@ export const platformLedger = pgTable("platform_ledger", {
     // user_refund          用户退款
     // agent_withdraw       代理提现
     // agent_commission     代理佣金支出
-    // vendor_settlement    供应商结算支出
+    // vendor_settlement    渠道结算支出
     // adjustment           调账
     // bonus                活动赠送
     // campaign_reclaim     活动扣回
@@ -1009,7 +1009,7 @@ npx drizzle-kit migrate    # 执行迁移
 # 首次部署
 # 1. 创建新数据库 3cloud_v2
 # 2. 执行迁移
-# 3. 导入基础数据（模型、供应商、系统配置等）
+# 3. 导入基础数据（模型、渠道、系统配置等）
 # 4. 验证数据一致性
 ```
 
@@ -1019,8 +1019,8 @@ npx drizzle-kit migrate    # 执行迁移
 -- 首次部署需要导入的基础数据：
 -- 1. 系统默认配置（site_configs）
 -- 2. 已知模型列表（models）
--- 3. 已知供应商列表（vendors）
--- 4. 供应商-模型映射（vendor_models）
+-- 3. 已知渠道列表（vendors）
+-- 4. 渠道-模型映射（vendor_models）
 -- 5. 默认路由配置（model_routes + model_route_vendors）
 -- 以上基础数据使用 seed 脚本导入，不依赖迁移
 ```

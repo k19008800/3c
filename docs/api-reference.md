@@ -1,9 +1,12 @@
 # 3cloud API 参考手册
 
-> **最后更新**：2026-07-28
-> **版本**：v1.0
-> **定位**：面向集成开发者的 API 参考文档，覆盖所有开放端点、认证方式、错误码、限流策略、最佳实践。
+> **最后更新**：2026-08-29
+> **版本**：v1.0.0
+> **状态**：review
+> **定位**：面向集成开发者的 API 参考文档，覆盖已核验的开放端点、认证方式、错误码、限流策略、最佳实践。
 > 管理后台 API 请参考各 ref-* 深化文档。
+>
+> **路径规则（ADR-0005、ADR-0023）**：OpenAI 兼容 canonical 为 `/v1/*`；Anthropic 兼容 canonical 为 `/anthropic/v1/*`；平台业务 API canonical 为 `/api/v1/*`；`/api/v1/v1/*` 仅为 deprecated alias，兼容至 `v1.x`，并在 `v2.0.0` 移除。新集成、SDK、示例、前端和测试不得使用 alias。
 
 ---
 
@@ -88,7 +91,7 @@ Refresh Token 有效期: 7 天
 ### 2.1 列出可用模型
 
 ```
-GET /api/v1/models
+GET /v1/models
 ```
 
 **响应**
@@ -111,7 +114,7 @@ GET /api/v1/models
 ### 2.2 对话补全
 
 ```
-POST /api/v1/chat/completions
+POST /v1/chat/completions
 ```
 
 **请求体**
@@ -163,7 +166,7 @@ data: [DONE]
 ### 2.3 Embedding
 
 ```
-POST /api/v1/embeddings
+POST /v1/embeddings
 ```
 
 | 参数 | 类型 | 必填 | 说明 |
@@ -197,7 +200,7 @@ PUT /api/v1/me
 ### 3.3 修改密码
 
 ```
-POST /api/v1/me/password
+POST /api/v1/me/change-password
 ```
 
 | 参数 | 类型 | 必填 | 说明 |
@@ -227,13 +230,13 @@ POST /api/v1/me/real-name
 ### 4.1 列出 API Key
 
 ```
-GET /api/v1/api-keys
+GET /api/v1/me/api-keys
 ```
 
 ### 4.2 创建 API Key
 
 ```
-POST /api/v1/api-keys
+POST /api/v1/me/api-keys
 ```
 
 | 参数 | 类型 | 必填 | 说明 |
@@ -264,13 +267,13 @@ POST /api/v1/api-keys
 ### 4.3 删除 API Key
 
 ```
-DELETE /api/v1/api-keys/:id
+DELETE /api/v1/me/api-keys/:id
 ```
 
 ### 4.4 更新 API Key
 
 ```
-PUT /api/v1/api-keys/:id
+PATCH /api/v1/me/api-keys/:id
 ```
 
 ---
@@ -297,7 +300,7 @@ GET /api/v1/me/balance
 ### 5.2 创建充值订单
 
 ```
-POST /api/v1/recharge
+POST /api/v1/me/recharge
 ```
 
 | 参数 | 类型 | 必填 | 说明 |
@@ -319,7 +322,7 @@ POST /api/v1/recharge
 ### 5.3 余额变动流水
 
 ```
-GET /api/v1/me/balance-logs
+余额变动流水端点：待路由核验（当前未确认可用路径）
 ```
 
 | 参数 | 类型 | 必填 | 说明 |
@@ -337,7 +340,7 @@ GET /api/v1/me/balance-logs
 ### 6.1 查询调用记录
 
 ```
-GET /api/v1/me/call-logs
+调用记录端点：待路由核验（当前未确认可用路径）
 ```
 
 | 参数 | 类型 | 必填 | 说明 |
@@ -382,7 +385,7 @@ GET /api/v1/me/call-logs
 ### 7.1 获取通知列表
 
 ```
-GET /api/v1/notifications
+GET /api/v1/me/notifications
 ```
 
 | 参数 | 类型 | 必填 | 说明 |
@@ -394,13 +397,13 @@ GET /api/v1/notifications
 ### 7.2 标记已读
 
 ```
-POST /api/v1/notifications/:id/read
+POST /api/v1/me/notifications/:id/read
 ```
 
 ### 7.3 全部标记已读
 
 ```
-POST /api/v1/notifications/read-all
+POST /api/v1/me/notifications/read-all
 ```
 
 ### 7.4 通知订阅配置
@@ -417,7 +420,7 @@ PUT /api/v1/me/notification-settings
 ### 8.1 开启 2FA
 
 ```
-POST /api/v1/me/2fa/enable
+POST /api/v1/auth/2fa/enable
 ```
 
 **响应**
@@ -433,7 +436,7 @@ POST /api/v1/me/2fa/enable
 ### 8.2 验证 2FA
 
 ```
-POST /api/v1/me/2fa/verify
+POST /api/v1/auth/2fa/verify
 ```
 
 | 参数 | 类型 | 必填 | 说明 |
@@ -443,7 +446,7 @@ POST /api/v1/me/2fa/verify
 ### 8.3 关闭 2FA
 
 ```
-POST /api/v1/me/2fa/disable
+POST /api/v1/auth/2fa/disable
 ```
 
 ---

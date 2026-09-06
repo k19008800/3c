@@ -23,7 +23,7 @@
 
 ### 1.1 价格层级六层实现
 
-#### L0 — 供应商成本价
+#### L0 — 渠道成本价
 
 **`vendor_models` 表字段**：
 ```typescript
@@ -610,8 +610,8 @@ GET /api/v1/admin/profit/records?period=2026-07 — 利润明细
 | 收入构成（充值/代理/其他） | `recharge_orders.channel` + `agents` | 月度 |
 | 按模型收入 Top 5 | `call_logs.modelName` GROUP BY | 月度 |
 | 本月支出 | `call_logs.cost` SUM（成本价）| 月度 |
-| 支出构成（按供应商） | `call_logs.vendorName` GROUP BY | 月度 |
-| 毛利润 | 用户收入 - 供应商成本 | 月度 |
+| 支出构成（按渠道） | `call_logs.vendorName` GROUP BY | 月度 |
+| 毛利润 | 用户收入 - 渠道成本 | 月度 |
 | 毛利率趋势 | `finance_profit_records` 表 | 近 12 个月 |
 | 按模型毛利率 | `finance_profit_records` 表 | 月度 |
 
@@ -626,7 +626,7 @@ export const financeProfitRecords = pgTable("finance_profit_records", {
   totalCalls: integer("total_calls"),
   totalTokens: bigint("total_tokens", { mode: "number" }),
   totalUserCost: numeric("total_user_cost", { precision: 18, scale: 6 }),   // 用户总付费
-  totalCostPrice: numeric("total_cost_price", { precision: 18, scale: 6 }), // 供应商总成本
+  totalCostPrice: numeric("total_cost_price", { precision: 18, scale: 6 }), // 渠道总成本
   grossProfit: numeric("gross_profit"),    // 毛利润 = totalUserCost - totalCostPrice
   grossMargin: numeric("gross_margin"),    // 毛利率 = grossProfit / totalUserCost * 100
   totalCommission: numeric("total_commission"), // 佣金总支出
@@ -647,7 +647,7 @@ admin → 财务总览
 │
 ├── 支出分析面板
 │   ├── 本月支出 ¥（占收入比 %）
-│   ├── 支出构成饼图（按供应商）
+│   ├── 支出构成饼图（按渠道）
 │   └── 支出趋势折线图
 │
 └── 利润分析面板
@@ -959,13 +959,13 @@ async function generateDailySummary(date: string) {
 
 | # | 场景 | 触发条件 | 预期行为 | 影响范围 | 优先级 |
 |---|------|---------|---------|---------|--------|
-| FIN-001 | 账务不平自动检测 | 对账引擎发现账户流水与供应商账单之间的金额不一致 | 自动标记差异记录为 `RECONCILE_MISMATCH`，生成对账差异报告；差异 < 0.01 元的自动按舍入处理；差异 >= 0.01 元的创建异常工单通知财务团队 | 该对账周期 | P0 |
+| FIN-001 | 账务不平自动检测 | 对账引擎发现账户流水与渠道账单之间的金额不一致 | 自动标记差异记录为 `RECONCILE_MISMATCH`，生成对账差异报告；差异 < 0.01 元的自动按舍入处理；差异 >= 0.01 元的创建异常工单通知财务团队 | 该对账周期 | P0 |
 | FIN-002 | 多币种汇率过期 | 系统使用的汇率数据超过有效期（如 24h 未更新） | 冻结使用过期汇率进行的新交易，已有进行中的交易使用过期汇率完成；触发汇率更新任务，若 1h 内仍未更新则通知管理员 | 涉及该币种的全部交易 | P0 |
 | FIN-003 | 财务报表导出数据一致性 | 生成报表过程中有新交易发生 | 报表使用快照隔离级别（`SERIALIZABLE` 或 `REPEATABLE READ`），基于导出时刻的一致性快照，不受后续交易影响 | 该报表 | P0 |
 | FIN-004 | 余额并发扣减（防止通兑超扣） | 多个不相关的消费操作同时并发扣减同一账户余额 | 使用行级锁（`SELECT ... FOR UPDATE`）保证原子性；若扣减后余额为负，事务回滚并返回错误 | 该账户 | P0 |
 | FIN-005 | 退款时账户余额不足 | 用户申请退款时账户可用余额小于退款金额 | 支持负余额退款（平台先行垫付），记录为"负余额"状态，用户下次充值时优先抵扣；退款金额需从平台运营账户划扣 | 退款流程 | P0 |
 | FIN-006 | 发票重复开具 | 同一笔交易被误操作重复申请开票 | 每笔交易增加 `invoice_status` 字段 + `invoice_id` 唯一约束；重复申请时返回"该交易已开具发票"错误 | 开票流程 | P0 |
-| FIN-007 | 自动对账引擎停摆 | 对账引擎因依赖服务（如供应商 API）不可用而无法完成对账 | 标记该供应商对账为 `PENDING`，继续处理其他供应商；对账任务设置超时（默认 30 分钟），超时后标记为 `TIMEOUT` 并通知管理员手动处理 | 该供应商对账 | P1 |
+| FIN-007 | 自动对账引擎停摆 | 对账引擎因依赖服务（如渠道 API）不可用而无法完成对账 | 标记该渠道对账为 `PENDING`，继续处理其他渠道；对账任务设置超时（默认 30 分钟），超时后标记为 `TIMEOUT` 并通知管理员手动处理 | 该渠道对账 | P1 |
 | FIN-008 | 财务日报计算超时 | 当日交易量过大导致财务日报计算超过预定时长 | 日报计算设置超时（默认 10 分钟），超时后暂停计算；采取增量计算策略：按小时粒度预汇总，日报时合并小时汇总结果 | 日报 | P1 |
 
 ### 详细边界说明
@@ -982,7 +982,7 @@ async function generateDailySummary(date: string) {
 ```
 
 **差异来源分析**:
-- 时间差异（服务时间 vs 供应商结算时间 T+1）
+- 时间差异（服务时间 vs 渠道结算时间 T+1）
 - 舍入差异（不同系统计数精度不一致）
 - 价格变更差异（历史计价 vs 新价格）
 - 汇率差异（多币种结算）

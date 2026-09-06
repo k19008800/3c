@@ -11,7 +11,7 @@
 ```
 计费引擎
 ├── 价格引擎（定价查询）
-│   ├── L0 供应商成本价
+│   ├── L0 渠道成本价
 │   ├── L1 平台标准价
 │   ├── L2 模型覆盖价
 │   ├── L3 代理折扣价
@@ -34,7 +34,7 @@
 │   ├── 模糊匹配
 │   └── 差异处理
 │
-└── 供应商结算
+└── 渠道结算
     ├── 结算周期
     ├── 佣金计算
     └── 打款流程
@@ -48,7 +48,7 @@
 
 | 层级 | 名称 | 说明 | 存储位置 | 优先级 |
 |------|------|------|---------|-------|
-| L0 | 供应商成本价 | 上游原始报价 | `vendor_models.input_price / output_price` | — |
+| L0 | 渠道成本价 | 上游原始报价 | `vendor_models.input_price / output_price` | — |
 | L1 | 平台标准价 | L0 × (1 + 全局加价率) | 运行时计算 | 最低 |
 | L2 | 模型覆盖价 | 特定模型独立售价 | `models.override_input_price / override_output_price` | 中 |
 | L3 | 代理折扣价 | 代理名下用户的专属价格 | `agent_commission.discount_rate` | 中高 |
@@ -76,11 +76,11 @@ flowchart TD
 全局加价率：site_configs 中配置 "billing.default_markup_rate"
 
 计算公式：
-  标准输入价 = 供应商成本输入价 × (1 + 全局加价率)
-  标准输出价 = 供应商成本输出价 × (1 + 全局加价率)
+  标准输入价 = 渠道成本输入价 × (1 + 全局加价率)
+  标准输出价 = 渠道成本输出价 × (1 + 全局加价率)
 
 示例：
-  供应商成本价: input=¥0.0100, output=¥0.0300
+  渠道成本价: input=¥0.0100, output=¥0.0300
   全局加价率: 50%
   标准价: input=¥0.0150, output=¥0.0450
   
@@ -98,7 +98,7 @@ flowchart TD
 sequenceDiagram
     participant U as 用户
     participant P as 计费引擎
-    participant V as 供应商
+    participant V as 渠道
 
     U->>P: ① API 请求（含 model / max_tokens）
     P->>P: ② 查询定价（按优先级取价格）
@@ -111,7 +111,7 @@ sequenceDiagram
         P->>P: ⑥ 实时扣费（直接扣减余额，允许余额为负但不超过停止阈值）
         P->>P: ⑦ 写入 call_logs（status=success + 实际费用）
         P->>P: ⑧ 写入 balance_logs（consumption）
-        P->>V: ⑨ 转发请求给供应商
+        P->>V: ⑨ 转发请求给渠道
         V-->>P: ⑩ 返回响应
         P-->>U: ⑪ 返回响应
     end
@@ -259,17 +259,17 @@ TTL：5 分钟（价格变更后最多 5 分钟生效）
 ```
 差异类型 → 处理流程：
 
-平台有 - 供应商无（漏报）：
+平台有 - 渠道无（漏报）：
   1. 系统自动标记
   2. 财务逐笔核查 call_logs 原始记录
   3. 确认平台确实有此消费
-  4. 联系供应商补录或折扣处理
+  4. 联系渠道补录或折扣处理
 
-供应商有 - 平台无（超收）：
+渠道有 - 平台无（超收）：
   1. 系统自动标记
-  2. 检查是否为供应商重复计费
-  3. 联系供应商冲正
-  4. 记录为供应商待确认
+  2. 检查是否为渠道重复计费
+  3. 联系渠道冲正
+  4. 记录为渠道待确认
 
 金额不一致：
   1. 检查定价配置是否在周期内变更
@@ -287,7 +287,7 @@ TTL：5 分钟（价格变更后最多 5 分钟生效）
 // vendor_models 表中的价格字段
 inputPrice: numeric("input_price", { precision: 18, scale: 6 }).notNull().default("0"),
 outputPrice: numeric("output_price", { precision: 18, scale: 6 }).notNull().default("0"),
-costInputPrice: numeric("cost_input_price", { precision: 18, scale: 6 }),   // L0 供应商成本
+costInputPrice: numeric("cost_input_price", { precision: 18, scale: 6 }),   // L0 渠道成本
 costOutputPrice: numeric("cost_output_price", { precision: 18, scale: 6 }),
 
 // vendor_pricing 表（价格管理页载体）— 模型级缓存命中折扣率（可空，回退全局）
@@ -406,7 +406,7 @@ export const invoices = pgTable("invoices", {
 │ 全局加价率: [50%] (L0 → L1 的计算系数)                │
 │ 修改后影响全部模型的标准售价                            │
 │                                                       │
-│ ┌─ 供应商价格 ─────────────────────────────────────┐ │
+│ ┌─ 渠道价格 ─────────────────────────────────────┐ │
 │ │ 模型名称   | 成本价(in/out) | 标准价(in/out) | 覆盖价 | 缓存折扣率 |
 │ │ gpt-4o     | 0.01/0.03     | 0.015/0.045   | —    | 0.1 (10%) |
 │ │ deepseek   | 0.001/0.002   | 0.0015/0.003  | —    | —(跟随全局) |
@@ -438,8 +438,8 @@ export const invoices = pgTable("invoices", {
 │                                                       │
 │ ┌─ 差异明细 ─────────────────────────────────────┐   │
 │ │ 类型         | 笔数 | 金额      | 操作            │  │
-│ │ 平台有-供应商无 | 23   | ¥123.45  | [核查]  [确认]  │  │
-│ │ 供应商有-平台无 | 15   | ¥89.00   | [核查]  [忽略]  │  │
+│ │ 平台有-渠道无 | 23   | ¥123.45  | [核查]  [确认]  │  │
+│ │ 渠道有-平台无 | 15   | ¥89.00   | [核查]  [忽略]  │  │
 │ │ 金额不一致   | 7     | ¥12.30   | [查看]  [修正]  │  │
 │ └────────────────────────────────────────────────┘  │
 │                                                       │
@@ -457,7 +457,7 @@ export const invoices = pgTable("invoices", {
 | 计费引擎异常 | 事务回滚 | 自动回滚，不扣费 |
 | 价格为负数 | 更新时校验 | 拒绝更新，触发告警 |
 | 用户折扣率变动影响历史计费 | 版本控制 | 折扣率仅在变动后生效（timestamp） |
-| 供应商价格变动同步延迟 | 版本控制 | 价格在配置时生效，不追溯历史 |
+| 渠道价格变动同步延迟 | 版本控制 | 价格在配置时生效，不追溯历史 |
 
 ### 8.1 计费引擎 SLA（P1 补充）
 
@@ -524,4 +524,4 @@ export const invoices = pgTable("invoices", {
 
 ### 10.1 预扣时序定义
 
-当前计费1 预扣时序定义\n\n当前计费流程为"预扣后转发"模式。以下定义完整的预扣→确认→回滚时序：\n\n```mermaid\nsequenceDiagram\n    participant U as 用户请求\n    participant BE as 计费引擎\n    participant DB as 数据库\n    participant V as 供应商\n\n    U->>BE: ① API 请求\n    BE->>BE: ② 查询定价、计算预估费用\n    BE->>DB: ③ 预扣余额（行锁 UPDATE users SET balance = balance - estimated_cost WHERE user_id = ? AND balance >= estimated_cost - overdraft_limit）\n    DB-->>BE: ④ 返回预扣结果（成功/失败）\n    \n    alt 预扣失败（余额不足）\n        BE-->>U: 返回 402 BALANCE_EXHAUSTED\n    else 预扣成功\n        BE->>DB: ⑤ 写入 billing_logs（status=pending, estimated_cost, balance_before, balance_after）\n        BE->>V: ⑥ 转发请求到供应商\n        \n        alt 供应商响应成功（正常返回 tokens）\n            V-->>BE: ⑦ 返回响应\n            BE->>BE: ⑧ 计算实际费用 = actual_tokens × price / 1,000,000\n            \n            alt 实际费用 ≤ 预扣金额\n                BE->>DB: ⑨a 回滚差额：余额 = 余额 + (estimated_cost - actual_cost)\n                BE->>DB: ⑨b 更新 billing_logs：status=settled, actual_cost, refund_amount\n            else 实际费用 > 预扣金额（需追扣）\n                BE->>DB: ⑨a 追扣差额：余额 = 余额 - (actual_cost - estimated_cost)\n                BE->>DB: ⑨b 更新 billing_logs：status=settled, actual_cost, extra_charge\n            end\n            \n            BE-->>U: ⑩ 返回响应\n            \n        else 供应商超时/异常（无有效 tokens 返回）\n            V--xBE: ⑦ 超时或错误\n            BE->>DB: ⑧ 回滚预扣金额：余额 = 余额 + estimated_cost\n            BE->>DB: ⑨ 更新 billing_logs：status=refunded, refund_amount=estimated_cost, error_reason\n            BE->>DB: ⑩ 写入 operation_logs（计费回滚事件）\n            BE-->>U: ⑪ 返回 502/504 错误\n        end\n    end\n```\n\n### 10.2 预扣回滚关键参数\n\n| 参数 | 默认值 | 说明 |\n|------|--------|------|\n| 预扣超时等待 | 30 秒 | 供应商响应超时后自动回滚预扣 |\n| 预扣释放定时器 | 60 秒 | 兜底定时器，确保超时后预扣自动释放（防止死锁） |\n| 透支上限 | -10 元 | 余额为负时的透支上限，超过后返回 402 |\n| 最大追扣倍数 | 2x | 实际费用超过预扣金额 2 倍时触发异常告警，冻结该笔交易 |\n\n### 10.3 预扣金额计算规则\n\n```\n预估费用 = 预估 max_tokens × 输入价格 / 1,000,000\n\n注意：\n- 若请求未指定 max_tokens，按模型默认值（如 4096）计算预估费用\n- 流式请求（stream=true）：按 max_tokens × 输入价格 预扣，最终按实际返回 tokens 结算\n- 非流式请求：按 max_tokens 预扣，最终按返回 tokens 结算\n\n例外情况：\n- 图片输入（vision 模型）：提前估算图片 token 数（按 768×768 ≈ 2000 tokens/图）\n- 工具调用（function calling）：额外预扣 1000 tokens 的 tool_call 开销\n- embedding 请求：按 input 字符数 × 模型系数 预扣\n```\n\n### 10.4 并发扣款保护机制\n\n| 保护层 | 实现方式 | 说明 |\n|--------|---------|------|\n| 行级锁 | `UPDATE ... WHERE balance >= amount` | 数据库层面的乐观锁，确保扣款不超卖 |\n| 重试机制 | 预扣冲突时最多重试 3 次（间隔 10ms） | 高并发下少量冲突自动重试 |\n| 死锁检测 | 数据库自动死锁检测，回滚后重试 | 跨表更新时的死锁防护 |\n| 监控告警 | 预扣冲突率 > 1% 触发告警 | 运营介入判断是否需要扩容 |\n\n**并发场景举例：**\n\n```\n用户 A 余额：¥100.00\n\n请求 1：预扣 ¥50.00 → UPDATE users SET balance = 50.00 WHERE id = A AND balance >= 50.00 → 成功\n请求 2：预扣 ¥60.00 → UPDATE users SET balance = 40.00 WHERE id = A AND balance >= 60.00 → 失败（余额不足）\n\n保护效果：请求 2 返回 402，不会出现余额为负的异常状态\n```\n\n### 10.5 计费异常运营干预流程\n\n当计费异常（计费日志缺失、定价缓存未刷新、对账差异）发生时，运营按以下流程处理：\n\n```mermaid\nflowchart TD\n    A[发现计费异常] --> B{异常类型?}\n    \n    B -->|计费日志缺失| C[核查 call_logs 原始记录]\n    C --> D{缺失原因?}\n    D -->|计费引擎未写入| E[补录 billing_logs]\n    D -->|定价查询失败| F[人工计算费用并补录]\n    D -->|系统 Bug| G[记录 Bug 并修复 + 批量补录]\n    \n    B -->|定价缓存未刷新| H[检查缓存 TTL 和刷新策略]\n    H --> I[手动刷新缓存（Redis DEL）]\n    I --> J[验证刷新后定价是否正确]\n    J --> K[对受影响用户进行补偿计算]\n    \n    B -->|对账差异| L[参见 §4.4 对账差异处理]\n    \n    E --> M[补录后执行余额校准]\n    F --> M\n    G --> M\n    M --> N[通知受影响用户]\n    N --> O[写入 operation_logs 审计]\n```\n\n**运营操作面板：**\n\n管理后台 → 财务 → 计费异常处理\n\n```\n┌─ 计费异常处理工作台 ──────────────────────────────┐\n│                                                     │\n│ 筛选: [全部类型 ▼] [最近 24 小时 ▼] [搜索用户]       │\n│                                                     │\n│ ┌─ 待处理异常列表 ───────────────────────────────┐ │\n│ │ 时间       | 用户 | 异常类型       | 金额  | 操作 │ │\n│ │ 14:23:45  | 张三 | 计费日志缺失   | ¥0.50 | [补录]│ │\n│ │ 14:20:12  | 李四 | 定价缓存偏差   | ¥1.20 | [校准]│ │\n│ │ 12:00:00  | 王五 | 预扣未回滚     | ¥3.00 | [回滚]│ │\n│ └────────────────────────────────────────────────┘ │\n│                                                     │\n│ 批量操作: [选中全部] [补录选中] [校准选中] [导出]    │\n│                                                     │\n│ 操作日志:                                           │\n│ 2026-07-30 14:25  admin_张三  补录了 3 笔计费日志    │\n│ 2026-07-30 14:24  admin_李四  校准了用户 42 的余额    │\n└─────────────────────────────────────────────────────┘\n```\n\n### 10.6 精度与舍入规则\n\n| 规则 | 说明 |\n|------|------|\n| 存款精度 | 18,6（数据库存储） |\n| 中间计算 | 使用 JavaScript Number（IEEE 754 双精度），最后一步四舍五入到 6 位 |\n| 舍入方式 | 四舍五入（Math.round），非银行家舍入 |\n| 最低扣费 | ¥0.000001（不足 1 token 的场景按 0 计费） |\n| 偏差累积检查 | 每月对账时检查计费总和与余额变动总和之差 ≤ ¥0.01 才通过 |\n\n### 10.7 计费引擎可用性 SLA\n\n| 指标 | 目标 | 测量方式 |\n|------|------|---------|\n| 计费引擎可用性 | 99.99% | （总请求 - 计费失败请求）/ 总请求 |\n| 计费延迟 P95 | ≤ 50ms | 从请求到达计费引擎到扣款完成 |\n| 计费延迟 P99 | ≤ 200ms | 含定价查询 + 余额扣减 + 日志写入 |\n| 预扣回滚延迟 | ≤ 60s | 供应商超时后自动回滚的最长时间 |\n\n**降级策略：**\n\n| 组件故障 | 降级策略 |\n|---------|---------|\n| Redis 不可用 | 定价查询降级到 DB（查询延迟增加，但可用） |\n| 计费引擎死锁 | 自动检测后重启，重启期间请求排队（最多 30s） |\n| 数据库主库故障 | 计费暂停（不扣费但返回错误），避免数据不一致 |\n\n### 10.8 T+1 结算周期边界规则\n\n| 场景 | 归属规则 |\n|------|---------|\n| 请求 23:59:59 发起，供应商 00:00:01 返回 | 按请求发起时间归属到前一日 |\n| 流式请求跨日（streaming） | 按首个 chunk 返回时间归属 |\n| 手动补录计费日志 | 按补录时间归属，但关联原始请求时间 |\n\n### 10.9 计费与财务总账同步\n\n```\n同步方式：T+1 批量归集\n\n每日 00:30 执行：\n  1. 统计前一日所有 billing_logs（status=settled）\n  2. 按用户汇总：total_consumption = SUM(actual_cost)\n  3. 汇总写入 platform_ledger（type=user_consumption）\n  4. 核对：SUM(billing_logs.actual_cost) == SUM(ledger.amount)（笔数 + 金额双重校验）\n  5. 校验失败触发告警：运营介入核查\n\n同步验证：\n  - 笔数校验：SUM(billing_logs.id count) == SUM(ledger entries count)\n  - 金额校验：SUM(billing_logs.actual_cost) == SUM(ledger.amount)\n  - 余额校验：系统总余额 + 总消费 + 总提现 - 总充值 = 0（会计恒等式）\n```"}]
+当前计费1 预扣时序定义\n\n当前计费流程为"预扣后转发"模式。以下定义完整的预扣→确认→回滚时序：\n\n```mermaid\nsequenceDiagram\n    participant U as 用户请求\n    participant BE as 计费引擎\n    participant DB as 数据库\n    participant V as 渠道\n\n    U->>BE: ① API 请求\n    BE->>BE: ② 查询定价、计算预估费用\n    BE->>DB: ③ 预扣余额（行锁 UPDATE users SET balance = balance - estimated_cost WHERE user_id = ? AND balance >= estimated_cost - overdraft_limit）\n    DB-->>BE: ④ 返回预扣结果（成功/失败）\n    \n    alt 预扣失败（余额不足）\n        BE-->>U: 返回 402 BALANCE_EXHAUSTED\n    else 预扣成功\n        BE->>DB: ⑤ 写入 billing_logs（status=pending, estimated_cost, balance_before, balance_after）\n        BE->>V: ⑥ 转发请求到渠道\n        \n        alt 渠道响应成功（正常返回 tokens）\n            V-->>BE: ⑦ 返回响应\n            BE->>BE: ⑧ 计算实际费用 = actual_tokens × price / 1,000,000\n            \n            alt 实际费用 ≤ 预扣金额\n                BE->>DB: ⑨a 回滚差额：余额 = 余额 + (estimated_cost - actual_cost)\n                BE->>DB: ⑨b 更新 billing_logs：status=settled, actual_cost, refund_amount\n            else 实际费用 > 预扣金额（需追扣）\n                BE->>DB: ⑨a 追扣差额：余额 = 余额 - (actual_cost - estimated_cost)\n                BE->>DB: ⑨b 更新 billing_logs：status=settled, actual_cost, extra_charge\n            end\n            \n            BE-->>U: ⑩ 返回响应\n            \n        else 渠道超时/异常（无有效 tokens 返回）\n            V--xBE: ⑦ 超时或错误\n            BE->>DB: ⑧ 回滚预扣金额：余额 = 余额 + estimated_cost\n            BE->>DB: ⑨ 更新 billing_logs：status=refunded, refund_amount=estimated_cost, error_reason\n            BE->>DB: ⑩ 写入 operation_logs（计费回滚事件）\n            BE-->>U: ⑪ 返回 502/504 错误\n        end\n    end\n```\n\n### 10.2 预扣回滚关键参数\n\n| 参数 | 默认值 | 说明 |\n|------|--------|------|\n| 预扣超时等待 | 30 秒 | 渠道响应超时后自动回滚预扣 |\n| 预扣释放定时器 | 60 秒 | 兜底定时器，确保超时后预扣自动释放（防止死锁） |\n| 透支上限 | -10 元 | 余额为负时的透支上限，超过后返回 402 |\n| 最大追扣倍数 | 2x | 实际费用超过预扣金额 2 倍时触发异常告警，冻结该笔交易 |\n\n### 10.3 预扣金额计算规则\n\n```\n预估费用 = 预估 max_tokens × 输入价格 / 1,000,000\n\n注意：\n- 若请求未指定 max_tokens，按模型默认值（如 4096）计算预估费用\n- 流式请求（stream=true）：按 max_tokens × 输入价格 预扣，最终按实际返回 tokens 结算\n- 非流式请求：按 max_tokens 预扣，最终按返回 tokens 结算\n\n例外情况：\n- 图片输入（vision 模型）：提前估算图片 token 数（按 768×768 ≈ 2000 tokens/图）\n- 工具调用（function calling）：额外预扣 1000 tokens 的 tool_call 开销\n- embedding 请求：按 input 字符数 × 模型系数 预扣\n```\n\n### 10.4 并发扣款保护机制\n\n| 保护层 | 实现方式 | 说明 |\n|--------|---------|------|\n| 行级锁 | `UPDATE ... WHERE balance >= amount` | 数据库层面的乐观锁，确保扣款不超卖 |\n| 重试机制 | 预扣冲突时最多重试 3 次（间隔 10ms） | 高并发下少量冲突自动重试 |\n| 死锁检测 | 数据库自动死锁检测，回滚后重试 | 跨表更新时的死锁防护 |\n| 监控告警 | 预扣冲突率 > 1% 触发告警 | 运营介入判断是否需要扩容 |\n\n**并发场景举例：**\n\n```\n用户 A 余额：¥100.00\n\n请求 1：预扣 ¥50.00 → UPDATE users SET balance = 50.00 WHERE id = A AND balance >= 50.00 → 成功\n请求 2：预扣 ¥60.00 → UPDATE users SET balance = 40.00 WHERE id = A AND balance >= 60.00 → 失败（余额不足）\n\n保护效果：请求 2 返回 402，不会出现余额为负的异常状态\n```\n\n### 10.5 计费异常运营干预流程\n\n当计费异常（计费日志缺失、定价缓存未刷新、对账差异）发生时，运营按以下流程处理：\n\n```mermaid\nflowchart TD\n    A[发现计费异常] --> B{异常类型?}\n    \n    B -->|计费日志缺失| C[核查 call_logs 原始记录]\n    C --> D{缺失原因?}\n    D -->|计费引擎未写入| E[补录 billing_logs]\n    D -->|定价查询失败| F[人工计算费用并补录]\n    D -->|系统 Bug| G[记录 Bug 并修复 + 批量补录]\n    \n    B -->|定价缓存未刷新| H[检查缓存 TTL 和刷新策略]\n    H --> I[手动刷新缓存（Redis DEL）]\n    I --> J[验证刷新后定价是否正确]\n    J --> K[对受影响用户进行补偿计算]\n    \n    B -->|对账差异| L[参见 §4.4 对账差异处理]\n    \n    E --> M[补录后执行余额校准]\n    F --> M\n    G --> M\n    M --> N[通知受影响用户]\n    N --> O[写入 operation_logs 审计]\n```\n\n**运营操作面板：**\n\n管理后台 → 财务 → 计费异常处理\n\n```\n┌─ 计费异常处理工作台 ──────────────────────────────┐\n│                                                     │\n│ 筛选: [全部类型 ▼] [最近 24 小时 ▼] [搜索用户]       │\n│                                                     │\n│ ┌─ 待处理异常列表 ───────────────────────────────┐ │\n│ │ 时间       | 用户 | 异常类型       | 金额  | 操作 │ │\n│ │ 14:23:45  | 张三 | 计费日志缺失   | ¥0.50 | [补录]│ │\n│ │ 14:20:12  | 李四 | 定价缓存偏差   | ¥1.20 | [校准]│ │\n│ │ 12:00:00  | 王五 | 预扣未回滚     | ¥3.00 | [回滚]│ │\n│ └────────────────────────────────────────────────┘ │\n│                                                     │\n│ 批量操作: [选中全部] [补录选中] [校准选中] [导出]    │\n│                                                     │\n│ 操作日志:                                           │\n│ 2026-07-30 14:25  admin_张三  补录了 3 笔计费日志    │\n│ 2026-07-30 14:24  admin_李四  校准了用户 42 的余额    │\n└─────────────────────────────────────────────────────┘\n```\n\n### 10.6 精度与舍入规则\n\n| 规则 | 说明 |\n|------|------|\n| 存款精度 | 18,6（数据库存储） |\n| 中间计算 | 使用 JavaScript Number（IEEE 754 双精度），最后一步四舍五入到 6 位 |\n| 舍入方式 | 四舍五入（Math.round），非银行家舍入 |\n| 最低扣费 | ¥0.000001（不足 1 token 的场景按 0 计费） |\n| 偏差累积检查 | 每月对账时检查计费总和与余额变动总和之差 ≤ ¥0.01 才通过 |\n\n### 10.7 计费引擎可用性 SLA\n\n| 指标 | 目标 | 测量方式 |\n|------|------|---------|\n| 计费引擎可用性 | 99.99% | （总请求 - 计费失败请求）/ 总请求 |\n| 计费延迟 P95 | ≤ 50ms | 从请求到达计费引擎到扣款完成 |\n| 计费延迟 P99 | ≤ 200ms | 含定价查询 + 余额扣减 + 日志写入 |\n| 预扣回滚延迟 | ≤ 60s | 渠道超时后自动回滚的最长时间 |\n\n**降级策略：**\n\n| 组件故障 | 降级策略 |\n|---------|---------|\n| Redis 不可用 | 定价查询降级到 DB（查询延迟增加，但可用） |\n| 计费引擎死锁 | 自动检测后重启，重启期间请求排队（最多 30s） |\n| 数据库主库故障 | 计费暂停（不扣费但返回错误），避免数据不一致 |\n\n### 10.8 T+1 结算周期边界规则\n\n| 场景 | 归属规则 |\n|------|---------|\n| 请求 23:59:59 发起，渠道 00:00:01 返回 | 按请求发起时间归属到前一日 |\n| 流式请求跨日（streaming） | 按首个 chunk 返回时间归属 |\n| 手动补录计费日志 | 按补录时间归属，但关联原始请求时间 |\n\n### 10.9 计费与财务总账同步\n\n```\n同步方式：T+1 批量归集\n\n每日 00:30 执行：\n  1. 统计前一日所有 billing_logs（status=settled）\n  2. 按用户汇总：total_consumption = SUM(actual_cost)\n  3. 汇总写入 platform_ledger（type=user_consumption）\n  4. 核对：SUM(billing_logs.actual_cost) == SUM(ledger.amount)（笔数 + 金额双重校验）\n  5. 校验失败触发告警：运营介入核查\n\n同步验证：\n  - 笔数校验：SUM(billing_logs.id count) == SUM(ledger entries count)\n  - 金额校验：SUM(billing_logs.actual_cost) == SUM(ledger.amount)\n  - 余额校验：系统总余额 + 总消费 + 总提现 - 总充值 = 0（会计恒等式）\n```"}]

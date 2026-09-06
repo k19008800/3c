@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-08-29T11:20:47.828495+00:00",
+  "requirements_docs": 420,
+  "prototypes": 118,
+  "pages": {
+    "console": 144,
+    "portal": 7,
+    "total": 151
+  },
+  "routes": 161,
+  "api_registered": 479,
+  "frontend_call_sites": 469,
+  "db_records": 115,
+  "test_files": 80
+}

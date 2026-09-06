@@ -1,9 +1,9 @@
-# 供应商结算管理 — 深化参考文档
+# 渠道结算管理 — 深化参考文档
 
 > **对应章节**：[PRD-README.md §4.4 财务管理](../PRD-README.md#44-财务管理) — 深化模块
 > **状态**：已深化完成 ✅ | **版本**：v2.0 | **最后更新**：2026-07-28
-> **定位**：平台向供应商采购 API 能力的月度结算对账体系，包含结算单生成、对账确认、争议处理、付款管理全流程。
-> **设计原则**：与用户侧计费引擎共享调用数据源，结算数据可作为供应商对账的官方依据。
+> **定位**：平台向渠道采购 API 能力的月度结算对账体系，包含结算单生成、对账确认、争议处理、付款管理全流程。
+> **设计原则**：与用户侧计费引擎共享调用数据源，结算数据可作为渠道对账的官方依据。
 > **粒度**：数据模型 → 结算流程 → API → 组件 Props → 运营配置 → 边界条件 → 验收标准
 
 ---
@@ -15,7 +15,7 @@
 3. [结算单生成引擎](#3-结算单生成引擎)
 4. [结算对账工作流](#4-结算对账工作流)
 5. [争议处理全流程](#5-争议处理全流程)
-6. [供应商付款管理](#6-供应商付款管理)
+6. [渠道付款管理](#6-渠道付款管理)
 7. [汇率与多币种处理](#7-汇率与多币种处理)
 8. [API 接口规格](#8-api-接口规格)
 9. [前端组件 Props](#9-前端组件-props)
@@ -28,7 +28,7 @@
 
 ## 1. 数据表结构
 
-### 1.1 `vendor_settlement_cycles` — 供应商结算周期
+### 1.1 `vendor_settlement_cycles` — 渠道结算周期
 
 ```typescript
 export const vendorSettlementCycles = pgTable("vendor_settlement_cycles", {
@@ -72,7 +72,7 @@ export const vendorSettlementDetails = pgTable("vendor_settlement_details", {
   cycleId: integer("cycle_id").notNull().references(() => vendorSettlementCycles.id, { onDelete: "cascade" }),
   vendorModelId: integer("vendor_model_id").notNull().references(() => vendorModels.id),
   modelName: varchar("model_name", { length: 128 }).notNull(),     // 冗余，快照值
-  modelProvider: varchar("model_provider", { length: 64 }),        // 冗余，供应商侧模型名
+  modelProvider: varchar("model_provider", { length: 64 }),        // 冗余，渠道侧模型名
   totalCalls: integer("total_calls").notNull().default(0),
   successCalls: integer("success_calls").notNull().default(0),
   failedCalls: integer("failed_calls").notNull().default(0),
@@ -98,7 +98,7 @@ export const vendorSettlementDetails = pgTable("vendor_settlement_details", {
 }));
 ```
 
-### 1.3 `vendor_payments` — 供应商付款记录
+### 1.3 `vendor_payments` — 渠道付款记录
 
 ```typescript
 export const vendorPayments = pgTable("vendor_payments", {
@@ -170,12 +170,12 @@ export const vendorSettlementSnapshots = pgTable("vendor_settlement_snapshots", 
 
 | 频次 | 说明 | 适用场景 | 配置项 |
 |------|------|---------|--------|
-| 月度 | 每月 1 日自动生成上月结算单 | 默认，多数供应商 | `settlement_frequency` |
-| 半月度 | 每月 1 日和 16 日生成 | 高流水供应商 | 按供应商设置 |
-| 周度 | 每周一生成 | 大流量供应商需快速对账 | 按供应商设置 |
-| 手动 | 管理员手动触发 | 新接入供应商测试期 | 按供应商设置 |
+| 月度 | 每月 1 日自动生成上月结算单 | 默认，多数渠道 | `settlement_frequency` |
+| 半月度 | 每月 1 日和 16 日生成 | 高流水渠道 | 按渠道设置 |
+| 周度 | 每周一生成 | 大流量渠道需快速对账 | 按渠道设置 |
+| 手动 | 管理员手动触发 | 新接入渠道测试期 | 按渠道设置 |
 
-**优先级**：按供应商配置 > 全局默认（月度）
+**优先级**：按渠道配置 > 全局默认（月度）
 
 ### 2.2 结算周期生成
 
@@ -191,13 +191,13 @@ Step 1: 确定周期
 
 Step 2: 检查重复
   └─ 查询 vendor_settlement_cycles (vendorId, period) 是否已存在
-  └─ 已存在 → 跳过该供应商（如需重新生成需先删除旧单）
+  └─ 已存在 → 跳过该渠道（如需重新生成需先删除旧单）
 
 Step 3: 创建周期记录
   └─ INSERT vendor_settlement_cycles (status='generating')
 
 Step 4: 记录调用快照
-  └─ 记录当前 call_logs 中该供应商最后一条记录的时间戳和 ID
+  └─ 记录当前 call_logs 中该渠道最后一条记录的时间戳和 ID
   └─ 写入 vendor_settlement_snapshots (type='call_logs_checkpoint')
 
 Step 5: 数据聚合
@@ -212,7 +212,7 @@ Step 6: 成本计算
   └─ costInput = round(inputTokens / 1000.0 * unitPriceInput)
   └─ costOutput = round(outputTokens / 1000.0 * unitPriceOutput)
   └─ costTotal = costInput + costOutput
-  └─ 汇率换算：非CNY供应商 × exchangeRate
+  └─ 汇率换算：非CNY渠道 × exchangeRate
 
 Step 7: 写入明细
   └─ 逐模型 INSERT vendor_settlement_details
@@ -227,11 +227,11 @@ Step 8: 汇总更新
 
 Step 9: 平台毛利对照
   └─ 查询同期用户消费总金额（consumption_logs）
-  └─ platformProfit = 用户总收入 - 供应商成本
+  └─ platformProfit = 用户总收入 - 渠道成本
   └─ 写入 vendor_settlement_cycles.platformProfit
 
 Step 10: 通知
-  └─ 站内信通知财务管理员："XX供应商YY月度结算单已生成，金额¥ZZZ"
+  └─ 站内信通知财务管理员："XX渠道YY月度结算单已生成，金额¥ZZZ"
 ```
 
 ---
@@ -244,7 +244,7 @@ Step 10: 通知
 结算定时任务(cron)
     │
     ├─ SettlementGenerator.run()
-    │   ├─ 遍历所有活跃供应商
+    │   ├─ 遍历所有活跃渠道
     │   ├─ 检查频次是否到期
     │   ├─ 调用 generateForVendor(vendorId, period)
     │   └─ 结果写入 events_queue
@@ -287,10 +287,10 @@ interface GenerateSettlementResult {
 
 ### 3.3 性能考虑
 
-- 单供应商单周期聚合查询必须在 5 秒内完成
+- 单渠道单周期聚合查询必须在 5 秒内完成
 - 前置建索引：`call_logs(vendor_id, created_at, vendor_model_id)`
-- 调用量极大的供应商（月 > 1000 万条），自动分片查询（按周分片再合并）
-- 生成过程中如遇供应商 API 成本价未配置，标记为 `error` 并跳过
+- 调用量极大的渠道（月 > 1000 万条），自动分片查询（按周分片再合并）
+- 生成过程中如遇渠道 API 成本价未配置，标记为 `error` 并跳过
 
 ---
 
@@ -354,7 +354,7 @@ interface GenerateSettlementResult {
 | generating | 无（系统处理中） | — | 完成后自动到 generated |
 | generated | 确认 / 标记争议 / 重新生成 | finance | POST confirm / dispute |
 | confirming | 无（系统处理中） | — | 完成后到 confirmed |
-| confirmed | 记录付款 / 发送供应商确认 | finance | POST payment / POST notify-vendor |
+| confirmed | 记录付款 / 发送渠道确认 | finance | POST payment / POST notify-vendor |
 | disputing | 无（系统处理中） | — | 完成后到 disputed |
 | disputed | 解决争议 / 拒绝争议 | finance / admin | POST resolve-dispute / reject-dispute |
 | settling | 无（系统处理中） | — | 完成后到 settled |
@@ -370,7 +370,7 @@ interface GenerateSettlementResult {
   1. 结算金额 < ¥10,000
   2. 调用成功率 > 95%
   3. 无未处理的争议
-  4. 该供应商已连续结算 3 次以上无争议
+  4. 该渠道已连续结算 3 次以上无争议
   
 否则 → 需 finance 角色人工确认
 ```
@@ -385,12 +385,12 @@ interface GenerateSettlementResult {
 5. 系统记录 operatorId、confirmedAt
 ```
 
-### 4.4 结算单通知供应商
+### 4.4 结算单通知渠道
 
 **通知方式**：
-- 系统自动发送结算单摘要邮件至供应商联系人邮箱（需在 vendor 表中配置 `contactEmail`）
+- 系统自动发送结算单摘要邮件至渠道联系人邮箱（需在 vendor 表中配置 `contactEmail`）
 - 邮件内容：结算周期、总金额、模型明细摘要、PDF 附件
-- 供应商可回复争议或通过平台入口查看
+- 渠道可回复争议或通过平台入口查看
 
 ---
 
@@ -400,8 +400,8 @@ interface GenerateSettlementResult {
 
 | 场景 | 典型原因 | 处理策略 |
 |------|---------|---------|
-| 调用量差异 | 平台统计与供应商对账单不一致 | 核对 call_logs，以平台数据为准，若供应商有证据则按证据调整 |
-| Token 计量差异 | 双方 Token 计数算法不同 | 按供应商计价规范重新核算 |
+| 调用量差异 | 平台统计与渠道对账单不一致 | 核对 call_logs，以平台数据为准，若渠道有证据则按证据调整 |
+| Token 计量差异 | 双方 Token 计数算法不同 | 按渠道计价规范重新核算 |
 | 单价不符 | 合同价格与系统配置价不一致 | 检查 vendor_models 配置，如配置错误需修正后重新生成 |
 | 折扣未生效 | 双方约定的批量折扣未体现在结算单 | 补充 discount 字段记录，需审批确认 |
 | 缓存计费 | 缓存命中的 Token 按不同单价计算 | 检查 `vendor_pricing.cache_discount_rate`（模型级）与 `system_config.billing.cache_hit_discount`（全局默认 0.1）是否与合同一致 |
@@ -457,7 +457,7 @@ Step 6: 状态恢复
 
 ---
 
-## 6. 供应商付款管理
+## 6. 渠道付款管理
 
 ### 6.1 付款工作流
 
@@ -485,7 +485,7 @@ Step 6: 状态恢复
     │   └─ settledBy = operatorId
     │
     └─ 通知
-        └─ 财务通知："XX供应商YY月结算 ¥ZZZ 已付款"
+        └─ 财务通知："XX渠道YY月结算 ¥ZZZ 已付款"
 ```
 
 ### 6.2 合并付款
@@ -528,7 +528,7 @@ interface PartialPayment {
 | 月度应付总额 | SUM(confirmed 结算单 totalCost) | 柱状图(月度) |
 | 月度已付总额 | SUM(completed 付款记录 amount) | 柱状图(月度) |
 | 待付余额 | 应付 - 已付 | 数字卡片 |
-| 各供应商应付分布 | 按供应商 GROUP BY | 饼图 |
+| 各渠道应付分布 | 按渠道 GROUP BY | 饼图 |
 | 逾期未付 | 结算单 confirmed 超过 30 天未 settled | 红色告警列表 |
 | 月均付款周期 | 从 generated 到 completed 平均天数 | 趋势折线图 |
 
@@ -539,7 +539,7 @@ interface PartialPayment {
 ### 7.1 汇率管理
 
 **汇率来源**：
-- 优先使用供应商合同约定的固定汇率（写入 vendors.agreedExchangeRate）
+- 优先使用渠道合同约定的固定汇率（写入 vendors.agreedExchangeRate）
 - 未约定则使用系统配置默认汇率（site_configs.default_exchange_rate）
 - 支持手动输入当期汇率
 
@@ -943,10 +943,10 @@ interface ExchangeRateItem {
 
 | # | 边界场景 | 处理策略 |
 |---|---------|---------|
-| B1 | 结算周期内供应商无调用记录 | 跳过生成，不在列表中展示 |
-| B2 | 供应商某模型成本价未配置 | 标记该模型为 error，结算单整体标记 warning，不影响其他模型 |
+| B1 | 结算周期内渠道无调用记录 | 跳过生成，不在列表中展示 |
+| B2 | 渠道某模型成本价未配置 | 标记该模型为 error，结算单整体标记 warning，不影响其他模型 |
 | B3 | 调用日志数据量极大（月 > 1 亿条） | 分片查询，按周聚合再合并，单次生成不超过 60 秒 |
-| B4 | 同一供应商多期结算单 pending | 只允许生成最新一期，历史未生成的需要手动补齐 |
+| B4 | 同一渠道多期结算单 pending | 只允许生成最新一期，历史未生成的需要手动补齐 |
 
 ### 11.2 流程边界
 
@@ -954,8 +954,8 @@ interface ExchangeRateItem {
 |---|---------|---------|
 | B5 | 结算单已 closed 后发现数据错误 | 不可修改，通过审批流程新建"补充结算单"（special 类型）|
 | B6 | 结算单 disputed 超过 60 天未解决 | 系统自动告警 super_admin，标记为 escalation |
-| B7 | 供应商已删除/禁用 | 只展示历史结算单，不可生成新结算单 |
-| B8 | 结算周期跨越供应商变更 | 按 vendor_model 归属周期内的 vendorId 为准 |
+| B7 | 渠道已删除/禁用 | 只展示历史结算单，不可生成新结算单 |
+| B8 | 结算周期跨越渠道变更 | 按 vendor_model 归属周期内的 vendorId 为准 |
 
 ### 11.3 支付边界
 
@@ -972,7 +972,7 @@ interface ExchangeRateItem {
 |---|---------|---------|
 | B13 | 多人同时操作同一结算单 | 乐观锁（updatedAt 比对），后操作返回冲突提示 |
 | B14 | 生成结算单时系统异常中断 | 状态回退到 pending，自动重试最多 3 次 |
-| B15 | 恶意请求批量生成结算单 | 限制手动生成间隔 60 秒，单次最多 10 个供应商 |
+| B15 | 恶意请求批量生成结算单 | 限制手动生成间隔 60 秒，单次最多 10 个渠道 |
 
 ---
 
@@ -982,12 +982,12 @@ interface ExchangeRateItem {
 
 | # | 验收项 | 通过标准 |
 |---|-------|---------|
-| AC1 | 自动周期生成 | cron 按配置时间执行，生成所有活跃供应商的上月结算单 |
-| AC2 | 手动生成 | 指定供应商+周期，生成成功，结果正确 |
+| AC1 | 自动周期生成 | cron 按配置时间执行，生成所有活跃渠道的上月结算单 |
+| AC2 | 手动生成 | 指定渠道+周期，生成成功，结果正确 |
 | AC3 | 重复生成保护 | 已存在结算单的周期返回跳过，forceRegenerate 需先删除旧单 |
 | AC4 | 汇总数据正确性 | 随机抽取 5 条明细，手动计算验证 totalCalls/totalTokens/cost 正确 |
 | AC5 | 快照记录 | 生成时记录 call_logs 快照和价格快照，checksum 可验证 |
-| AC6 | 空周期处理 | 无调用数据的供应商跳过生成 |
+| AC6 | 空周期处理 | 无调用数据的渠道跳过生成 |
 
 ### 12.2 确认与争议
 
@@ -1012,7 +1012,7 @@ interface ExchangeRateItem {
 
 | # | 验收项 | 通过标准 |
 |---|-------|---------|
-| AC16 | PDF 导出 | 结算单 PDF 含页眉/供应商信息/模型明细/金额合计/页脚 |
+| AC16 | PDF 导出 | 结算单 PDF 含页眉/渠道信息/模型明细/金额合计/页脚 |
 | AC17 | 结算通知 | 结算单确认后自动通知配置的邮箱 |
 
 ---
@@ -1021,14 +1021,14 @@ interface ExchangeRateItem {
 
 | 关联模块 | 文档 | 关系 |
 |---------|------|------|
-| 供应商管理 | `ref-4.3-vendor-model.md` | 供应商基本信息、模型定价数据源、结算联系人配置 |
+| 渠道管理 | `ref-4.3-vendor-model.md` | 渠道基本信息、模型定价数据源、结算联系人配置 |
 | 财务对账 | `ref-4.4.5-reconciliation-prd.md` | 与用户侧对账引擎共享调用数据，结算时对照 platformProfit |
 | 运维监控 | `ref-4.7-monitor-logs.md` | `call_logs` 是结算数据来源，需确保正确性 |
 | 操作日志 | `ref-4.13-operation-timeline.md` | 结算单所有关键操作（确认/争议/付款）写入操作日志 |
 | 文件上传 | — | payment proof 文件上传复用现有文件上传服务 |
 | 通知服务 | `ref-5.4-alert-rules.md` | 结算逾期/争议超时告警事件对接通知系统 |
 | 邮件模板 | `ref-4.17-template-library.md` | 结算通知邮件使用模板库的邮件模板 |
-| 用户端财务 | `ref-4.4-finance.md` | 用户侧计费与供应商侧结算构成完整闭环 |
+| 用户端财务 | `ref-4.4-finance.md` | 用户侧计费与渠道侧结算构成完整闭环 |
 
 ---
 
@@ -1039,7 +1039,7 @@ interface ExchangeRateItem {
 **页眉区域**：
 ```
 ┌─────────────────────────────────────────┐
-│  [平台Logo]    3cloud 供应商结算单       │
+│  [平台Logo]    3cloud 渠道结算单       │
 │                 Settlement Invoice       │
 ├─────────────────────────────────────────┤
 │ 编号：ST-2026-08-DS-001                  │
@@ -1047,9 +1047,9 @@ interface ExchangeRateItem {
 └─────────────────────────────────────────┘
 ```
 
-**供应商信息**：
+**渠道信息**：
 ```
-供应商：DeepSeek (ID: 3)
+渠道：DeepSeek (ID: 3)
 联系人：support@deepseek.com
 结算周期：2026-07-01 ~ 2026-07-31
 结算币种：CNY

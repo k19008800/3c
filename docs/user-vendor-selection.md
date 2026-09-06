@@ -1,10 +1,12 @@
-# PRD：用户自选厂商功能
+# PRD：用户自选渠道功能
+
+> **⚠️ 已废止（2026-09）**：本文档规划的"用户自选渠道 + `model@vendor` 二维设计"已被 [`SPEC-模型编码化改造与去除用户供应商选择.md`](SPEC-模型编码化改造与去除用户供应商选择.md) 取代。权威口径改为：以全局唯一**模型编码**为 API `model` 权威值，用户侧不再出现独立的"供应商/渠道"选择维度。本文档仅保留兼容窗口参考，不得作为新集成依据。
 
 > **文档编号**：PRD-USER-VENDOR-SELECTION  
 > **版本**：v1.0  
 > **日期**：2026-08-06  
-> **状态**：待评审  
-> **关联模块**：供应商管理 `ref-4.3` · 智能路由 `ref-5.1` · 计费引擎 `ref-5.2` · 用户仪表盘 `ref-2.2`
+> **状态**：~~待评审~~ → **已废止**  
+> **关联模块**：渠道管理 `ref-4.3` · 智能路由 `ref-5.1` · 计费引擎 `ref-5.2` · 用户仪表盘 `ref-2.2`
 
 ---
 
@@ -12,43 +14,43 @@
 
 ### 0.1 背景
 
-3Cloud 平台当前的路由策略由系统自动选择供应商（weighted_random / lowest_price 等）。部分用户对成本、延迟、品牌有偏好，希望**自行选择**同一模型背后的不同供应商，以获得更优性价比或更符合业务需求的服务。
+3Cloud 平台当前的路由策略由系统自动选择渠道（weighted_random / lowest_price 等）。部分用户对成本、延迟、品牌有偏好，希望**自行选择**同一模型背后的不同渠道，以获得更优性价比或更符合业务需求的服务。
 
 ### 0.2 核心场景
 
 ```
 用户调用 GLM-5.2
-  → 系统检测到该模型有多个可用供应商（厂商A / 厂商B / 厂商C）
-  → 返回可选供应商列表（含价格、品牌、推荐标签、健康状态）
-  → 用户选择厂商B（价格最低）
+  → 系统检测到该模型有多个可用渠道（渠道A / 渠道B / 渠道C）
+  → 返回可选渠道列表（含价格、品牌、推荐标签、健康状态）
+  → 用户选择渠道B（价格最低）
   → 系统拼接 model@vendor 发起调用：glm-5.2@vendor_b
-  → 后端解析 @ 拆分，路由到厂商B
-  → 计费按厂商B的售价结算
+  → 后端解析 @ 拆分，路由到渠道B
+  → 计费按渠道B的售价结算
 ```
 
 ### 0.3 设计目标
 
 | 目标 | 说明 |
 |------|------|
-| 用户自主选择 | 用户能看到所有可用供应商及其价格，自行决策 |
+| 用户自主选择 | 用户能看到所有可用渠道及其价格，自行决策 |
 | 价格透明 | 输入/输出单价清晰展示，支持对比 |
 | 无感兼容 | 不选择时走现有自动路由，零迁移成本 |
 | API 简洁 | `model@vendor` 格式，兼容 OpenAI SDK |
 
 ---
 
-## 1. 厂商管理
+## 1. 渠道管理
 
-### 1.1 厂商资料
+### 1.1 渠道资料
 
-厂商基础信息，面向用户展示。
+渠道基础信息，面向用户展示。
 
 | 字段 | 类型 | 说明 | 对外展示 |
 |------|------|------|---------|
 | id | serial PK | 内部 ID | 否 |
-| name | varchar(100) | 厂商名称，如"智谱AI" | 是 |
-| code | varchar(50) | 厂商编码，如 `vendor_a`，用于 `model@vendor` 拼接 | 否 |
-| logoUrl | varchar(500) | 厂商 Logo URL | 是 |
+| name | varchar(100) | 渠道名称，如"智谱AI" | 是 |
+| code | varchar(50) | 渠道编码，如 `vendor_a`，用于 `model@vendor` 拼接 | 否 |
+| logoUrl | varchar(500) | 渠道 Logo URL | 是 |
 | brandIntro | text | 品牌简介（一句话） | 是 |
 | officialUrl | varchar(500) | 官网地址 | 是 |
 | creditRating | varchar(10) | 信用评级：AAA / AA / A / BBB / BB / B | 是 |
@@ -56,7 +58,7 @@
 | displayOrder | integer | 展示排序权重，越大越靠前 | 是 |
 | isRecommended | boolean | 推荐标记（平台背书） | 是 |
 
-### 1.2 厂商状态
+### 1.2 渠道状态
 
 | 状态 | 值 | 用户可见性 | 说明 |
 |------|---|-----------|------|
@@ -64,33 +66,33 @@
 | 维护中 | `maintenance` | ⚠️ 不可选 | 计划内维护，展示但置灰 |
 | 下线 | `offline` | ❌ 不展示 | 已下线，不返回给用户 |
 
-**状态变更传播**：厂商状态变更时，同步影响该厂商下所有 `vendor_models` 的可选性。若用户已选中某厂商后该厂商进入维护/下线，系统自动回退到自动路由并通知用户。
+**状态变更传播**：渠道状态变更时，同步影响该渠道下所有 `vendor_models` 的可选性。若用户已选中某渠道后该渠道进入维护/下线，系统自动回退到自动路由并通知用户。
 
-### 1.3 厂商资源实例（内部维护）
+### 1.3 渠道资源实例（内部维护）
 
-即现有 `vendor_api_keys` + `vendor_key_groups` 体系，**不对外展示**。内部维护每个厂商的 API Key 池、节点地址、轮换策略等。
+即现有 `vendor_api_keys` + `vendor_key_groups` 体系，**不对外展示**。内部维护每个渠道的 API Key 池、节点地址、轮换策略等。
 
 | 资源 | 对应表 | 说明 |
 |------|--------|------|
 | API Key 池 | `vendor_api_keys` | 加密存储，轮换使用 |
 | Key 分组 | `vendor_key_groups` | 按策略分组（round_robin / weight_random） |
 | 分组内 Key | `vendor_key_group_items` | 具体 Key 实例，含独立定价 |
-| 节点地址 | `vendors.baseUrl` | 厂商 API 端点 |
+| 节点地址 | `vendors.baseUrl` | 渠道 API 端点 |
 
-> 资源实例管理复用现有 `ref-4.3` 供应商管理模块，本 PRD 不重复定义。
+> 资源实例管理复用现有 `ref-4.3` 渠道管理模块，本 PRD 不重复定义。
 
 ---
 
-## 2. 厂商定价管理
+## 2. 渠道售价管理
 
 ### 2.1 定价模型
 
-**一条记录 = 一个模型 × 一个厂商**，对应现有 `vendor_models` 表的售价字段，新增用户可见的定价元数据。
+**一条记录 = 一个模型 × 一个渠道**，对应现有 `vendor_models` 表的售价字段，新增用户可见的定价元数据。
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | serial PK | 记录 ID |
-| vendorId | integer FK→vendors | 厂商 |
+| vendorId | integer FK→vendors | 渠道 |
 | modelId | integer FK→models | 模型 |
 | sellPriceInput | numeric(18,6) | 输入售价（元/1M tokens） |
 | sellPriceOutput | numeric(18,6) | 输出售价（元/1M tokens） |
@@ -107,8 +109,8 @@
 |------|------|
 | 按比例调整 | 选中多条记录，按百分比上调/下调 |
 | 设固定价 | 选中多条记录，统一设置输入/输出价格 |
-| 按厂商调价 | 选中某厂商下所有模型，统一调整 |
-| 按模型调价 | 选中某模型下所有厂商，统一调整 |
+| 按渠道调价 | 选中某渠道下所有模型，统一调整 |
+| 按模型调价 | 选中某模型下所有渠道，统一调整 |
 
 **调价审批流程**（复用 `ref-4.3` §8.2）：
 
@@ -121,10 +123,10 @@
 
 ### 2.3 排序与推荐标记
 
-用户端厂商列表排序规则：
+用户端渠道列表排序规则：
 
 ```
-1. isRecommended = true 的厂商优先
+1. isRecommended = true 的渠道优先
 2. 按 sellPriceInput 升序（价格低优先）
 3. 按 displayOrder 降序
 4. 同价时按 creditRating 降序
@@ -137,15 +139,15 @@
 
 ---
 
-## 3. 供应商成本管理（内部）
+## 3. 渠道成本管理（内部）
 
 ### 3.1 成本价定义
 
-平台向供应商采购的**实际支付价格**，仅管理后台可见，**绝不对外展示**。
+平台向渠道采购的**实际支付价格**，仅管理后台可见，**绝不对外展示**。
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| vendorModelId | integer FK→vendor_models | 供应商-模型映射 ID |
+| vendorModelId | integer FK→vendor_models | 渠道-模型映射 ID |
 | costInputPrice | numeric(18,6) | 输入成本价（元/1M tokens） |
 | costOutputPrice | numeric(18,6) | 输出成本价（元/1M tokens） |
 | costCurrency | varchar(10) | 结算货币：CNY / USD |
@@ -180,10 +182,10 @@
 
 ### 4.2 统计指标
 
-#### 4.2.1 厂商选择分布
+#### 4.2.1 渠道选择分布
 
 ```sql
--- 某模型下各厂商的被选次数占比
+-- 某模型下各渠道的被选次数占比
 SELECT
   vendor_id,
   COUNT(*) AS selection_count,
@@ -196,10 +198,10 @@ GROUP BY vendor_id
 ORDER BY selection_count DESC;
 ```
 
-#### 4.2.2 厂商切换率
+#### 4.2.2 渠道切换率
 
 ```
-切换率 = 切换厂商的请求数 / 总请求数 × 100%
+切换率 = 切换渠道的请求数 / 总请求数 × 100%
 
 切换定义：同一用户连续两次调用同一模型，vendor_id 不同。
 ```
@@ -208,19 +210,19 @@ ORDER BY selection_count DESC;
 
 | 指标 | 计算方式 | 说明 |
 |------|---------|------|
-| 价格选择偏好 | 统计用户选择最低价厂商的占比 | 高=价格敏感 |
-| 品牌选择偏好 | 统计用户选择推荐/高信用厂商的占比 | 高=品牌敏感 |
-| 延迟选择偏好 | 统计用户选择低延迟厂商的占比 | 高=性能敏感 |
-| 切换后价格变动 | 用户切换厂商后的平均价格变动幅度 | 衡量切换动机 |
+| 价格选择偏好 | 统计用户选择最低价渠道的占比 | 高=价格敏感 |
+| 品牌选择偏好 | 统计用户选择推荐/高信用渠道的占比 | 高=品牌敏感 |
+| 延迟选择偏好 | 统计用户选择低延迟渠道的占比 | 高=性能敏感 |
+| 切换后价格变动 | 用户切换渠道后的平均价格变动幅度 | 衡量切换动机 |
 
 ### 4.3 统计看板（管理后台）
 
 | 看板 | 维度 | 图表 |
 |------|------|------|
-| 厂商选择分布 | 模型 × 厂商 | 饼图 + 表格 |
-| 厂商切换趋势 | 时间 × 切换率 | 折线图 |
+| 渠道选择分布 | 模型 × 渠道 | 饼图 + 表格 |
+| 渠道切换趋势 | 时间 × 切换率 | 折线图 |
 | 价格敏感度 | 用户分群 × 选择偏好 | 柱状图 |
-| 厂商收入贡献 | 厂商 × 收入金额 | 排行榜 |
+| 渠道收入贡献 | 渠道 × 收入金额 | 排行榜 |
 
 ---
 
@@ -238,7 +240,7 @@ ORDER BY selection_count DESC;
 | 组成 | 来源 | 说明 |
 |------|------|------|
 | model_name | `models.name` | 平台统一模型名 |
-| vendor_code | `vendors.code` | 厂商编码（非 ID，非 name） |
+| vendor_code | `vendors.code` | 渠道编码（非 ID，非 name） |
 | @ | 分隔符 | 唯一分隔符，model_name 中不允许出现 @ |
 
 ### 5.2 后端解析规则
@@ -267,9 +269,9 @@ function parseModelVendor(input: string): { model: string; vendorCode: string | 
 **解析优先级**：
 
 ```
-1. 请求体 model 字段含 @ → 解析为 model + vendor，走指定厂商路由
+1. 请求体 model 字段含 @ → 解析为 model + vendor，走指定渠道路由
 2. 请求体 model 字段不含 @ → 走现有自动路由（零影响兼容）
-3. 解析出的 vendor 不存在/不可用 → 返回 404 + 错误提示可选厂商列表
+3. 解析出的 vendor 不存在/不可用 → 返回 404 + 错误提示可选渠道列表
 ```
 
 ### 5.3 兼容 OpenAI 格式
@@ -294,7 +296,7 @@ const response = await openai.chat.completions.create({
 
 ### 5.4 API 端点
 
-#### `GET /api/v1/models/:modelName/vendors` — 获取模型可选厂商列表
+#### `GET /api/v1/models/:modelName/vendors` — 获取模型可选渠道列表
 
 **鉴权**：用户 Token
 
@@ -325,7 +327,7 @@ const response = await openai.chat.completions.create({
       },
       {
         "vendorCode": "vendor_b",
-        "name": "云厂商B",
+        "name": "云渠道B",
         "logoUrl": "https://cdn.3cloud.ai/logos/vendor_b.png",
         "brandIntro": "聚合代理，价格更低",
         "creditRating": "AA",
@@ -341,9 +343,9 @@ const response = await openai.chat.completions.create({
       },
       {
         "vendorCode": "vendor_c",
-        "name": "云厂商C",
+        "name": "云渠道C",
         "logoUrl": "https://cdn.3cloud.ai/logos/vendor_c.png",
-        "brandIntro": "新接入厂商，限时优惠",
+        "brandIntro": "新接入渠道，限时优惠",
         "creditRating": "A",
         "sellPriceInput": "0.700000",
         "sellPriceOutput": "1.400000",
@@ -361,9 +363,9 @@ const response = await openai.chat.completions.create({
 ```
 
 **过滤规则**：
-- 仅返回 `status = active` 的厂商
+- 仅返回 `status = active` 的渠道
 - 仅返回 `vendor_models.isEnabled = true` 的映射
-- 熔断器 `circuitState = dead` 的厂商不返回
+- 熔断器 `circuitState = dead` 的渠道不返回
 - `cost*` 字段不返回
 
 #### `POST /api/v1/chat/completions` — 调用（现有端点，扩展 model 字段）
@@ -377,17 +379,17 @@ const response = await openai.chat.completions.create({
 }
 ```
 
-**错误响应**（厂商不可用）：
+**错误响应**（渠道不可用）：
 
 ```json
 {
   "error": {
     "type": "vendor_unavailable",
-    "message": "厂商 vendor_c 当前不可用",
+    "message": "渠道 vendor_c 当前不可用",
     "code": "VENDOR_UNAVAILABLE",
     "availableVendors": [
       { "vendorCode": "vendor_a", "name": "智谱AI", "sellPriceInput": "1.000000" },
-      { "vendorCode": "vendor_b", "name": "云厂商B", "sellPriceInput": "0.800000" }
+      { "vendorCode": "vendor_b", "name": "云渠道B", "sellPriceInput": "0.800000" }
     ]
   }
 }
@@ -401,21 +403,21 @@ const response = await openai.chat.completions.create({
 
 ```
 用户选择模型（如 GLM-5.2）
-  → 展示"可选厂商"按钮（带角标显示厂商数量）
-  → 点击展开厂商选择器面板
-  → 展示厂商卡片列表（价格、品牌、推荐标签、健康状态）
-  → 用户选中某厂商
+  → 展示"可选渠道"按钮（带角标显示渠道数量）
+  → 点击展开渠道选择器面板
+  → 展示渠道卡片列表（价格、品牌、推荐标签、健康状态）
+  → 用户选中某渠道
   → 模型输入框自动拼接为 glm-5.2@vendor_b
   → 用户发起调用
 ```
 
-### 6.2 厂商选择器组件
+### 6.2 渠道选择器组件
 
 ```typescript
 interface VendorSelectorProps {
   modelName: string;              // 当前模型名
-  vendors: VendorOption[];        // 可选厂商列表
-  selectedVendorCode: string | null; // 已选厂商（null=自动路由）
+  vendors: VendorOption[];        // 可选渠道列表
+  selectedVendorCode: string | null; // 已选渠道（null=自动路由）
   onSelect: (vendorCode: string | null) => void;
 }
 
@@ -444,11 +446,11 @@ interface VendorOption {
 │                                                     │
 │  模型：[GLM-5.2 ▼]  [?]                             │
 │                                                     │
-│  ┌─ 供应厂商 ──────────────────────────────────┐   │
+│  ┌─ 供应渠道 ──────────────────────────────────┐   │
 │  │  ○ 自动选择（系统智能路由）            [?]   │   │
 │  │  ○ 智谱AI     ¥1.00/¥2.00  ⭐推荐  AAA  [?] │   │
-│  │  ○ 云厂商B    ¥0.80/¥1.60          AA   [?] │   │
-│  │  ○ 云厂商C    ¥0.70/¥1.40          A    [?] │   │
+│  │  ○ 云渠道B    ¥0.80/¥1.60          AA   [?] │   │
+│  │  ○ 云渠道C    ¥0.70/¥1.40          A    [?] │   │
 │  └──────────────────────────────────────────────┘   │
 │                                                     │
 │  实际调用：glm-5.2@vendor_b                        │
@@ -457,12 +459,12 @@ interface VendorOption {
 └─────────────────────────────────────────────────────┘
 ```
 
-### 6.4 厂商卡片展示规则
+### 6.4 渠道卡片展示规则
 
 | 元素 | 展示规则 |
 |------|---------|
-| Logo | 48×48 圆角，加载失败显示厂商名首字 |
-| 厂商名 | 14px 加粗 |
+| Logo | 48×48 圆角，加载失败显示渠道名首字 |
+| 渠道名 | 14px 加粗 |
 | 品牌简介 | 12px 灰色，单行截断 |
 | 价格 | 输入/输出分开展示，¥符号 + 6位小数 |
 | 推荐标签 | 金色 ⭐ 图标 + 推荐理由 Tooltip |
@@ -480,7 +482,7 @@ interface VendorOption {
 
 ### 7.1 新增表
 
-#### `vendor_profiles` — 厂商展示资料（扩展 vendors 表）
+#### `vendor_profiles` — 渠道展示资料（扩展 vendors 表）
 
 ```sql
 CREATE TABLE vendor_profiles (
@@ -498,7 +500,7 @@ CREATE TABLE vendor_profiles (
 );
 ```
 
-#### `vendor_model_prices` — 厂商定价记录（用户可见售价）
+#### `vendor_model_prices` — 渠道售价记录（用户可见售价）
 
 ```sql
 CREATE TABLE vendor_model_prices (
@@ -520,7 +522,7 @@ CREATE INDEX idx_vmp_vendor_model ON vendor_model_prices(vendor_model_id);
 CREATE INDEX idx_vmp_effective ON vendor_model_prices(effective_at, expired_at);
 ```
 
-#### `vendor_cost_prices` — 供应商成本价（内部）
+#### `vendor_cost_prices` — 渠道成本价（内部）
 
 ```sql
 CREATE TABLE vendor_cost_prices (
@@ -558,7 +560,7 @@ CREATE TABLE price_change_history (
 CREATE INDEX idx_pch_vendor_model ON price_change_history(vendor_model_id);
 ```
 
-#### `user_vendor_selections` — 用户厂商选择记录
+#### `user_vendor_selections` — 用户渠道选择记录
 
 ```sql
 CREATE TABLE user_vendor_selections (
@@ -586,14 +588,14 @@ ALTER TABLE vendors ADD COLUMN IF NOT EXISTS code VARCHAR(50) NOT NULL UNIQUE;
 
 ```sql
 ALTER TABLE vendor_models ADD COLUMN IF NOT EXISTS user_selectable BOOLEAN DEFAULT true;
--- 是否对该模型开放用户自选厂商功能
+-- 是否对该模型开放用户自选渠道功能
 ```
 
 #### `models` 表新增字段
 
 ```sql
 ALTER TABLE models ADD COLUMN IF NOT EXISTS vendor_selection_enabled BOOLEAN DEFAULT false;
--- 该模型是否启用厂商自选功能（全局开关）
+-- 该模型是否启用渠道自选功能（全局开关）
 ```
 
 ### 7.3 ER 关系简图
@@ -626,13 +628,13 @@ models ─── vendor_models（1:N）── vendors
 
 | 表 | 用途 | 对外 | 关键字段 |
 |------|------|------|---------|
-| `vendors` | 厂商主表 | 部分 | id, name, code, status, base_url |
-| `vendor_profiles` | 厂商展示资料 | 是 | logo_url, brand_intro, credit_rating, is_recommended |
+| `vendors` | 渠道主表 | 部分 | id, name, code, status, base_url |
+| `vendor_profiles` | 渠道展示资料 | 是 | logo_url, brand_intro, credit_rating, is_recommended |
 | `vendor_api_keys` | API Key 池 | 否 | encrypted_key, is_enabled |
 | `vendor_key_groups` | Key 分组 | 否 | strategy, status |
 | `vendor_key_group_items` | 分组内 Key | 否 | api_key_encrypted, weight, priority |
 | `models` | 模型定义 | 是 | name, display_name, vendor_selection_enabled |
-| `vendor_models` | 厂商-模型映射 | 部分 | vendor_id, model_id, upstream_model, user_selectable |
+| `vendor_models` | 渠道-模型映射 | 部分 | vendor_id, model_id, upstream_model, user_selectable |
 | `vendor_model_prices` | 用户可见售价 | 是 | sell_price_input, sell_price_output, effective_at |
 | `vendor_cost_prices` | 内部成本价 | **否** | cost_input_price, cost_output_price |
 | `price_change_history` | 价格变更记录 | 否 | old_value, new_value, changed_by |
@@ -647,25 +649,25 @@ models ─── vendor_models（1:N）── vendors
 
 | 页面 | pageKey | 帮助内容 |
 |------|---------|---------|
-| 厂商管理列表 | `vendor-management` | 适用角色：运营/管理员。功能：管理平台供应商资料、状态、资源实例。核心操作：新增厂商、编辑资料、切换状态、测试连通性。注意事项：厂商下线前确认有备用厂商。常见问题：厂商维护中是否影响现有用户？——是，自动切换到备用厂商。 |
-| 厂商定价管理 | `vendor-pricing` | 适用角色：运营/财务。功能：设置各厂商对模型的售价。核心操作：单条改价、批量调价、定时生效。注意事项：涨价需审批，提前通知用户。常见问题：改价后多久生效？——降价即时，涨价按审批流程 T+7/14/30。 |
-| 供应商成本管理 | `vendor-cost` | 适用角色：财务/管理员。功能：管理平台采购成本价。核心操作：设置成本价、查看毛利率。注意事项：成本价仅内部可见，不对外展示。 |
-| 用户选购统计 | `vendor-selection-stats` | 适用角色：运营/产品。功能：分析用户厂商选择行为。核心指标：选择分布、切换率、价格敏感度。 |
-| 用户端厂商选择器 | `user-vendor-selector` | 适用角色：所有用户。功能：调用模型时选择供应商。核心操作：查看可选厂商、对比价格、选择厂商。注意事项：不选时系统自动路由。常见问题：选错厂商怎么办？——下次调用重新选择即可。 |
+| 渠道管理列表 | `vendor-management` | 适用角色：运营/管理员。功能：管理平台渠道资料、状态、资源实例。核心操作：新增渠道、编辑资料、切换状态、测试连通性。注意事项：渠道下线前确认有备用渠道。常见问题：渠道维护中是否影响现有用户？——是，自动切换到备用渠道。 |
+| 渠道售价管理 | `vendor-pricing` | 适用角色：运营/财务。功能：设置各渠道对模型的售价。核心操作：单条改价、批量调价、定时生效。注意事项：涨价需审批，提前通知用户。常见问题：改价后多久生效？——降价即时，涨价按审批流程 T+7/14/30。 |
+| 渠道成本管理 | `vendor-cost` | 适用角色：财务/管理员。功能：管理平台采购成本价。核心操作：设置成本价、查看毛利率。注意事项：成本价仅内部可见，不对外展示。 |
+| 用户选购统计 | `vendor-selection-stats` | 适用角色：运营/产品。功能：分析用户渠道选择行为。核心指标：选择分布、切换率、价格敏感度。 |
+| 用户端渠道选择器 | `user-vendor-selector` | 适用角色：所有用户。功能：调用模型时选择渠道。核心操作：查看可选渠道、对比价格、选择渠道。注意事项：不选时系统自动路由。常见问题：选错渠道怎么办？——下次调用重新选择即可。 |
 
 ### 8.2 按钮级帮助对照表
 
 | 按钮/操作 | 帮助文案 |
 |-----------|---------|
-| 新增厂商 | 创建一个新的供应商，需填写名称、编码、API 地址 |
-| 编辑厂商资料 | 修改供应商的基础信息和展示资料 |
-| 切换厂商状态 | 将供应商设为正常/维护/下线，维护和下线将影响用户选择 |
-| 测试连通性 | 向供应商 API 发送测试请求，验证连接是否正常 |
+| 新增渠道 | 创建一个新的渠道，需填写名称、编码、API 地址 |
+| 编辑渠道资料 | 修改渠道的基础信息和展示资料 |
+| 切换渠道状态 | 将渠道设为正常/维护/下线，维护和下线将影响用户选择 |
+| 测试连通性 | 向渠道 API 发送测试请求，验证连接是否正常 |
 | 批量调价 | 选中多条定价记录，按比例或固定值统一调整价格 |
-| 设为推荐 | 将该厂商标记为推荐，用户端展示推荐标签 |
-| 查看价格历史 | 查看该厂商-模型的历史调价记录 |
-| 自动选择 | 系统根据价格、健康度、延迟自动选择最优厂商 |
-| 厂商卡片 [?] | 显示该厂商的品牌简介、信用评级、健康状态、价格信息 |
+| 设为推荐 | 将该渠道标记为推荐，用户端展示推荐标签 |
+| 查看价格历史 | 查看该渠道-模型的历史调价记录 |
+| 自动选择 | 系统根据价格、健康度、延迟自动选择最优渠道 |
+| 渠道卡片 [?] | 显示该渠道的品牌简介、信用评级、健康状态、价格信息 |
 
 ---
 
@@ -673,11 +675,11 @@ models ─── vendor_models（1:N）── vendors
 
 | 指标 | 要求 |
 |------|------|
-| 厂商列表响应 | P99 < 200ms（Redis 缓存，TTL 60s） |
+| 渠道列表响应 | P99 < 200ms（Redis 缓存，TTL 60s） |
 | model@vendor 解析 | P99 < 1ms（纯字符串操作） |
-| 厂商选择记录写入 | 异步写入，不阻塞主请求 |
+| 渠道选择记录写入 | 异步写入，不阻塞主请求 |
 | 价格缓存更新 | 调价后 60s 内全节点生效 |
-| 可选厂商数量上限 | 单模型最多 10 个厂商展示 |
+| 可选渠道数量上限 | 单模型最多 10 个渠道展示 |
 | 统计看板数据延迟 | T+1 小时（每小时聚合一次） |
 
 ---
@@ -688,9 +690,9 @@ models ─── vendor_models（1:N）── vendors
 |------|------|------|
 | P0 | `model@vendor` 解析 + 路由适配 | 现有路由引擎 |
 | P0 | `GET /models/:name/vendors` API | `vendor_profiles` 表 |
-| P1 | 用户端厂商选择器 UI | P0 API |
-| P1 | 厂商定价管理（管理后台） | `vendor_model_prices` 表 |
-| P2 | 供应商成本管理（内部） | `vendor_cost_prices` 表 |
+| P1 | 用户端渠道选择器 UI | P0 API |
+| P1 | 渠道售价管理（管理后台） | `vendor_model_prices` 表 |
+| P2 | 渠道成本管理（内部） | `vendor_cost_prices` 表 |
 | P2 | 用户选购统计看板 | `call_logs` 聚合 |
 | P3 | 批量调价 + 定时生效 | 价格变更审批流程 |
 
@@ -719,10 +721,10 @@ models ─── vendor_models（1:N）── vendors
 | 自动路由 | 无影响 | model 不含 @ 时走自动路由 |
 | OpenAI SDK | 无影响 | model 字段直接传 model@vendor |
 | 计费引擎 | 无影响 | 按 vendor_models 售价计费，逻辑不变 |
-| 熔断器 | 无影响 | 指定厂商熔断时返回错误 + 可选列表 |
-| 健康检查 | 无影响 | 厂商健康状态影响可选性 |
-| Key 池轮换 | 无影响 | 选定厂商后走该厂商的 Key 池 |
-| 供应商管理 | 扩展 | 新增 vendor_profiles 展示资料 |
+| 熔断器 | 无影响 | 指定渠道熔断时返回错误 + 可选列表 |
+| 健康检查 | 无影响 | 渠道健康状态影响可选性 |
+| Key 池轮换 | 无影响 | 选定渠道后走该渠道的 Key 池 |
+| 渠道管理 | 扩展 | 新增 vendor_profiles 展示资料 |
 | 路由覆盖 | 无影响 | 覆盖优先级高于用户选择（运维应急） |
 
 ## 附录 C：路由覆盖与用户选择的关系
@@ -734,4 +736,4 @@ models ─── vendor_models（1:N）── vendors
   3. 自动路由策略（weighted_random / lowest_price）—— 默认
 ```
 
-运维通过路由覆盖可以将某模型强制路由到指定厂商，即使用户在请求中指定了 `model@vendor`，也会被覆盖到运维指定的厂商。此场景仅在应急故障时使用，用户会收到通知说明厂商已切换。
+运维通过路由覆盖可以将某模型强制路由到指定渠道，即使用户在请求中指定了 `model@vendor`，也会被覆盖到运维指定的渠道。此场景仅在应急故障时使用，用户会收到通知说明渠道已切换。

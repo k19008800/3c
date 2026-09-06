@@ -1,0 +1,14 @@
+pnpm build artifacts (generated 2026-09-04T09:16:37.0593909+08:00):
+workdir: C:\Users\ZH\.openclaw\workspace\3cloud
+
+--- api/dist ---
+files: 1076
+total bytes: 6523560
+index.js SHA-256: 79831A4ABD993F91C51A12942DBFA56C2DE7B1EE3F44AF3A537597C9F3DD2B99
+
+--- web-console/dist ---
+files: 3
+total bytes: 1925763
+
+--- web-portal/.next ---
+exists: yes

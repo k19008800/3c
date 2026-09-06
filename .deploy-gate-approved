@@ -1,11 +1,18 @@
-approved: 2026-08-18
-by: dispatch-agent
+approved: 2026-08-28
+by: dispatch-agent (经 BOSS 确认走部署前检查流程)
+based-on: 2026-08 P0 缓存定价与缓存计量验收（最新基线，原 808 已过时）
 gates:
   typecheck: 0 errors (api / web-console / web-portal)
-  vitest: 808/808 passed (52 files)
+  vitest: 1159/1159 passed (77 files, exit 0)   # 2026-08-29 latest baseline
   verify: 17/17 passed
   e2e: 10/10 passed (playwright msedge)
   build: shared / api / web-console / web-portal all passed
   accounting: consumption == balance_transactions == balance delta (exact)
   stress: 9/9 passed (20 concurrent requests, no double-billing, no frozen residue)
-note: 生产服仍为空（2026-08-16 已清空），部署执行需 BOSS 最终确认后按 deploy/deployment-runbook.md 进行
+prod-precheck (2026-08-28, read-only):
+  host: 117.78.2.66 (hcss-ecs-38a9, Ubuntu 22.04, 2C/1.7G/40G)
+  node: v20.20.2 / pnpm 10.34.5 / pm2 7.0.1 / nginx 1.30.2 / pg 17.10(+pgvector) / redis(密码保护, PONG)
+  db-residue: none (仅默认 postgres 库) / /root/3cloud: absent / pm2: empty
+  ports: 3000/3100/5175 空闲; 5432/6379 仅 127.0.0.1 监听
+  status: 生产服空白就绪, 可部署性预检通过
+note: 部署执行高影响操作(密钥生成/建库/迁移/SSL)需 BOSS 最终放行后, 按 deploy/deployment-runbook.md 逐步执行; DNS 公网解析需在外部环境复核

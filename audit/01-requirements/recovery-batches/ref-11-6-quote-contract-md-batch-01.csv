@@ -1,0 +1,51 @@
+﻿req_id,domain,source_path,bad_fields,recovered_section,recovered_quote,recovered_assertion,quote_source_lines,section_source_lines,conversion,compound_after_recovery,status,basis
+UA2-06360,user-agent,docs/ref-11.6-quote-contract.md,source_section,1. 报价管理,鎬婚噾棰?,鎬婚噾棰?,120,17,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06367,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,1. 报价管理,附加说明,附加说明,28,17,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06368,user-agent,docs/ref-11.6-quote-contract.md,source_section,1. 报价管理,**鎶ヤ环鍗曠姸鎬佹祦杞?*,**鎶ヤ环鍗曠姸鎬佹祦杞?*,30,17,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06370,user-agent,docs/ref-11.6-quote-contract.md,source_section,1. 报价管理,说明,说明,61;93,17,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06372,user-agent,docs/ref-11.6-quote-contract.md,source_section,1. 报价管理,draft,draft,123;157,17,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06375,user-agent,docs/ref-11.6-quote-contract.md,source_section,1. 报价管理,pending_approval,pending_approval,123;157,17,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06378,user-agent,docs/ref-11.6-quote-contract.md,source_section,1. 报价管理,approved,approved,86;123;157,17,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06379,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,1. 报价管理,审批通过,审批通过,86,17,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06381,user-agent,docs/ref-11.6-quote-contract.md,source_section,1. 报价管理,rejected,rejected,34;42;78;123,17,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06383,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,1. 报价管理,查看驳回原因，修改后重新提交,查看驳回原因，修改后重新提交,42,17,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06384,user-agent,docs/ref-11.6-quote-contract.md,source_section,1. 报价管理,sent,sent,43;123,17,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06385,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,1. 报价管理,已发送给客户,已发送给客户,43,17,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06386,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,1. 报价管理,标记为已接受 / 过期,标记为已接受 / 过期,43,17,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06387,user-agent,docs/ref-11.6-quote-contract.md,source_section,1. 报价管理,accepted,accepted,123,17,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06390,user-agent,docs/ref-11.6-quote-contract.md,source_section,1. 报价管理,expired,expired,34;78;79;88;123;157;280,17,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06396,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,2. 合同模板管理,模板名称,模板名称,135,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06398,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,2. 合同模板管理,内容,内容,55;101;324,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06399,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,2. 合同模板管理,Markdown 格式合同正文,Markdown 格式合同正文,55,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06400,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,变量,变量,61;137,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06402,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,版本,版本,138,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06408,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,说明,说明,61;93,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06409,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,绀轰緥鍊?,绀轰緥鍊?,61,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06410,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,`{{customerName}}`,`{{customerName}}`,63,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06411,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,2. 合同模板管理,客户名称,客户名称,63;117;152,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06412,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,2. 合同模板管理,张三科技有限公司,张三科技有限公司,63,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06413,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,`{{customerContact}}`,`{{customerContact}}`,64,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06414,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,鑱旂郴浜?,鑱旂郴浜?,64;118;153,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06415,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,张三,张三,64,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06416,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,`{{contractNo}}`,`{{contractNo}}`,65,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06417,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,合同编号,合同编号,65,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06418,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,CON-260801-001,CON-260801-001,65,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06419,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,`{{effectiveDate}}`,`{{effectiveDate}}`,66,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06420,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,2. 合同模板管理,生效日期,生效日期,66;158,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06421,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,2026-08-01,2026-08-01,66,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06422,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,`{{expiryDate}}`,`{{expiryDate}}`,67,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06423,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,2. 合同模板管理,到期日期,到期日期,67;159,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06424,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,2027-07-31,2027-07-31,67,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06425,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,`{{serviceDesc}}`,`{{serviceDesc}}`,68,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06426,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,服务描述,服务描述,68,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06427,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,AI 模型 API 调用服务,AI 模型 API 调用服务,68,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06428,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,`{{totalAmount}}`,`{{totalAmount}}`,69,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06429,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,2. 合同模板管理,合同金额,合同金额,69,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06431,user-agent,docs/ref-11.6-quote-contract.md,source_section,2. 合同模板管理,`{{paymentTerms}}`,`{{paymentTerms}}`,70,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06432,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,2. 合同模板管理,付款条款,付款条款,70,49,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06434,user-agent,docs/ref-11.6-quote-contract.md,source_section,3. 合同管理,**鍚堝悓鐘舵€佹祦杞?*,**鍚堝悓鐘舵€佹祦杞?*,74,72,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06435,user-agent,docs/ref-11.6-quote-contract.md,source_section,3. 合同管理,draft,draft,123;157,72,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06437,user-agent,docs/ref-11.6-quote-contract.md,source_section,3. 合同管理,pending_approval,pending_approval,123;157,72,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06439,user-agent,docs/ref-11.6-quote-contract.md,source_section,3. 合同管理,approved,approved,86;123;157,72,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06440,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,3. 合同管理,审批通过，待签署,审批通过，待签署,86,72,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06441,user-agent,docs/ref-11.6-quote-contract.md,source_section,3. 合同管理,signed,signed,87;157;160,72,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认

@@ -1,0 +1,272 @@
+﻿req_id,domain,source_path,bad_fields,recovered_section,recovered_quote,recovered_assertion,quote_source_lines,section_source_lines,conversion,compound_after_recovery,status,basis,source_section_context,source_quote_context,section_check,quote_check,assertion_check,format_risk_check,review_decision,review_notes
+UA2-03006,user-agent,docs/SPEC-§22-用户端体验增强.md,source_quote;atomic_assertion,完成能力 / 展示效果,**Step 1：欢迎与介绍（全屏模态弹窗）**,**Step 1：欢迎与介绍（全屏模态弹窗）**,44,42;235;311;429;484;570;750;977;1216;1415;1662;1735;1840;1920;1969;2032,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"42: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+235: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+311: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+429: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+484: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+570: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+750: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+977: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1216: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1415: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1662: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1735: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1840: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1920: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1969: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+2032: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉",44: **Step 1锛氭杩庝笌浠嬬粛锛堝叏灞忔ā鎬佸脊绐楋級**,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03017,user-agent,docs/SPEC-§22-用户端体验增强.md,source_quote;atomic_assertion,完成能力 / 展示效果,创建成功后：,创建成功后：,56,42;235;311;429;484;570;750;977;1216;1415;1662;1735;1840;1920;1969;2032,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"42: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+235: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+311: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+429: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+484: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+570: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+750: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+977: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1216: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1415: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1662: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1735: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1840: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1920: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1969: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+2032: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉",56: - 鍒涘缓鎴愬姛鍚庯細,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03018,user-agent,docs/SPEC-§22-用户端体验增强.md,source_quote;atomic_assertion,完成能力 / 展示效果,创建弹窗关闭,创建弹窗关闭,57,42;235;311;429;484;570;750;977;1216;1415;1662;1735;1840;1920;1969;2032,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"42: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+235: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+311: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+429: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+484: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+570: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+750: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+977: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1216: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1415: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1662: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1735: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1840: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1920: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1969: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+2032: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉",57:   - 鍒涘缓寮圭獥鍏抽棴,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03023,user-agent,docs/SPEC-§22-用户端体验增强.md,source_quote;atomic_assertion,完成能力 / 展示效果,自动跳转到模型列表页 `/console/models,自动跳转到模型列表页 `/console/models,63,42;235;311;429;484;570;750;977;1216;1415;1662;1735;1840;1920;1969;2032,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"42: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+235: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+311: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+429: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+484: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+570: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+750: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+977: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1216: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1415: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1662: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1735: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1840: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1920: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1969: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+2032: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉",63: - 鑷姩璺宠浆鍒版ā鍨嬪垪琛ㄩ〉 `/console/models`,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03041,user-agent,docs/SPEC-§22-用户端体验增强.md,source_quote;atomic_assertion,完成能力 / 展示效果,展示三个语言标签切换：Python | JavaScript | cURL,展示三个语言标签切换：Python | JavaScript | cURL,83,42;235;311;429;484;570;750;977;1216;1415;1662;1735;1840;1920;1969;2032,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"42: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+235: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+311: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+429: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+484: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+570: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+750: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+977: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1216: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1415: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1662: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1735: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1840: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1920: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1969: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+2032: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉",83: - 灞曠ず涓変釜璇█鏍囩鍒囨崲锛歅ython | JavaScript | cURL,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03044,user-agent,docs/SPEC-§22-用户端体验增强.md,source_quote;atomic_assertion,完成能力 / 展示效果,JavaScript：`import { ThreeCloud } from '3cloud-sdk';,JavaScript：`import { ThreeCloud } from '3cloud-sdk';,85,42;235;311;429;484;570;750;977;1216;1415;1662;1735;1840;1920;1969;2032,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"42: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+235: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+311: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+429: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+484: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+570: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+750: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+977: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1216: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1415: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1662: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1735: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1840: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1920: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1969: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+2032: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉",85:   - JavaScript锛歚import { ThreeCloud } from '3cloud-sdk'; const client = new ThreeCloud({ apiKey: 'sk-3c-xxx' }); ...`,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03046,user-agent,docs/SPEC-§22-用户端体验增强.md,source_quote;atomic_assertion,完成能力 / 展示效果,"cURL：`curl https://api.3cloud.dev/v1/chat/completions -H ""Authorization: Bearer sk-3c-xxx"" ...","cURL：`curl https://api.3cloud.dev/v1/chat/completions -H ""Authorization: Bearer sk-3c-xxx"" ...",86,42;235;311;429;484;570;750;977;1216;1415;1662;1735;1840;1920;1969;2032,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"42: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+235: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+311: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+429: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+484: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+570: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+750: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+977: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1216: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1415: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1662: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1735: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1840: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1920: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1969: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+2032: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉","86:   - cURL锛歚curl https://api.3cloud.dev/v1/chat/completions -H ""Authorization: Bearer sk-3c-xxx"" ...`",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03072,user-agent,docs/SPEC-§22-用户端体验增强.md,source_quote;atomic_assertion,边界条件,显示友好错误提示 + 解决方案建议 + [重试] 按钮 + 允许跳过,显示友好错误提示 + 解决方案建议 + [重试] 按钮 + 允许跳过,202,196;943;1179;1382;1607;1817,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"196: ### 杈圭晫鏉′欢
+943: ### 杈圭晫鏉′欢
+1179: ### 杈圭晫鏉′欢
+1382: ### 杈圭晫鏉′欢
+1607: ### 杈圭晫鏉′欢
+1817: ### 杈圭晫鏉′欢",202: | Step 4 API 璋冪敤澶辫触 | 鏄剧ず鍙嬪ソ閿欒鎻愮ず + 瑙ｅ喅鏂规寤鸿 + [閲嶈瘯] 鎸夐挳 + 鍏佽璺宠繃 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03083,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,验收标准,AC-1,AC-1,722,209;956;1195;1395;1621;1724;1827;1908;1957;2021;2096,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"209: ### 楠屾敹鏍囧噯
+956: ### 楠屾敹鏍囧噯
+1195: ### 楠屾敹鏍囧噯
+1395: ### 楠屾敹鏍囧噯
+1621: ### 楠屾敹鏍囧噯
+1724: ### 楠屾敹鏍囧噯
+1827: ### 楠屾敹鏍囧噯
+1908: ### 楠屾敹鏍囧噯
+1957: ### 楠屾敹鏍囧噯
+2021: ### 楠屾敹鏍囧噯
+2096: ### 楠屾敹鏍囧噯",722: | AC-14 | 璋冨害浠诲姟瑙﹀彂 rate_spike 鍛婅 | 鍛婅鍗＄墖鍑虹幇鏂板憡璀︼紝绾㈣壊瑙掓爣鏁板瓧 +1 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03086,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,验收标准,AC-2,AC-2,729,209;956;1195;1395;1621;1724;1827;1908;1957;2021;2096,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"209: ### 楠屾敹鏍囧噯
+956: ### 楠屾敹鏍囧噯
+1195: ### 楠屾敹鏍囧噯
+1395: ### 楠屾敹鏍囧噯
+1621: ### 楠屾敹鏍囧噯
+1724: ### 楠屾敹鏍囧噯
+1827: ### 楠屾敹鏍囧噯
+1908: ### 楠屾敹鏍囧噯
+1957: ### 楠屾敹鏍囧噯
+2021: ### 楠屾敹鏍囧噯
+2096: ### 楠屾敹鏍囧噯","729: | AC-21 | 瀵煎嚭 > 100,000 鏉?| 寮圭獥鎻愮ず""缂╁皬鏃堕棿鑼冨洿"" |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03089,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,验收标准,AC-3,AC-3,1199,209;956;1195;1395;1621;1724;1827;1908;1957;2021;2096,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"209: ### 楠屾敹鏍囧噯
+956: ### 楠屾敹鏍囧噯
+1195: ### 楠屾敹鏍囧噯
+1395: ### 楠屾敹鏍囧噯
+1621: ### 楠屾敹鏍囧噯
+1724: ### 楠屾敹鏍囧噯
+1827: ### 楠屾敹鏍囧噯
+1908: ### 楠屾敹鏍囧噯
+1957: ### 楠屾敹鏍囧噯
+2021: ### 楠屾敹鏍囧噯
+2096: ### 楠屾敹鏍囧噯",1199: | AC-32 | 鍒涘缓 Webhook 閰嶇疆 | 淇濆瓨鎴愬姛锛屽垪琛ㄥ嚭鐜版柊鍗＄墖 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03092,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,验收标准,AC-4,AC-4,1399;1406;1625,209;956;1195;1395;1621;1724;1827;1908;1957;2021;2096,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"209: ### 楠屾敹鏍囧噯
+956: ### 楠屾敹鏍囧噯
+1195: ### 楠屾敹鏍囧噯
+1395: ### 楠屾敹鏍囧噯
+1621: ### 楠屾敹鏍囧噯
+1724: ### 楠屾敹鏍囧噯
+1827: ### 楠屾敹鏍囧噯
+1908: ### 楠屾敹鏍囧噯
+1957: ### 楠屾敹鏍囧噯
+2021: ### 楠屾敹鏍囧噯
+2096: ### 楠屾敹鏍囧噯","1399: | AC-41 | 鐧诲綍椤垫樉绀轰笁涓涓夋柟鐧诲綍鎸夐挳 | 鐐瑰嚮璺宠浆鍒板搴旀巿鏉冮〉 |
+1406: | AC-48 | GitHub 鎺堟潈鎷掔粷 | 璺冲洖鐧诲綍椤碉紝Toast ""鎺堟潈宸插彇娑? |
+1625: | AC-49 | 鐢ㄦ埛鍏抽棴閭欢閫氱煡鍏ㄥ眬 | 涓嶅啀鏀跺埌閭欢 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03118,user-agent,docs/SPEC-§22-用户端体验增强.md,source_quote;atomic_assertion,完成能力 / 展示效果,本月剩余天数 = DAY(LAST_DAY(NOW())) - DAY(NOW()) + 1,本月剩余天数 = DAY(LAST_DAY(NOW())) - DAY(NOW()) + 1,254,42;235;311;429;484;570;750;977;1216;1415;1662;1735;1840;1920;1969;2032,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"42: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+235: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+311: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+429: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+484: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+570: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+750: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+977: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1216: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1415: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1662: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1735: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1840: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1920: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1969: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+2032: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉",254: 鏈湀鍓╀綑澶╂暟 = DAY(LAST_DAY(NOW())) - DAY(NOW()) + 1,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03129,user-agent,docs/SPEC-§22-用户端体验增强.md,source_quote;atomic_assertion,完成能力 / 展示效果,"""forecastUsagePercent"": 57.9, // 预估/预算","""forecastUsagePercent"": 57.9, // 预估/预算",277,42;235;311;429;484;570;750;977;1216;1415;1662;1735;1840;1920;1969;2032,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"42: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+235: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+311: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+429: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+484: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+570: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+750: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+977: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1216: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1415: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1662: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1735: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1840: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1920: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1969: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+2032: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉","277:   ""forecastUsagePercent"": 57.9, // 棰勪及/棰勭畻",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03149,user-agent,docs/SPEC-§22-用户端体验增强.md,source_quote;atomic_assertion,完成能力 / 展示效果,**告警分类与展示：**,**告警分类与展示：**,318,42;235;311;429;484;570;750;977;1216;1415;1662;1735;1840;1920;1969;2032,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"42: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+235: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+311: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+429: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+484: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+570: #### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+750: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+977: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1216: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1415: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1662: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1735: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1840: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1920: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+1969: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉
+2032: ### 瀹屾垚鑳藉姏 / 灞曠ず鏁堟灉",318: **鍛婅鍒嗙被涓庡睍绀猴細**,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03166,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,后端告警生成逻辑,"export const userAlerts = pgTable(""user_alerts"", {","export const userAlerts = pgTable(""user_alerts"", {",407,388,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,388: #### 鍚庣鍛婅鐢熸垚閫昏緫,"407: export const userAlerts = pgTable(""user_alerts"", {",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03167,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,后端告警生成逻辑,"id: serial(""id"").primaryKey(),","id: serial(""id"").primaryKey(),",408;1088;1110;1129;1287;1452;1762,388,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,388: #### 鍚庣鍛婅鐢熸垚閫昏緫,"408:   id: serial(""id"").primaryKey(),
+1088:   id: serial(""id"").primaryKey(),
+1110:   id: serial(""id"").primaryKey(),
+1129:   id: serial(""id"").primaryKey(),
+1287:   id: serial(""id"").primaryKey(),
+1452:   id: serial(""id"").primaryKey(),
+1762:   id: serial(""id"").primaryKey(),",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03168,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,后端告警生成逻辑,"userId: integer(""user_id"").notNull().references(() => users.id),","userId: integer(""user_id"").notNull().references(() => users.id),",409;1089,388,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,388: #### 鍚庣鍛婅鐢熸垚閫昏緫,"409:   userId: integer(""user_id"").notNull().references(() => users.id),
+1089:   userId: integer(""user_id"").notNull().references(() => users.id),",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03169,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,后端告警生成逻辑,"type: varchar(""type"", { length: 30 }).notNull(),","type: varchar(""type"", { length: 30 }).notNull(),",410,388,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,388: #### 鍚庣鍛婅鐢熸垚閫昏緫,"410:   type: varchar(""type"", { length: 30 }).notNull(),",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03170,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,后端告警生成逻辑,"level: varchar(""level"", { length: 10 }).notNull().default(""medium""),","level: varchar(""level"", { length: 10 }).notNull().default(""medium""),",411,388,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,388: #### 鍚庣鍛婅鐢熸垚閫昏緫,"411:   level: varchar(""level"", { length: 10 }).notNull().default(""medium""),",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03171,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,后端告警生成逻辑,"message: varchar(""message"", { length: 500 }).notNull(),","message: varchar(""message"", { length: 500 }).notNull(),",412,388,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,388: #### 鍚庣鍛婅鐢熸垚閫昏緫,"412:   message: varchar(""message"", { length: 500 }).notNull(),",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03172,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,后端告警生成逻辑,"detail: jsonb(""detail""),","detail: jsonb(""detail""),",413,388,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,388: #### 鍚庣鍛婅鐢熸垚閫昏緫,"413:   detail: jsonb(""detail""),",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03173,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,后端告警生成逻辑,"route: varchar(""route"", { length: 200 }),","route: varchar(""route"", { length: 200 }),",414,388,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,388: #### 鍚庣鍛婅鐢熸垚閫昏緫,"414:   route: varchar(""route"", { length: 200 }),",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03174,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,后端告警生成逻辑,"read: boolean(""read"").default(false),","read: boolean(""read"").default(false),",415,388,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,388: #### 鍚庣鍛婅鐢熸垚閫昏緫,"415:   read: boolean(""read"").default(false),",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03175,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,后端告警生成逻辑,"createdAt: timestamp(""created_at"").defaultNow(),","createdAt: timestamp(""created_at"").defaultNow(),",416;1103;1298;1466;1770,388,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,388: #### 鍚庣鍛婅鐢熸垚閫昏緫,"416:   createdAt: timestamp(""created_at"").defaultNow(),
+1103:   createdAt: timestamp(""created_at"").defaultNow(),
+1298:   createdAt: timestamp(""created_at"").defaultNow(),
+1466:   createdAt: timestamp(""created_at"").defaultNow(),
+1770:   createdAt: timestamp(""created_at"").defaultNow(),",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03176,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,后端告警生成逻辑,"}, (table) => ({","}, (table) => ({",417;1105;1122;1134;1300;1468,388,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,388: #### 鍚庣鍛婅鐢熸垚閫昏緫,"417: }, (table) => ({
+1105: }, (table) => ({
+1122: }, (table) => ({
+1134: }, (table) => ({
+1300: }, (table) => ({
+1468: }, (table) => ({",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03177,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,后端告警生成逻辑,"userIdReadIdx: index(""idx_alerts_user_read"").on(table.userId, table.read),","userIdReadIdx: index(""idx_alerts_user_read"").on(table.userId, table.read),",418,388,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,388: #### 鍚庣鍛婅鐢熸垚閫昏緫,"418:   userIdReadIdx: index(""idx_alerts_user_read"").on(table.userId, table.read),",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03178,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,后端告警生成逻辑,"typeIdx: index(""idx_alerts_type"").on(table.userId, table.type),","typeIdx: index(""idx_alerts_type"").on(table.userId, table.type),",419,388,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,388: #### 鍚庣鍛婅鐢熸垚閫昏緫,"419:   typeIdx: index(""idx_alerts_type"").on(table.userId, table.type),",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03180,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section;source_quote;atomic_assertion,后端告警生成逻辑,**进度条说明：**,**进度条说明：**,437,388,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,388: #### 鍚庣鍛婅鐢熸垚閫昏緫,437: **杩涘害鏉¤鏄庯細**,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03184,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,后端告警生成逻辑,已出账金额：SUM(call_logs WHERE created_at < NOW() - INTERVAL '24h' AND billing_cycle = current),已出账金额：SUM(call_logs WHERE created_at < NOW() - INTERVAL '24h' AND billing_cycle = current),442,388,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,388: #### 鍚庣鍛婅鐢熸垚閫昏緫,442: - 宸插嚭璐﹂噾棰濓細SUM(call_logs WHERE created_at < NOW() - INTERVAL '24h' AND billing_cycle = current),PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03185,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section;source_quote;atomic_assertion,后端告警生成逻辑,待结算费用：SUM(call_logs WHERE created_at >= NOW() - INTERVAL '24h' AND billing_cycle = current),待结算费用：SUM(call_logs WHERE created_at >= NOW() - INTERVAL '24h' AND billing_cycle = current),443,388,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,388: #### 鍚庣鍛婅鐢熸垚閫昏緫,443: - 寰呯粨绠楄垂鐢細SUM(call_logs WHERE created_at >= NOW() - INTERVAL '24h' AND billing_cycle = current),PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03191,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,GET /api/v1/me/logs/recent?limit=20&since={lastId},GET /api/v1/me/logs/recent?limit=20&since={lastId},504;517,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,"504: - 姣?5 绉掕皟鐢?`GET /api/v1/me/logs/recent?limit=20&since={lastId}`
+517: GET /api/v1/me/logs/recent?limit=20&since={lastId}",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03192,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,"""activities"": [","""activities"": [",520,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,"520:   ""activities"": [",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03193,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,"""id"": ""log_12345"",","""id"": ""log_12345"",",522,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,"522:       ""id"": ""log_12345"",",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03194,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,"""model"": ""deepseek-chat"",","""model"": ""deepseek-chat"",",523;602;837,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,"523:       ""model"": ""deepseek-chat"",
+602:     ""model"": ""deepseek-chat"",
+837:     ""model"": ""deepseek-chat"",",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03195,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,"""inputTokens"": 256,","""inputTokens"": 256,",524;605,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,"524:       ""inputTokens"": 256,
+605:     ""inputTokens"": 256,",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03196,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,"""outputTokens"": 1024,","""outputTokens"": 1024,",525;606,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,"525:       ""outputTokens"": 1024,
+606:     ""outputTokens"": 1024,",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03197,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,"""cost"": 0.0008,","""cost"": 0.0008,",526,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,"526:       ""cost"": 0.0008,",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03198,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,"""status"": ""success"",","""status"": ""success"",",527;608,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,"527:       ""status"": ""success"",
+608:     ""status"": ""success"",",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03199,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,"""errorMessage"": null,","""errorMessage"": null,",528,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,"528:       ""errorMessage"": null,",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03200,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,"""timestamp"": ""2026-07-28T21:29:32Z"",","""timestamp"": ""2026-07-28T21:29:32Z"",",529,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,"529:       ""timestamp"": ""2026-07-28T21:29:32Z"",",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03201,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,"""duration"": 512","""duration"": 512",530;609,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,"530:       ""duration"": 512
+609:     ""duration"": 512",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03202,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,"""hasMore"": true","""hasMore"": true",533,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,"533:   ""hasMore"": true",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03203,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,interface LiveActivityFeedProps {,interface LiveActivityFeedProps {,540,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,540: interface LiveActivityFeedProps {,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03204,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,activities: ActivityItem[];,activities: ActivityItem[];,541,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,541:   activities: ActivityItem[];,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03205,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,paused: boolean;,paused: boolean;,542,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,542:   paused: boolean;,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03206,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,connectionMode: 'ws' | 'polling';,connectionMode: 'ws' | 'polling';,543,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,543:   connectionMode: 'ws' | 'polling';,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03207,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,onTogglePause: () => void;,onTogglePause: () => void;,544,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,544:   onTogglePause: () => void;,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03208,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,onClear: () => void;,onClear: () => void;,545;882,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,"545:   onClear: () => void;
+882:   onClear: () => void;",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-03209,user-agent,docs/SPEC-§22-用户端体验增强.md,source_section,降级轮询,onViewDetail: (id: string) => void;,onViewDetail: (id: string) => void;,546,516,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,516: # 闄嶇骇杞,546:   onViewDetail: (id: string) => void;,PENDING,PENDING,PENDING,PENDING,PENDING,

@@ -1,8 +1,8 @@
 # 3cloud 通知与告警 — 可编码深度规格
 
-> **来源**：PRD-README.md §5.4 通知与告警精化  
-> **关联模块**：核心引擎 > 监控服务 | 供应商管理 | 用户仪表盘 > 告警中心  
-> **版本**：V1.0 | **日期**：2026-07-28  
+> **来源**：PRD-README.md §5.4 通知与告警精化
+> **关联模块**：核心引擎 > 监控服务 | 渠道管理 | 用户仪表盘 > 告警中心
+> **版本**：V1.0 | **日期**：2026-07-28
 > **前置依赖表**：`monitoring_rules`、`monitoring_alerts`、`notification_config`、`notification_history`
 
 ---
@@ -109,7 +109,7 @@ export const notificationHistory = pgTable("notification_history", {
 | `redis_health` | `redis_health` | Redis 健康 | O>K判定 |
 | `disk_usage` | `disk_usage` | 磁盘使用率 | 百分比 |
 | `memory_usage` | `memory_usage` | 内存使用率 | 百分比 |
-| — | `vendor_availability` | 供应商可用率 | 百分比（如 99 → 99%） |
+| — | `vendor_availability` | 渠道可用率 | 百分比（如 99 → 99%） |
 | — | `platform_balance` | 平台余额 | 金额（如 500 → ¥500） |
 | — | `user_failure_rate` | 用户失败率 | 百分比 |
 | — | `cpu_usage` | CPU 使用率 | 百分比 |
@@ -174,7 +174,7 @@ export const notificationHistory = pgTable("notification_history", {
 ```json
 {
   "type": "vendor_availability",
-  "name": "供应商可用率告警",
+  "name": "渠道可用率告警",
   "threshold": 99.0,
   "severity": "critical",
   "enabled": true,
@@ -450,7 +450,7 @@ const alertTypeLabels: Record<AlertType, { label: string; unit: string }> = {
   redis_health:        { label: 'Redis 健康', unit: '' },
   disk_usage:          { label: '磁盘使用率', unit: '%' },
   memory_usage:        { label: '内存使用率', unit: '%' },
-  vendor_availability: { label: '供应商可用率', unit: '%' },
+  vendor_availability: { label: '渠道可用率', unit: '%' },
   platform_balance:    { label: '平台余额', unit: '¥' },
   user_failure_rate:   { label: '用户失败率', unit: '%' },
   cpu_usage:           { label: 'CPU 使用率', unit: '%' },
@@ -526,7 +526,7 @@ const AlertTrendChart = ({ data, loading, range, onRangeChange }: AlertTrendChar
 │   ├── 读取 monitoring_rules 全部 enabled 规则
 │   ├── 周期性采集各指标数值
 │   │   ├── api_error_rate → 路由引擎统计（ref-5.1-routing）
-│   │   ├── vendor_availability → 供应商健康检查（ref-4.3-vendor-model）
+│   │   ├── vendor_availability → 渠道健康检查（ref-4.3-vendor-model）
 │   │   ├── platform_balance → finance-service 余额统计
 │   │   └── disk_usage / cpu_usage → 系统监控
 │   ├── 超过阈值 → 写入 monitoring_alerts
@@ -550,7 +550,7 @@ const AlertTrendChart = ({ data, loading, range, onRangeChange }: AlertTrendChar
 |---------|---------|---------|------|
 | api_error_rate | 路由引擎 | 强 | 需从路由统计失败率 |
 | api_response_time | 路由引擎 | 强 | 需统计平均响应时间 |
-| vendor_availability | 供应商管理 | 强 | 需供应商健康检查状态 |
+| vendor_availability | 渠道管理 | 强 | 需渠道健康检查状态 |
 | platform_balance | 财务 > 余额 | 强 | 需 finance 余额 |
 | user_failure_rate | 路由引擎 | 强 | 需按 user 聚合失败率 |
 | disk_usage / cpu_usage | 系统监控 | 强 | 服务器层指标 |
@@ -564,7 +564,7 @@ const AlertTrendChart = ({ data, loading, range, onRangeChange }: AlertTrendChar
 | 告警事件查询 | 5.4.1 告警规则 | `PRD-README.md` §5.4 |
 | 告警命中趋势 | 5.4.1 告警统计 | `PRD-README.md` §5.4 |
 | 用户端告警中心 | 2.2.1 用户端功能规格（区域 12） | `ref-2.2-user-dashboard.md` |
-| 供应商可用率 | 4.3.1 供应商健康检查 | `ref-4.3-vendor-model.md` |
+| 渠道可用率 | 4.3.1 渠道健康检查 | `ref-4.3-vendor-model.md` |
 | 熔断关联告警 | 5.1.3 熔断器 | `ref-5.1-routing.md` |
 | 通知渠道 | 4.5 通知与告警 | `PRD-README.md` §4.5 |
 
@@ -573,7 +573,7 @@ const AlertTrendChart = ({ data, loading, range, onRangeChange }: AlertTrendChar
 > **关联文档**
 > - `PRD-README.md` §5.4 — 通知与告警精化（本文件的基础）
 > - `ref-2.2-user-dashboard.md` §区域 12 — 用户端告警中心（告警消费端）
-> - `ref-4.3-vendor-model.md` — 供应商可用率依赖
+> - `ref-4.3-vendor-model.md` — 渠道可用率依赖
 > - `ref-5.1-routing.md` — 熔断器状态告警触发
 
 ---
@@ -602,14 +602,14 @@ const AlertTrendChart = ({ data, loading, range, onRangeChange }: AlertTrendChar
 | POST /api/v1/admin/finance/recharge/manual-fix | 手动补单频率 | > 5 次/小时 | warning | 30 分钟 |
 | — | 充值渠道可用性 | < 100% | critical | 1 分钟 |
 
-### 6.3 供应商模块 API 告警
+### 6.3 渠道模块 API 告警
 
 | API 路径 | 告警指标 | 阈值 | 等级 | 静默期 |
 |---------|---------|------|------|--------|
-| GET /api/v1/admin/vendors/:id/health | 供应商健康检查失败 | 连续 3 次 | warning | 5 分钟 |
-| — | 供应商可用率 | < 95% | warning | 10 分钟 |
-| — | 供应商可用率 | < 80% | critical | 5 分钟 |
-| — | 供应商响应延迟 P99 | > 5s | warning | 5 分钟 |
+| GET /api/v1/admin/vendors/:id/health | 渠道健康检查失败 | 连续 3 次 | warning | 5 分钟 |
+| — | 渠道可用率 | < 95% | warning | 10 分钟 |
+| — | 渠道可用率 | < 80% | critical | 5 分钟 |
+| — | 渠道响应延迟 P99 | > 5s | warning | 5 分钟 |
 | — | Key 池消耗率 | > 90% | warning | 30 分钟 |
 | — | 批量模型异常数 | ≥ 3 个同时异常 | critical | 1 分钟 |
 
@@ -667,7 +667,7 @@ const AlertTrendChart = ({ data, loading, range, onRangeChange }: AlertTrendChar
 
 预置策略：
 - critical 级告警：所有模块默认开启
-- warning 级告警：安全/计费/供应商默认开启，其他按需
+- warning 级告警：安全/计费/渠道默认开启，其他按需
 - info 级告警：全部默认开启（用于日报汇总）
 
 新增告警规则建议的分级标准：

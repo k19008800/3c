@@ -1,8 +1,8 @@
-# 3cloud 供应商与模型管理 — 可编码深度规格
+# 3cloud 渠道与模型管理 — 可编码深度规格
 
-> **来源**：PRD-README.md §4.3 供应商与模型管理  
-> **关联模块**：核心引擎 > 智能路由 | 财务 > 价格管理 | 监控 > 健康检查  
-> **版本**：V1.0 | **日期**：2026-07-27  
+> **来源**：PRD-README.md §4.3 渠道与模型管理
+> **关联模块**：核心引擎 > 智能路由 | 财务 > 价格管理 | 监控 > 健康检查
+> **版本**：V1.0 | **日期**：2026-07-27
 > **前置依赖表**：`vendors`、`models`、`vendor_models`、`vendor_key_groups`、`vendor_key_group_items`、`vendor_key_group_model_prices`、`vendor_api_keys`
 
 ---
@@ -13,7 +13,7 @@
 2. [API 接口清单](#2-api-接口清单)
 3. [前端页面与组件](#3-前端页面与组件)
 4. [Key 资源池完整规格](#4-key-资源池完整规格)
-5. [供应商状态切换流程](#5-供应商状态切换流程)
+5. [渠道状态切换流程](#5-渠道状态切换流程)
 6. [交叉引用与调用链](#6-交叉引用与调用链)
 
 ---
@@ -22,7 +22,7 @@
 
 ```typescript
 // ============================================================
-//  vendors — 供应商主表
+//  vendors — 渠道主表
 // ============================================================
 export const vendors = pgTable("vendors", {
   id: serial("id").primaryKey(),
@@ -30,7 +30,7 @@ export const vendors = pgTable("vendors", {
   baseUrl: varchar("base_url", { length: 500 }).notNull(),
   status: vendorStatusEnum("status").notNull().default("active"), // active | maintenance | offline
   description: text("description"),
-  // 供应商自助注册字段
+  // 渠道自助注册字段
   userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
   companyName: varchar("company_name", { length: 255 }),
   contactName: varchar("contact_name", { length: 100 }),
@@ -69,13 +69,13 @@ export const models = pgTable("models", {
 modelTypeEnum: ["chat","embedding","image","audio","rerank","video","moderation","realtime"]
 
 // ============================================================
-//  vendor_models — 供应商-模型映射
+//  vendor_models — 渠道-模型映射
 // ============================================================
 export const vendorModels = pgTable("vendor_models", {
   id: serial("id").primaryKey(),
   vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
   modelId: integer("model_id").notNull().references(() => models.id, { onDelete: "cascade" }),
-  upstreamModelName: varchar("upstream_model_name", { length: 200 }).notNull(), // 供应商侧的模型名
+  upstreamModelName: varchar("upstream_model_name", { length: 200 }).notNull(), // 渠道侧的模型名
   // 定价（平台采购成本价）
   costPriceInput: numeric("cost_price_input", { precision: 18, scale: 6 }).notNull(),
   costPriceOutput: numeric("cost_price_output", { precision: 18, scale: 6 }).notNull(),
@@ -113,7 +113,7 @@ export const vendorModels = pgTable("vendor_models", {
 }));
 
 // ============================================================
-//  vendor_key_groups — 供应商 Key 资源池分组
+//  vendor_key_groups — 渠道 Key 资源池分组
 // ============================================================
 export const vendorKeyGroups = pgTable("vendor_key_groups", {
   id: serial("id").primaryKey(),
@@ -174,7 +174,7 @@ export const vendorKeyGroupModelPrices = pgTable("vendor_key_group_model_prices"
 }));
 
 // ============================================================
-//  vendor_api_keys — 供应商自助管理的 API Key
+//  vendor_api_keys — 渠道自助管理的 API Key
 // ============================================================
 export const vendorApiKeys = pgTable("vendor_api_keys", {
   id: serial("id").primaryKey(),
@@ -194,9 +194,9 @@ export const vendorApiKeys = pgTable("vendor_api_keys", {
 
 ## 2. API 接口清单
 
-### 2.1 供应商管理
+### 2.1 渠道管理
 
-#### `GET /api/v1/admin/vendors` — 供应商列表
+#### `GET /api/v1/admin/vendors` — 渠道列表
 
 **查询参数**
 
@@ -229,11 +229,11 @@ export const vendorApiKeys = pgTable("vendor_api_keys", {
 }
 ```
 
-#### `POST /api/v1/admin/vendors` — 创建供应商
+#### `POST /api/v1/admin/vendors` — 创建渠道
 
 ```json
 {
-  "name": "新供应商",
+  "name": "新渠道",
   "baseUrl": "https://api.new-vendor.com",
   "description": "描述"
 }
@@ -245,7 +245,7 @@ export const vendorApiKeys = pgTable("vendor_api_keys", {
 { "status": "ok", "data": { "id": 13 } }
 ```
 
-#### `PUT /api/v1/admin/vendors/:id` — 编辑供应商
+#### `PUT /api/v1/admin/vendors/:id` — 编辑渠道
 
 ```json
 {
@@ -348,9 +348,9 @@ export const vendorApiKeys = pgTable("vendor_api_keys", {
 }
 ```
 
-### 2.3 供应商-模型映射
+### 2.3 渠道-模型映射
 
-#### `GET /api/v1/admin/vendors/:id/models` — 获取供应商的模型映射列表
+#### `GET /api/v1/admin/vendors/:id/models` — 获取渠道的模型映射列表
 
 **响应 200**
 
@@ -562,7 +562,7 @@ export const vendorApiKeys = pgTable("vendor_api_keys", {
         "changedBy": "admin@3cloud.ai",
         "field": "sell_price_input",
         "oldValue": "0.0020", "newValue": "0.0018",
-        "reason": "供应商降价，同步调整"
+        "reason": "渠道降价，同步调整"
       }
     ]
   }
@@ -601,7 +601,7 @@ interface VendorDetailState {
   loading: boolean; tab: 'info' | 'models' | 'keys' | 'health';
 }
 
-// 供应商状态切换弹窗
+// 渠道状态切换弹窗
 interface VendorStatusToggleDialogProps {
   open: boolean; vendorName: string; currentStatus: VendorStatus;
   onConfirm: (newStatus: VendorStatus, reason: string) => void; onCancel: () => void;
@@ -679,7 +679,7 @@ function smoothWeightedRoundRobin(items: KeyGroupItem[], totalWeight: number): K
 Key 定价优先级（高 → 低）：
   1. vendor_key_group_model_prices（Key-模型交叉折扣）
   2. vendor_key_group_items.sellPrice*（Key 专属售价）
-  3. vendor_models.sellPrice*（供应商-模型映射售价）
+  3. vendor_models.sellPrice*（渠道-模型映射售价）
   4. 全局价格表（pricing 服务）
 ```
 
@@ -688,7 +688,7 @@ Key 定价优先级（高 → 低）：
 ```
 [管理员点击"测试连通性"]
   → 后端解密 API Key
-  → 向供应商 baseUrl + endpoint 发送请求
+  → 向渠道 baseUrl + endpoint 发送请求
   → 记录响应时间 / HTTP 状态码
   → 解密后 5 秒内清除内存中的明文 Key
   → 返回结果（成功/失败 + 延迟 + 错误信息）
@@ -696,7 +696,7 @@ Key 定价优先级（高 → 低）：
 
 ---
 
-## 5. 供应商状态切换流程
+## 5. 渠道状态切换流程
 
 ### 5.1 状态机
 
@@ -713,14 +713,14 @@ offline ──────→ active            ← 重新上线（需审核）
 ### 5.2 切换时的影响范围计算
 
 ```typescript
-// 供应商状态切换时，后端自动计算影响范围
+// 渠道状态切换时，后端自动计算影响范围
 interface SwitchoverImpact {
   affectedModelIds: number[];        // 哪些模型会受影响
-  switchoverVendors: SwitchoverVendor[];  // 各模型的备用供应商
+  switchoverVendors: SwitchoverVendor[];  // 各模型的备用渠道
   estimatedTrafficRedirect: number;  // 预计重定向的流量百分比
 }
 
-// 前端弹窗展示影响范围 + 备用供应商就绪状态
+// 前端弹窗展示影响范围 + 备用渠道就绪状态
 // 管理员填写下线原因后才允许确认切换
 ```
 
@@ -737,10 +737,10 @@ interface VendorStatusToggleDialogProps {
 
 // 弹窗内显示：
 //   "将 DeepSeek 切换为维护模式"
-//   "影响：约 50% 的请求将路由到备用供应商"
-//   "备用供应商就绪：OspreyAI（已验证）"
+//   "影响：约 50% 的请求将路由到备用渠道"
+//   "备用渠道就绪：OspreyAI（已验证）"
 //   "说明：[文本框——必填]"
-//   "备用供应商待切换模型：deepseek-chat, gpt-4o"
+//   "备用渠道待切换模型：deepseek-chat, gpt-4o"
 ```
 
 ---
@@ -750,13 +750,13 @@ interface VendorStatusToggleDialogProps {
 ### 6.1 跨模块数据流
 
 ```
-供应商管理
-├── vendor-models 定价 → 路由引擎选择供应商（ref-5.1-routing.md）
+渠道管理
+├── vendor-models 定价 → 路由引擎选择渠道（ref-5.1-routing.md）
 ├── vendor-models circuitState → 熔断器状态影响路由选择
 ├── key-groups 配置 → 路由引擎 Key 分配
 ├── 价格变更 → 同步更新 billing 价格快照（PRD-README §5.2）
 ├── 健康检查 → monitoring 告警规则触发（ref-5.4-alert-rules.md）
-└── vendor_api_keys → 供应商自助管理验证（ref-4.10 供应商自助）
+└── vendor_api_keys → 渠道自助管理验证（ref-4.10 渠道自助）
 
 模型管理
 ├── model 定义 → 用户端模型中心（ref-2.2-user-dashboard 区域 6）
@@ -766,71 +766,71 @@ interface VendorStatusToggleDialogProps {
 
 ### 6.2 依赖的外部模块
 
-| 供应商模块 | 外部模块 | 依赖类型 | 说明 |
+| 渠道模块 | 外部模块 | 依赖类型 | 说明 |
 |-----------|---------|---------|------|
 | vendor-models | 路由引擎 | 强 | 路由选择时读取映射 |
 | vendor-models | 熔断器 | 强 | circuitState 由熔断器写入 |
 | key-groups | 路由引擎 | 强 | Key 选择时读分组 |
-| 供应商管理 | 监控 > 健康检查 | 弱 | health_check* 字段 |
+| 渠道管理 | 监控 > 健康检查 | 弱 | health_check* 字段 |
 | 价格变更 | 财务 > 价格 | 强 | 批量改价影响定价 |
 | status 切换 | 告警模块 | 弱 | 下线触发告警 |
 
 ---
 
 > **关联文档**
-> - `PRD-README.md` §4.3 — 供应商与模型管理（本文件的基础）
+> - `PRD-README.md` §4.3 — 渠道与模型管理（本文件的基础）
 > - `ref-5.1-routing.md` — 智能路由系统
 > - `ref-5.4-alert-rules.md` — 告警规则配置
 > - `ref-2.2-user-dashboard.md` — 用户端仪表盘
 > - `ref-5.2-billing.md` — 计费价格变更同步
-> - `ref-5.4-alert-rules.md` §6.3 — 供应商模块API告警
-> - `ops-manual.md` §十一.4 — 供应商链路异常处理
-> - `SPEC-§29-资金与对账管理.md` — 供应商结算对账
+> - `ref-5.4-alert-rules.md` §6.3 — 渠道模块API告警
+> - `ops-manual.md` §十一.4 — 渠道链路异常处理
+> - `SPEC-§29-资金与对账管理.md` — 渠道结算对账
 
 ---
 
-## 7. 供应商异常场景运营处理（运营视角补充）
+## 7. 渠道异常场景运营处理（运营视角补充）
 
-> **P0 补充**：2026-07-30 — 供应商上下线用户影响处理、Key 耗尽通知、健康检查驱动运营决策、批量异常降级
+> **P0 补充**：2026-07-30 — 渠道上下线用户影响处理、Key 耗尽通知、健康检查驱动运营决策、批量异常降级
 
-### 7.1 供应商上下线对用户的影响处理
+### 7.1 渠道上下线对用户的影响处理
 
-#### 7.1.1 供应商主动下线流程
+#### 7.1.1 渠道主动下线流程
 
 ```
 运营发起下线 → 系统检查影响范围 → 通知受影响的用户 → 执行下线 → 确认路由切换完成
 
 详细步骤：
 
-1. 运营在管理后台发起供应商下线申请
+1. 运营在管理后台发起渠道下线申请
 2. 系统自动检查下线影响范围：
-   - 该供应商提供哪些模型
+   - 该渠道提供哪些模型
    - 有多少用户正在使用这些模型
-   - 这些模型是否有可用备用供应商
+   - 这些模型是否有可用备用渠道
 3. 系统生成影响报告供运营确认：
    "下线 DeepSeek 将影响：
     - 模型 5 个（deepseek-chat / deepseek-coder / ...）
     - 活跃用户 128 人
-    - 该模型组可用备用供应商：OspreyAI（已连接）/ 阿里云（已验证）"
+    - 该模型组可用备用渠道：OspreyAI（已连接）/ 阿里云（已验证）"
 4. 运营填写下线原因（必填）、设置下线时间（立即/定时）
 5. 系统执行下线：
-   a. 先将该供应商所有模型标记为"切换中"（30 秒内不接受新请求）
-   b. 路由引擎自动将流量切换到备用供应商
-   c. 确认所有备用供应商连通性正常
-   d. 将供应商状态改为 offline
+   a. 先将该渠道所有模型标记为"切换中"（30 秒内不接受新请求）
+   b. 路由引擎自动将流量切换到备用渠道
+   c. 确认所有备用渠道连通性正常
+   d. 将渠道状态改为 offline
 6. 路由切换成功后，向受影响用户发送站内通知：
    "deepseek-chat 模型已切换至 OspreyAI 供应，价格和服务质量不变"
-   （仅在该模型有备用供应商时通知；无备用供应商时通知用户该模型已下线）
+   （仅在该模型有备用渠道时通知；无备用渠道时通知用户该模型已下线）
 ```
 
-#### 7.1.2 供应商被动熔断流程
+#### 7.1.2 渠道被动熔断流程
 
 ```
 熔断器触发 → 自动切换 → 记录事件 → 运营确认
 
-1. 熔断器检测到供应商连续失败超过阈值（默认 10 次）
+1. 熔断器检测到渠道连续失败超过阈值（默认 10 次）
 2. 自动打开熔断器：vendor_models.circuitState = 'open'
-3. 路由引擎自动将流量切换到备用供应商
+3. 路由引擎自动将流量切换到备用渠道
 4. 系统记录熔断事件到 security_events
 5. 运营收到告警通知："DeepSeek 熔断器已打开，已自动切换到 OspreyAI"
 6. 运营核查根因后，手动或自动恢复熔断器
@@ -840,20 +840,20 @@ interface VendorStatusToggleDialogProps {
 
 | 请求状态 | 处理方式 |
 |---------|---------|
-| 已发送到供应商等待响应 | 等待完成（允许最多 30s 超时）
-| 排队中但未发送 | 重新路由到备用供应商
-| 新到达 | 直接路由到备用供应商
+| 已发送到渠道等待响应 | 等待完成（允许最多 30s 超时）
+| 排队中但未发送 | 重新路由到备用渠道
+| 新到达 | 直接路由到备用渠道
 
-#### 7.1.3 供应商 Key 耗尽/过期处理
+#### 7.1.3 渠道 Key 耗尽/过期处理
 
 ```
-检测 → 通知运营 → 切换 Key / 供应商
+检测 → 通知运营 → 切换 Key / 渠道
 
-1. 系统检测到供应商 API Key 返回 401/403（过期或无效）
+1. 系统检测到渠道 API Key 返回 401/403（过期或无效）
 2. 自动将该 Key 标记为 isDown=true，切换到该 Key 分组内下一个可用 Key
 3. 若整个 Key 分组都不可用：
-   a. 自动切换到该供应商的备用 Key 分组
-   b. 若无可用的 Key 分组：切换到备用供应商
+   a. 自动切换到该渠道的备用 Key 分组
+   b. 若无可用的 Key 分组：切换到备用渠道
 4. 记录事件到 security_events（type=vendor_key_exhausted）
 5. 告警通知运营："DeepSeek API Key 已失效（分组：主库-1），建议立即续费"
 6. 运营收到通知后：
@@ -874,18 +874,18 @@ flowchart TD
     B -->|失败| D[递增 consecutiveFailures]
     D --> E{failCount >= failThreshold?}
     E -->|否| F[记录失败日志，继续监控]
-    E -->|是| G[触发告警：供应商模型可用性下降]
+    E -->|是| G[触发告警：渠道模型可用性下降]
     G --> H{继续失败?}
     H -->|连续失败达 circuitBreakThreshold| I[自动打开熔断器]
-    I --> J[路由引擎自动切换到备用供应商]
+    I --> J[路由引擎自动切换到备用渠道]
     J --> K[运营收到告警 + 切换通知]
     K --> L[运营决策]
     L --> M{根因?}
-    M -->|供应商接口故障| N[联系供应商,确认故障等级和恢复时间]
+    M -->|渠道接口故障| N[联系渠道,确认故障等级和恢复时间]
     M -->|网络问题| O[切换备用线路/CDN]
-    M -->|Key 限流| P[联系供应商提额或切换 Key]
+    M -->|Key 限流| P[联系渠道提额或切换 Key]
     M -->|配置错误| Q[修复配置后手动关闭熔断器]
-    
+
     H -->|自动恢复| R[关闭熔断器,恢复正常路由]
 ```
 
@@ -901,21 +901,21 @@ flowchart TD
 
 #### 7.2.3 运营操作面板
 
-管理后台 → 供应商管理 → 异常处理
+管理后台 → 渠道管理 → 异常处理
 
 ```
-┌─ 供应商异常处理 ─────────────────────────────────────┐
+┌─ 渠道异常处理 ─────────────────────────────────────┐
 │                                                         │
 │ 实时状态: ✅ 正常   ⚠️ 异常 1   ❌ 熔断 2              │
 │                                                         │
-│ ┌─ 异常供应商列表 ─────────────────────────────────┐   │
-│ │ 供应商   | 模型      | 状态    | 持续   | 操作    │   │
+│ ┌─ 异常渠道列表 ─────────────────────────────────┐   │
+│ │ 渠道   | 模型      | 状态    | 持续   | 操作    │   │
 │ │ DeepSeek | deepseek  | ⚠️ 告警  | 5min  | [查看]  │   │
 │ │ OspreyAI | gpt-4o    | ❌ 熔断  | 1min  | [切换]  │   │
 │ │ 阿里云   | qwen      | ✅ 备用  | —     | [设置]  │   │
 │ └────────────────────────────────────────────────────┘   │
 │                                                         │
-│ 一键切换备选供应商: [选中异常项] [一键切换]              │
+│ 一键切换备选渠道: [选中异常项] [一键切换]              │
 │                                                         │
 │ 最近异常事件:                                           │
 │ 14:23 DeepSeek 健康检查失败 ×5，告警触发                 │
@@ -924,52 +924,52 @@ flowchart TD
 └─────────────────────────────────────────────────────────┘
 ```
 
-### 7.3 供应商批量异常降级策略
+### 7.3 渠道批量异常降级策略
 
-#### 7.3.1 多供应商同时故障降级分级
+#### 7.3.1 多渠道同时故障降级分级
 
 | 故障范围 | 降级策略 | 运营操作 |
 |---------|---------|---------|
-| 1 个供应商中 1 个模型 | 自动切换到该模型的其他供应商 | 无需干预 |
-| 1 个供应商中多个模型 | 自动批量切换 + 通知运营 | 确认切换状态 |
-| 多个供应商中相同模型 | 按优先级选择剩余可用供应商，若无则下线该模型 | 通知受影响的用户 |
-| 关键供应商全站宕机 | 自动切换到所有备用供应商 + 紧急通知 | 联系关键供应商确认 |
-| **所有同类型供应商故障** | **模型下线 + 用户通知 + 触发 BCP（业务连续性计划）** | **运营按 BCP 手册执行** |
+| 1 个渠道中 1 个模型 | 自动切换到该模型的其他渠道 | 无需干预 |
+| 1 个渠道中多个模型 | 自动批量切换 + 通知运营 | 确认切换状态 |
+| 多个渠道中相同模型 | 按优先级选择剩余可用渠道，若无则下线该模型 | 通知受影响的用户 |
+| 关键渠道全站宕机 | 自动切换到所有备用渠道 + 紧急通知 | 联系关键渠道确认 |
+| **所有同类型渠道故障** | **模型下线 + 用户通知 + 触发 BCP（业务连续性计划）** | **运营按 BCP 手册执行** |
 
 #### 7.3.2 批量异常降级执行时序
 
 ```mermaid
 flowchart TD
-    A[检测到多个供应商/模型异常] --> B[系统评估故障范围]
+    A[检测到多个渠道/模型异常] --> B[系统评估故障范围]
     B --> C[按降级分级执行]
     C --> D{所有受影响模型
-    都有备用供应商?}
-    D -->|是| E[自动切换到备用供应商]
+    都有备用渠道?}
+    D -->|是| E[自动切换到备用渠道]
     E --> F[记录切换日志]
     F --> G[通知运营:切换完成]
-    
-    D -->|否| H[部分模型无备用供应商]
-    H --> I[有备用供应商的模型:自动切换]
-    I --> J[无备用供应商的模型:标记为"暂时不可用"]
+
+    D -->|否| H[部分模型无备用渠道]
+    H --> I[有备用渠道的模型:自动切换]
+    I --> J[无备用渠道的模型:标记为"暂时不可用"]
     J --> K[通知受影响用户:模型不可用]
-    K --> L[运营评估新增供应商可行性]
+    K --> L[运营评估新增渠道可行性]
 ```
 
-#### 7.3.3 供应商切换后用户通知模板
+#### 7.3.3 渠道切换后用户通知模板
 
-**场景 1：模型已切换到备用供应商（价格和服务不变）**
+**场景 1：模型已切换到备用渠道（价格和服务不变）**
 
-> 通知标题：deepseek-chat 模型已切换供应商
+> 通知标题：deepseek-chat 模型已切换渠道
 > 通知内容：为保障您的服务稳定性，deepseek-chat 模型已自动从 DeepSeek 切换至 OspreyAI 供应。
 > - 价格：不变（¥0.0150/1K tokens）
 > - 服务质量：不变
 > - 生效时间：即时
 > - 无需任何操作
 
-**场景 2：模型暂时不可用（无备用供应商）**
+**场景 2：模型暂时不可用（无备用渠道）**
 
 > 通知标题：deepseek-chat 模型暂时不可用
-> 通知内容：因供应商故障，deepseek-chat 模型暂时不可用。我们正在紧急处理中。
+> 通知内容：因渠道故障，deepseek-chat 模型暂时不可用。我们正在紧急处理中。
 > - 预计恢复时间：请关注后续通知
 > - 替代方案：您可切换到以下替代模型：[列出替代模型]
 > - 影响评估：不影响您的账户余额和其他模型
@@ -978,33 +978,33 @@ flowchart TD
 
 | 配置项 | 默认值 | 说明 |
 |--------|--------|------|
-| 自动切换开关 | true | 是否自动切换到备用供应商 |
+| 自动切换开关 | true | 是否自动切换到备用渠道 |
 | 批量异常触发阈值 | 3 个模型同时异常 | 多少模型同时异常视为批量异常 |
 | 自动切换冷却期 | 5 分钟 | 切换后 5 分钟内不再自动切换（防抖动） |
-| 备选供应商健康检查前置 | true | 切换前先验证备用供应商连通性 |
+| 备选渠道健康检查前置 | true | 切换前先验证备用渠道连通性 |
 | 用户通知开关 | true | 切换后是否通知用户 |
 
 ---
 
-## 8. 供应商入驻审核与价格变更流程（运营视角补充）
+## 8. 渠道入驻审核与价格变更流程（运营视角补充）
 
-> **P1 补充**：2026-07-30 — 供应商入驻审核超时处理、修改价格审批流程
+> **P1 补充**：2026-07-30 — 渠道入驻审核超时处理、修改价格审批流程
 
-### 8.1 供应商入驻审核流程
+### 8.1 渠道入驻审核流程
 
 #### 8.1.1 审核时序
 
 ```
-供应商提交入驻 → 资料初审（运营）→ 技术对接验证 → 正式上线
+渠道提交入驻 → 资料初审（运营）→ 技术对接验证 → 正式上线
 
-1. 供应商填写入驻信息：
-   - 供应商名称、联系方式、合同信息
+1. 渠道填写入驻信息：
+   - 渠道名称、联系方式、合同信息
    - API 地址、认证方式（API Key / OAuth / 自定义）
    - 模型清单及定价方案
    - 服务协议签署
 
 2. 运营初审（T+1 内完成）：
-   - 审核供应商资质文件
+   - 审核渠道资质文件
    - 确认合同条款完整
    - 填写运营审核意见
 
@@ -1015,7 +1015,7 @@ flowchart TD
    - 运行 24 小时健康监测
 
 4. 正式上线：
-   - 设置供应商状态为 active
+   - 设置渠道状态为 active
    - 配置路由权重（初始值较低，逐步调高）
    - 通知运营和产品团队
 ```
@@ -1030,8 +1030,8 @@ flowchart TD
 
 **超时影响：**
 
-- 超过 T+7 未完成入驻 → 供应商状态自动标记为 stalled
-- 超过 T+14 未完成入驻 → 自动关闭入驻申请，通知供应商
+- 超过 T+7 未完成入驻 → 渠道状态自动标记为 stalled
+- 超过 T+14 未完成入驻 → 自动关闭入驻申请，通知渠道
 - 超时原因记录到 operation_logs
 
 #### 8.1.3 审核驳回规则
@@ -1042,7 +1042,7 @@ flowchart TD
 | 资质不符合要求 | ❌（需补充材料） | 30 天后可重新申请 |
 | 技术对接失败 | ✅ | 修复后立即重新提交 |
 | 定价不合理 | ✅ | 调整定价后重新提交 |
-### 8.2 供应商修改价格审批流程
+### 8.2 渠道修改价格审批流程
 
 #### 8.2.1 价格变更分级
 
@@ -1057,7 +1057,7 @@ flowchart TD
 #### 8.2.2 价格变更执行流程
 
 ```
-1. 供应商提交价格变更申请
+1. 渠道提交价格变更申请
 2. 系统自动判断变更级别
 3. 根据级别路由到对应审批人
 4. 审批通过后：
@@ -1065,12 +1065,12 @@ i   a. 新价格存入 vendor_price_history
    b. 新价格生效时间按级别规则设定
    c. 自动通知受影响用户
    d. 更新计费引擎中的价格缓存
-5. 审批驳回：通知供应商驳回原因
+5. 审批驳回：通知渠道驳回原因
 
 用户通知模板（涨价场景）：
 
 "尊敬的 3cloud 用户，
-供应商 DeepSeek 的 DeepSeek-V3 模型将于 2026-08-06 起调整价格：
+渠道 DeepSeek 的 DeepSeek-V3 模型将于 2026-08-06 起调整价格：
   输入：¥1.00/1M tokens → ¥1.20/1M tokens
   输出：¥2.00/1M tokens → ¥2.40/1M tokens
 您可考虑切换到以下替代模型：[DeepSeek-V4 | GLM-5-Pro | Qwen3.5]

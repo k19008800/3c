@@ -1,0 +1,28 @@
+﻿req_id,domain,source_path,bad_fields,recovered_section,recovered_quote,recovered_assertion,quote_source_lines,section_source_lines,conversion,compound_after_recovery,status,basis
+UA2-01007,user-agent,docs/PRD-代理商支撑增强.md,source_section,API 接口,GET,GET,99;101;102;134;135;217;220,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01022,user-agent,docs/PRD-代理商支撑增强.md,source_section,API 接口,浠ｇ悊鍟?,浠ｇ悊鍟?,99;101;102;134;135;217;220,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01027,user-agent,docs/PRD-代理商支撑增强.md,source_section;source_quote;atomic_assertion,前端变更,"管理后台 -> 新增""客户报备""入口","管理后台 -> 新增""客户报备""入口",71,67;104;140;188;222;247,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01028,user-agent,docs/PRD-代理商支撑增强.md,source_section;source_quote;atomic_assertion,前端变更,报备列表 + 创建表单 + 审核操作,报备列表 + 创建表单 + 审核操作,71,67;104;140;188;222;247,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01053,user-agent,docs/PRD-代理商支撑增强.md,source_section,API 接口,/api/v1/agent/finance/commission-trends,/api/v1/agent/finance/commission-trends,99,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01054,user-agent,docs/PRD-代理商支撑增强.md,source_section,API 接口,佣金趋势数据,佣金趋势数据,99,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01057,user-agent,docs/PRD-代理商支撑增强.md,source_section,API 接口,/api/v1/agent/finance/settlement/:period,/api/v1/agent/finance/settlement/:period,101,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01061,user-agent,docs/PRD-代理商支撑增强.md,source_section,API 接口,/api/v1/agent/finance/settlement/:period/download,/api/v1/agent/finance/settlement/:period/download,101,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01062,user-agent,docs/PRD-代理商支撑增强.md,source_section,API 接口,涓嬭浇缁撶畻鍗?PDF,涓嬭浇缁撶畻鍗?PDF,101,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01065,user-agent,docs/PRD-代理商支撑增强.md,source_section,API 接口,/api/v1/agent/finance/calendar,/api/v1/agent/finance/calendar,102,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01066,user-agent,docs/PRD-代理商支撑增强.md,source_section,API 接口,财务日历,财务日历,102,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01076,user-agent,docs/PRD-代理商支撑增强.md,source_quote;atomic_assertion,功能规格,名下客户按消费金额排序，展示消费总额 / 本月消费 / 调用次数,名下客户按消费金额排序，展示消费总额 / 本月消费 / 调用次数,124,18;82;120;156;203;237,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01081,user-agent,docs/PRD-代理商支撑增强.md,source_quote;atomic_assertion,功能规格,客户流失预警,客户流失预警,127,18;82;120;156;203;237,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01082,user-agent,docs/PRD-代理商支撑增强.md,source_quote;atomic_assertion,功能规格,连续 N 天未调用的客户标记预警（默认 14 天）,连续 N 天未调用的客户标记预警（默认 14 天）,127,18;82;120;156;203;237,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01086,user-agent,docs/PRD-代理商支撑增强.md,source_section,API 接口,/api/v1/agent/customers/consumption-ranking,/api/v1/agent/customers/consumption-ranking,134,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01087,user-agent,docs/PRD-代理商支撑增强.md,source_section,API 接口,客户消费排名,客户消费排名,134,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01090,user-agent,docs/PRD-代理商支撑增强.md,source_section,API 接口,/api/v1/agent/customers/:userId/consumption-trend,/api/v1/agent/customers/:userId/consumption-trend,135,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01091,user-agent,docs/PRD-代理商支撑增强.md,source_section,API 接口,客户消费趋势,客户消费趋势,135,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01118,user-agent,docs/PRD-代理商支撑增强.md,source_quote;atomic_assertion,功能规格,标记已读,标记已读,163,18;82;120;156;203;237,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01119,user-agent,docs/PRD-代理商支撑增强.md,source_quote;atomic_assertion,功能规格,单条标记 / 全部标记已读,单条标记 / 全部标记已读,163,18;82;120;156;203;237,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01133,user-agent,docs/PRD-代理商支撑增强.md,source_section;source_quote;atomic_assertion,API 接口,标记已读,标记已读,163,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01137,user-agent,docs/PRD-代理商支撑增强.md,source_section;source_quote;atomic_assertion,API 接口,全部标记已读,全部标记已读,163,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01147,user-agent,docs/PRD-代理商支撑增强.md,source_quote;atomic_assertion,功能规格,展示当前等级的所有权益，高亮已解锁项,展示当前等级的所有权益，高亮已解锁项,208,18;82;120;156;203;237,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01155,user-agent,docs/PRD-代理商支撑增强.md,source_section,API 接口,/api/v1/agent/level/benefits,/api/v1/agent/level/benefits,217,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01156,user-agent,docs/PRD-代理商支撑增强.md,source_section,API 接口,当前等级权益,当前等级权益,217,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01167,user-agent,docs/PRD-代理商支撑增强.md,source_section,API 接口,/api/v1/agent/level/history,/api/v1/agent/level/history,220,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-01168,user-agent,docs/PRD-代理商支撑增强.md,source_section,API 接口,等级变更历史,等级变更历史,220,56;93;130;179;213,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认

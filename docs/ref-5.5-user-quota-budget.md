@@ -686,5 +686,5 @@ interface QuotaUsageChartProps {
 | 通知规则 | `ref-4.14.5-notification-rules.md` | 额度预警通知通道 |
 | 操作日志 | `ref-4.13-operation-timeline.md` | 额度调整操作记录 |
 | 系统配置 | `ref-4.8-system-config.md` | 额度配置存储在 site_configs |
-| 供应商管理 | `ref-4.3-vendor-model.md` | 企业用户额度影响供应商路由 |
+| 渠道管理 | `ref-4.3-vendor-model.md` | 企业用户额度影响渠道路由 |
 | 开放 API | `ref-4.19-open-api-platform.md` | 额度查询可作为开放 API 端点 |

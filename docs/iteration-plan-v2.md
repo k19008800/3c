@@ -1,5 +1,7 @@
 # 3cloud 迭代落实方案 v2（P0–P3）
 
+> ⚠️ **迭代完成不等于 production ready。** 本文是 2026-08-17 的历史执行计划；任务勾选、阶段完成和历史测试数字均不能替代当前候选提交的发布证据。当前生产准入只以 [`07-quality-and-acceptance/release-baseline.md`](07-quality-and-acceptance/release-baseline.md) 和现行 release gate 为准；其当前结论为 `not_ready`。
+
 > **日期**：2026-08-17
 > **定位**：P0→P3 四档迭代的可执行落实方案，每项任务含目标/实现文件/测试要求/Gate/派发方式，可直接按 `kb/3cloud/spawn-protocol.md` 派发子代理执行。
 > **前置结论**：基于 `iteration-plan-v1.md`（2026-07-30 差距分析）+ 2026-08-16/17 Batch 1-4 完成后的代码现状（HEAD `2286ac1`，全量测试 463/463、verify 17/17、E2E 10/10、tsc 0 错误）。
@@ -188,7 +190,7 @@ pnpm build                             # 三端构建通过
 ## P1 — 契约收口 + 资金闭环（🟡 重要）✅ 已完成（2026-08-18）
 
 > 目标：按 `docs/api-contract.md` §2 的 253 端点地图消灭 ⬜，优先用户高频项；补齐资金闭环。
-> **P1 验收结果**：api-contract §2 高频 ⬜ 清零（P1-1 用户 10 组 / P1-2 代理 4 组 / P1-3 供应商结算 6 端点 / P1-4 定价校验）；回归 Gate 全绿：typecheck 0 错、**685/685 单测**（574 基线 + 111 新增）、verify 17/17、E2E 10/10、build 全过 → **宣告 P1 完成**。
+> **P1 验收结果**：api-contract §2 高频 ⬜ 清零（P1-1 用户 10 组 / P1-2 代理 4 组 / P1-3 渠道结算 6 端点 / P1-4 定价校验）；回归 Gate 全绿：typecheck 0 错、**685/685 单测**（574 基线 + 111 新增）、verify 17/17、E2E 10/10、build 全过 → **宣告 P1 完成**。
 
 ### P1-1 用户高频端点补齐
 
@@ -215,9 +217,9 @@ pnpm build                             # 三端构建通过
 - **Gate**：`pnpm -w api test` + verify 回归。
 - **工时**：后端 2.5d。
 
-### P1-3 供应商结算自动对账（SPEC §25 增强）
+### P1-3 渠道结算自动对账（SPEC §25 增强）
 
-- **范围**：`/admin/vendor-settlements/generate`（月度结算单自动计算：按供应商聚合 consumption）、`/admin/supplier-bill-match`（账单匹配差异标记）；供应商结算单下载。
+- **范围**：`/admin/vendor-settlements/generate`（月度结算单自动计算：按渠道聚合 consumption）、`/admin/supplier-bill-match`（账单匹配差异标记）；渠道结算单下载。
 - **实现文件**：改 `api/src/routes/admin-finance.ts` / `admin-vendor-settlements.ts`（新增）；`api/src/services/finance/vendor-settlement.ts`。
 - **测试要求**：结算单生成金额=sum(consumption cost)，对账差异标记正确。
 - **Gate**：`pnpm -w api test` + verify 回归。
@@ -358,7 +360,7 @@ P0-4 Pipeline 接入（依赖 P0-1/P0-2/P0-3）
    ↓ P0 验收（回归 Gate 全绿）
 P1-1 用户高频 ─┐（可并行 3 子代理）
 P1-2 代理结算 ─┤
-P1-3 供应商对账 ┤
+P1-3 渠道对账 ┤
 P1-4 定价校验 ─┘
    ↓ P1 验收
 P2-1 定价层级 ─→ P2-2 代理增长（依赖 P1-2 邀请端点）──┐

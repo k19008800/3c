@@ -16,6 +16,7 @@ kb/
 ├── decisions/          ← 重大决策记录
 │   └── YYYY-MM-DD-*.md
 ├── infrastructure/     ← 基础设施
+│   ├── dev-setup.md    ← 🚀 本地开发启动方案（Docker Desktop 提供 Redis）
 │   ├── credentials.md ← 🔐 密钥/凭据总表（单一速查入口）
 │   ├── servers.md     ← 服务器清单
 │   └── baota.md       ← 宝塔面板配置
@@ -39,6 +40,7 @@ kb/
 |------|----------|--------|
 | `profile/boss.md` | BOSS 个人属性、技能、偏好、习惯 | 🔵 低 |
 | `projects/3cloud.md` | 项目架构、模块清单（28+项）、部署、编码腐烂修复记录 | 🟡 中 |
+| `infrastructure/dev-setup.md` | **本地启动方案**（pnpm dev + Docker Desktop Redis） | 🔵 低 |
 | `infrastructure/credentials.md` | **所有密钥/密码/Token 总表** | 🔴 **高** |
 | `infrastructure/servers.md` | 服务器 IP、SSH、域名 | 🔴 **高（含密钥路径）** |
 | `infrastructure/baota.md` | 宝塔面板地址/账号 | 🔴 **高** |

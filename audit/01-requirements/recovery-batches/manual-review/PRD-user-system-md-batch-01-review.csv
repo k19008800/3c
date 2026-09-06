@@ -1,0 +1,85 @@
+﻿req_id,domain,source_path,bad_fields,recovered_section,recovered_quote,recovered_assertion,quote_source_lines,section_source_lines,conversion,compound_after_recovery,status,basis,source_section_context,source_quote_context,section_check,quote_check,assertion_check,format_risk_check,review_decision,review_notes
+UA2-00052,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,**资源维度**（按模块划分）：,**资源维度**（按模块划分）：,23,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,23: **璧勬簮缁村害**锛堟寜妯″潡鍒掑垎锛夛細,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00053,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,`user`,`user`,27;78,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,"27: | `user` | 鐢ㄦ埛绠＄悊 | 鍒楄〃 / 璇︽儏 / 浣欓鎿嶄綔 / 绂佺敤 |
+78: | `target_type` | 鎿嶄綔瀵硅薄绫诲瀷 | `user` |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00054,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,用户管理,用户管理,27,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,27: | `user` | 鐢ㄦ埛绠＄悊 | 鍒楄〃 / 璇︽儏 / 浣欓鎿嶄綔 / 绂佺敤 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00055,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,列表 / 详情 / 余额操作 / 禁用,列表 / 详情 / 余额操作 / 禁用,27,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,27: | `user` | 鐢ㄦ埛绠＄悊 | 鍒楄〃 / 璇︽儏 / 浣欓鎿嶄綔 / 绂佺敤 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00056,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,`apikey`,`apikey`,28,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,28: | `apikey` | API Key 绠＄悊 | 鍒楄〃 / 鍒涘缓 / 缂栬緫 / 鍒犻櫎 / 鏉冮檺閰嶇疆 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00057,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,API Key 管理,API Key 管理,28;777,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,"28: | `apikey` | API Key 绠＄悊 | 鍒楄〃 / 鍒涘缓 / 缂栬緫 / 鍒犻櫎 / 鏉冮檺閰嶇疆 |
+777: #### 2.2.3 API Key 绠＄悊 `/console/api-keys`",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00058,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,列表 / 创建 / 编辑 / 删除 / 权限配置,列表 / 创建 / 编辑 / 删除 / 权限配置,28,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,28: | `apikey` | API Key 绠＄悊 | 鍒楄〃 / 鍒涘缓 / 缂栬緫 / 鍒犻櫎 / 鏉冮檺閰嶇疆 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00062,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,`model`,`model`,30,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,30: | `model` | 妯″瀷绠＄悊 | 鍒楄〃 / 浠锋牸 / 鏄犲皠 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00063,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,模型管理,模型管理,30,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,30: | `model` | 妯″瀷绠＄悊 | 鍒楄〃 / 浠锋牸 / 鏄犲皠 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00064,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,列表 / 价格 / 映射,列表 / 价格 / 映射,30,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,30: | `model` | 妯″瀷绠＄悊 | 鍒楄〃 / 浠锋牸 / 鏄犲皠 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00071,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,`security`,`security`,33,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,33: | `security` | 瀹夊叏绠＄悊 | 浜嬩欢 / 瑙勫垯 / 灏佺 / 椋庢帶 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00072,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,安全管理,安全管理,33,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,33: | `security` | 瀹夊叏绠＄悊 | 浜嬩欢 / 瑙勫垯 / 灏佺 / 椋庢帶 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00073,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,事件 / 规则 / 封禁 / 风控,事件 / 规则 / 封禁 / 风控,33,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,33: | `security` | 瀹夊叏绠＄悊 | 浜嬩欢 / 瑙勫垯 / 灏佺 / 椋庢帶 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00074,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,`log`,`log`,34,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,34: | `log` | 鏃ュ織绠＄悊 | 璋冪敤鏃ュ織 / 鎿嶄綔鏃ュ織 / 瀹¤鏃ュ織 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00075,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,日志管理,日志管理,34,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,34: | `log` | 鏃ュ織绠＄悊 | 璋冪敤鏃ュ織 / 鎿嶄綔鏃ュ織 / 瀹¤鏃ュ織 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00076,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,调用日志 / 操作日志 / 审计日志,调用日志 / 操作日志 / 审计日志,34,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,34: | `log` | 鏃ュ織绠＄悊 | 璋冪敤鏃ュ織 / 鎿嶄綔鏃ュ織 / 瀹¤鏃ュ織 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00077,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,`config`,`config`,35,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,35: | `config` | 绯荤粺閰嶇疆 | 鍙傛暟 / 鐗堟湰 / 绔欑偣 / 鐜 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00078,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,系统配置,系统配置,35;93,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,"35: | `config` | 绯荤粺閰嶇疆 | 鍙傛暟 / 鐗堟湰 / 绔欑偣 / 鐜 |
+93: 5. 绯荤粺閰嶇疆淇敼",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00079,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,参数 / 版本 / 站点 / 环境,参数 / 版本 / 站点 / 环境,35,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,35: | `config` | 绯荤粺閰嶇疆 | 鍙傛暟 / 鐗堟湰 / 绔欑偣 / 鐜 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00080,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,`marketing`,`marketing`,36,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,36: | `marketing` | 钀ラ攢杩愯惀 | 娲诲姩 / 鍏憡 / 鍐呭 / 閭欢妯℃澘 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00081,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,营销运营,营销运营,36,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,36: | `marketing` | 钀ラ攢杩愯惀 | 娲诲姩 / 鍏憡 / 鍐呭 / 閭欢妯℃澘 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00082,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,活动 / 公告 / 内容 / 邮件模板,活动 / 公告 / 内容 / 邮件模板,36,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,36: | `marketing` | 钀ラ攢杩愯惀 | 娲诲姩 / 鍏憡 / 鍐呭 / 閭欢妯℃澘 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00084,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,操作代码,操作代码,40,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,40: | 鎿嶄綔浠ｇ爜 | 鎿嶄綔 | 璇存槑 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00085,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,操作,操作,40;74;75;76;77;78;79;83;84;371;579;884;1022,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,"40: | 鎿嶄綔浠ｇ爜 | 鎿嶄綔 | 璇存槑 |
+74: | `operator_id` | 鎿嶄綔浜虹敤鎴ID | `u_10086` |
+75: | `operator_name` | 鎿嶄綔浜烘樀绉|| `寮犱笁` |
+76: | `operator_ip` | 鎿嶄綔浜烘潵婧IP | `117.78.2.66` |
+77: | `action` | 鎿嶄綔绫诲瀷 | `user.balance.adjust` |
+78: | `target_type` | 鎿嶄綔瀵硅薄绫诲瀷 | `user` |
+79: | `target_id` | 鎿嶄綔瀵硅薄 ID | `u_10087` |
+83: | `result` | 鎿嶄綔缁撴灉 | `success` / `failed` |
+84: | `timestamp` | 鎿嶄綔鏃堕棿 | `2026-07-26 11:30:00` |
+371: | 鎿嶄綔 | 瑙﹀彂鏂瑰紡 | 璺宠浆/寮圭獥 | 鏉冮檺瑕佹眰 |
+579: | 鎿嶄綔 | 琛屼负 |
+884: **鎵归噺鎿嶄綔**
+1022: | 鎿嶄綔 | 璇存槑 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00086,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,说明,说明,40;52;743;753;1022,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,"40: | 鎿嶄綔浠ｇ爜 | 鎿嶄綔 | 璇存槑 |
+52: | 鑼冨洿 | 璇存槑 | 绀轰緥 |
+743: | 鍔熻兘 | 璇存槑 |
+753: | 鍔熻兘 | 璇存槑 |
+1022: | 鎿嶄綔 | 璇存槑 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00090,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,`create`,`create`,43,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,43: | `create` | 鍒涘缓 | 鏂板 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00091,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,创建,创建,28;43;805;816;933,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,"28: | `apikey` | API Key 绠＄悊 | 鍒楄〃 / 鍒涘缓 / 缂栬緫 / 鍒犻櫎 / 鏉冮檺閰嶇疆 |
+43: | `create` | 鍒涘缓 | 鏂板 |
+805: ##### 鍒涘缓 Key 寮圭獥
+816: **鍒涘缓鎴愬姛鍚庣殑澶勭悊**
+933: 鍒涘缓 Key 鏃讹細",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00092,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,新增,新增,43,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,43: | `create` | 鍒涘缓 | 鏂板 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00093,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,`update`,`update`,44,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,44: | `update` | 缂栬緫 | 淇敼鐜版湁鏁版嵁 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00094,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,编辑,编辑,838,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,838: ##### 缂栬緫 Key,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00095,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,修改现有数据,修改现有数据,44,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,44: | `update` | 缂栬緫 | 淇敼鐜版湁鏁版嵁 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00096,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,`delete`,`delete`,45,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,45: | `delete` | 鍒犻櫎 | 绉婚櫎 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00097,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,删除,删除,45;96,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,"45: | `delete` | 鍒犻櫎 | 绉婚櫎 |
+96: 8. API Key 绂佺敤/鍒犻櫎",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00098,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,移除,移除,45,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,45: | `delete` | 鍒犻櫎 | 绉婚櫎 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00099,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,`export`,`export`,46,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,46: | `export` | 瀵煎嚭 | 鎵归噺瀵煎嚭鏁版嵁 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00100,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,导出,导出,46;300;1029,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,"46: | `export` | 瀵煎嚭 | 鎵归噺瀵煎嚭鏁版嵁 |
+300: **鏁版嵁瀵煎嚭**
+1029: **缁撴灉瀵煎嚭**",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00101,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,批量导出数据,批量导出数据,46,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,46: | `export` | 瀵煎嚭 | 鎵归噺瀵煎嚭鏁版嵁 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00105,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,范围,范围,52;297;684,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,"52: | 鑼冨洿 | 璇存槑 | 绀轰緥 |
+297: - 瀵规瘮鍛ㄦ湡 = 褰撳墠鏃堕棿鑼冨洿 - 褰撳墠鏃堕棿鑼冨洿闀垮害
+684: | 浠锋牸鑼冨洿 | 楼0-0.01 / 楼0.01-0.05 / 楼0.05-0.10 / 楼0.10+ |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00107,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,示例,示例,52;1095,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,"52: | 鑼冨洿 | 璇存槑 | 绀轰緥 |
+1095: | 缁勫悎 | 鍥捐〃绫诲瀷 | 绀轰緥 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00108,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,`all`,`all`,54,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,"54: | `all` | 鍏ㄥ钩鍙版暟鎹|| super_admin, admin |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00109,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,鍏ㄥ钩鍙版暟鎹,鍏ㄥ钩鍙版暟鎹,54,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,"54: | `all` | 鍏ㄥ钩鍙版暟鎹|| super_admin, admin |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00110,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,"super_admin, admin","super_admin, admin",54,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,"54: | `all` | 鍏ㄥ钩鍙版暟鎹|| super_admin, admin |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00118,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,模板名称,模板名称,60,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,60: | 妯℃澘鍚嶇О | 鍖呭惈鏉冮檺 | 閫傜敤鍦烘櫙 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00128,user-agent,docs/PRD-用户体系.md,source_section,2.1.2 权限引擎规格,"user:{read}, finance:{read}, log:{read}","user:{read}, finance:{read}, log:{read}",64,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,"64: | 瀹㈡湇涓撳憳 | user:{read}, finance:{read}, log:{read} | 澶勭悊鐢ㄦ埛鍜ㄨ |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00129,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.1.2 权限引擎规格,处理用户咨询,处理用户咨询,64,21,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,21: #### 2.1.2 鏉冮檺寮曟搸瑙勬牸,"64: | 瀹㈡湇涓撳憳 | user:{read}, finance:{read}, log:{read} | 澶勭悊鐢ㄦ埛鍜ㄨ |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00276,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,区域 3：额度使用进度条,**字段规格**,**字段规格**,128;166;201;530;1297,199,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,199: ##### 鍖哄煙 3锛氶搴︿娇鐢ㄨ繘搴︽潯,"128: **瀛楁瑙勬牸**
+166: **瀛楁瑙勬牸**
+201: **瀛楁瑙勬牸**
+530: **瀛楁瑙勬牸**
+1297: **瀛楁瑙勬牸**",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00278,user-agent,docs/PRD-用户体系.md,source_section,区域 3：额度使用进度条,decimal,decimal,135;206,199,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,199: ##### 鍖哄煙 3锛氶搴︿娇鐢ㄨ繘搴︽潯,"135: | 璐︽埛浣欓 | decimal(10,2) | `users.balance` | 姣忔椤甸潰鍒锋柊 | 楼0.00 |
+206: | 宸茬敤閲|| decimal | 褰撴湀宸叉秷鑰楅噺 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00280,user-agent,docs/PRD-用户体系.md,source_section,区域 3：额度使用进度条,宸茬敤閲,宸茬敤閲,206,199,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,199: ##### 鍖哄煙 3锛氶搴︿娇鐢ㄨ繘搴︽潯,206: | 宸茬敤閲|| decimal | 褰撴湀宸叉秷鑰楅噺 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00282,user-agent,docs/PRD-用户体系.md,source_section,区域 3：额度使用进度条,当月已消耗量,当月已消耗量,206,199,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,199: ##### 鍖哄煙 3锛氶搴︿娇鐢ㄨ繘搴︽潯,206: | 宸茬敤閲|| decimal | 褰撴湀宸叉秷鑰楅噺 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-00284,user-agent,docs/PRD-用户体系.md,source_section,区域 3：额度使用进度条,int,int,137,199,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,199: ##### 鍖哄煙 3锛氶搴︿娇鐢ㄨ繘搴︽潯,137: | 浠婃棩宸茬敤 Token | bigint | `call_logs` 褰撴棩鑱氬悎 | 10 绉掕疆璇|| 0 tokens |,PENDING,PENDING,PENDING,PENDING,PENDING,

@@ -1,0 +1,478 @@
+﻿req_id,domain,source_path,bad_fields,recovered_section,recovered_quote,recovered_assertion,quote_source_lines,section_source_lines,conversion,compound_after_recovery,status,basis,source_section_context,source_quote_context,section_check,quote_check,assertion_check,format_risk_check,review_decision,review_notes
+UA2-01827,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,POST,POST,46;118;283;315;317;318;319,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛","46: | POST | /api/v1/playground/embeddings | 鍚戦噺宓屽叆璋冭瘯 | model_manage |
+118: | POST | /api/v1/me/budget-rules | 鍒涘缓棰勭畻瑙勫垯 | 鐢ㄦ埛 |
+283: | POST | /api/v1/me/notifications/read-all | 鍏ㄩ儴鏍囪宸茶 | 鐢ㄦ埛 |
+315: | POST | /api/v1/me/security/devices/:id/logout | 杩滅▼鐧诲嚭璁惧 | 鐢ㄦ埛 |
+317: | POST | /api/v1/me/security/change-password | 淇敼瀵嗙爜 | 鐢ㄦ埛 |
+318: | POST | /api/v1/me/security/bind-phone | 缁戝畾鎵嬫満 | 鐢ㄦ埛 |
+319: | POST | /api/v1/me/security/bind-email | 缁戝畾閭 | 鐢ㄦ埛 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01830,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,model_manage,model_manage,46;48,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛","46: | POST | /api/v1/playground/embeddings | 鍚戦噺宓屽叆璋冭瘯 | model_manage |
+48: | GET | /api/v1/playground/models | 鍙皟璇曟ā鍨嬪垪琛紙鎸夌被鍨嬪垎缁勶級 | model_manage |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01832,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/playground/embeddings,/api/v1/playground/embeddings,46,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",46: | POST | /api/v1/playground/embeddings | 鍚戦噺宓屽叆璋冭瘯 | model_manage |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01833,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,向量嵌入调试,向量嵌入调试,46,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",46: | POST | /api/v1/playground/embeddings | 鍚戦噺宓屽叆璋冭瘯 | model_manage |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01839,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,GET,GET,48;119;122;123;155;157;158;217;218;219;220;221;222;279;281;314;316;320;388;389;439;441;442;443,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛","48: | GET | /api/v1/playground/models | 鍙皟璇曟ā鍨嬪垪琛紙鎸夌被鍨嬪垎缁勶級 | model_manage |
+119: | GET | /api/v1/me/budget-rules | 棰勭畻瑙勫垯鍒楄〃 | 鐢ㄦ埛 |
+122: | GET | /api/v1/me/budget-usage | 褰撳墠棰勭畻浣跨敤鎯呭喌 | 鐢ㄦ埛 |
+123: | GET | /api/v1/me/budget-usage/history | 棰勭畻浣跨敤鍘嗗彶 | 鐢ㄦ埛 |
+155: | GET | /api/v1/me/onboarding/progress | 鑾峰彇寮曞杩涘害 | 鐢ㄦ埛 |
+157: | GET | /api/v1/me/onboarding/examples | 鑾峰彇绀轰緥浠ｇ爜鍒楄〃 | 鐢ㄦ埛 |
+158: | GET | /api/v1/me/onboarding/examples/:lang | 鑾峰彇鎸囧畾璇█绀轰緥浠ｇ爜 | 鐢ㄦ埛 |
+217: | GET | /api/v1/me/billing/summaries | 鏈堝害璐﹀崟鍒楄〃 | 鐢ㄦ埛 |
+218: | GET | /api/v1/me/billing/summaries/:period | 鎸囧畾鏈堜唤璐﹀崟璇︽儏 | 鐢ㄦ埛 |
+219: | GET | /api/v1/me/billing/summaries/:period/download | 涓嬭浇璐﹀崟 PDF | 鐢ㄦ埛 |
+220: | GET | /api/v1/me/billing/analysis | 娑堣垂鍒嗘瀽鏁版嵁锛堝缁达級 | 鐢ㄦ埛 |
+221: | GET | /api/v1/me/billing/forecast | 璐圭敤棰勬祴 | 鐢ㄦ埛 |
+222: | GET | /api/v1/me/billing/optimization-tips | 鎴愭湰浼樺寲寤鸿 | 鐢ㄦ埛 |
+279: | GET | /api/v1/me/notification-preferences | 鑾峰彇閫氱煡鍋忓ソ | 鐢ㄦ埛 |
+281: | GET | /api/v1/me/notifications | 閫氱煡鍘嗗彶鍒楄〃 | 鐢ㄦ埛 |
+314: | GET | /api/v1/me/security/devices | 鐧诲綍璁惧鍒楄〃 | 鐢ㄦ埛 |
+316: | GET | /api/v1/me/security/login-history | 鐧诲綍娲诲姩鏃ュ織 | 鐢ㄦ埛 |
+320: | GET | /api/v1/me/security/score | 瀹夊叏璇勫垎 | 鐢ㄦ埛 |
+388: | GET | /api/v1/public/status/incidents | 鍘嗗彶鏁呴殰浜嬩欢 | 鏃犻渶鐧诲綍 |
+389: | GET | /api/v1/public/status/latency | 鍝嶅簲鏃堕棿瓒嬪娍 | 鏃犻渶鐧诲綍 |
+439: | GET | /api/v1/public/sdks | SDK 鐗堟湰鍒楄〃 | 鏃犻渶鐧诲綍 |
+441: | GET | /api/v1/public/examples | 浠ｇ爜绀轰緥鍒楄〃 | 鏃犻渶鐧诲綍 |
+442: | GET | /api/v1/public/examples/:language | 鎸囧畾璇█绀轰緥 | 鏃犻渶鐧诲綍 |
+443: | GET | /api/v1/public/error-guide | 閿欒鎺掓煡鎸囧崡 | 鏃犻渶鐧诲綍 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01840,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/playground/models,/api/v1/playground/models,48,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",48: | GET | /api/v1/playground/models | 鍙皟璇曟ā鍨嬪垪琛紙鎸夌被鍨嬪垎缁勶級 | model_manage |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01841,user-agent,docs/PRD-用户端体验增强.md,source_section;source_quote;atomic_assertion,API 接口,可调试模型列表（按类型分组）,可调试模型列表（按类型分组）,48,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",48: | GET | /api/v1/playground/models | 鍙皟璇曟ā鍨嬪垪琛紙鎸夌被鍨嬪垎缁勶級 | model_manage |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01867,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/me/budget-rules,/api/v1/me/budget-rules,118;119;120;121,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛","118: | POST | /api/v1/me/budget-rules | 鍒涘缓棰勭畻瑙勫垯 | 鐢ㄦ埛 |
+119: | GET | /api/v1/me/budget-rules | 棰勭畻瑙勫垯鍒楄〃 | 鐢ㄦ埛 |
+120: | PATCH | /api/v1/me/budget-rules/:id | 鏇存柊棰勭畻瑙勫垯 | 鐢ㄦ埛 |
+121: | DELETE | /api/v1/me/budget-rules/:id | 鍒犻櫎棰勭畻瑙勫垯 | 鐢ㄦ埛 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01868,user-agent,docs/PRD-用户端体验增强.md,source_section;source_quote;atomic_assertion,API 接口,创建预算规则,创建预算规则,118,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",118: | POST | /api/v1/me/budget-rules | 鍒涘缓棰勭畻瑙勫垯 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01869,user-agent,docs/PRD-用户端体验增强.md,source_section;source_quote;atomic_assertion,API 接口,用户,用户,118;119;120;121;122;123;155;156;157;158;217;218;219;220;221;222;279;280;281;282;283;314;315;316;317;318;319;320;461;463,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛","118: | POST | /api/v1/me/budget-rules | 鍒涘缓棰勭畻瑙勫垯 | 鐢ㄦ埛 |
+119: | GET | /api/v1/me/budget-rules | 棰勭畻瑙勫垯鍒楄〃 | 鐢ㄦ埛 |
+120: | PATCH | /api/v1/me/budget-rules/:id | 鏇存柊棰勭畻瑙勫垯 | 鐢ㄦ埛 |
+121: | DELETE | /api/v1/me/budget-rules/:id | 鍒犻櫎棰勭畻瑙勫垯 | 鐢ㄦ埛 |
+122: | GET | /api/v1/me/budget-usage | 褰撳墠棰勭畻浣跨敤鎯呭喌 | 鐢ㄦ埛 |
+123: | GET | /api/v1/me/budget-usage/history | 棰勭畻浣跨敤鍘嗗彶 | 鐢ㄦ埛 |
+155: | GET | /api/v1/me/onboarding/progress | 鑾峰彇寮曞杩涘害 | 鐢ㄦ埛 |
+156: | PATCH | /api/v1/me/onboarding/progress | 鏇存柊寮曞杩涘害 | 鐢ㄦ埛 |
+157: | GET | /api/v1/me/onboarding/examples | 鑾峰彇绀轰緥浠ｇ爜鍒楄〃 | 鐢ㄦ埛 |
+158: | GET | /api/v1/me/onboarding/examples/:lang | 鑾峰彇鎸囧畾璇█绀轰緥浠ｇ爜 | 鐢ㄦ埛 |
+217: | GET | /api/v1/me/billing/summaries | 鏈堝害璐﹀崟鍒楄〃 | 鐢ㄦ埛 |
+218: | GET | /api/v1/me/billing/summaries/:period | 鎸囧畾鏈堜唤璐﹀崟璇︽儏 | 鐢ㄦ埛 |
+219: | GET | /api/v1/me/billing/summaries/:period/download | 涓嬭浇璐﹀崟 PDF | 鐢ㄦ埛 |
+220: | GET | /api/v1/me/billing/analysis | 娑堣垂鍒嗘瀽鏁版嵁锛堝缁达級 | 鐢ㄦ埛 |
+221: | GET | /api/v1/me/billing/forecast | 璐圭敤棰勬祴 | 鐢ㄦ埛 |
+222: | GET | /api/v1/me/billing/optimization-tips | 鎴愭湰浼樺寲寤鸿 | 鐢ㄦ埛 |
+279: | GET | /api/v1/me/notification-preferences | 鑾峰彇閫氱煡鍋忓ソ | 鐢ㄦ埛 |
+280: | PATCH | /api/v1/me/notification-preferences | 鏇存柊閫氱煡鍋忓ソ | 鐢ㄦ埛 |
+281: | GET | /api/v1/me/notifications | 閫氱煡鍘嗗彶鍒楄〃 | 鐢ㄦ埛 |
+282: | PATCH | /api/v1/me/notifications/:id/read | 鏍囪宸茶 | 鐢ㄦ埛 |
+283: | POST | /api/v1/me/notifications/read-all | 鍏ㄩ儴鏍囪宸茶 | 鐢ㄦ埛 |
+314: | GET | /api/v1/me/security/devices | 鐧诲綍璁惧鍒楄〃 | 鐢ㄦ埛 |
+315: | POST | /api/v1/me/security/devices/:id/logout | 杩滅▼鐧诲嚭璁惧 | 鐢ㄦ埛 |
+316: | GET | /api/v1/me/security/login-history | 鐧诲綍娲诲姩鏃ュ織 | 鐢ㄦ埛 |
+317: | POST | /api/v1/me/security/change-password | 淇敼瀵嗙爜 | 鐢ㄦ埛 |
+318: | POST | /api/v1/me/security/bind-phone | 缁戝畾鎵嬫満 | 鐢ㄦ埛 |
+319: | POST | /api/v1/me/security/bind-email | 缁戝畾閭 | 鐢ㄦ埛 |
+320: | GET | /api/v1/me/security/score | 瀹夊叏璇勫垎 | 鐢ㄦ埛 |
+461: | 鐢ㄦ埛寮曞 Onboarding | P0 | 鍚庣 2d + 鍓嶇 4d | 鎻愬崌娉ㄥ唽杞寲鐜囷紝鍑忓皯娴佸け |
+463: | 閫氱煡鍋忓ソ绠＄悊 | P1 | 鍚庣 2d + 鍓嶇 2d | 鐢ㄦ埛浣撻獙浼樺寲 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01872,user-agent,docs/PRD-用户端体验增强.md,source_section;source_quote;atomic_assertion,API 接口,预算规则列表,预算规则列表,119,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",119: | GET | /api/v1/me/budget-rules | 棰勭畻瑙勫垯鍒楄〃 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01874,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,PATCH,PATCH,120;156;280;282,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛","120: | PATCH | /api/v1/me/budget-rules/:id | 鏇存柊棰勭畻瑙勫垯 | 鐢ㄦ埛 |
+156: | PATCH | /api/v1/me/onboarding/progress | 鏇存柊寮曞杩涘害 | 鐢ㄦ埛 |
+280: | PATCH | /api/v1/me/notification-preferences | 鏇存柊閫氱煡鍋忓ソ | 鐢ㄦ埛 |
+282: | PATCH | /api/v1/me/notifications/:id/read | 鏍囪宸茶 | 鐢ㄦ埛 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01875,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/me/budget-rules/:id,/api/v1/me/budget-rules/:id,120;121,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛","120: | PATCH | /api/v1/me/budget-rules/:id | 鏇存柊棰勭畻瑙勫垯 | 鐢ㄦ埛 |
+121: | DELETE | /api/v1/me/budget-rules/:id | 鍒犻櫎棰勭畻瑙勫垯 | 鐢ㄦ埛 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01878,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,DELETE,DELETE,121,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",121: | DELETE | /api/v1/me/budget-rules/:id | 鍒犻櫎棰勭畻瑙勫垯 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01883,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/me/budget-usage,/api/v1/me/budget-usage,122;123,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛","122: | GET | /api/v1/me/budget-usage | 褰撳墠棰勭畻浣跨敤鎯呭喌 | 鐢ㄦ埛 |
+123: | GET | /api/v1/me/budget-usage/history | 棰勭畻浣跨敤鍘嗗彶 | 鐢ㄦ埛 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01887,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/me/budget-usage/history,/api/v1/me/budget-usage/history,123,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",123: | GET | /api/v1/me/budget-usage/history | 棰勭畻浣跨敤鍘嗗彶 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01908,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/me/onboarding/progress,/api/v1/me/onboarding/progress,155;156,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛","155: | GET | /api/v1/me/onboarding/progress | 鑾峰彇寮曞杩涘害 | 鐢ㄦ埛 |
+156: | PATCH | /api/v1/me/onboarding/progress | 鏇存柊寮曞杩涘害 | 鐢ㄦ埛 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01909,user-agent,docs/PRD-用户端体验增强.md,source_section;source_quote;atomic_assertion,API 接口,获取引导进度,获取引导进度,155,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",155: | GET | /api/v1/me/onboarding/progress | 鑾峰彇寮曞杩涘害 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01913,user-agent,docs/PRD-用户端体验增强.md,source_section;source_quote;atomic_assertion,API 接口,更新引导进度,更新引导进度,156,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",156: | PATCH | /api/v1/me/onboarding/progress | 鏇存柊寮曞杩涘害 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01916,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/me/onboarding/examples,/api/v1/me/onboarding/examples,157;158,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛","157: | GET | /api/v1/me/onboarding/examples | 鑾峰彇绀轰緥浠ｇ爜鍒楄〃 | 鐢ㄦ埛 |
+158: | GET | /api/v1/me/onboarding/examples/:lang | 鑾峰彇鎸囧畾璇█绀轰緥浠ｇ爜 | 鐢ㄦ埛 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01917,user-agent,docs/PRD-用户端体验增强.md,source_section;source_quote;atomic_assertion,API 接口,获取示例代码列表,获取示例代码列表,157,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",157: | GET | /api/v1/me/onboarding/examples | 鑾峰彇绀轰緥浠ｇ爜鍒楄〃 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01920,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/me/onboarding/examples/:lang,/api/v1/me/onboarding/examples/:lang,158,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",158: | GET | /api/v1/me/onboarding/examples/:lang | 鑾峰彇鎸囧畾璇█绀轰緥浠ｇ爜 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01921,user-agent,docs/PRD-用户端体验增强.md,source_section;source_quote;atomic_assertion,API 接口,获取指定语言示例代码,获取指定语言示例代码,158,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",158: | GET | /api/v1/me/onboarding/examples/:lang | 鑾峰彇鎸囧畾璇█绀轰緥浠ｇ爜 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01933,user-agent,docs/PRD-用户端体验增强.md,source_quote;atomic_assertion,功能规格,支持 PDF / CSV 格式下载,支持 PDF / CSV 格式下载,181,11;67;141;176;240;300;338;409,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"11: #### 鍔熻兘瑙勬牸
+67: #### 鍔熻兘瑙勬牸
+141: #### 鍔熻兘瑙勬牸
+176: #### 鍔熻兘瑙勬牸
+240: #### 鍔熻兘瑙勬牸
+300: #### 鍔熻兘瑙勬牸
+338: #### 鍔熻兘瑙勬牸
+409: #### 鍔熻兘瑙勬牸",181: | 璐﹀崟涓嬭浇 | 鏀寔 PDF / CSV 鏍煎紡涓嬭浇 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01936,user-agent,docs/PRD-用户端体验增强.md,source_quote;atomic_assertion,功能规格,成本优化建议,成本优化建议,222,11;67;141;176;240;300;338;409,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"11: #### 鍔熻兘瑙勬牸
+67: #### 鍔熻兘瑙勬牸
+141: #### 鍔熻兘瑙勬牸
+176: #### 鍔熻兘瑙勬牸
+240: #### 鍔熻兘瑙勬牸
+300: #### 鍔熻兘瑙勬牸
+338: #### 鍔熻兘瑙勬牸
+409: #### 鍔熻兘瑙勬牸",222: | GET | /api/v1/me/billing/optimization-tips | 鎴愭湰浼樺寲寤鸿 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01941,user-agent,docs/PRD-用户端体验增强.md,source_quote;atomic_assertion,功能规格,本月 vs 上月消费对比，环比增长率,本月 vs 上月消费对比，环比增长率,185,11;67;141;176;240;300;338;409,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"11: #### 鍔熻兘瑙勬牸
+67: #### 鍔熻兘瑙勬牸
+141: #### 鍔熻兘瑙勬牸
+176: #### 鍔熻兘瑙勬牸
+240: #### 鍔熻兘瑙勬牸
+300: #### 鍔熻兘瑙勬牸
+338: #### 鍔熻兘瑙勬牸
+409: #### 鍔熻兘瑙勬牸",185: | 瀵规瘮鍒嗘瀽 | 鏈湀 vs 涓婃湀娑堣垂瀵规瘮锛岀幆姣斿闀跨巼 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01943,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/me/billing/summaries,/api/v1/me/billing/summaries,217;218;219,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛","217: | GET | /api/v1/me/billing/summaries | 鏈堝害璐﹀崟鍒楄〃 | 鐢ㄦ埛 |
+218: | GET | /api/v1/me/billing/summaries/:period | 鎸囧畾鏈堜唤璐﹀崟璇︽儏 | 鐢ㄦ埛 |
+219: | GET | /api/v1/me/billing/summaries/:period/download | 涓嬭浇璐﹀崟 PDF | 鐢ㄦ埛 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01944,user-agent,docs/PRD-用户端体验增强.md,source_section;source_quote;atomic_assertion,API 接口,月度账单列表,月度账单列表,217,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",217: | GET | /api/v1/me/billing/summaries | 鏈堝害璐﹀崟鍒楄〃 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01947,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/me/billing/summaries/:period,/api/v1/me/billing/summaries/:period,218;219,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛","218: | GET | /api/v1/me/billing/summaries/:period | 鎸囧畾鏈堜唤璐﹀崟璇︽儏 | 鐢ㄦ埛 |
+219: | GET | /api/v1/me/billing/summaries/:period/download | 涓嬭浇璐﹀崟 PDF | 鐢ㄦ埛 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01948,user-agent,docs/PRD-用户端体验增强.md,source_section;source_quote;atomic_assertion,API 接口,指定月份账单详情,指定月份账单详情,218,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",218: | GET | /api/v1/me/billing/summaries/:period | 鎸囧畾鏈堜唤璐﹀崟璇︽儏 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01951,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/me/billing/summaries/:period/download,/api/v1/me/billing/summaries/:period/download,219,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",219: | GET | /api/v1/me/billing/summaries/:period/download | 涓嬭浇璐﹀崟 PDF | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01955,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/me/billing/analysis,/api/v1/me/billing/analysis,220,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",220: | GET | /api/v1/me/billing/analysis | 娑堣垂鍒嗘瀽鏁版嵁锛堝缁达級 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01956,user-agent,docs/PRD-用户端体验增强.md,source_section;source_quote;atomic_assertion,API 接口,消费分析数据（多维）,消费分析数据（多维）,220,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",220: | GET | /api/v1/me/billing/analysis | 娑堣垂鍒嗘瀽鏁版嵁锛堝缁达級 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01959,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/me/billing/forecast,/api/v1/me/billing/forecast,221,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",221: | GET | /api/v1/me/billing/forecast | 璐圭敤棰勬祴 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01963,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/me/billing/optimization-tips,/api/v1/me/billing/optimization-tips,222,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",222: | GET | /api/v1/me/billing/optimization-tips | 鎴愭湰浼樺寲寤鸿 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01964,user-agent,docs/PRD-用户端体验增强.md,source_section;source_quote;atomic_assertion,API 接口,成本优化建议,成本优化建议,222,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",222: | GET | /api/v1/me/billing/optimization-tips | 鎴愭湰浼樺寲寤鸿 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01976,user-agent,docs/PRD-用户端体验增强.md,source_quote;atomic_assertion,功能规格,站内通知 / 邮件 / 短信 / Webhook,站内通知 / 邮件 / 短信 / Webhook,245,11;67;141;176;240;300;338;409,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"11: #### 鍔熻兘瑙勬牸
+67: #### 鍔熻兘瑙勬牸
+141: #### 鍔熻兘瑙勬牸
+176: #### 鍔熻兘瑙勬牸
+240: #### 鍔熻兘瑙勬牸
+300: #### 鍔熻兘瑙勬牸
+338: #### 鍔熻兘瑙勬牸
+409: #### 鍔熻兘瑙勬牸",245: | 閫氱煡娓犻亾 | 绔欏唴閫氱煡 / 閭欢 / 鐭俊 / Webhook |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01979,user-agent,docs/PRD-用户端体验增强.md,source_quote;atomic_assertion,功能规格,静默时段,静默时段,247,11;67;141;176;240;300;338;409,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"11: #### 鍔熻兘瑙勬牸
+67: #### 鍔熻兘瑙勬牸
+141: #### 鍔熻兘瑙勬牸
+176: #### 鍔熻兘瑙勬牸
+240: #### 鍔熻兘瑙勬牸
+300: #### 鍔熻兘瑙勬牸
+338: #### 鍔熻兘瑙勬牸
+409: #### 鍔熻兘瑙勬牸",247: | 闈欓粯鏃舵 | 璁剧疆瀹夐潤鏃舵锛堝 23:00-08:00 涓嶆帹閫侊級 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01980,user-agent,docs/PRD-用户端体验增强.md,source_quote;atomic_assertion,功能规格,设置安静时段（如 23:00-08:00 不推送）,设置安静时段（如 23:00-08:00 不推送）,247,11;67;141;176;240;300;338;409,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"11: #### 鍔熻兘瑙勬牸
+67: #### 鍔熻兘瑙勬牸
+141: #### 鍔熻兘瑙勬牸
+176: #### 鍔熻兘瑙勬牸
+240: #### 鍔熻兘瑙勬牸
+300: #### 鍔熻兘瑙勬牸
+338: #### 鍔熻兘瑙勬牸
+409: #### 鍔熻兘瑙勬牸",247: | 闈欓粯鏃舵 | 璁剧疆瀹夐潤鏃舵锛堝 23:00-08:00 涓嶆帹閫侊級 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01984,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/me/notification-preferences,/api/v1/me/notification-preferences,279;280,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛","279: | GET | /api/v1/me/notification-preferences | 鑾峰彇閫氱煡鍋忓ソ | 鐢ㄦ埛 |
+280: | PATCH | /api/v1/me/notification-preferences | 鏇存柊閫氱煡鍋忓ソ | 鐢ㄦ埛 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01985,user-agent,docs/PRD-用户端体验增强.md,source_section;source_quote;atomic_assertion,API 接口,获取通知偏好,获取通知偏好,279,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",279: | GET | /api/v1/me/notification-preferences | 鑾峰彇閫氱煡鍋忓ソ | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01989,user-agent,docs/PRD-用户端体验增强.md,source_section;source_quote;atomic_assertion,API 接口,更新通知偏好,更新通知偏好,280,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",280: | PATCH | /api/v1/me/notification-preferences | 鏇存柊閫氱煡鍋忓ソ | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01992,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/me/notifications,/api/v1/me/notifications,281;282;283,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛","281: | GET | /api/v1/me/notifications | 閫氱煡鍘嗗彶鍒楄〃 | 鐢ㄦ埛 |
+282: | PATCH | /api/v1/me/notifications/:id/read | 鏍囪宸茶 | 鐢ㄦ埛 |
+283: | POST | /api/v1/me/notifications/read-all | 鍏ㄩ儴鏍囪宸茶 | 鐢ㄦ埛 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01993,user-agent,docs/PRD-用户端体验增强.md,source_section;source_quote;atomic_assertion,API 接口,通知历史列表,通知历史列表,281,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",281: | GET | /api/v1/me/notifications | 閫氱煡鍘嗗彶鍒楄〃 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01996,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/me/notifications/:id/read,/api/v1/me/notifications/:id/read,282,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",282: | PATCH | /api/v1/me/notifications/:id/read | 鏍囪宸茶 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-01997,user-agent,docs/PRD-用户端体验增强.md,source_section;source_quote;atomic_assertion,API 接口,标记已读,标记已读,282;283,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛","282: | PATCH | /api/v1/me/notifications/:id/read | 鏍囪宸茶 | 鐢ㄦ埛 |
+283: | POST | /api/v1/me/notifications/read-all | 鍏ㄩ儴鏍囪宸茶 | 鐢ㄦ埛 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-02000,user-agent,docs/PRD-用户端体验增强.md,source_section,API 接口,/api/v1/me/notifications/read-all,/api/v1/me/notifications/read-all,283,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",283: | POST | /api/v1/me/notifications/read-all | 鍏ㄩ儴鏍囪宸茶 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-02001,user-agent,docs/PRD-用户端体验增强.md,source_section;source_quote;atomic_assertion,API 接口,全部标记已读,全部标记已读,283,41;114;151;213;275;310;381;435,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"41: #### API 鎺ュ彛
+114: #### API 鎺ュ彛
+151: #### API 鎺ュ彛
+213: #### API 鎺ュ彛
+275: #### API 鎺ュ彛
+310: #### API 鎺ュ彛
+381: #### API 鎺ュ彛
+435: #### API 鎺ュ彛",283: | POST | /api/v1/me/notifications/read-all | 鍏ㄩ儴鏍囪宸茶 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-02010,user-agent,docs/PRD-用户端体验增强.md,source_quote;atomic_assertion,功能规格,登录活动日志,登录活动日志,316,11;67;141;176;240;300;338;409,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"11: #### 鍔熻兘瑙勬牸
+67: #### 鍔熻兘瑙勬牸
+141: #### 鍔熻兘瑙勬牸
+176: #### 鍔熻兘瑙勬牸
+240: #### 鍔熻兘瑙勬牸
+300: #### 鍔熻兘瑙勬牸
+338: #### 鍔熻兘瑙勬牸
+409: #### 鍔熻兘瑙勬牸",316: | GET | /api/v1/me/security/login-history | 鐧诲綍娲诲姩鏃ュ織 | 鐢ㄦ埛 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+UA2-02012,user-agent,docs/PRD-用户端体验增强.md,source_quote;atomic_assertion,功能规格,安全设置,安全设置,306;308,11;67;141;176;240;300;338;409,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"11: #### 鍔熻兘瑙勬牸
+67: #### 鍔熻兘瑙勬牸
+141: #### 鍔熻兘瑙勬牸
+176: #### 鍔熻兘瑙勬牸
+240: #### 鍔熻兘瑙勬牸
+300: #### 鍔熻兘瑙勬牸
+338: #### 鍔熻兘瑙勬牸
+409: #### 鍔熻兘瑙勬牸","306: | 瀹夊叏璁剧疆 | 淇敼瀵嗙爜 / 缁戝畾鎵嬫満 / 缁戝畾閭 / 2FA 绠＄悊 |
+308: | 瀹夊叏璇勫垎 | 缁煎悎瀹夊叏璁剧疆瀹屾垚搴﹁瘎鍒嗭紝寮曞瀹屽杽瀹夊叏閰嶇疆 |",PENDING,PENDING,PENDING,PENDING,PENDING,

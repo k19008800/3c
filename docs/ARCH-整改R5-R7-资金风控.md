@@ -3,8 +3,8 @@
 | 字段 | 值 |
 |------|-----|
 | 文档编号 | ARCH-2026-ADMIN-RECHARGE-R5R7-001 |
-| 版本 | v1.1（按 PRD-RECT-P1-R5R7-001 对齐 + B1–B20 双签裁决固化） |
-| 日期 | 2026-08-19 |
+| 版本 | v1.2（按 ADR-0001 / BOSS 2026-08-30 人工确认修订） |
+| 日期 | 2026-08-30 |
 | 适用项目 | 3cloud（AI API 网关 + 管理后台） |
 | 编制角色 | arch-agent（系统架构总设计师） |
 | **业务依据（权威）** | `docs/PRD-整改R5-R7-资金风控.md`（PRD-RECT-P1-R5R7-001 v1.0，业务规则/状态机/配置/边界 E1–E31 **以 PRD 为准**） |
@@ -14,7 +14,7 @@
 | 现状依据 | 仓库代码逐文件核对（含 `admin-finance-stats.ts` 退款审核、`admin-settings.ts`/`admin-ops.ts` 配置端点、权限树 `sys.config`/`finance.refund`） |
 | 执行方 | backend-agent / frontend-agent（**接口契约以本文档为准**）；test-agent 按 §6 验证；review-agent 门禁 |
 
-> **本方案只做设计，不含代码实现。** 与阶段一契约的差异（B2 免审批取消、B20 用户端上限、B3 上限保持等）逐条标注；破坏性变更点见 §7.1。
+> **本方案只做设计，不含代码实现。** 人工上账单笔上限以 ADR-0001 及 2026-08-30 人工确认结果为准：¥50,000，超过即拒绝；用户自助充值上限仍为 ¥1,000,000。历史 B3/B20 相反表述均视为 superseded；破坏性变更点见 §7.1。
 
 ---
 
@@ -48,7 +48,7 @@
 | `api/src/services/billing/credit-limit.ts` | **新增**限额服务：`precheckAndReserve(tx, {opUserId, targetUserId, amount, refType, refId, exceedAction})`（PG 权威：advisory lock + 滚动汇总 + 插行 + 超限拒绝）；`syncRedisAdd`（提交后 ZADD，尽力而为）；`redisRollingSum`（Lua） | R6 | 增 |
 | `api/src/scripts/lim_add.lua` | **新增** Redis Lua：滚动窗口 汇总-判定-自增-剪枝（ZSET，§3.1） | R6 | 增 |
 | `api/src/routes/admin-finance-missing.ts` | 创建端点：限额预检/预占 + tier 定级 + `metadata.approval`/`limit_escalated` 初始化；review 端点：多阶段状态机 + 职责分离（含 B4 降级代审 `escalation_reason`）+ 2FA/二次确认 preHandler；列表新增审批字段 | R5/R6/R7 | 改 |
-| `api/src/routes/recharge.ts` | audit/reject：多阶段状态机 + 职责分离（manual 单）+ 2FA/二次确认；**用户端 `MAX_AMOUNT` 1,000,000 → 50,000（B20）**；管理端列表新增审批字段 | R5/R7/B20 | 改 |
+| `api/src/routes/recharge.ts` | audit/reject：多阶段状态机 + 职责分离（manual 单）+ 2FA/二次确认；用户端 `MAX_AMOUNT=1,000,000` 保持不变（B20）；管理端列表新增审批字段 | R5/R7/B20 | 改 |
 | `api/src/routes/admin-adjust.ts` | `calcApproval` → `calcApprovalTier`（none 档废止 + 白名单免审 + tier3）；review 支持 `pending_super`（终审角色校验）；reverse 加钱方向限额预占；2FA/二次确认；降级代审 | R5/R6/R7 | 改 |
 | `api/src/routes/admin-finance-stats.ts` | 退款审核鉴权 `adminAuth` → `requirePerm('finance.refund')`（B16）；review 挂 2FA/二次确认；审计补确认标记 | R7/B16 | 改 |
 | `api/src/routes/admin-finance-rules.ts` | **新增** `GET/PUT /admin/finance/rules`（requirePerm('sys.config')；`operation_2fa` 段仅 super_admin；保存校验 + `resetFinanceRulesCache` + 审计 + 2FA/二次确认） | R7/B17 | 增 |
@@ -66,7 +66,7 @@
 | `web-console/src/pages/AdminAdjustPage.tsx` | tier3/pending_super；免审提示（白名单开关）；审批链台账；2FA 包装；`[?]` | R5/R6/R7 | 改 |
 | `web-console/src/pages/AdminRechargeOrdersPage.tsx` | 多阶段展示；补二次确认；2FA 包装；`[?]` | R5/R7 | 改 |
 | `web-console/src/pages/AdminRefundReviewPage.tsx` | 鉴权收敛适配 + 2FA 包装 + 二次确认 + `[?]` | R7/B16 | 改 |
-| `web-console/src/pages/RechargePage.tsx` | 用户端单笔充值上限提示 50,000（B20 同步） | B20 | 改 |
+| `web-console/src/pages/RechargePage.tsx` | 用户端单笔充值上限提示 1,000,000（B20 保持现状）；不得与人工上账 ¥50,000 混用 | B20 | 校验 |
 | `web-console/src/pages/AdminFinanceRiskConfigPage.tsx` | **新增**风控规则配置页（pageKey `finance-risk-config`，PRD §7.3；大额/限额/2FA 策略；保存需 2FA+二次确认；`[?]`） | R5/R6/R7/B17 | 增 |
 
 > **P1 合规**：本期新增/语义变化的按钮（多阶段审核、终审、2FA 输入、确认执行、保存风控配置等）必须随页面交付 `[?]` 帮助，数据源 = PRD §7/§8 对照表（PRODUCT-DESIGN-PRINCIPLES P1，不可降级）。
@@ -118,9 +118,9 @@
 | | `super_review_threshold` | 100,000 | > 此值追加 super_admin 终审；> dual_review_threshold（E12） |
 | | `review_exempt` | 关 | 白名单科目免审（B2）：`enabled` + 科目 ∈ `subjects` + 调增 + ≤ `max_amount`(1,000)；**免审单计入 R6 累计** |
 | | `adjustment_decrease_same_tier` | true | 调减与调增同档；**调减恰 ¥10,000 仍双人特例**（B1） |
-| `limits` | `operator_24h` / `recipient_24h` | 50,000 | 操作人/被入账用户 24h 滚动窗口累计（B5/B6） |
+| `limits` | `operator_24h` / `recipient_24h` | 50,000 | 操作人/被入账用户 24h 滚动窗口累计（B5/B6）；对外 canonical 键名，见 ADR-0022 |
 
-> 🔄 **终裁修订（2026-08-18）**：配置键以实现为准统一为 `limits.soft_limit=50000`（超限升级审批阈值）/ `limits.hard_limit=100000`（超限 429 拒绝阈值）/ `exceed_action`（'escalate' 默认 / 'reject'）/ `exempt_roles` / `window_hours` / `timezone`。操作人与被入账用户两维度**同值**（符合 PRD B5/B6 同为 ¥50,000）；`operator_24h`/`recipient_24h` 键名退役。未来需分维度不同值时再扩展。tier3 大额（单笔>100,000）豁免 hard 拒绝（走三人审批链，P1-3 裁决）。
+> **已 superseded（2026-08-30，ADR-0022）**：不得使用 `limits.soft_limit` / `limits.hard_limit` 替代公开配置键。对外统一使用 `limits.operator_24h`、`limits.recipient_24h`、`limits.exceed_action`；两个维度独立计算，默认均为 ¥50,000。累计超限按 `exceed_action` 升级或拒绝；单笔上限校验优先于累计限额，人工上账超过 ¥50,000 直接拒绝。历史 soft/hard 名称仅可在迁移说明中作为旧键引用。
 | | `exceed_action` | escalate | escalate=升级双人 / reject=直接拒绝（B7） |
 | | `exempt_roles` | [] | 豁免角色（默认空；super_admin 不豁免，B8） |
 | | `count_decrease` / `count_refund_review` | false | 调减/充值审核是否计入（B9/B10，默认否） |
@@ -646,7 +646,7 @@ ALTER TABLE adjustment_records ADD COLUMN escalation_reason varchar(255);
 | # | 用例 | 说明 |
 |---|------|------|
 | 28 | **B2 测试更新**：`admin-adjust.test.ts` 原"调增免审批生效"用例改为"调增 ≤1万 → pending 待审"（免审批语义变更，**必须同步修改**，否则阶段一用例失败） | R5 落地必做 |
-| 29 | **B20 用户端上限**：`/me/recharge` amount > 50,000 → 400（原 1,000,000 上限用例更新）；amount=50,000 → 201 | `recharge.ts` 用户端测试 |
+| 29 | **B20 用户端上限**：`/me/recharge` amount > 1,000,000 → 400；amount=1,000,000 → 201；人工上账 >¥50,000 另按 B3 拒绝 | `recharge.ts` 用户端测试 |
 | 30 | 958 全量回归：幂等/兜底/通知/权限矩阵用例保持 | 阶段一契约回归 |
 
 ---
@@ -663,7 +663,7 @@ ALTER TABLE adjustment_records ADD COLUMN escalation_reason varchar(255);
 | B4' | 职责分离 | 创建人可自审 | 创建人 ≠ 审批人强制（super_admin 不豁免，B4） | 行为收紧 |
 | B5' | 资金写操作 2FA | 无 | 未启用 → 403；缺令牌/确认 → 403 | **上线前置**：管理团队账号启用 2FA；前后端同发；配置 `operation_2fa.policy` 紧急关闭 |
 | B6' | 24h 限额（滚动） | 无 | 创建预占；超限升级/拒绝 | 运营超限提示；默认值 50,000（B5/B6） |
-| **B20'** | **用户端单笔充值上限** | `recharge.ts MAX_AMOUNT=1,000,000` | **50,000（B20）** | **用户侧行为变化**：原可充 ≤100 万，现 ≤5 万；前端 `RechargePage.tsx` 提示同步 + 上线公告；用户端上限测试更新（§6 用例 29） |
+| **B20'** | **用户端单笔充值上限** | `recharge.ts MAX_AMOUNT=1,000,000` | **保持 1,000,000（B20）** | 无用户侧上限变更；前端保持 1,000,000 提示；人工上账另受 ¥50,000 单笔上限约束 |
 | B7' | 退款审核鉴权 | adminAuth（admin/super_admin） | `requirePerm('finance.refund')`（+finance 角色） | 鉴权放宽（finance 可审退款），预期行为（B16）；前端导航/按钮权限同步（§9 Q8） |
 
 ### 7.2 存量数据与兼容性
@@ -675,7 +675,7 @@ ALTER TABLE adjustment_records ADD COLUMN escalation_reason varchar(255);
 | 存量 `adjustment_records` 待审单 | 沿用各自 `approval_level`（level1/level2 原流程）；level3/pending_super 仅新单产生 |
 | 存量 approved/reversed | 不动；红冲回补已废除（B19 不回退），旧单无计数残留问题 |
 | `finance_rules` 既有 `{manual_topup:{max_amount}}` | 兼容：缺 `large_amount`/`limits`/`operation_2fa` 段 → 读取默认值；保存配置时全量写回 |
-| 用户端 `/me/recharge-orders`、`/me/balance` | 零改动（分级期间仍显示 pending；`paid` 语义不变）；**仅单笔上限提示变化（B20）** |
+| 用户端 `/me/recharge-orders`、`/me/balance` | 零改动（分级期间仍显示 pending；`paid` 语义不变）；用户自助充值上限保持 ¥1,000,000（B20） |
 | 退款审核 `refund_requests` | 表零改动；鉴权/2FA 叠加 |
 
 ### 7.3 风险与回滚
@@ -687,7 +687,7 @@ ALTER TABLE adjustment_records ADD COLUMN escalation_reason varchar(255);
 | 2FA 强制上线运营断操作 | 中 | 上线检查清单（管理员 2FA 启用率 100%）；`operation_2fa.policy='disabled'` 一键回滚 |
 | 前端 401 拦截器误登出 | 中 | R7 错误码避开 401（§4.2 红线）；§6 用例 22 断言 |
 | B2 免审批取消引发运营投诉 | 中 | 白名单免审开关可开（{赠送,补偿,纠错} ≤¥1,000）；PRD §7.2 FAQ 文案 |
-| B20 用户端上限收紧引发客诉 | 中 | 前端提示 + 上线公告；超 5 万用户走对公/人工上账路径（E11 说明） |
+| 人工上账与用户充值上限混淆 | 中 | 前端和 API 明确区分：用户自助充值单笔上限 ¥1,000,000；人工上账单笔上限 ¥50,000，超限走充值订单路径 |
 | enum ADD VALUE 迁移异常 | 低 | 人工检查 drizzle SQL（同事务不使用新值） |
 | 存量 pending 单在升级后的行为（B18） | 低 | 明确"沿用旧级别"，实现零重算 |
 
@@ -698,7 +698,7 @@ ALTER TABLE adjustment_records ADD COLUMN escalation_reason varchar(255);
 | 代码（R5） | 还原 `calcApprovalTier` 为旧 `calcApproval`、review/audit 回单步；metadata.approval 字段保留无害 |
 | 代码（R6） | 移除创建端点限额预占与 Lua；表保留不启用 |
 | 代码（R7） | 移除 `requireOperation2fa` 挂载；或 `operation_2fa.policy='disabled'`（中间件读取，60s 缓存） |
-| 代码（B20） | `MAX_AMOUNT` 还原 1,000,000（常量一处） |
+| 代码（B20） | 用户自助充值 `MAX_AMOUNT=1,000,000` 保持不变；人工上账由 `manual_topup.max_amount=50,000` 单独约束 |
 | 数据库 0029 | `DROP TABLE credit_limit_events;`（追加反向 migration） |
 | 数据库 0030 | PG 无 DROP VALUE → 保留 `pending_super` 不用；新增列可 `DROP COLUMN`（反向 migration） |
 | 数据 | 计数表可清空重建（从单据重新回放）；R5/R7 无自动资金变动，回滚窗口无冲正需求 |
@@ -725,10 +725,10 @@ ALTER TABLE adjustment_records ADD COLUMN escalation_reason varchar(255);
 | Q1 | 滞留超时主动通知（B15 高成本项） | 台账标记已定；定时扫描通知上级成本高 | **本期仅"标记 + 创建/审批时刻即时通知"**；超时扫描定时任务（通知上级）若排期紧不实现，标注取舍 | 调度-agent |
 | Q2 | 管理员强制重置 2FA 端点 | 现状无 `/admin/2fa/reset`（PRD E27 引用 SPEC-§20） | 本期实现 disable 联动失效（revoked seq）；**不新建重置端点**（产品另立 PRD） | 产品-agent |
 | Q3 | 风控规则配置页落点 | 新页面 vs 并入风控规则页 | **新增 `AdminFinanceRiskConfigPage`**（pageKey finance-risk-config）；frontend-agent 可并入现有设置页 | frontend-agent |
-| Q4 | B20 用户端上限的公告/前端提示节奏 | 用户侧行为变化 | 前端 `RechargePage` 提示同步 + 上线公告；与后端同批发布 | 产品-agent |
+| Q4 | B20 用户端上限的公告/前端提示节奏 | 已确认用户自助充值上限保持 ¥1,000,000 | 无上限变更；仅需保持现有提示，并在人工上账页面单独展示 ¥50,000 限制 | 已关闭（2026-08-30） |
 | Q5 | 退款审核是否计入 R6 限额 | PRD 计数清单未列 | **默认不计入**（用户申报金额，拆分语义不同）；如需计入开放配置 | 产品-agent |
 | Q6 | `sys.config` 是否顺带收敛 admin-settings/admin-ops | 现状两文件用 adminAuth | **本期不改既有设置端点**，仅新配置端点用 `requirePerm('sys.config')` | 调度-agent |
-| Q7 | 用户端充值上限是否配置化 | B20 落地形态 | **常量 50,000**（与 ref §4.4 对齐）；配置化随 P2-14 收尾评估 | 产品-agent |
+| Q7 | 用户端充值上限是否配置化 | B20 已确认保持 ¥1,000,000 | 当前保持既有常量 ¥1,000,000；不与人工上账 ¥50,000 共用配置 | 已关闭（2026-08-30） |
 | Q8 | 前端财务导航是否补退款审核入口 | B16 后 finance 可审退款 | 确认 D2 财务导航含退款审核（finance.refund）；若缺补菜单项 | frontend-agent |
 
 ---
@@ -741,7 +741,7 @@ ALTER TABLE adjustment_records ADD COLUMN escalation_reason varchar(255);
 |----|------|--------------|----------------------|
 | **B1** | 采纳：调减与调增同档；恰 ¥10,000 仍双人特例保留 | §2.1 `adjustment_decrease_same_tier` + `calcApprovalTier` 特例；§6 用例 1/6 | 调减现状 ≥1 万即二级，同档后 ≤1 万调减降为单审、**恰 1 万保留双人**（不放松）——行为变化写入 §6 用例 1 边界断言 |
 | **B2** | 采纳：取消"调增<¥10,000 金额型免审批"（none 档废止）；白名单科目免审开关默认关闭（开启时仅 {赠送,补偿,纠错} 且 ≤¥1,000 免审，计入 24h 累计） | §2.1 `review_exempt` + `isReviewExempt`；§2.2.3 状态机；§3.3 计数范围 | ⚠️ **阶段一 `admin-adjust.test.ts`"调增免审批生效"用例必须同步更新**（§6 用例 28）：免审批语义变更，否则阶段一用例失败；前端"免审·提交即生效"提示移除 |
-| **B3** | 🔄 **终裁（2026-08-18 修订，覆盖 v1.1"保持 50,000"）**：人工上账创建上限 **50,000 → 1,000,000**（分级审批承接大额，tier3 对人工上账有效） | §2.1 `manual_topup.max_amount=1000000`；§2.2 状态机；§6 用例 3 | 避免大额对公到账借道调账重演 P0-1 口径污染；符合整改方案 A1"R5 分级放开"原意；阶段一">50,000 拒绝创建"由分级审批取代 |
+| **B3** | **终裁（2026-08-30，覆盖历史“放开至 1,000,000”表述）**：人工上账创建上限 **¥50,000**；超过即拒绝，不进入人工上账终审档。大额对公入账走充值订单路径。 | §2.1 `manual_topup.max_amount=50000`；§2.2 状态机；§6 用例 3 | 与 ADR-0001 及 BOSS 人工确认一致；历史 1,000,000 方案标记 superseded |
 | **B4** | 采纳：super_admin 不豁免职责分离；审批人不足 → 单据滞留 + 通知 super_admin → 代审（必填降级原因 + 审计标记） | §2.4 矩阵 + §2.5 降级；`escalation_reason` 契约（§2.3.2）；§6 用例 7/8 | 阶段一无此语义，纯新增；super_admin 自建自审由"直接放行"（现状未校验）改为"仅降级代审路径可过"——行为收紧 |
 | **B5/B6** | 采纳：操作人、被入账用户 24h 累计限额各 ¥50,000（滚动窗口） | §2.1 `limits.operator_24h/recipient_24h`；§3.1 ZSET 滚动窗口（**取代任务原稿日键方案**） | 阶段一 A2"单日累计本期不设限"由 R6 兑现；滚动窗口跨日语义 §6 用例 11 |
 | **B7** | 采纳：超限默认强制升级审批（max(金额档,双人档)），`exceed_action='reject'` 可配置 | §2.1 `limits.exceed_action` + `calcEffectiveTier`；§3.4 时序；§6 用例 15 | 新增；9×¥9,999 第 6 笔起升级（整改方案验收） |
@@ -756,7 +756,7 @@ ALTER TABLE adjustment_records ADD COLUMN escalation_reason varchar(255);
 | **B17** | 采纳：大额/限额配置 → admin/super_admin（并入 sys.config 或新增 finance.rule_config 权限点）；2FA 策略 → 仅 super_admin | §4.8 配置端点 `PUT /admin/finance/rules`（requirePerm('sys.config')，operation_2fa 段 super_admin-only）；§6 用例 26 | `sys.config` 权限点现状存在于权限树但无路由使用，本期 wire 到新端点；**不改既有 admin-settings/admin-ops**（§9 Q6） |
 | **B18** | 采纳：按提交时点固化（存量待审单沿用旧级别） | §2.2.2/2.2.3 存量兼容 + §7.2 | 存量 pending 单不重算、不升级（**修正 ARCH v1.0"重算 tier"设计**）；配置变更即时生效于新单 |
 | **B19** | 采纳：驳回/红冲不回退累计 | §3.3 计数范围 + §3.4；§6 用例 13 | **废除 ARCH v1.0"红冲回补 DECRBY"设计**（lim_dec.lua 不建）；保守风控防"提交-撤销-再提交"循环 |
-| **B20** | 🔄 **终裁（2026-08-18 修订，覆盖 v1.1"100 万→5 万"）**：用户端单笔充值上限**保持 ¥1,000,000**（`recharge.ts MAX_AMOUNT` 不改），与人工上账统一为 1,000,000 口径 | `recharge.ts` 用户端**不改**；`RechargePage.tsx` 不改；§6 用例 29 删除 | P2-14 收敛为"单笔上限 1,000,000 + 分级审批承接大额"；减少用户侧破坏性变更与上线公告成本 |
+| **B20** | **用户自助充值单笔上限保持 ¥1,000,000**；与人工上账上限 ¥50,000 是不同业务对象，不得混同 | `recharge.ts` 用户端保持现状；用户自助充值大额仍按充值订单审批规则处理 | 依据 ADR-0001；历史“用户端与人工上账统一上限”表述 superseded |
 
 ---
 
@@ -795,7 +795,7 @@ ALTER TABLE adjustment_records ADD COLUMN escalation_reason varchar(255);
 2. **R5 状态机**：manual-topup review 多阶段 + 职责分离 + 降级代审 → recharge audit 同构 → adjust tier3/pending_super（测试 #3–#8）。
 3. **R6 限额**：`credit-limit.ts` + Lua → 创建预占/判定 → 豁免/回退语义（测试 #9–#17）。
 4. **R7 2FA**：jwt 操作令牌 → operation-verify（含共享计数、登录 verify 接入）→ `require-operation-2fa` 中间件（令牌+确认标记）→ 落点清单（含退款审核 B16、配置端点 B17）（测试 #18–#26）。
-5. **B20（终裁修订）**：用户端 `MAX_AMOUNT` **保持 1,000,000 不改**（覆盖 v1.1 的 50,000 方案）；人工上账创建上限 **50,000 → 1,000,000**（B3 终裁）——上限统一 1,000,000，分级审批承接大额。
+5. **B3/B20（2026-08-30 修订）**：人工上账 `manual_topup.max_amount=50,000`，超过即拒绝；用户自助充值 `MAX_AMOUNT=1,000,000` 保持不变。两者不得再写成统一上限。
 6. **前端**：`operation-2fa.ts` + `Operation2faModal`（两步）→ 四页面（人工上账/调账/充值订单/退款审核）多阶段展示与 2FA 包装 → 风控配置页 → `[?]` 更新。
 7. **收尾**：§6 全量用例（含阶段一回归与 B2/B20 变更用例）通过，review-agent 门禁，双签 §9 开放问题。
 
@@ -806,7 +806,7 @@ ALTER TABLE adjustment_records ADD COLUMN escalation_reason varchar(255);
 | 变更 | v1.0（任务稿默认） | v1.1（PRD + B1–B20） |
 |------|-------------------|---------------------|
 | 配置段命名 | `approval`/`limits`(soft/hard) | **PRD 三配置段 `large_amount`/`limits`/`operation_2fa`，键名逐字段对齐** |
-| 人工上账创建上限 | 放开至 1,000,000 | **保持 50,000（B3）**；终审档仅充值订单/调账 |
+| 人工上账创建上限 | 放开至 1,000,000 | **保持 50,000（B3）**；超过即拒绝，终审档不适用于人工上账 |
 | 调增免审批 | 取消（默认）+ 白名单备选 | **取消 + 白名单 `{赠送,补偿,纠错} ≤¥1,000` 开关默认关（B2）** |
 | 调减分级 | 对称同档（无特例） | **同档 + 恰 ¥10,000 仍双人（B1 特例）** |
 | 限额窗口 | 日键 `{yyyymmdd}` | **24h 滚动窗口（B5/B6）**：Redis ZSET 事件集 + PG `credit_limit_events` |
@@ -814,4 +814,4 @@ ALTER TABLE adjustment_records ADD COLUMN escalation_reason varchar(255);
 | 审批人不足 | fail-closed 滞留 + super_admin 兜底 | **B4：滞留 + 通知 super_admin + 代审必填原因 + 审计标记**；B15 超时标记 |
 | 2FA | 强制策略 + 独立计数 | **B12 mandatory_admin + 与登录共享计数（B14）+ 二次确认标记头（E30）+ 2FA 重置失效（E27）** |
 | 范围 | 9 资金端点 | **+退款审核（B16）+ 风控配置保存（B17）**；`sys.config`/`finance.refund` 权限点 wire |
-| 用户端上限 | 未涉及 | **B20：MAX_AMOUNT 1,000,000 → 50,000** |
+| 用户端上限 | 未涉及 | **B20：MAX_AMOUNT 1,000,000 保持不变；与人工上账 ¥50,000 分开** |

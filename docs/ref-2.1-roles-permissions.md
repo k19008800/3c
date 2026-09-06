@@ -1,7 +1,10 @@
 # 角色与权限体系 — 深化参考文档
 
 > **对应章节**：[PRD-README.md §2.1 角色与权限体系](../PRD-README.md#21-角色与权限体系)
-> **状态**：从 [`ref-4.6-security.md §2`](ref-4.6-security.md#2-角色与权限体系) 提取独立为单独文档，便于权限管理专项参考
+> **状态**：review（历史参考，未完成实现核验）
+> **版本**：v1.0.0 — 2026-08-29
+> **上游 ADR**：ADR-0024
+> **来源**：从 [`ref-4.6-security.md §2`](ref-4.6-security.md#2-角色与权限体系) 提取，便于权限管理专项参考
 > **粒度**：Bitset 权限定义 → 角色矩阵 → API 接口 → 前端组件 Props → 权限计算优先级的函数级说明
 
 ---
@@ -46,25 +49,27 @@ export const Perm = {
 
 ## 2. 内置角色权限矩阵
 
+> 当前 canonical 角色以 ADR-0024 和数据库 `user_role` 枚举为准。财务、运维、客服、审计等能力通过权限点/权限聚合表达，不新增数据库角色。
+
 | 角色 | 标识 | 安全权限 | 其他核心权限 |
 |------|------|---------|-------------|
-| 超级管理员 | `super_admin` | 全部（~0n） | 全部 |
-| 管理员 | `admin` | VIEW + ACTION + EDIT, AUDIT_VIEW + REVIEW | 用户/模型/财务/代理/日志 |
-| 财务专员 | `finance_ops` | AUDIT_VIEW, LOG_VIEW | 全部财务 + 用户查看 |
-| 运维工程师 | `ops` | VIEW + ACTION + EDIT, CONFIG_VIEW + EDIT | 用户查看、模型管理 |
-| 客服/审核 | `support` | LOG_VIEW, REVIEW_LIST + ACTION | 用户管理(不含删除/改角色) |
-| 审计员 | `auditor` | AUDIT_VIEW + REVIEW, RECONCILIATION_VIEW | 用户查看 |
-| 用户 | `user` | 无管理员权限 | 基础用户权限 |
+| 超级管理员 | `super_admin` | 全部（~0n） | 全部；最后一个不得删除、降权或锁定 |
+| 管理员 | `admin` | 按权限点授权，不含角色管理权限 | 用户/模型/财务/代理/日志 |
+| 代理商 | `agent` | 按权限点授权 | 名下用户、分佣和提现 |
+| 业务员 | `sales` | 按权限点授权 | 业务员功能 |
+| 普通用户 | `customer` | 无管理员权限 | 基础用户权限 |
+
+> `finance_ops`、`ops`、`support`、`auditor`、`user` 不是当前数据库角色枚举；`finance` 只能作为权限聚合或权限点语义。未来角色必须另行 ADR、迁移和矩阵。
 
 ## 3. 权限计算优先级
 
-```
-user_permission_overrides（最高优先级）
-  → user_role_assignments（中级，覆盖 users.role 默认权限）
-  → users.role 内置（最低优先级）
+统一计算顺序：
+
+```text
+显式 deny → 管理员强制策略 → 显式 grant → 角色权限并集 → 默认最小权限
 ```
 
-支持细粒度的 `grantPerms` / `denyPerms` 覆盖。
+多角色先取并集，最终显式 deny 优先；无明确授权默认拒绝。支持细粒度 `grantPerms` / `denyPerms` 覆盖。前后端 effective permission 必须一致，权限变更后缓存必须失效。`super_admin` 的 `*` 仅由统一权限守卫解释。
 
 ## 4. API
 
@@ -72,7 +77,9 @@ user_permission_overrides（最高优先级）
 |------|------|------|
 | GET | `/api/v1/admin/roles` | 角色列表（含权限 bitset 字段）|
 | POST | `/api/v1/admin/roles` | 创建角色 |
-| POST | `/api/v1/admin/users/:id/permissions` | 权限覆盖（grant/deny）|
+| GET | `/api/v1/admin/users/:id/permissions` | 规划：查询权限覆写（planned） |
+| PUT | `/api/v1/admin/users/:id/permissions` | 规划：全量替换权限覆写（planned） |
+| DELETE | `/api/v1/admin/users/:id/permissions` | 规划：清除权限覆写（planned） |
 
 ## 5. 中间件使用
 
@@ -91,7 +98,9 @@ app.get("/api/v1/admin/users", {
 
 ---
 
-> **文档版本**：v1.0 — 2026-07-28（从 ref-4.6-security.md §2 提取独立）
+> **文档版本**：v1.0.0 — 2026-08-29
+> **状态**：review（历史参考，未完成实现核验）
+> **上游 ADR**：ADR-0024
 
 ---
 
@@ -104,7 +113,7 @@ app.get("/api/v1/admin/users", {
 | RBP-001 | 角色嵌套循环引用 | 角色 A 继承角色 B，角色 B 又继承角色 A，形成循环 | 权限解析引擎检测到循环引用，抛出 `RoleCircularReferenceError`，阻止创建/更新操作并返回 400 错误 |
 | RBP-002 | 权限递归计算超时 | 角色层级超过 10 层 deep，Bitset 递归合并在 2 秒内未完成 | 熔断递归计算，使用当前已计算的中间结果兜底，记录报警日志 |
 | RBP-003 | 角色被引用时删除 | 试图删除一个已被其他用户或角色分配引用的角色 | 返回 409 Conflict，提示该角色仍有 N 个用户/角色正在使用，需先解除引用后再删除 |
-| RBP-004 | user_permission_overrides 与角色权限冲突 | grantPerms 授予了某权限但 roles 配置 denyPerms 拒绝同一权限 | grantPerms 优先生效（最高优先级），中间件返回 true 允许操作 |
+| RBP-004 | user_permission_overrides 与角色权限冲突 | grantPerms 授予了某权限但 roles 配置 denyPerms 拒绝同一权限 | 按 ADR-0024 执行显式 deny 优先；最终拒绝并返回 `403 PERMISSION_DENIED` |
 | RBP-005 | 权限 Bitset 溢出 | 自定义扩展权限超过 64 位（BigInt 限制） | 抛出权限定义错误，在启动时校验总权限位数，超出后阻止服务启动并提示开发人员扩展 Bitset 类型 |
 
 ### 异常流程

@@ -659,7 +659,7 @@ interface ReportTemplateContent {
 | 日营收报告 | 营收/成本/毛利 | 每日 | finance@ |
 | 周活跃报告 | DAU/新增/留存 | 每周 | ops@ |
 | 月度运营报告 | 全指标 | 每月 | all |
-| 供应商成本报告 | 供应商成本/比例 | 每月 | finance@ |
+| 渠道成本报告 | 渠道成本/比例 | 每月 | finance@ |
 
 ---
 

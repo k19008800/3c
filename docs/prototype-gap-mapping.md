@@ -35,7 +35,7 @@
 | admin-tax-banking.html | /finance/tax-banking | `AdminTaxBankingPage.tsx` ⚠️ | `/admin/finance/tax-banking` | `/admin/tax-banking/{config,history,bank-accounts}`（缺失） |
 | admin-coupon.html | /finance/coupons | `AdminCouponPage.tsx` 🗑️ | —（live 已用 `AdminRedemptionPage` → `/admin/finance/coupons`） | `/admin/coupons/generate`（缺失） |
 | admin-supplier-bill-match.html | /finance/supplier-bill-match | — ❌ 需新建 | `/admin/finance/supplier-bill-match` | 待定 |
-| （无原型） | — | `AdminVendorSettlementsPage.tsx` ⚠️ 供应商结算 | `/admin/suppliers/settlements` | `/admin/vendor-settlements/*`（缺失） |
+| （无原型） | — | `AdminVendorSettlementsPage.tsx` ⚠️ 渠道结算 | `/admin/suppliers/settlements` | `/admin/vendor-settlements/*`（缺失） |
 
 > 其余（dashboard/manual-topup/adjust/orders/commissions/refunds/invoices/withdrawals/reconciliation/cost-dashboard/cost-prediction/settlement/profit/pricing）已挂路由 ✅。
 
@@ -57,7 +57,7 @@
 | admin-conversion-funnel.html | /analytics/funnel | `admin/AdminConversionFunnelPage.tsx` ⚠️ | `/admin/analytics/funnel` | `/admin/conversion/funnel`（缺失） |
 | admin-customer-success.html | /analytics/success | — ❌ 需新建 | `/admin/analytics/success` | 待定 |
 
-## ⑤ 供应商管理 🔌
+## ⑤ 渠道管理 🔌
 
 | 原型 | 原型路由 | React 页面 | 建议 React 路由 | 后端端点（现状） |
 |---|---|---|---|---|
@@ -167,6 +167,6 @@
 1. **批次 A — 消费运营+客户分析**（4+1 页，同一套消费/漏斗端点，原型明确的新分组）：✅ tracking / ✅ stream / ✅ anomaly / ✅ balance-alert 已实现（后端 `admin-consumption.ts`）；剩 **funnel**（+success 新建）
 2. **批次 B — 财务结算**（reconciliation-diff / discount-engine / tax-banking / supplier-bill-match 新建）
 3. **批次 C — 风控+审计**（security-incident / ip-blacklist / content-moderation / operation-diff / data-request）
-4. **批次 D — 供应商+代理商+营销**（multimodal-models / competitive-monitor / campaigns / approvals 新建）
+4. **批次 D — 渠道+代理商+营销**（multimodal-models / competitive-monitor / campaigns / approvals 新建）
 5. **批次 E — 客服+系统+运维杂项**（support / chat / knowledge-base / webhooks / sys-db / sys-cache / consent / users-permission / permission-audit / activity / notification-policy / operator-dashboard / subscription / deletion）
 6. **清理**：3 个 🗑️ 重复页面（删除或注释 import）。（`2026-08-14` 已补：侧栏「消费运营」「客户分析」两组已挂入 `ConsoleLayout.tsx`。）13 个配置路由解耦出各自独立页面

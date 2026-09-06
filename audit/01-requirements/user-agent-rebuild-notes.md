@@ -1,0 +1,43 @@
+# 用户/代理商/业务员/渠道需求原子化返工说明
+
+- 输出：`user-agent-atomic-v2.csv`。
+- 范围覆盖用户、代理商、业务员、渠道 PRD；用户/代理/权限/模型/充值/发票/CRM/销售协作等相关 ref；未修改业务源码。
+- 每条记录来自目标文档的实际段落或 Markdown 表格单元格；段落仅按原文句号、问号、感叹号、分号边界拆分，表格按单元格拆分。`source_quote` 保留源文本，不把表格竖线改成斜线。
+- `atomic_assertion` 每行只引用一个来源片段作为一个可验证断言；未把实现现状当作通过结论。
+- 证据字段要求源码路径/行号和测试或动态证据；缺证据时后续标记 UNKNOWN。
+- 数量：6494 条；按文档计数：
+  - `PRD-用户体系.md`：905
+  - `PRD-代理商体系.md`：73
+  - `PRD-代理商支撑增强.md`：234
+  - `PRD-业务员支撑.md`：421
+  - `PRD-渠道化术语统一与用户自选渠道定价.md`：155
+  - `PRD-用户端体验增强.md`：372
+  - `SPEC-§2-用户体系.md`：270
+  - `SPEC-§3-代理商体系.md`：136
+  - `SPEC-§11-业务员支撑模块.md`：160
+  - `SPEC-§18-用户端体验增强.md`：136
+  - `SPEC-§19-代理商支撑增强.md`：111
+  - `SPEC-§22-用户端体验增强.md`：985
+  - `SPEC-§24-代理商增强.md`：167
+  - `SPEC-§25-供应商增强.md`：127
+  - `SPEC-渠道化术语统一与用户自选渠道定价.md`：120
+  - `ref-2.1-roles-permissions.md`：80
+  - `ref-2.2-user-dashboard.md`：191
+  - `ref-2.2.2-model-center.md`：109
+  - `ref-2.2.3-api-keys.md`：93
+  - `ref-2.2.4-call-logs.md`：93
+  - `ref-2.2.6-recharge.md`：94
+  - `ref-2.2.8-redemption-invoices.md`：97
+  - `ref-3-agent-system.md`：403
+  - `ref-24-agent-enhance.md`：142
+  - `ref-30-permission-management.md`：83
+  - `ref-11.1-crm.md`：179
+  - `ref-11.2-leads.md`：158
+  - `ref-11.3-follow-up.md`：76
+  - `ref-11.4-opportunity.md`：106
+  - `ref-11.5-performance.md`：72
+  - `ref-11.6-quote-contract.md`：352
+  - `ref-11.7-sales-knowledge.md`：210
+  - `ref-11.8-team-collaboration.md`：196
+
+- 原有 `user-agent-atomic.csv` 未覆盖本次返工结果，v2 作为完整交付文件。

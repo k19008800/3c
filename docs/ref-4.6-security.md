@@ -211,7 +211,7 @@ export const securityEventTypeEnum = pgEnum("security_event_type", [
   "user_captcha",       // 验证码挑战
   "circuit_trip",       // 熔断器触发
   "circuit_recovery",   // 熔断器恢复
-  "vendor_failure",     // 供应商故障
+  "vendor_failure",     // 渠道故障
   "test_alert",         // 测试告警
 ]);
 ```
@@ -564,9 +564,9 @@ const THREAT_CATEGORIES = {
   ip_banned:       { name: "IP 封禁",    severity: "high" },
   user_banned:     { name: "账号封禁",   severity: "high" },
   user_captcha:    { name: "验证码挑战", severity: "low" },
-  circuit_trip:    { name: "厂商熔断",   severity: "high" },
+  circuit_trip:    { name: "渠道熔断",   severity: "high" },
   circuit_recovery:{ name: "熔断恢复",   severity: "low" },
-  vendor_failure:  { name: "厂商失败",   severity: "medium" },
+  vendor_failure:  { name: "渠道失败",   severity: "medium" },
   risk_detected:   { name: "风控检测",   severity: "medium" },
   sensitive_word:  { name: "敏感词触发", severity: "medium" },
   abnormal_ip:     { name: "异常IP",     severity: "medium" },
@@ -925,7 +925,7 @@ export const auditLogs = pgTable("audit_logs", {
 });
 ```
 
-**已审计的操作类型（40+ 种）**：用户创建/禁用/启用/重置密码/余额调整/角色变更、实名审核、提现审核（初审/复审/打款）、充值确认、订单取消、代理创建/编辑、系统配置修改、厂商创建/编辑、模型创建/编辑、安全规则触发、内容过滤创建/更新/删除等。
+**已审计的操作类型（40+ 种）**：用户创建/禁用/启用/重置密码/余额调整/角色变更、实名审核、提现审核（初审/复审/打款）、充值确认、订单取消、代理创建/编辑、系统配置修改、渠道创建/编辑、模型创建/编辑、安全规则触发、内容过滤创建/更新/删除等。
 
 ### 10.2 API
 

@@ -36,7 +36,7 @@
 
 | # | 目标 | 说明 |
 |---|------|------|
-| 1 | 对外提供标准化管理 API | 第三方开发者可通过 API 管理用户、查询财务、操作供应商等 |
+| 1 | 对外提供标准化管理 API | 第三方开发者可通过 API 管理用户、查询财务、操作渠道等 |
 | 2 | 完善的鉴权与权限体系 | 基于 Admin API Key 的细粒度权限控制，支持 RBAC |
 | 3 | 多级限流策略 | 按 Key 级别、操作级别、全局级别多维限流 |
 | 4 | 自动化 API 文档生成 | 基于 OpenAPI 3.0 规范的文档门户，支持在线调试 |
@@ -47,7 +47,7 @@
 | 包含 | 不包含 |
 |------|--------|
 | Admin API Key 完整生命周期管理 | 用户端 API Key 管理（已有独立体系）|
-| 开放 API 端点定义与版本管理 | 供应商 API 代理转发（已有路由系统）|
+| 开放 API 端点定义与版本管理 | 渠道 API 代理转发（已有路由系统）|
 | Rate Limit 策略（Key 级别 + 操作级别） | 模型调用计费（已有计费系统）|
 | OpenAPI 3.0 规范自动生成 | 第三方 OAuth/SSO 集成 |
 | 文档门户（在线调试 + 代码示例） | API 市场 / 应用商店 |
@@ -119,7 +119,7 @@
   /api/v2/users                    — 用户列表
   /api/v2/users/{id}               — 用户详情
   /api/v2/finance/revenue           — 收入查询
-  /api/v2/vendors/health            — 供应商健康
+  /api/v2/vendors/health            — 渠道健康
   /api/v2/agents/{id}/commission    — 代理佣金
 ```
 
@@ -469,7 +469,7 @@ server.get("/api/v2/users", {
   "tags": [
     { "name": "users", "description": "用户管理" },
     { "name": "finance", "description": "财务管理" },
-    { "name": "vendors", "description": "供应商管理" },
+    { "name": "vendors", "description": "渠道管理" },
     { "name": "agents", "description": "代理商管理" },
     { "name": "system", "description": "系统管理" }
   ]
@@ -534,7 +534,7 @@ components.schemas.ErrorResponse = {
   │  │  GET /api/v2/finance/revenue            │
   │  │  GET /api/v2/finance/cost-analysis      │
   │  │  ⋮                                     │
-  │  ┌ 供应商管理                              │
+  │  ┌ 渠道管理                              │
   │  │  GET /api/v2/vendors                    │
   │  │  GET /api/v2/vendors/{id}/health        │
   │  │  ⋮                                     │
@@ -594,15 +594,15 @@ curl -H "X-Admin-Key: ak_prod_..." "https://api.unmisa.com/api/v2/users?page=1&p
 | GET | `/api/v2/finance/reports/{id}` | 报表详情 | finance:read | read |
 | GET | `/api/v2/finance/reports/{id}/download` | 下载报表 | finance:read | read |
 
-### 8.3 供应商管理
+### 8.3 渠道管理
 
 | 方法 | 路径 | 说明 | 权限 | 限流 |
 |------|------|------|------|------|
-| GET | `/api/v2/vendors` | 供应商列表 | vendors:read | read |
-| GET | `/api/v2/vendors/{id}` | 供应商详情 | vendors:read | read |
-| GET | `/api/v2/vendors/{id}/health` | 供应商健康 | vendors:read | read |
+| GET | `/api/v2/vendors` | 渠道列表 | vendors:read | read |
+| GET | `/api/v2/vendors/{id}` | 渠道详情 | vendors:read | read |
+| GET | `/api/v2/vendors/{id}/health` | 渠道健康 | vendors:read | read |
 | GET | `/api/v2/vendors/models` | 所有模型列表 | vendors:read | read |
-| POST | `/api/v2/vendors/{id}/test` | 测试供应商连通 | vendors:write | write |
+| POST | `/api/v2/vendors/{id}/test` | 测试渠道连通 | vendors:write | write |
 
 ### 8.4 代理商管理
 
@@ -1140,7 +1140,7 @@ interface PermissionTreeNode {
 | 系统配置 | `ref-4.8-system-config.md` | 开放 API 配置存储在 site_configs |
 | 安全风控 | `ref-4.6-security.md` | IP 白名单 + 审计日志 |
 | 操作日志 | `ref-4.13-operation-timeline.md` | 管理面的操作日志记录 |
-| 供应商管理 | `ref-4.3-vendor-model.md` | 供应商开放 API 数据源 |
+| 渠道管理 | `ref-4.3-vendor-model.md` | 渠道开放 API 数据源 |
 | 财务管理 | `ref-4.4-finance.md` | 财务开放 API 数据源 |
 | 用户管理 | — | 用户开放 API 数据源 |
 | 监控日志 | `ref-4.7-monitor-logs.md` | 使用日志监控告警 |

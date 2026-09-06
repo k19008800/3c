@@ -137,7 +137,7 @@
 
 ### 完成能力 / 展示效果
 
-- 服务列表：API 服务 / 各供应商模型 / 平台管理端 / Portal
+- 服务列表：API 服务 / 各渠道模型 / 平台管理端 / Portal
 - 状态标签：Operational / Degraded / Outage
 - 历史 uptime：近 30 天可用率
 - 事件记录：历史故障事件及解决方案

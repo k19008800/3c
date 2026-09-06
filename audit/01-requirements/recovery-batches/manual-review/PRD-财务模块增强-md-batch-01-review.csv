@@ -1,0 +1,41 @@
+﻿req_id,domain,source_path,bad_fields,recovered_section,recovered_quote,recovered_assertion,quote_source_lines,section_source_lines,conversion,compound_after_recovery,status,basis,source_section_context,source_quote_context,section_check,quote_check,assertion_check,format_risk_check,review_decision,review_notes
+REQ-CF-00164,core-finance,docs/PRD-财务模块增强.md,source_section;source_quote,API 接口,| 方法 | 路径 | 说明 | 权限 |,鏂规硶应满足：`GET`,64;127;174;247;274,62;125;172;245;272,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"62: #### API 鎺ュ彛
+125: #### API 鎺ュ彛
+172: #### API 鎺ュ彛
+245: #### API 鎺ュ彛
+272: #### API 鎺ュ彛","64: | 鏂规硶 | 璺緞 | 璇存槑 | 鏉冮檺 |
+127: | 鏂规硶 | 璺緞 | 璇存槑 | 鏉冮檺 |
+174: | 鏂规硶 | 璺緞 | 璇存槑 | 鏉冮檺 |
+247: | 鏂规硶 | 璺緞 | 璇存槑 | 鏉冮檺 |
+274: | 鏂规硶 | 璺緞 | 璇存槑 | 鏉冮檺 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+REQ-CF-00172,core-finance,docs/PRD-财务模块增强.md,source_section;source_quote,API 接口,| `POST` | `/api/v1/admin/finance/reports/monthly/generate` | 手动生成报告 | finance 以上 |,鏂规硶应满足：`POST`,68,62;125;172;245;272,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"62: #### API 鎺ュ彛
+125: #### API 鎺ュ彛
+172: #### API 鎺ュ彛
+245: #### API 鎺ュ彛
+272: #### API 鎺ュ彛",68: | `POST` | `/api/v1/admin/finance/reports/monthly/generate` | 鎵嬪姩鐢熸垚鎶ュ憡 | finance 浠ヤ笂 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+REQ-CF-00174,core-finance,docs/PRD-财务模块增强.md,source_section;source_quote,API 接口,| `POST` | `/api/v1/admin/finance/reports/monthly/generate` | 手动生成报告 | finance 以上 |,璇存槑应满足：鎵嬪姩鐢熸垚鎶ュ憡,68,62;125;172;245;272,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"62: #### API 鎺ュ彛
+125: #### API 鎺ュ彛
+172: #### API 鎺ュ彛
+245: #### API 鎺ュ彛
+272: #### API 鎺ュ彛",68: | `POST` | `/api/v1/admin/finance/reports/monthly/generate` | 鎵嬪姩鐢熸垚鎶ュ憡 | finance 浠ヤ笂 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+REQ-CF-00178,core-finance,docs/PRD-财务模块增强.md,source_section;source_quote,API 接口,| `GET` | `/api/v1/admin/finance/reports/monthly/:period/pdf` | 下载 PDF | finance 以上 |,璇存槑应满足：涓嬭浇 PDF,69,62;125;172;245;272,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"62: #### API 鎺ュ彛
+125: #### API 鎺ュ彛
+172: #### API 鎺ュ彛
+245: #### API 鎺ュ彛
+272: #### API 鎺ュ彛",69: | `GET` | `/api/v1/admin/finance/reports/monthly/:period/pdf` | 涓嬭浇 PDF | finance 浠ヤ笂 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+REQ-CF-00219,core-finance,docs/PRD-财务模块增强.md,source_section;source_quote,API 接口,| 方法 | 路径 | 说明 | 权限 |,鏂规硶应满足：`PUT`,64;127;174;247;274,62;125;172;245;272,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"62: #### API 鎺ュ彛
+125: #### API 鎺ュ彛
+172: #### API 鎺ュ彛
+245: #### API 鎺ュ彛
+272: #### API 鎺ュ彛","64: | 鏂规硶 | 璺緞 | 璇存槑 | 鏉冮檺 |
+127: | 鏂规硶 | 璺緞 | 璇存槑 | 鏉冮檺 |
+174: | 鏂规硶 | 璺緞 | 璇存槑 | 鏉冮檺 |
+247: | 鏂规硶 | 璺緞 | 璇存槑 | 鏉冮檺 |
+274: | 鏂规硶 | 璺緞 | 璇存槑 | 鏉冮檺 |",PENDING,PENDING,PENDING,PENDING,PENDING,
+REQ-CF-00222,core-finance,docs/PRD-财务模块增强.md,source_section;source_quote,API 接口,| `GET` | `/api/v1/admin/finance/reports/monthly` | 月度报告列表 | finance 以上 |,鏉冮檺应满足：super_admin,66,62;125;172;245;272,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,"62: #### API 鎺ュ彛
+125: #### API 鎺ュ彛
+172: #### API 鎺ュ彛
+245: #### API 鎺ュ彛
+272: #### API 鎺ュ彛",66: | `GET` | `/api/v1/admin/finance/reports/monthly` | 鏈堝害鎶ュ憡鍒楄〃 | finance 浠ヤ笂 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+REQ-CF-00300,core-finance,docs/PRD-财务模块增强.md,source_section;source_quote,9.7 财务模块总览,| 月度财务报告 | P0 | 后端3d+前端2d | 管理层决策的核心数据 |,妯″潡应满足：鏈堝害璐㈠姟鎶ュ憡,294,289,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,289: ### 9.7 璐㈠姟妯″潡鎬昏,294: | 鏈堝害璐㈠姟鎶ュ憡 | P0 | 鍚庣3d+鍓嶇2d | 绠＄悊灞傚喅绛栫殑鏍稿績鏁版嵁 |,PENDING,PENDING,PENDING,PENDING,PENDING,
+REQ-CF-00308,core-finance,docs/PRD-财务模块增强.md,source_section;source_quote,9.7 财务模块总览,| 授信额度体系 | P1 | 后端5d+前端3d | 大客户业务的前提条件 |,妯″潡应满足：鎺堜俊棰濆害浣撶郴,296,289,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认,289: ### 9.7 璐㈠姟妯″潡鎬昏,296: | 鎺堜俊棰濆害浣撶郴 | P1 | 鍚庣5d+鍓嶇3d | 澶у鎴蜂笟鍔＄殑鍓嶆彁鏉′欢 |,PENDING,PENDING,PENDING,PENDING,PENDING,

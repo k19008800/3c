@@ -498,7 +498,7 @@ URL: https://api.unmisa.com/open/v1/docs
 | PATCH | `/open/v1/keys/:id` | 更新 Key (名称/状态) | App Token | 基础 |
 | GET | `/open/v1/keys/:id/stats` | Key 调用统计 | App Token | 基础 |
 
-### 7.3 模型与供应商
+### 7.3 模型与渠道
 
 | 方法 | 路径 | 说明 | 鉴权 | 限流 |
 |------|------|------|------|------|
@@ -779,7 +779,7 @@ third_party_apps 1 ── N third_party_app_usage_logs
 | 409 | `CONFLICT` | 资源冲突（如同名 Key）|
 | 429 | `RATE_LIMIT_EXCEEDED` | 请求频率超限 |
 | 500 | `INTERNAL_ERROR` | 服务内部错误 |
-| 502 | `UPSTREAM_ERROR` | 上游供应商错误 |
+| 502 | `UPSTREAM_ERROR` | 上游渠道错误 |
 | 503 | `SERVICE_UNAVAILABLE` | 服务暂不可用 |
 
 ---

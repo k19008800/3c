@@ -10,7 +10,7 @@
 | flowcharts/01-recharge.md | PRD-§2.2.6 充值 + §4.4 财务 | ⏳ 待校验 | |
 | flowcharts/02-agent-withdraw.md | PRD-§3.4 提现管理 + §4.4.4 提现审核 | ⏳ 待校验 | |
 | flowcharts/03-real-name-review.md | PRD-§2.1.2 实名审核 | ⏳ 待校验 | |
-| flowcharts/04-vendor-status-switch.md | PRD-§4.3.1 供应商状态切换 | ⏳ 待校验 | |
+| flowcharts/04-vendor-status-switch.md | PRD-§4.3.1 渠道状态切换 | ⏳ 待校验 | |
 | flowcharts/05-auto-reconciliation.md | PRD-§5.2.4 自动对账 | ⏳ 待校验 | |
 | flowcharts/06-agent-upgrade.md | PRD-§3.1 代理层级审核 | ⏳ 待校验 | |
 

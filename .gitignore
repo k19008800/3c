@@ -26,3 +26,7 @@ e2e/.tmp-screenshot.mjs
 api/exports/
 api/tmp/exports/
 
+
+# Python 缓存（audit/ 审阅工具产生）
+__pycache__/
+*.pyc

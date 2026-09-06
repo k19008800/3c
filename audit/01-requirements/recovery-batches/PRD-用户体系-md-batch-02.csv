@@ -1,0 +1,51 @@
+﻿req_id,domain,source_path,bad_fields,recovered_section,recovered_quote,recovered_assertion,quote_source_lines,section_source_lines,conversion,compound_after_recovery,status,basis
+UA2-00290,user-agent,docs/PRD-用户体系.md,source_section,区域 3：额度使用进度条,**杩涘害鏉＄姸鎬侀€昏緫**,**杩涘害鏉＄姸鎬侀€昏緫**,211,199,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00291,user-agent,docs/PRD-用户体系.md,source_section,区域 3：额度使用进度条,**边界条件**,**边界条件**,151;184;221;1318,199,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00295,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,区域 3：额度使用进度条,**运营策略**,**运营策略**,157;227;362,199,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00296,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,区域 3：额度使用进度条,额度 > 80% 时：系统自动触发余额不足通知,额度 > 80% 时：系统自动触发余额不足通知,229,199,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00334,user-agent,docs/PRD-用户体系.md,source_section,区域 6：模型分布明细表,渚涘簲鍟,渚涘簲鍟,314,307,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00335,user-agent,docs/PRD-用户体系.md,source_section,区域 6：模型分布明细表,灞曠ず渚涘簲鍟Logo 缂╁啓,灞曠ず渚涘簲鍟Logo 缂╁啓,314,307,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00336,user-agent,docs/PRD-用户体系.md,source_section,区域 6：模型分布明细表,调用次数,调用次数,315,307,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00337,user-agent,docs/PRD-用户体系.md,source_section,区域 6：模型分布明细表,今日调用次数,今日调用次数,315,307,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00338,user-agent,docs/PRD-用户体系.md,source_section,区域 6：模型分布明细表,Token 总量,Token 总量,316,307,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00339,user-agent,docs/PRD-用户体系.md,source_section,区域 6：模型分布明细表,浠婃棩 Token 娑堣€,浠婃棩 Token 娑堣€,316,307,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00344,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,区域 6：模型分布明细表,默认按调用量降序排列,默认按调用量降序排列,322,307,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00507,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,**页面布局**,**页面布局**,630,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00508,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.2.2 模型中心 `/console/models`,**模型卡片字段规格**,**模型卡片字段规格**,649,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00517,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,输入价格,输入价格,656,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00518,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,`vendor_models.input_price`,`vendor_models.input_price`,656,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00519,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,¥0.002/1K tokens,¥0.002/1K tokens,656,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00520,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,输出价格,输出价格,657,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00521,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,`vendor_models.output_price`,`vendor_models.output_price`,657,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00522,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,¥0.008/1K tokens,¥0.008/1K tokens,657,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00526,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.2.2 模型中心 `/console/models`,**分类页签逻辑**,**分类页签逻辑**,660,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00527,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.2.2 模型中心 `/console/models`,分类,分类,660;662,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00529,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.2.2 模型中心 `/console/models`,| 全部 | 全部模型（排除已下线）|,| 全部 | 全部模型（排除已下线）|,664,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00530,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,文本生成,文本生成,665,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00531,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,`models.capability` = 'text_generation',`models.capability` = 'text_generation',665,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00532,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,对话,对话,666;719;741,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00533,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,`models.capability` = 'chat',`models.capability` = 'chat',666,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00534,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,图像生成,图像生成,667,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00535,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,`models.capability` = 'image_generation',`models.capability` = 'image_generation',667,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00536,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,嵌入,嵌入,668,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00537,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,`models.capability` = 'embedding',`models.capability` = 'embedding',668,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00538,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,代码,代码,40;669,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00539,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,`models.capability` = 'code',`models.capability` = 'code',669,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00540,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.2.2 模型中心 `/console/models`,音频,音频,670,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00541,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,`models.capability` = 'audio',`models.capability` = 'audio',670,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00542,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,**搜索逻辑**,**搜索逻辑**,672,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00543,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,按模型名模糊匹配,按模型名模糊匹配,674,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00549,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,选项,选项,1031,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00550,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,渚涘簲鍟,渚涘簲鍟,314,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00552,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,价格范围,价格范围,684,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00553,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,¥0-0.01 / ¥0.01-0.05 / ¥0.05-0.10 / ¥0.10+,¥0-0.01 / ¥0.01-0.05 / ¥0.05-0.10 / ¥0.10+,684,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00554,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,鐘舵€,鐘舵€,993,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00556,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,**价格明细弹窗**,**价格明细弹窗**,689,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00558,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,**Playground 在线测试**,**Playground 在线测试**,711,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00559,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,**测试界面布局**,**测试界面布局**,713,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00560,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,**对话模式**,**对话模式**,741,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00561,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,功能,功能,743;753,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00562,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,说明,说明,40;52;743;753;1022,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00563,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,System Prompt,System Prompt,722,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00566,user-agent,docs/PRD-用户体系.md,source_section;source_quote;atomic_assertion,2.2.2 模型中心 `/console/models`,支持连续对话，历史消息自动拼入上下文,支持连续对话，历史消息自动拼入上下文,746,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-00573,user-agent,docs/PRD-用户体系.md,source_section,2.2.2 模型中心 `/console/models`,**对比模式**,**对比模式**,751;1102,628,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认

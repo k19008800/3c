@@ -14,7 +14,7 @@ graph TB
         UI[Web 前端<br/>React + Vite]
         SDK[用户 SDK<br/>OpenAI 兼容]
         AGENT[代理端<br/>React]
-        VENDOR[供应商端<br/>React]
+        VENDOR[渠道端<br/>React]
         ADMIN[管理员端<br/>React]
     end
 
@@ -36,7 +36,7 @@ graph TB
         AGENT_SVC[代理商服务]
         FINANCE[财务管理]
         SECURITY[安全风控]
-        VENDOR_SVC[供应商管理]
+        VENDOR_SVC[渠道管理]
         CAMPAIGN[营销活动]
         NOTIFY[通知服务]
         MONITOR[监控告警]
@@ -49,7 +49,7 @@ graph TB
     end
 
     subgraph 外部
-        PROVIDERS[AI 供应商<br/>DeepSeek / OpenAI / ...]
+        PROVIDERS[AI 渠道<br/>DeepSeek / OpenAI / ...]
         PAY[支付网关<br/>微信 / 支付宝]
         SMTP[邮件服务<br/>SMTP]
     end
@@ -128,7 +128,7 @@ graph TB
         LETS[Let's Encrypt<br/>SSL 证书]
         PAYGW[支付网关]
         MAIL[SMTP 邮件]
-        PROVIDERS[AI 供应商]
+        PROVIDERS[AI 渠道]
     end
 
     DNS1 --> NGX1
@@ -194,7 +194,7 @@ graph LR
         USER[用户服务]
         AGENT[代理服务]
         FIN[财务服务]
-        VEN[供应商服务]
+        VEN[渠道服务]
         SEC[安全服务]
         NOT[通知服务]
         CAMP[活动服务]
@@ -242,7 +242,7 @@ graph LR
 
 | 模块 | 依赖 | 说明 |
 |------|------|------|
-| 路由引擎 | 供应商服务、熔断器、限流引擎 | 请求转发前需知道供应商状态和限流限制 |
+| 路由引擎 | 渠道服务、熔断器、限流引擎 | 请求转发前需知道渠道状态和限流限制 |
 | 计费引擎 | 用户服务、财务服务 | 计费需要用户折扣率和定价配置 |
 | 通知服务 | 用户服务、活动服务 | 通知需要知道用户订阅偏好 |
 | 安全服务 | 用户服务、日志服务 | 安全检测需要用户行为和日志 |
@@ -262,7 +262,7 @@ sequenceDiagram
     participant L as 限流器
     participant R as 路由引擎
     participant CB as 熔断器
-    participant P as 供应商
+    participant P as 渠道
     participant B as 计费引擎
     participant D as 数据库
 
@@ -274,12 +274,12 @@ sequenceDiagram
     L->>L: 四级限流检查
     L->>R: 限流通过
 
-    R->>R: 查询供应商优先级
-    R->>CB: 检查供应商状态
+    R->>R: 查询渠道优先级
+    R->>CB: 检查渠道状态
     CB->>CB: 检查熔断状态
 
     alt 熔断关闭
-        CB->>R: 供应商可用
+        CB->>R: 渠道可用
         R->>B: 预估算费 + 预扣余额
         B->>D: 查询折扣率
         B->>D: 预扣余额
@@ -290,9 +290,9 @@ sequenceDiagram
         B->>D: 更新余额 + 记录日志
         R-->>C: 返回响应
     else 熔断打开
-        CB->>R: 供应商不可用
-        R->>R: 选择备用供应商
-        R->>CB: 检查备用供应商
+        CB->>R: 渠道不可用
+        R->>R: 选择备用渠道
+        R->>CB: 检查备用渠道
         R->>P: 转发到备用
     end
 ```

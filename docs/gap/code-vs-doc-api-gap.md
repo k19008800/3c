@@ -1,4 +1,4 @@
-# 3cloud 代码 vs 文档 API 差距分析报告
+﻿# 3cloud 代码 vs 文档 API 差距分析报告
 
 > **审计日期**：2026-07-31
 > **审计方法**：自动化扫描 + 人工核实
@@ -70,7 +70,7 @@
 | `GET /api/v1/agent/alerts/clients` | 客户预警（客户端列表） | ⚠️ 有 `agent/alerts`，缺 `clients` 子路由 |
 | `PUT /api/v1/agent/alerts/:id/dismiss` | 预警处理 | ✅ 已有 |
 
-### 5. §25 供应商增强 —— 路径写法差异为主 ⚠️ 需对齐
+### 5. §25 渠道增强 —— 路径写法差异为主 ⚠️ 需对齐
 
 | 文档定义 | 代码实际 | 结论 |
 |---------|---------|------|
@@ -119,7 +119,7 @@
 | `GET /api/v1/admin/users/:id/permissions/detail` | 权限详情 | ❌ 无（有 permissions 主接口） |
 | `GET /api/v1/me/permissions` + `/check` | 用户权限一览 | ❌ 无（有 admin 侧） |
 
-### 10. §31 供应商故障演练与多环境 —— 大部分未实现 ⚠️
+### 10. §31 渠道故障演练与多环境 —— 大部分未实现 ⚠️
 
 | API | 说明 | 代码状态 |
 |-----|------|---------|
@@ -143,7 +143,7 @@
 | `GET/POST /api/v1/admin/settings/terms-of-service/versions` + `PUT :id` + `POST :id/publish` | 服务条款 | ✅ 已有 |
 | `POST /api/v1/me/data-export/request` + `GET requests` + `GET :id/download` | 用户数据导出 | ✅ 已有 |
 | `POST /api/v1/admin/data-export/:id/process` + `reject` + `GET requests` + `GET :id/download` | 管理端审核 | ✅ 已有 |
-| `GET /api/v1/admin/finance/vendor-cost-analysis` | 供应商成本分析 | ✅ 已有 |
+| `GET /api/v1/admin/finance/vendor-cost-analysis` | 渠道成本分析 | ✅ 已有 |
 
 ### 13. 其他零散缺口
 
@@ -183,7 +183,7 @@
 | `admin/request-records/**`、`risk-control/**`、`threat-intel/**` | ~20 | 新模块未写文档 |
 | `me/**`（2fa/sessions/stats/legal/data-export/notifications） | ~30 | 用户端新接口未文档化 |
 | `agent/**`（settlements/finance/redemption/referral/client-pricing） | ~30 | 代理端接口未文档化 |
-| `vendor/**` + `vendor-self/**` | ~20 | 供应商接口未文档化 |
+| `vendor/**` + `vendor-self/**` | ~20 | 渠道接口未文档化 |
 | `auth/**`（wechat/realname/security） | ~15 | 认证子接口未文档化 |
 | `api-keys/**`、`redemption/**`、`knowledge/**`、`tickets/**`、`chat/**` | ~40 | 各模块辅助接口 |
 
@@ -197,8 +197,8 @@
 
 | 差异 | 文档现值 | 代码 | 处理结果 |
 |------|------|------|------|
-| 供应商结算路径单复数 | `vendor/settlement/*`（§25） | `vendor/settlements/*` | ✅ 文档已统一为复数；自助结算用 `vendor/self-settlement/*` |
-| 供应商通知 vs 公告 | `vendor/notifications`（§25） | `vendor/announcements` | ✅ 文档已统一为 announcements（含 PRD-管理后台、ref-4.10 引用） |
+| 渠道结算路径单复数 | `vendor/settlement/*`（§25） | `vendor/settlements/*` | ✅ 文档已统一为复数；自助结算用 `vendor/self-settlement/*` |
+| 渠道通知 vs 公告 | `vendor/notifications`（§25） | `vendor/announcements` | ✅ 文档已统一为 announcements（含 PRD-管理后台、ref-4.10 引用） |
 | 对账差异视图 | `reconciliation/differences/*`（§29） | `reconciliation/mismatches/:id/resolve` | ✅ 文档已统一为 mismatches/reports/run/export/:id |
 | 故障演练路径 | `drills/vendor-failure/*`（§31） | `drills/*` | ✅ 文档已统一去掉 vendor-failure 段 |
 | 环境配置对比 | `environments/compare` + `:name/config`（§31） | `environments/diff` + `sync` | ✅ 文档已统一为 diff/sync/health-check |
@@ -211,7 +211,7 @@
 ### P0 — 影响合规/资金/核心体验（建议立即对齐）
 1. **§29 资金与对账**：资金流水 ledger、资金账户、财务锁账、逾期违约金、对账差异视图、报表中心 —— 6 组接口未实现，财务核心能力缺失
 2. **§32 SSO 登录链路**：`auth/sso/:provider` + callback 未实现，企业 SSO 只有配置没有登录
-3. **§25 供应商结算**：管理端结算审核接口缺失（`admin/vendor/settlement/requests` + approve/reject）
+3. **§25 渠道结算**：管理端结算审核接口缺失（`admin/vendor/settlement/requests` + approve/reject）
 4. **§30 权限**：`me/permissions` + `/check`、`roles/stats`、`users/:id/permissions/detail` 未实现，权限工具链不完整
 
 ### P1 — 影响体验/运营（建议下一迭代）

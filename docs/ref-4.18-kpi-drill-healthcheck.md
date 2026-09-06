@@ -64,7 +64,7 @@
 | 7 日留存 | `retention_7d` | `/admin/users` | `view=retention_cohort` | 留存分群详情 |
 | 代理活跃度 | `agent_activity` | `/admin/agents` | `active=30d` | 近 30 天活跃代理 |
 | Key 使用率 | `key_usage_rate` | `/admin/api-keys` | `scope=used_7d` | 近 7 天有调用的 Key |
-| 供应商健康度 | `vendor_health` | `/admin/vendors` | `view=health` | 供应商健康面板 |
+| 渠道健康度 | `vendor_health` | `/admin/vendors` | `view=health` | 渠道健康面板 |
 | 告警收敛率 | `alert_convergence` | `/admin/alerts` | `type=real` | 真实告警列表 |
 | ARPU | `arpu` | `/admin/finance/arpu-analysis` | — | ARPU 分析页 |
 | 日营收 | `daily_revenue` | `/admin/finance/revenue` | `range=today` | 今日营收详情 |
@@ -111,7 +111,7 @@ interface DrilldownRouteConfig {
 │ │ [折线图: 蓝色=本月, 灰色=上月]                     │ │
 │ └────────────────────────────────────────────────────┘ │
 │                                                        │
-│ 🥧 供应商成本占比                                       │
+│ 🥧 渠道成本占比                                       │
 │ ├────────────────────────────────────────────────────┤ │
 │ │ [饼图: DeepSeek 55%, GLM 25%, 其他 20%]            │ │
 │ └────────────────────────────────────────────────────┘ │
@@ -222,7 +222,7 @@ interface DrilldownRouteConfig {
           ┌────────────┼────────────┐
           ▼            ▼            ▼
     ┌─────────┐  ┌─────────┐  ┌─────────┐
-    │本地检查  │  │远程检查  │  │供应商    │
+    │本地检查  │  │远程检查  │  │渠道    │
     │(API进程) │  │(SSH/HTTP)│  │连通性    │
     └─────────┘  └─────────┘  └─────────┘
 ```
@@ -301,7 +301,7 @@ HealthCheckScheduler.run()
     ├─ disk.ts              — 磁盘空间
     ├─ memory.ts            — 内存使用
     ├─ cpu.ts               — CPU 使用率
-    ├─ vendor-connectivity  — 供应商连通性
+    ├─ vendor-connectivity  — 渠道连通性
     ├─ ssl-cert.ts          — SSL 证书
     ├─ backup.ts            — 备份完整性
     ├─ migration.ts         — 迁移状态
@@ -376,12 +376,12 @@ const diskCheck: HealthCheckItem = {
 };
 ```
 
-**供应商连通性检查**：
+**渠道连通性检查**：
 
 ```typescript
 const vendorConnectivityCheck: HealthCheckItem = {
   type: "vendor_connectivity",
-  label: "供应商连通性",
+  label: "渠道连通性",
   category: "vendor",
   severity: "warning",
   interval: 300,            // 5分钟
@@ -400,18 +400,18 @@ const vendorConnectivityCheck: HealthCheckItem = {
     if (failures.length > 0) {
       return {
         status: "fail",
-        message: `${failures.length}/${vendors.length} 供应商不可达`,
+        message: `${failures.length}/${vendors.length} 渠道不可达`,
         metrics: { total: vendors.length, failures: failures.length, slow: slowOnes.length },
       };
     }
     if (slowOnes.length > 0) {
       return {
         status: "warning",
-        message: `${slowOnes.length}/${vendors.length} 供应商延迟 > 5s`,
+        message: `${slowOnes.length}/${vendors.length} 渠道延迟 > 5s`,
         metrics: { total: vendors.length, failures: 0, slow: slowOnes.length },
       };
     }
-    return { status: "pass", message: "所有供应商连通", metrics: { total: vendors.length } };
+    return { status: "pass", message: "所有渠道连通", metrics: { total: vendors.length } };
   },
 };
 ```
@@ -427,7 +427,7 @@ const vendorConnectivityCheck: HealthCheckItem = {
   └─ 内建检查项直接查询进程状态
   └─ 磁盘/CPU/内存通过 os 模块或 exec 命令获取
   └─ 数据库/Redis 通过现有连接池探活
-  └─ 供应商通过 HTTP HEAD 到测试端点
+  └─ 渠道通过 HTTP HEAD 到测试端点
 
 优点: 零额外部署成本
 限制: 无法巡检集群其他节点
@@ -479,7 +479,7 @@ HTTP POST /api/v1/admin/system-health/report
 | 6 | 磁盘使用率 | `disk_usage` | system | warning | 1h | 10000 | 各挂载点使用率 < 85% |
 | 7 | 内存使用率 | `memory_usage` | system | warning | 1h | 10000 | 使用率 < 90% |
 | 8 | CPU 使用率 | `cpu_usage` | system | warning | 1h | 10000 | 5min 负载 < 80% |
-| 9 | 供应商连通性 | `vendor_connectivity` | vendor | warning | 5min | 15000 | 测试端点延迟 < 5s |
+| 9 | 渠道连通性 | `vendor_connectivity` | vendor | warning | 5min | 15000 | 测试端点延迟 < 5s |
 | 10 | SSL 证书 | `ssl_certificate` | vendor | warning | 24h | 10000 | 剩余天数 > 30 |
 | 11 | 备份完整性 | `backup_integrity` | backup | critical | 24h | 30000 | 最近备份 < 24h 且校验通过 |
 | 12 | 数据库迁移 | `database_migration` | database | critical | 每次部署 | 30000 | 迁移全部通过 |
@@ -952,7 +952,7 @@ interface ArpuAnalysisPageProps {
 | B7 | 磁盘/网络权限不足无法执行检查 | 记为 skipped 并记录原因，不触发告警 |
 | B8 | 数据库中 health_checks 表过大 | 自动 TTL 清理（保留 90 天），定期归档 |
 | B9 | 多个 API 进程同时执行巡检 | 分布式锁（Redis SETNX）避免重复 |
-| B10 | 供应商全部不可达（网络故障）| 记录供应商故障事件，不重复触发整单告警 |
+| B10 | 渠道全部不可达（网络故障）| 记录渠道故障事件，不重复触发整单告警 |
 
 ### 13.3 报告边界
 
@@ -1008,7 +1008,7 @@ interface ArpuAnalysisPageProps {
 
 | # | 验收项 | 通过标准 |
 |---|-------|---------|
-| AC17 | 成本分析 | 供应商占比/模型效率/异常标记正确 |
+| AC17 | 成本分析 | 渠道占比/模型效率/异常标记正确 |
 | AC18 | ARPU 分析 | 分层/渠道对比趋势正确 |
 
 ---

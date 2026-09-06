@@ -1,7 +1,7 @@
 # 原型差距补齐实施规格（2026-08-18）
 
 > 目标：按用户裁决补齐全部缺失端点，使前端已挂载页面全部有真实后端支撑。
-> 裁决：工单管理 1:1 复刻；其余核心功能等价；供应商旧 6 页补别名；磁盘缓存完整闭环。
+> 裁决：工单管理 1:1 复刻；其余核心功能等价；渠道旧 6 页补别名；磁盘缓存完整闭环。
 > 已建 migration 0026 + schema：`api/src/db/schema/gap-fix-2026-08.ts`（announcementReads / refundRequests / followReminders / customerTags / customerNotes / supportTestKeys / knowledgeBaseFeedback）；users.role 枚举已加 `sales`。
 > 新增路由统一模式：对齐 `routes/admin-support-missing.ts`（adminAuth / jwtAuth / writeAudit / parsePageQuery / periodStart）。
 
@@ -54,11 +54,11 @@
 
 数据源：consumption_records(user_id, model, input_tokens, output_tokens, cost, created_at)、suppliers(id,name)、vendor_pricing、recharge_orders、balance_transactions、agent_commissions。
 1. `GET /admin/settlements?period=week|month|quarter&status=` → `{ data: { summary: { pending_total, settled_total, pending_vendors, disputed }, list: [{ id, vendor_name, period, revenue, cost, profit, status(pending|settled|disputed) }] } }`
-   - 按供应商聚合 consumption_records.cost 与收入（充值/消费金额），profit=revenue-cost；status 由 vendor_settlements 或计算（存在即 settled）。
+   - 按渠道聚合 consumption_records.cost 与收入（充值/消费金额），profit=revenue-cost；status 由 vendor_settlements 或计算（存在即 settled）。
 2. `POST /admin/settlements/:id/settle` → 标记已结算（可用 vendor_settlements 表或 system_config 记录）；写 audit。
 3. `GET /admin/profit?period=` → `{ data: { summary: { revenue, cost, profit, margin }, list: [{ vendor_name, revenue, cost, commission, net_profit, margin, trend(up|down|flat) }] } }`
 4. `GET /admin/reconciliation?period=` → `{ data: { summary: { revenue, cost, profit, margin }, list: [{ vendor_name, revenue, cost, profit, margin, diff, status(matched|mismatch) }] } }`
-   - diff = 平台金额 vs 供应商账单金额（无账单数据时 diff=0/status=matched 或按差异计算）。
+   - diff = 平台金额 vs 渠道账单金额（无账单数据时 diff=0/status=matched 或按差异计算）。
 
 ## 5. 退款审核 → 并入 `routes/admin-finance-stats.ts`
 
@@ -113,14 +113,14 @@
 11. `POST /me/follow-reminders/:id/complete`、`POST /me/follow-reminders/:id/ignore`。
 12. `GET /me/sales-performance?period=` → `{ data: { customers, new_customers, reminders_done, total_spend, revenue, rank } }`。
 
-## 10. 供应商旧 6 页别名 → 新文件 `routes/admin-vendor-alias.ts`
+## 10. 渠道旧 6 页别名 → 新文件 `routes/admin-vendor-alias.ts`
 
 前端 AdminVendorCostPage/ProfilesPage/PricingPage/StatsPage/PerformancePage/ModelServicePage 调用 /admin/vendor-*，后端已有 /admin/suppliers/* 与 /admin/pricing。
 1. `GET/PUT /admin/vendor-profiles` → suppliers 表映射（id,name,status,description,base_url…）
 2. `GET/PUT /admin/vendor-pricing` + `POST /admin/vendor-pricing/batch-adjust` → vendor_pricing 映射（model,provider,input_price,output_price,status）
 3. `GET/PUT /admin/vendor-costs` → supplier_models 成本映射
 4. `GET /admin/vendor-stats?period=` → 用户选购统计（consumption_records 按 supplier/model 聚合）
-5. `GET /admin/vendor-performance?period=` → 供应商绩效（成功率/延迟/调用量聚合 consumption_records + model-health-stats）
+5. `GET /admin/vendor-performance?period=` → 渠道绩效（成功率/延迟/调用量聚合 consumption_records + model-health-stats）
 6. `GET/PUT/DELETE /admin/vendor-models` → supplier_models 映射
 7. `POST /admin/vendor-keys/:id/toggle`、`DELETE /admin/vendor-keys/:id`、`POST /admin/vendors/:id/toggle-status` → supplier_keys/suppliers 映射
    实现策略：**别名转发到 suppliers.ts 对应逻辑**（可复制 suppliers.ts 中的查询，路径换成 /admin/vendor-*），保持前端零改动。

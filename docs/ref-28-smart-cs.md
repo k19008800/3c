@@ -263,7 +263,7 @@ export const csUserViewTokens = pgTable("cs_user_view_tokens", {
 POST   /api/v1/admin/cs/simulate-call             — 模拟 API 调用
   body: { 
     model: string          // 模型名称
-    provider?: string      // 指定供应商（可选）
+    provider?: string      // 指定渠道（可选）
     apiKey: string         // 用户的 Key
     messages: ChatMessage[]  // 测试消息
     maxTokens?: number
@@ -374,7 +374,7 @@ interface TempKey {
 | # | 用例 | 预期 |
 |---|------|------|
 | 28.4-1 | 客服模拟 API 调用 | 使用用户 Key+模型，完整模拟返回结果或错误 |
-| 28.4-2 | 模拟结果显示路由信息 | 实际调用的供应商、响应时间、是否回退 |
+| 28.4-2 | 模拟结果显示路由信息 | 实际调用的渠道、响应时间、是否回退 |
 | 28.4-3 | 生成临时测试 Key | 限定 1 小时有效期、100 次调用、100 万 Token |
 | 28.4-4 | 临时 Key 到期自动失效 | 超过有效期或限量后返回错误 |
 | 28.4-5 | 管理员吊销临时 Key | 立即生效，已生成的 Key 不可用 |

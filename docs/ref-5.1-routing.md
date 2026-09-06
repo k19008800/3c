@@ -1,8 +1,8 @@
 # 3cloud 智能路由系统 — 可编码深度规格
 
-> **来源**：PRD-README.md §5.1 智能路由系统  
-> **关联模块**：供应商与模型管理 > 供应商-模型映射 | 熔断器配置 | 路由推荐  
-> **版本**：V1.0 | **日期**：2026-07-27  
+> **来源**：PRD-README.md §5.1 智能路由系统
+> **关联模块**：渠道与模型管理 > 渠道-模型映射 | 熔断器配置 | 路由推荐
+> **版本**：V1.0 | **日期**：2026-07-27
 > **前置依赖**：`vendors`、`vendor_models`、`circuit_breaker_configs` 表
 
 ---
@@ -30,28 +30,28 @@ export const circuitBreakerConfigs = pgTable("circuit_breaker_configs", {
   id: serial("id").primaryKey(),
   vendorModelId: integer("vendor_model_id")
     .notNull().references(() => vendorModels.id, { onDelete: "cascade" }),
-  
+
   // 熔断配置
   failureThreshold: integer("failure_threshold").notNull().default(5),    // 连续失败次数触发半开
   circuitTimeoutSec: integer("circuit_timeout_sec").notNull().default(30), // 全开→半开等待秒数
   probeCount: integer("probe_count").notNull().default(3),                // 半开探针成功次数→恢复
   probeIntervalSec: integer("probe_interval_sec").notNull().default(10),  // 探针间隔秒数
-  
+
   // 检活配置
   healthCheckEnabled: boolean("health_check_enabled").notNull().default(true),
   healthCheckEndpoint: varchar("health_check_endpoint", { length: 500 }),
   healthCheckMethod: varchar("health_check_method", { length: 10 }).default("GET"),
   healthCheckIntervalSec: integer("health_check_interval_sec").default(30),
   healthCheckTimeoutMs: integer("health_check_timeout_ms").default(5000),
-  
+
   // 生效范围
   scope: varchar("scope", { length: 20 }).notNull().default("vendor_model"), // vendor_model | key_group_item
-  
+
   // 时效字段
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-  
+
 }, (table) => ({
   vendorModelUnique: uniqueIndex("circuit_config_vendor_model_idx").on(table.vendorModelId),
 }));
@@ -62,25 +62,25 @@ export const circuitBreakerConfigs = pgTable("circuit_breaker_configs", {
 ```typescript
 // ============================================================
 //  routing_overrides — 路由手动覆盖
-//  用途：管理员临时强制将某模型路由到某供应商/Key，覆盖自动路由策略
+//  用途：管理员临时强制将某模型路由到某渠道/Key，覆盖自动路由策略
 // ============================================================
 export const routingOverrides = pgTable("routing_overrides", {
   id: serial("id").primaryKey(),
   modelId: integer("model_id").notNull().references(() => models.id, { onDelete: "cascade" }),
   vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
   keyGroupId: integer("key_group_id").references(() => vendorKeyGroups.id, { onDelete: "set null" }),
-  
+
   overrideType: varchar("override_type", { length: 20 }).notNull().default("vendor"), // vendor | key_group
-  
+
   // 有效期
   startAt: timestamp("start_at", { withTimezone: true }),
   endAt: timestamp("end_at", { withTimezone: true }),
   isPermanent: boolean("is_permanent").notNull().default(false),
-  
+
   reason: text("reason"),
   createdBy: integer("created_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  
+
 }, (table) => ({
   modelOverrideIdx: index("routing_override_model_idx").on(table.modelId),
 }));
@@ -98,19 +98,19 @@ export const routingRecommendations = pgTable("routing_recommendations", {
   modelId: integer("model_id").notNull().references(() => models.id),
   vendorId: integer("vendor_id").notNull().references(() => vendors.id),
   upstreamModelName: varchar("upstream_model_name", { length: 200 }),
-  
+
   // 评分
   costScore: integer("cost_score").notNull(),           // 0-100
   latencyScore: integer("latency_score").notNull(),      // 0-100
   reliabilityScore: integer("reliability_score").notNull(), // 0-100
   overallScore: integer("overall_score").notNull(),      // 0-100
-  
+
   // 原始数据
   avgCostPerCall: numeric("avg_cost_per_call", { precision: 12, scale: 6 }),
   avgLatencyMs: numeric("avg_latency_ms", { precision: 10, scale: 2 }),
   successRate: numeric("success_rate", { precision: 5, scale: 2 }),
   totalCalls: integer("total_calls").default(0),
-  
+
   calcPeriod: varchar("calc_period", { length: 10 }).default("7d"), // 分析时间范围
   reason: text("reason"),                                              // 推荐理由
   analyzedAt: timestamp("analyzed_at", { withTimezone: true }).notNull().defaultNow(),
@@ -170,7 +170,7 @@ export const routingRecommendations = pgTable("routing_recommendations", {
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | status | string | — | closed / degraded / half_open / dead |
-| vendorId | int | — | 按供应商筛选 |
+| vendorId | int | — | 按渠道筛选 |
 
 **响应 200**
 
@@ -248,7 +248,7 @@ export const routingRecommendations = pgTable("routing_recommendations", {
 #### `POST /api/v1/admin/routing/circuit-breakers/:vendorModelId/manual-open` — 手动熔断（管理员强制下线）
 
 ```json
-{ "reason": "由于供应商故障，手动熔断", "estimatedRecoveryMinutes": 30 }
+{ "reason": "由于渠道故障，手动熔断", "estimatedRecoveryMinutes": 30 }
 ```
 
 ### 2.3 路由覆盖
@@ -374,12 +374,12 @@ export const routingRecommendations = pgTable("routing_recommendations", {
 │   ├── 全局策略：下拉选择器 [weighted_random ▼] + 编辑按钮
 │   ├── 模型级策略列表（表格）
 │   │   ├── 模型名 / 当前策略 / 是否有覆盖 / 操作[编辑]
-│   └── 重试配置：最大重试次数 / 是否切换供应商 / 超时时间
+│   └── 重试配置：最大重试次数 / 是否切换渠道 / 超时时间
 │
 ├── 熔断器状态页签
 │   ├── 状态筛选器：[全部 ▼] [closed ▼] [degraded] [half_open] [dead]
 │   ├── 熔断器列表（表格）
-│   │   ├── 供应商 / 模型 / 状态(色标) / 失败次数 / 熔断时间 / 操作
+│   │   ├── 渠道 / 模型 / 状态(色标) / 失败次数 / 熔断时间 / 操作
 │   │   ├── 操作：[查看配置] [重置熔断] [手动熔断]
 │   └── 熔断器配置编辑弹窗
 │
@@ -390,7 +390,7 @@ export const routingRecommendations = pgTable("routing_recommendations", {
 │
 └── 路由推荐页签
     ├── 模型选择器 / 分析周期
-    ├── 推荐结果卡片（每模型 2-3 个供应商评分卡片）
+    ├── 推荐结果卡片（每模型 2-3 个渠道评分卡片）
     └── [应用推荐] 按钮
 ```
 
@@ -463,11 +463,11 @@ interface RecommendationCardProps {
 ```typescript
 // 路由选择时的手动覆盖优先级
 // 1. routing_overrides 表中当前时间在 startAt~endAt 范围内（或 isPermanent=true）
-// 2. 如果 overrideType='vendor' → 直接选该供应商
+// 2. 如果 overrideType='vendor' → 直接选该渠道
 // 3. 如果 overrideType='key_group' → 用该 Key 分组
 // 4. 有多个覆盖时，最近的 createdAt 优先
 // 5. 无覆盖 → 走正常的权重/策略选择
-// 6. 覆盖的供应商/Key 熔断时 → 回退到正常路由（覆盖视为失效）
+// 6. 覆盖的渠道/Key 熔断时 → 回退到正常路由（覆盖视为失效）
 ```
 
 ### 4.2 覆盖冲突处理
@@ -526,10 +526,10 @@ cron 定时任务（每小时）：
 ### 5.2 配置继承规则
 
 ```typescript
-// 供应商级默认值 → 模型级覆盖 → Key 级覆盖
+// 渠道级默认值 → 模型级覆盖 → Key 级覆盖
 // 1. 查询 vendor_models 行时，先查 circuit_breaker_configs
 // 2. 如果无配置 → 取该 vendor 的所有 model 的配置平均值作为默认值
-// 3. 如果供应商也无可参考配置 → 使用全局默认值
+// 3. 如果渠道也无可参考配置 → 使用全局默认值
 ```
 
 ### 5.3 前端配置页面的数据流
@@ -563,7 +563,7 @@ cron 定时任务（每小时）：
 ├── 路由推荐 → 读取 call_logs 历史数据
 │   └── 应用推荐 → 更新 vendor_models.weight
 │
-└── 供应商管理
+└── 渠道管理
     ├── vendors 状态切换 → 自动创建路由覆盖 / 影响推荐评分
     └── vendor-models 权重 → 路由推荐建议修改
 ```
@@ -572,12 +572,12 @@ cron 定时任务（每小时）：
 
 | 路由模块 | 外部模块 | 依赖类型 | 说明 |
 |---------|---------|---------|------|
-| 策略选择 | 供应商-模型映射 | 强 | 从 vendor_models 选路线 |
+| 策略选择 | 渠道-模型映射 | 强 | 从 vendor_models 选路线 |
 | 熔断器 | 健康检查 | 强 | health_check_* 字段 |
 | 熔断器 | 限流引擎 | 弱 | 限流打分可纳入熔断判断 |
-| 路由覆盖 | 供应商管理 | 弱 | 覆盖指向 vendor |
+| 路由覆盖 | 渠道管理 | 弱 | 覆盖指向 vendor |
 | 路由推荐 | call_logs | 强 | 历史数据聚合分析 |
-| 路由推荐 | 供应商管理 | 弱 | 供应商价格作为评分依据 |
+| 路由推荐 | 渠道管理 | 弱 | 渠道价格作为评分依据 |
 
 ### 6.3 章节交叉引用
 
@@ -585,9 +585,9 @@ cron 定时任务（每小时）：
 |-----------|-------------|---------|
 | 路由策略配置 | 5.1.2 负载均衡算法 | `PRD-README.md` §5.1 |
 | 熔断器配置 | 5.1.3 熔断器状态机 | `PRD-README.md` §5.1 |
-| 路由覆盖 | 4.3.3 供应商-模型映射 | `ref-4.3-vendor-model.md` |
-| 路由推荐 | 4.3 供应商模型管理 | `ref-4.3-vendor-model.md` |
-| 熔断器健康检查 | 4.3.1 供应商健康检查配置 | `ref-4.3-vendor-model.md` |
+| 路由覆盖 | 4.3.3 渠道-模型映射 | `ref-4.3-vendor-model.md` |
+| 路由推荐 | 4.3 渠道模型管理 | `ref-4.3-vendor-model.md` |
+| 熔断器健康检查 | 4.3.1 渠道健康检查配置 | `ref-4.3-vendor-model.md` |
 | 限流交互 | 5.3 限流引擎 | `PRD-README.md` §5.3 |
 | 余额预检查 | 5.2 计费结算 | `PRD-README.md` §5.2 |
 
@@ -595,7 +595,7 @@ cron 定时任务（每小时）：
 
 > **关联文档**
 > - `PRD-README.md` §5.1 — 智能路由系统（本文件的基础）
-> - `ref-4.3-vendor-model.md` — 供应商与模型管理（路由依赖的映射/价格）
+> - `ref-4.3-vendor-model.md` — 渠道与模型管理（路由依赖的映射/价格）
 > - `ref-5.4-alert-rules.md` — 告警规则配置（熔断触发告警）
 > - `PRD-README.md` §5.3 — 限流引擎
 
@@ -605,34 +605,34 @@ cron 定时任务（每小时）：
 
 ### 模块概述
 
-智能路由系统负责将用户的 API 请求（模型调用）按照策略分发给合适的供应商端点。核心功能包括路由策略配置、权重分配、熔断器、手动覆盖等。
+智能路由系统负责将用户的 API 请求（模型调用）按照策略分发给合适的渠道端点。核心功能包括路由策略配置、权重分配、熔断器、手动覆盖等。
 
 ### 边界条件清单
 
 | # | 场景 | 触发条件 | 预期行为 | 影响范围 | 优先级 |
 |---|------|---------|---------|---------|--------|
-| ROUTE-001 | 全部供应商不可用 | 所有已配置供应商均返回错误或超时 | 系统进入熔断降级模式，向调用方返回 503 Service Unavailable，附带降级标识和预估恢复时间 | 全部 API 调用 | P0 |
+| ROUTE-001 | 全部渠道不可用 | 所有已配置渠道均返回错误或超时 | 系统进入熔断降级模式，向调用方返回 503 Service Unavailable，附带降级标识和预估恢复时间 | 全部 API 调用 | P0 |
 | ROUTE-002 | 所有路由候选超时 | 所有候选路径均超过调用超时阈值 | 触发全局超时熔断，记录详细超时链路日志，唤醒管理员告警 | 该请求类型 | P0 |
-| ROUTE-003 | 路由权重全为 0 | 某模型的所有供应商路由权重设置为 0 | 路由引擎跳过该模型的所有路由候选，标记为"手动关闭"，直接返回错误并提示管理员启用至少一个路由 | 该模型所有调用 | P0 |
+| ROUTE-003 | 路由权重全为 0 | 某模型的所有渠道路由权重设置为 0 | 路由引擎跳过该模型的所有路由候选，标记为"手动关闭"，直接返回错误并提示管理员启用至少一个路由 | 该模型所有调用 | P0 |
 | ROUTE-004 | 路由配置不存在 | 请求的模型没有对应的路由配置记录 | 使用默认兜底路由策略（若有配置），否则返回 404 并写入配置缺失告警 | 该模型调用 | P0 |
 | ROUTE-005 | 熔断器恢复窗口过载 | 熔断器处于半开状态时大量并发请求涌入 | 仅允许一个探测请求通过（其余直接快速失败），探测成功则逐步恢复流量，失败则重新闭合 | 该熔断器作用域 | P1 |
-| ROUTE-006 | 手动覆盖与自动路由冲突 | 管理员手动指定某供应商，但自动路由正在执行反向恢复 | 手动覆盖优先级最高，自动路由在该覆盖期间暂停对覆盖目标的调整，覆盖解除后恢复 | 该覆盖目标 | P0 |
+| ROUTE-006 | 手动覆盖与自动路由冲突 | 管理员手动指定某渠道，但自动路由正在执行反向恢复 | 手动覆盖优先级最高，自动路由在该覆盖期间暂停对覆盖目标的调整，覆盖解除后恢复 | 该覆盖目标 | P0 |
 | ROUTE-007 | 路由候选升降级竞态 | 两个并发请求同时触发候选升降级逻辑 | 使用乐观锁保证升降级原子性，后执行的升级/降级需基于最新状态重新判断，防止同一候选被重复升降级 | 路由候选状态 | P1 |
 | ROUTE-008 | 路由配置热更新不一致 | 路由配置更新过程中服务实例间生效时间不一致 | 引入配置版本号，同一请求在单次链路上使用一致版本；跨版本请求允许短暂差异化，差异窗口不超过 30 秒 | 全部服务实例 | P1 |
 
 ### 详细边界说明
 
-#### ROUTE-001: 全部供应商不可用
+#### ROUTE-001: 全部渠道不可用
 
 **处理流程**:
-1. 路由引擎检测到所有候选供应商均不可用（连续 N 次失败）
+1. 路由引擎检测到所有候选渠道均不可用（连续 N 次失败）
 2. 立即触发一级熔断，标记该路由策略为 `DEGRADED` 状态
 3. 向调用方返回统一错误码 `ROUTING_ALL_DOWN`，附带 JSON 体：
    ```json
-   { "error": "routing_all_down", "message": "所有供应商暂时不可用，请稍后重试", "estimated_retry_ms": 30000 }
+   { "error": "routing_all_down", "message": "所有渠道暂时不可用，请稍后重试", "estimated_retry_ms": 30000 }
    ```
 4. 触发 P0 级管理员告警（短信 + 电话）
-5. 进入自动健康探测循环（间隔 10s），任一供应商恢复后自动解除熔断
+5. 进入自动健康探测循环（间隔 10s），任一渠道恢复后自动解除熔断
 
 #### ROUTE-002: 全部候选超时
 
@@ -654,7 +654,7 @@ cron 定时任务（每小时）：
 
 | 场景 | 恢复策略 | 是否通知 |
 |------|---------|---------|
-| 全部供应商不可用 | 自动健康探测 + 自动恢复 | P0 告警（短信+电话） |
+| 全部渠道不可用 | 自动健康探测 + 自动恢复 | P0 告警（短信+电话） |
 | 路由配置不存在 | 创建默认配置或返回 404 | P1 系统通知 |
 | 手动覆盖期间自动熔断 | 熔断不受覆盖影响，自动恢复 | P1 操作日志 |
 | 权重全 0 | 要求管理员手动启用 | P2 邮件通知 |

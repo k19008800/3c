@@ -1,0 +1,30 @@
+﻿req_id,domain,source_path,bad_fields,recovered_section,recovered_quote,recovered_assertion,quote_source_lines,section_source_lines,conversion,compound_after_recovery,status,basis
+UA2-06560,user-agent,docs/ref-11.6-quote-contract.md,source_section,contracts（合同）,status,status,123;157;213;272,144,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06561,user-agent,docs/ref-11.6-quote-contract.md,source_section,contracts（合同）,enum,enum,123;157,144,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06562,user-agent,docs/ref-11.6-quote-contract.md,source_section,contracts（合同）,draft/pending_approval/approved/signed/expired/terminated,draft/pending_approval/approved/signed/expired/terminated,157,144,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06563,user-agent,docs/ref-11.6-quote-contract.md,source_section,contracts（合同）,effectiveDate,effectiveDate,66;158;264,144,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06564,user-agent,docs/ref-11.6-quote-contract.md,source_section,contracts（合同）,date,date,128;142;158;159;166,144,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06565,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,contracts（合同）,生效日期,生效日期,66;158,144,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06566,user-agent,docs/ref-11.6-quote-contract.md,source_section,contracts（合同）,expiryDate,expiryDate,67;159;265,144,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06568,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,contracts（合同）,到期日期,到期日期,67;159,144,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06569,user-agent,docs/ref-11.6-quote-contract.md,source_section,contracts（合同）,signedAt,signedAt,160,144,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06570,user-agent,docs/ref-11.6-quote-contract.md,source_section,contracts（合同）,timestamp,timestamp,127;128;141;142;160;165;166,144,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06571,user-agent,docs/ref-11.6-quote-contract.md,source_section,contracts（合同）,签署时间,签署时间,160,144,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06572,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,contracts（合同）,| signMethod | varchar(20) | 签署方式（offline/electronic）|,| signMethod | varchar(20) | 签署方式（offline/electronic）|,161,144,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06582,user-agent,docs/ref-11.6-quote-contract.md,source_section,contracts（合同）,createdAt,createdAt,127;141;165,144,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06584,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,contracts（合同）,创建时间,创建时间,127;141;165,144,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06585,user-agent,docs/ref-11.6-quote-contract.md,source_section,contracts（合同）,updatedAt,updatedAt,128;142;166,144,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06587,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,contracts（合同）,更新时间,更新时间,128;142;166,144,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06610,user-agent,docs/ref-11.6-quote-contract.md,source_quote;atomic_assertion,报价,审批通过,审批通过,86,30;172;177;179;209,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06616,user-agent,docs/ref-11.6-quote-contract.md,source_section,合同模板,`POST`,`POST`,180,49;130;184;246;296,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06620,user-agent,docs/ref-11.6-quote-contract.md,source_section,合同模板,`GET`,`GET`,177;179;198,49;130;184;246;296,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06630,user-agent,docs/ref-11.6-quote-contract.md,source_quote;atomic_assertion,合同,合同列表,合同列表,269;307,65;74;191;198;253,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06668,user-agent,docs/ref-11.6-quote-contract.md,source_quote;atomic_assertion,边界条件,合同模板版本更新,合同模板版本更新,296,286,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06669,user-agent,docs/ref-11.6-quote-contract.md,source_quote;atomic_assertion,边界条件,已生成的合同不受影响，仅新合同使用新版本,已生成的合同不受影响，仅新合同使用新版本,296,286,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06671,user-agent,docs/ref-11.6-quote-contract.md,source_quote;atomic_assertion,边界条件,返回错误信息，允许重试，保留已生成的字段数据,返回错误信息，允许重试，保留已生成的字段数据,297,286,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06677,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,关联模块,合同关联客户，客户详情页展示合同列表,合同关联客户，客户详情页展示合同列表,307,302,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06681,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,关联模块,报价过期和合同到期提醒由定时任务驱动,报价过期和合同到期提醒由定时任务驱动,309,302,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06686,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,[?] 页面帮助,**页面名称**：报价与合同管理,**页面名称**：报价与合同管理,316,315,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06691,user-agent,docs/ref-11.6-quote-contract.md,source_section,[?] 按钮级帮助对照表,提交审批,提交审批,180,318,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06696,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,[?] 按钮级帮助对照表,选择模板并填充变量后自动生成标准合同内容,选择模板并填充变量后自动生成标准合同内容,324,318,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认
+UA2-06698,user-agent,docs/ref-11.6-quote-contract.md,source_section;source_quote;atomic_assertion,[?] 按钮级帮助对照表,下载 PDF 线下签署后上传扫描件，或在系统内电子签署,下载 PDF 线下签署后上传扫描件，或在系统内电子签署,325,318,gb18030->utf8 x1,NO,REVIEW_CANDIDATE,所有受影响字段均完成整字段可逆转换，且引用/章节可定位；仍需人工确认

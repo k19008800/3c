@@ -1,0 +1,17 @@
+﻿source_path,affected_requirements,source_lines,damaged_source_lines,readable_source_lines,source_damage_ratio,damaged_source_section_fields,damaged_source_quote_fields,damaged_assertion_fields,automatic_action
+docs/PRD-用户体系.md,407,1326,254,1072,0.192,340,127,127,MANUAL_REBUILD
+docs/SPEC-§22-用户端体验增强.md,290,2192,457,1735,0.208,79,243,243,MANUAL_REBUILD
+docs/PRD-管理后台.md,173,1344,240,1104,0.179,150,150,57,MANUAL_REBUILD
+docs/ref-11.6-quote-contract.md,147,326,55,271,0.169,103,51,51,MANUAL_REBUILD
+docs/PRD-运营增长模块.md,135,402,63,339,0.157,45,84,90,MANUAL_REBUILD
+docs/PRD-系统管理员支撑.md,87,442,50,392,0.113,28,67,36,MANUAL_REBUILD
+docs/PRD-核心引擎.md,59,352,72,280,0.205,54,54,13,MANUAL_REBUILD
+docs/PRD-客服支撑模块.md,55,272,24,248,0.088,18,44,18,MANUAL_REBUILD
+docs/PRD-用户端体验增强.md,45,475,55,420,0.116,0,45,45,MANUAL_REBUILD
+docs/PRD-财务模块增强.md,36,303,55,248,0.182,0,20,27,MANUAL_REBUILD
+docs/PRD-代理商支撑增强.md,32,272,34,238,0.125,0,32,32,MANUAL_REBUILD
+docs/PRD-概览与运营模型.md,18,51,14,37,0.275,13,10,10,MANUAL_REBUILD
+docs/PRD-组件库规范.md,17,113,19,94,0.168,0,17,17,MANUAL_REBUILD
+docs/ref-11.5-performance.md,10,249,43,206,0.173,0,10,10,MANUAL_REBUILD
+docs/PRD-第三方集成.md,6,107,11,96,0.103,0,6,6,MANUAL_REBUILD
+docs/PRD-代理商体系.md,5,111,18,93,0.162,0,5,5,MANUAL_REBUILD

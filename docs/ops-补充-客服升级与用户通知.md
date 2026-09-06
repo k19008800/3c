@@ -92,7 +92,7 @@ flowchart TD
 | 用户问计费细节 | 查看 billing_logs 后解释 |
 | 用户说余额不对 | 导出 balance_logs + recharge_orders 核对 |
 | API 返回 429 | 查看 rate_limits 配置，解释限流规则 |
-| 模型响应慢 | 检查供应商健康状态 |
+| 模型响应慢 | 检查渠道健康状态 |
 | Key 无效 | 检查 api_keys 状态，协助用户重新生成 |
 | 用户想退款 | 走退款流程（需财务复审） |
 | 代理佣金不对 | 导出 commission_logs 核对 |

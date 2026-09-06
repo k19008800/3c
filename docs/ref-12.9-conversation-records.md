@@ -13,7 +13,7 @@
 
 **核心价值**：交易纠纷举证（"这笔发出去什么、用的哪把 Key、扣了多少钱"）与政府调证（messages 上文 + 响应原文全量留存）。
 
-**与 `consumption_records` 的关系**：`consumption_records` 只记账（model / tokens / cost / requestId），不存消息内容、实际路由模型、供应商 Key、响应原文；留痕表补齐了举证所需的全部上下文。
+**与 `consumption_records` 的关系**：`consumption_records` 只记账（model / tokens / cost / requestId），不存消息内容、实际路由模型、渠道 Key、响应原文；留痕表补齐了举证所需的全部上下文。
 
 ---
 
@@ -28,8 +28,8 @@
 | `messages` | 请求体 | **全量原样，不脱敏**（用户拍板），jsonb |
 | `responseText` | 上游响应 | 非流式全文；流式聚合全文 |
 | `requestedModel` | 请求体 model | 用户请求的模型名 |
-| `routedModel` | 路由引擎 | 实际路由到的供应商模型 |
-| `supplierId` / `supplierKeyFp` | 路由结果 | 供应商 Key **只存 sha256 指纹**（`fingerprintKey`），不存明文 |
+| `routedModel` | 路由引擎 | 实际路由到的渠道模型 |
+| `supplierId` / `supplierKeyFp` | 路由结果 | 渠道 Key **只存 sha256 指纹**（`fingerprintKey`），不存明文 |
 | `clientKeyHash` | `api_keys.key_hash` | 客户端 Key 指纹，复用现有表 |
 | `status` / `errorCode` | 出口分支 | `succeeded` / `failed`，失败也记（纠纷高频场景"没成功凭什么扣费"） |
 | `inputTokens` / `outputTokens` / `cost` | 计费结果 | 便于与账单对质 |
@@ -42,7 +42,7 @@
 
 菜单：**审计合规 → 💬 对话留痕** → `web-console/src/pages/AdminConversationRecordsPage.tsx`
 
-- **列表**：时间 / 用户 / 请求模型 / 实际路由 / 供应商 / 状态徽章（成功·失败·限流）/ Token / 费用 / 操作
+- **列表**：时间 / 用户 / 请求模型 / 实际路由 / 渠道 / 状态徽章（成功·失败·限流）/ Token / 费用 / 操作
 - **筛选**：关键词（messages 内容全文 `ILIKE`）、请求模型、用户 ID、状态、时间范围
 - **详情回放**：请求 ID、用户、Key 指纹、模型路由、Token、费用、时间、IP + **上文逐条回放** + **响应全文**
 - **导出**：JSON（全量含 messages/responseText）/ CSV（主要字段 + 内容预览截断），上限 5 万条
@@ -174,7 +174,7 @@ interface RetentionConfig {
 | 场景 | 处理方式 |
 |------|---------|
 | 内容敏感 | **全量原样存储、不脱敏**（用户明确要求，供调证） |
-| 供应商 Key 泄露 | 只存 sha256 指纹（`fingerprintKey`），前端仅展示指纹 |
+| 渠道 Key 泄露 | 只存 sha256 指纹（`fingerprintKey`），前端仅展示指纹 |
 | 失败请求 | 一并留痕（`status=failed` + errorCode），供"没成功也扣了/发了什么"举证 |
 | 留痕写入失败 | 旁路吞错，不影响主链路 |
 | 数据量过大 | 保留策略调度器按 `system_config` 配置清理（默认永久保留） |

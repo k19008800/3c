@@ -10,4 +10,5 @@ tags: [kb, index]
 |------|-------------|
 | [[baota]] | Baota |
 | [[credentials]] | Credentials |
+| [[dev-setup]] | 本地开发启动方案 |
 | [[servers]] | Servers |
