@@ -20,8 +20,8 @@
  */
 
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify';
-import { verifyApiKey, extractApiKeyFromHeader, type ApiKeyContext } from '../services/auth/apikey';
-import { relayWebSocket, wsErrorFrame, type WsClientSocket } from '../services/upstream/ws-relay';
+import { verifyApiKey, extractApiKeyFromHeader, type ApiKeyContext } from '../services/auth/apikey.js';
+import { relayWebSocket, wsErrorFrame, type WsClientSocket } from '../services/upstream/ws-relay.js';
 
 /** 握手期鉴权失败信息（query/header key 无效时由 wsApiKeyAuth 写入 request.wsAuthError） */
 export interface WsAuthError {
@@ -97,8 +97,8 @@ function waitForFirstMessage(socket: WsClientSocket, timeoutMs: number): Promise
     }, timeoutMs);
     const cleanup = () => {
       clearTimeout(timer);
-      socket.off?.('message', onMessage as (...args: any[]) => void)
-        ?? socket.removeListener?.('message', onMessage as (...args: any[]) => void);
+      void (socket.off?.('message', onMessage as (...args: any[]) => void)
+        ?? socket.removeListener?.('message', onMessage as (...args: any[]) => void));
     };
     socket.on('message', onMessage as (...args: any[]) => void);
   });

@@ -2,8 +2,8 @@
  * 消费记录服务 — 记录每次 API 调用的 token 消费
  */
 
-import { db, schema } from '../../db';
-import { eq, sql } from 'drizzle-orm';
+import { db, schema } from '../../db/index.js';
+import { sql } from 'drizzle-orm';
 import crypto from 'crypto';
 
 interface ConsumptionInput {

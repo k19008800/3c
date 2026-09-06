@@ -11,7 +11,7 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { readTempAsset } from '../services/upstream/temp-asset-store';
+import { readTempAsset } from '../services/upstream/temp-asset-store.js';
 
 export async function internalAssetsRoutes(app: FastifyInstance) {
   app.get('/internal/assets/:name', async (request, reply) => {

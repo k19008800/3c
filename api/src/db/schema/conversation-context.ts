@@ -10,10 +10,10 @@ import {
   jsonb,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { users } from './users';
-import { apiKeys } from './api-keys';
-import { suppliers } from './suppliers';
-import { supplierModels } from './supplier-models';
+import { users } from './users.js';
+import { apiKeys } from './api-keys.js';
+import { suppliers } from './suppliers.js';
+import { supplierModels } from './supplier-models.js';
 
 /**
  * 对话上下文留痕表 — 每笔 /v1/chat/completions 请求的完整上下文记录

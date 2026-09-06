@@ -1,6 +1,6 @@
 import { pgTable, serial, integer, varchar, pgEnum, timestamp, numeric, text } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { users } from './users';
+import { users } from './users.js';
 
 export const agentLevelEnum = pgEnum('agent_level', [
   'junior',

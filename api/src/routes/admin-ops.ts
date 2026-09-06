@@ -20,13 +20,13 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, desc, inArray, and } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { join, resolve } from 'path';
-import { verifyToken } from '../services/auth/jwt';
-import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError, AppError } from '../lib/errors';
+import { verifyToken } from '../services/auth/jwt.js';
+import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError, AppError } from '../lib/errors.js';
 
 /* ───────── auth / audit helpers ───────── */
 

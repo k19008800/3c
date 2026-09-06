@@ -9,7 +9,7 @@
  *       同一笔消费重复调用只会生成一条佣金。
  */
 
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { eq, and, sql } from 'drizzle-orm';
 
 const round2 = (v: number): number => Math.round(v * 100) / 100;

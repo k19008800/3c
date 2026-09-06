@@ -18,7 +18,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq } from 'drizzle-orm';
 import {
   calcApprovalTier,
@@ -34,7 +34,7 @@ import {
   APPROVAL_LEVEL2_MAX,
   CREDIT_SOFT_LIMIT,
   CREDIT_HARD_LIMIT,
-} from './finance-rules';
+} from './finance-rules.js';
 
 const CFG_KEY = 'finance_rules';
 

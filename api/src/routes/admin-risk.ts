@@ -26,15 +26,15 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { and, asc, desc, eq, gte, like, not, or, sql } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
+import { verifyToken } from '../services/auth/jwt.js';
 import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
-} from '../lib/errors';
+} from '../lib/errors.js';
 
 /* ───────── auth / audit / 通用 helpers ───────── */
 

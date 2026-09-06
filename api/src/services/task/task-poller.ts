@@ -19,8 +19,8 @@
  * @module services/task
  */
 
-import { addBalance } from '../billing/balance';
-import { recordChannelResult } from '../upstream/circuit-breaker';
+import { addBalance } from '../billing/balance.js';
+import { recordChannelResult } from '../upstream/circuit-breaker.js';
 import {
   getSupplierWithKey,
   listInProgressTasks,
@@ -29,7 +29,7 @@ import {
   type TaskRecord,
   type TaskStatus,
   type TaskType,
-} from './task-store';
+} from './task-store.js';
 
 /** 轮询 tick 间隔（30s） */
 export const TASK_POLL_INTERVAL_MS = 30_000;

@@ -16,17 +16,17 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, ne, sql, desc } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
+import { verifyToken } from '../services/auth/jwt.js';
 import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
-} from '../lib/errors';
-import { cacheDel } from '../lib/redis';
-import { groupCacheKey } from '../services/groups';
+} from '../lib/errors.js';
+import { cacheDel } from '../lib/redis.js';
+import { groupCacheKey } from '../services/groups.js';
 
 /* ───────── helpers ───────── */
 

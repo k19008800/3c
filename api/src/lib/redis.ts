@@ -9,7 +9,7 @@
  * @module lib/redis
  */
 
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 
 const DEFAULT_CACHE_TTL_SECONDS = 600;
 

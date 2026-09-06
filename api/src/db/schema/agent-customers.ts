@@ -1,7 +1,7 @@
 import { pgTable, serial, integer, varchar, timestamp } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { agents } from './agents';
-import { users } from './users';
+import { agents } from './agents.js';
+import { users } from './users.js';
 
 export const agentCustomers = pgTable('agent_customers', {
   id: serial('id').primaryKey(),

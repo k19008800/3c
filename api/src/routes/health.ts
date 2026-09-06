@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { sql } from 'drizzle-orm';
 import net from 'node:net';
-import { db } from '../db';
+import { db } from '../db/index.js';
 
 /**
  * 系统健康检查

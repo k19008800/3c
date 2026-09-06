@@ -14,7 +14,7 @@
  * @see services/task/task-poller
  */
 
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { eq, and, inArray } from 'drizzle-orm';
 
 export type TaskType = 'midjourney' | 'suno';

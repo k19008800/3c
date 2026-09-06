@@ -12,9 +12,9 @@
 
 import { describe, it, expect } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { requirePerm } from './require-perm';
-import { hasPerm } from '../lib/permissions';
-import { generateAccessToken } from '../services/auth/jwt';
+import { requirePerm } from './require-perm.js';
+import { hasPerm } from '../lib/permissions.js';
+import { generateAccessToken } from '../services/auth/jwt.js';
 
 // 独立 JWT 密钥（中间件 verifyToken 与测试签发共用同一 process.env 值）
 process.env.JWT_SECRET = 'test-require-perm-secret';
@@ -33,13 +33,18 @@ describe('hasPerm 权限矩阵', () => {
     expect(hasPerm('super_admin', 'any.not.defined.perm')).toBe(false);
   });
 
-  it('admin → 有 finance.topup 与 finance.adjust', () => {
+  it('admin → 有 finance.topup、finance.adjust 与对账差异处理权限', () => {
     expect(hasPerm('admin', 'finance.topup')).toBe(true);
     expect(hasPerm('admin', 'finance.adjust')).toBe(true);
+    expect(hasPerm('admin', 'finance.reconciliation')).toBe(true);
+    expect(hasPerm('admin', 'FINANCE_RECON_APPROVE')).toBe(true);
+    expect(hasPerm('agent', 'FINANCE_RECON_APPROVE')).toBe(false);
   });
 
-  it('finance → 有 finance.topup，无 finance.adjust（A5 裁决）', () => {
+  it('finance → 有 finance.topup/对账差异处理，无 finance.adjust（A5 裁决）', () => {
     expect(hasPerm('finance', 'finance.topup')).toBe(true);
+    expect(hasPerm('finance', 'finance.reconciliation')).toBe(true);
+    expect(hasPerm('finance', 'FINANCE_RECON_APPROVE')).toBe(true);
     expect(hasPerm('finance', 'finance.adjust')).toBe(false);
   });
 

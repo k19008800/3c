@@ -14,26 +14,37 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
-import { eq, and, desc, sql, inArray } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { getBalance, creditBalance } from '../services/billing/balance';
-import { adjustLedgerAvailable, clearNegativeFlag } from '../services/billing/ledger';
-import { notifyUser } from '../services/notify';
-import { requirePerm } from '../middleware/require-perm';
-import { requireOperation2fa } from '../middleware/require-operation-2fa';
-import { calcApprovalTier, getApprovalRules } from '../lib/finance-rules';
-import { AppError, UnauthorizedError, ValidationError, ForbiddenError } from '../lib/errors';
+import crypto from 'node:crypto';
+import { db, schema } from '../db/index.js';
+import { eq, and, desc, sql, inArray, gte, lte } from 'drizzle-orm';
+import { verifyToken } from '../services/auth/jwt.js';
+import { getBalance, creditBalance } from '../services/billing/balance.js';
+import { adjustLedgerAvailable, clearNegativeFlag } from '../services/billing/ledger.js';
+import { notifyUser } from '../services/notify.js';
+import { requirePerm } from '../middleware/require-perm.js';
+import { requireOperation2fa } from '../middleware/require-operation-2fa.js';
+import {
+  resolveIdempotencyKey,
+  acquireIdempotencyLock,
+  releaseIdempotencyLock,
+  cacheIdempotentResponse,
+  getCachedIdempotentResponse,
+  isIdempotencyUniqueViolation,
+  IDEMPOTENCY_TTL_SECONDS,
+  type IdempotencyCachedEntry,
+} from '../services/idempotency.js';
+import { calcApprovalTier, getApprovalRules } from '../lib/finance-rules.js';
+import { AppError, UnauthorizedError, ValidationError, ForbiddenError, IdempotencyUnavailableError } from '../lib/errors.js';
 import {
   buildApprovalMeta,
   resolveOrderApproval,
   nextPhaseAfterApprove,
   approveStagePatch,
   type RechargeApprovalPhase,
-} from '../services/billing/recharge-approval';
+} from '../services/billing/recharge-approval.js';
 // campaign_coupon_codes 未从 db/schema/index.ts 导出（该文件禁改），直接从表定义导入
-import { campaignCouponCodes } from '../db/schema/coupons';
-import { parsePaymentConfig } from './admin-payment';
+import { campaignCouponCodes } from '../db/schema/coupons.js';
+import { parsePaymentConfig } from './admin-payment.js';
 
 // ── auth ─────────────────────────────────────────────
 async function jwtAuth(request: any, _reply: any) {
@@ -84,6 +95,35 @@ function userStatus(s: string): string {
   return s;
 }
 
+/** 充值记录支付方式标签（TopupRecordsPage 显示；含专用键 bank/usdt） */
+const RECORD_METHOD_LABEL: Record<string, string> = {
+  alipay: '支付宝',
+  wechat: '微信支付',
+  bank_transfer: '对公转账',
+  bank: '银行转账',
+  usdt: 'USDT',
+  qq: 'QQ钱包',
+  manual: '人工上账',
+};
+
+/** DB status → 充值记录前端状态（TopupRecordsPage 用 completed/pending/rejected/cancelled/refunded） */
+const RECORD_STATUS: Record<string, string> = {
+  paid: 'completed',
+  pending: 'pending',
+  failed: 'rejected',
+  cancelled: 'cancelled',
+  refunded: 'refunded',
+};
+
+/** 充值记录状态标签 */
+const RECORD_STATUS_LABEL: Record<string, string> = {
+  completed: '充值成功',
+  pending: '待审核',
+  rejected: '已驳回',
+  cancelled: '已取消',
+  refunded: '已退款',
+};
+
 const ALLOWED_METHODS = ['bank_transfer', 'alipay', 'wechat', 'qq'];
 const MAX_AMOUNT = 1_000_000;
 
@@ -116,14 +156,37 @@ export async function rechargeRoutes(app: FastifyInstance) {
     if (!ALLOWED_METHODS.includes(method)) throw new ValidationError('不支持的支付方式');
 
     const uid = userId(request);
+    const requestFingerprint = crypto.createHash('sha256')
+      .update(JSON.stringify({ user_id: uid, amount: amount.toFixed(2), payment_method: method }))
+      .digest('hex');
+    const idemKey = resolveIdempotencyKey(request as { headers: Record<string, string | string[] | undefined> }, crypto.randomUUID());
+    // 资金写路径严格模式（failClosed）：Redis 幂等锁不可用必须 503，不得静默降级绕过
+    const idem = await acquireIdempotencyLock(idemKey, IDEMPOTENCY_TTL_SECONDS, { failClosed: true });
+    if (idem.status === 'unavailable') {
+      throw new IdempotencyUnavailableError({ requestId: idemKey });
+    }
+    if (idem.status === 'duplicate') {
+      const cached = await getCachedIdempotentResponse(idemKey);
+      if (cached?.body !== undefined) {
+        if (cached.request_fingerprint !== requestFingerprint) {
+          throw new AppError('相同幂等键不可用于不同充值请求', 409, 'IDEMPOTENCY_CONFLICT');
+        }
+        reply.header('X-Idempotent-Replay', 'true');
+        return reply.send(cached.body);
+      }
+      throw new AppError('充值请求正在处理中或已存在', 409, 'IDEMPOTENCY_CONFLICT');
+    }
+    const lockToken = idem.status === 'acquired' ? idem.token : null;
     const orderNo = genOrderNo();
     // R5（ARCH v1.1 §2.2.2）：用户自助充值单创建时按金额定级并固化（B18 提交时点，
     // Q12 用户自助单同样分级）；不计入 R6 限额（B10/Q8：充值审核不计入任何维度），
     // 因此 limit_check 为 null、limit_escalated=false。
     const approvalRules = await getApprovalRules();
     const level = calcApprovalTier(amount, 'increase', approvalRules);
-    const [order] = await db
-      .insert(schema.rechargeOrders)
+    let order: typeof schema.rechargeOrders.$inferSelect | undefined;
+    try {
+      [order] = await db
+        .insert(schema.rechargeOrders)
       .values({
         userId: uid,
         orderNo,
@@ -131,6 +194,7 @@ export async function rechargeRoutes(app: FastifyInstance) {
         currency: 'CNY',
         method,
         status: 'pending',
+        idempotencyKey: idemKey,
         metadata: {
           source: 'web',
           approval: buildApprovalMeta(level, null),
@@ -139,9 +203,20 @@ export async function rechargeRoutes(app: FastifyInstance) {
           limit_escalated: false,
         },
       })
-      .returning();
+        .returning();
+    } catch (err) {
+      if (isIdempotencyUniqueViolation(err)) {
+        if (lockToken) await releaseIdempotencyLock(idemKey, lockToken);
+        throw new AppError('相同幂等键的充值订单已存在', 409, 'IDEMPOTENCY_CONFLICT');
+      }
+      if (lockToken) await releaseIdempotencyLock(idemKey, lockToken);
+      throw err;
+    }
 
-    if (!order) throw new AppError('Failed to create order', 500, 'ORDER_CREATE_FAILED');
+    if (!order) {
+      if (lockToken) await releaseIdempotencyLock(idemKey, lockToken);
+      throw new AppError('Failed to create order', 500, 'ORDER_CREATE_FAILED');
+    }
 
     // 支付配置（后台可配置）：对公账户 + 通道启停
     const payCfg = parsePaymentConfig((await db.select({ value: schema.systemConfig.value })
@@ -168,7 +243,26 @@ export async function rechargeRoutes(app: FastifyInstance) {
       data.expires_at = new Date(Date.now() + 30 * 60 * 1000).toISOString();
       data.channel_enabled = !!channelEnabled;
     }
-    return reply.status(201).send({ data });
+    const responseBody = { data };
+    const cacheEntry: IdempotencyCachedEntry = {
+      streamed: false,
+      body: responseBody,
+      request_fingerprint: requestFingerprint,
+      summary: {
+        idempotent_replay: false,
+        model: 'recharge',
+        input_tokens: 0,
+        output_tokens: 0,
+        total_tokens: 0,
+        cost: String(amount.toFixed(2)),
+        finish_reason: null,
+        streamed: false,
+        request_id: idemKey,
+      },
+    };
+    await cacheIdempotentResponse(idemKey, cacheEntry);
+    // 成功请求的 Redis 锁保留至 TTL，防止幂等窗口内重复创建；degraded 无需释放。
+    return reply.status(201).send(responseBody);
   });
 
   /** GET /api/v1/me/recharge-orders — 我的充值订单 */
@@ -301,6 +395,109 @@ export async function rechargeRoutes(app: FastifyInstance) {
         message: '兑换成功',
       },
     });
+  });
+
+  /** GET /api/v1/me/recharge/records — 我的充值记录（TopupRecordsPage 契约）
+   *
+   * P：page（默认1）、page_size（默认20，上限于10_000 以支持 CSV 导出）
+   * 时间筛选：?days=7|30|90（近 N 天）或 ?start_date+end_date（自定义，ISO 日期串）。
+   * 返回 { data: { list, total } }，金额为元（不复乘 100）。
+   */
+  app.get('/api/v1/me/recharge/records', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const q = (request.query || {}) as { page?: string; page_size?: string; days?: string; start_date?: string; end_date?: string };
+    const page = Math.max(parseInt(q.page ?? '1', 10) || 1, 1);
+    const pageSize = Math.min(Math.max(parseInt(q.page_size ?? '20', 10) || 20, 1), 10_000);
+    const uid = userId(request);
+
+    const conditions: any[] = [eq(schema.rechargeOrders.userId, uid)];
+
+    const daysRaw = q.days == null ? NaN : parseInt(String(q.days), 10);
+    const days = Number.isFinite(daysRaw) ? daysRaw : NaN;
+    if (Number.isFinite(days) && [7, 30, 90].includes(days)) {
+      conditions.push(sql`${schema.rechargeOrders.createdAt} >= now() - (${days} || ' days')::interval`);
+    }
+    const startDate = q.start_date ? String(q.start_date).trim() : '';
+    const endDate = q.end_date ? String(q.end_date).trim() : '';
+    if (startDate && /^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+      conditions.push(gte(schema.rechargeOrders.createdAt, new Date(`${startDate}T00:00:00.000`)));
+    }
+    if (endDate && /^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      conditions.push(lte(schema.rechargeOrders.createdAt, new Date(`${endDate}T23:59:59.999`)));
+    }
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [rows, countResult] = await Promise.all([
+      db
+        .select()
+        .from(schema.rechargeOrders)
+        .where(whereClause)
+        .orderBy(desc(schema.rechargeOrders.createdAt))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize),
+      db.select({ count: sql<number>`count(*)::int` }).from(schema.rechargeOrders)
+        .where(whereClause),
+    ]);
+
+    const list = rows.map((r) => {
+      const meta = (r.metadata ?? {}) as Record<string, unknown>;
+      const status = RECORD_STATUS[r.status] ?? r.status;
+      return {
+        id: r.id,
+        order_id: r.orderNo,
+        amount: Number(r.amount), // 元
+        payment_method: r.method,
+        method_label: RECORD_METHOD_LABEL[r.method] ?? r.method,
+        status,
+        status_label: RECORD_STATUS_LABEL[status] ?? status,
+        create_time: r.createdAt,
+        complete_time: r.paidAt,
+        payer: null,
+        trade_no: (meta.transfer_no as string) ?? null,
+        remark: r.note,
+        voucher: null,
+        reject_reason: (meta.review_note as string) ?? null,
+      };
+    });
+
+    return reply.send({
+      data: { list, total: Number(countResult[0]?.count ?? 0) },
+    });
+  });
+
+  /** GET /api/v1/me/redemption/history — 我的兑换历史（RedemptionPage 契约）
+   *
+   * campaign_coupon_codes JOIN coupon_codes，取 used_by=uid 且 status='used' 的已兑换码。
+   * 返回 { data: { list } }，金额为元（face_value 元，不复乘 100）。按 usedAt 倒序。
+   */
+  app.get('/api/v1/me/redemption/history', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const q = (request.query || {}) as { page_size?: string };
+    const pageSize = Math.min(Math.max(parseInt(q.page_size ?? '20', 10) || 20, 1), 100);
+    const uid = userId(request);
+
+    const rows = await db
+      .select({
+        id: campaignCouponCodes.id,
+        code: campaignCouponCodes.code,
+        faceValue: schema.couponCodes.faceValue,
+        batchName: schema.couponCodes.batchName,
+        usedAt: campaignCouponCodes.usedAt,
+        createdAt: campaignCouponCodes.createdAt,
+      })
+      .from(campaignCouponCodes)
+      .innerJoin(schema.couponCodes, eq(schema.couponCodes.id, campaignCouponCodes.campaignId))
+      .where(and(eq(campaignCouponCodes.usedBy, uid), eq(campaignCouponCodes.status, 'used')))
+      .orderBy(desc(campaignCouponCodes.usedAt))
+      .limit(pageSize);
+
+    const list = rows.map((c) => ({
+      id: c.id,
+      code: c.code,
+      amount: Number(c.faceValue), // 元
+      batch_name: c.batchName ?? null,
+      created_at: c.usedAt ?? c.createdAt,
+    }));
+
+    return reply.send({ data: { list } });
   });
 
   // ═══ 管理端 ═══

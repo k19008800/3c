@@ -17,8 +17,8 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
-import { buildApp } from '../app';
-import { runTempCleanupOnce, startTempCleanupScheduler } from '../services/upstream/temp-cleanup';
+import { buildApp } from '../app.js';
+import { runTempCleanupOnce, startTempCleanupScheduler } from '../services/upstream/temp-cleanup.js';
 
 const testEnv = {
   LOG_LEVEL: 'error',
@@ -54,7 +54,7 @@ describe('Vendor Alias + Disk Cache Loop', () => {
     startTempCleanupScheduler(app);
     await app.ready();
 
-    const { db, schema } = await import('../db');
+    const { db, schema } = await import('../db/index.js');
     const { eq } = await import('drizzle-orm');
 
     // ── Admin ──
@@ -208,7 +208,7 @@ describe('Vendor Alias + Disk Cache Loop', () => {
       expect(body.data.description).toBe('别名更新描述');
       expect(body.data.status).toBe('maintenance');
 
-      const { db, schema } = await import('../db');
+      const { db, schema } = await import('../db/index.js');
       const { eq, and } = await import('drizzle-orm');
       const [audit] = await db.select({ id: schema.auditLogs.id })
         .from(schema.auditLogs)

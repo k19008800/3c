@@ -17,7 +17,7 @@
  * @module services/upstream
  */
 
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { eq } from 'drizzle-orm';
 
 // ============================================================

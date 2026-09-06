@@ -19,11 +19,12 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, desc, sql, inArray, count } from 'drizzle-orm';
-import { isWindowParam, foldModelStats, activeModelCatalog, buildModelStat } from '../services/marketplace/health-queries';
-import { HEALTH_ORDER } from '../lib/latency';
-import { buildApiConfig, DEFAULT_API_DOMAIN } from '../services/config/api-domain';
+import { isWindowParam, foldModelStats, activeModelCatalog, buildModelStat } from '../services/marketplace/health-queries.js';
+import { HEALTH_ORDER } from '../lib/latency.js';
+import { buildApiConfig, DEFAULT_API_DOMAIN } from '../services/config/api-domain.js';
+import { normalizeI18nLang, parseI18nScopes } from '../lib/i18n-langs.js';
 
 /** 门户 i18n 默认语言（未传 lang 时） */
 const DEFAULT_PORTAL_LANG = 'zh-CN';
@@ -243,17 +244,30 @@ export async function publicRoutes(app: FastifyInstance) {
   });
 
   /**
-   * GET /api/v1/public/i18n/entries — 门户 i18n 词典（P2-3）
+   * GET /api/v1/public/i18n/entries — 门户 i18n 词典（P2-3 + Gate-1 scope 扩展）
    *
-   * query: lang（缺省 zh-CN）。只返回 status='active' 且 scope='portal' 的条目，
-   * 响应格式为 { key: value } 映射，Portal 服务端按 lang 拉取后渲染；
-   * 未翻译的 key 由前端回退英文源语（EN_DEFAULTS）。
+   * query:
+   *   · lang  — 语言代码（缺省 zh-CN）。过白名单归一（zh_cn→zh-CN 等），
+   *             非法值容忍回退默认 zh-CN（公开接口不 400）。
+   *   · scope — 作用域，可逗号分隔多值或重复传（`?scope=console,common`），
+   *             缺省时**向后兼容**只返回 `scope='portal'`。
+   *             动态 scope（error/email/notification）默认排除，仅显式传入才返回。
+   *
+   * 响应：`{ data: { key: value }, lang: "<规范>", scope: ["console","common"] }`
+   * 保持既有 `{ data: map }` 形态（新增 lang/scope 字段不破坏旧消费）。
+   *
+   * 缓存：词典变更频率低 → `Cache-Control: public, max-age=300`（原 no-store）。
+   * 所有 scope 过滤均限 `status='active'`。
    *
    * @see docs/SPEC-§23-系统级能力增强.md §23.4
+   * @see docs/多语言i18n改造方案.md §2.3 / §2.4（Gate-1）
    */
   app.get('/api/v1/public/i18n/entries', async (request, reply) => {
-    const q = (request.query || {}) as Record<string, string | undefined>;
-    const lang = (q.lang || DEFAULT_PORTAL_LANG).trim();
+    const q = (request.query || {}) as Record<string, unknown>;
+    // 语言归一：合法 → 规范形；非法/空 → 默认 zh-CN（公开接口容忍）
+    const lang = normalizeI18nLang(String(q.lang ?? '')) ?? DEFAULT_PORTAL_LANG;
+    // scope 解析（纯函数，兼容逗号分隔 / 重复传参；缺省回退 portal）
+    const scopes = parseI18nScopes(q.scope as string | string[] | undefined);
 
     const rows = await db.select({
       key: schema.i18nEntries.key,
@@ -262,14 +276,15 @@ export async function publicRoutes(app: FastifyInstance) {
       .from(schema.i18nEntries)
       .where(and(
         eq(schema.i18nEntries.lang, lang),
-        eq(schema.i18nEntries.scope, 'portal'),
+        inArray(schema.i18nEntries.scope, scopes),
         eq(schema.i18nEntries.status, 'active'),
       ));
 
     const map: Record<string, string> = {};
     for (const r of rows) map[r.key] = r.value;
 
-    return reply.send({ data: map });
+    reply.header('Cache-Control', 'public, max-age=300');
+    return reply.send({ data: map, lang, scope: scopes });
   });
 
   /**
@@ -352,5 +367,104 @@ export async function publicRoutes(app: FastifyInstance) {
         updated_at: row.updatedAt,
       },
     });
+  });
+
+  /**
+   * GET /api/v1/models/:name/channels — 单模型渠道定价（VendorSelectorPage）
+   *
+   * 无鉴权（public 域），登录控制台与门户共用同一数据源。
+   * 数据源：supplier_models × suppliers（按 supplier_id join），WHERE model_name = :name
+   * 且排除 R8 测试模型。一个渠道 = 提供该模型的 1 个供应商。
+   *
+   * 字段映射（对照 web-console/src/lib/channelization.ts 的 ChannelPricingRow）：
+   *   channel_code             → suppliers.code（供应商编码；缺省回退 supplier id 字符串）
+   *   channel_name             → suppliers.name
+   *   input_price/output_price → Number(inputPrice/outputPrice)，非法/空 → null
+   *   cache_read/write_input   → supplier_models.cost_cache_read/write_input_price（可空）
+   *   pricing_group            → null（无来源）
+   *   status                   → 由供应商状态 + 模型状态联合推导：
+   *                               模型 inactive/deprecated 或 供应商 offline/deprecated → 'offline'
+   *                               供应商 maintenance                        → 'maintenance'
+   *                               其余（可服务）                              → 'active'
+   *   maintenance              → 供应商状态 === 'maintenance'
+   *   health                   → suppliers.healthStatus 数值化（healthy=100 / degraded=50 / down=0 / unknown=null）
+   *   latency_ms               → null（本端点不做实时延迟采样）
+   *   recommended              → null（暂无推荐策略）
+   *   credit                   → null（suppliers/supplier_models 无信用评级列）
+   *
+   * 模型无供应商行时返回 `{ data: { model, channels: [] } }`（200，非 404）。
+   */
+  app.get('/api/v1/models/:name/channels', async (request, reply) => {
+    const name = String((request.params as { name?: string }).name ?? '').trim();
+
+    const rows = await db.select({
+      supId: schema.suppliers.id,
+      supName: schema.suppliers.name,
+      supCode: schema.suppliers.code,
+      supStatus: schema.suppliers.status,
+      supHealth: schema.suppliers.healthStatus,
+      modelStatus: schema.supplierModels.status,
+      inputPrice: schema.supplierModels.inputPrice,
+      outputPrice: schema.supplierModels.outputPrice,
+      cacheRead: schema.supplierModels.costCacheReadInputPrice,
+      cacheWrite: schema.supplierModels.costCacheWriteInputPrice,
+    })
+      .from(schema.supplierModels)
+      .innerJoin(schema.suppliers, eq(schema.supplierModels.supplierId, schema.suppliers.id))
+      .where(and(
+        eq(schema.supplierModels.modelName, name),
+        // R8：渠道目录同理过滤测试模型（与 /public/models 同源口径）
+        sql`${schema.supplierModels.modelName} NOT LIKE 'market-test-%'
+            AND ${schema.supplierModels.modelName} NOT LIKE 'alias-%'
+            AND ${schema.supplierModels.modelName} NOT LIKE 'compat-%'
+            AND ${schema.supplierModels.modelName} NOT LIKE 'verify-%'`,
+      ))
+      .orderBy(schema.suppliers.id);
+
+    function healthToScore(health: string | null | undefined): number | null {
+      if (health === 'healthy') return 100;
+      if (health === 'degraded') return 50;
+      if (health === 'down') return 0;
+      return null; // 'unknown' / 空白
+    }
+
+    function price(v: string | null | undefined): number | null {
+      if (v == null || v === '') return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    const channels = rows.map((r) => {
+      const maintenance = r.supStatus === 'maintenance';
+      let status: string;
+      if (
+        r.modelStatus === 'inactive' || r.modelStatus === 'deprecated'
+        || r.supStatus === 'offline' || r.supStatus === 'deprecated'
+      ) {
+        status = 'offline';
+      } else if (maintenance) {
+        status = 'maintenance';
+      } else {
+        status = 'active';
+      }
+
+      return {
+        channel_code: r.supCode ?? String(r.supId),
+        channel_name: r.supName,
+        input_price: price(r.inputPrice),
+        output_price: price(r.outputPrice),
+        cache_read_input_price: price(r.cacheRead),
+        cache_write_input_price: price(r.cacheWrite),
+        pricing_group: null,
+        status,
+        health: healthToScore(r.supHealth),
+        latency_ms: null,
+        recommended: null,
+        credit: null,
+        maintenance,
+      };
+    });
+
+    return reply.send({ data: { model: name, channels } });
   });
 }

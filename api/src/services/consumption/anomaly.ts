@@ -6,7 +6,7 @@
  *
  * 阈值是代码常量（默认值，后续可升级为数据库可配置）。周期键 period_key = UTC+8 日期 YYYY-MM-DD。
  */
-import { db, schema } from '../../db';
+import { db } from '../../db/index.js';
 import { sql } from 'drizzle-orm';
 
 /** 单次消费异常阈值（¥） */

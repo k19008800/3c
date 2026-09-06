@@ -12,7 +12,7 @@
  * @see docs/iteration-plan-v2.md P0-4 多模态预处理挂载
  */
 
-import { storeTempAsset, getAssetBaseUrl } from './temp-asset-store';
+import { storeTempAsset, getAssetBaseUrl } from './temp-asset-store.js';
 
 interface MultimodalContent {
   type: 'image_url' | 'image' | 'audio' | 'video';

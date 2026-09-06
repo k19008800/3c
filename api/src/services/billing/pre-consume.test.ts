@@ -22,10 +22,10 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
-import { getRedis } from '../../lib/redis';
+import { getRedis } from '../../lib/redis.js';
 import {
   shouldBypass,
   preConsume,
@@ -34,14 +34,14 @@ import {
   cleanupExpiredFreezes,
   invalidateThresholdCache,
   NEGATIVE_BALANCE_RULE_NAME,
-} from './pre-consume';
-import { PreConsumeFailedError } from '../../lib/errors';
-import { getBalance, addBalance } from './balance';
-import { settleBilling } from './settle';
-import { computeCost } from './pricing';
-import { determineStreamBilling } from './settle-stream';
-import { balanceLedgerKey, freezeRecordKey, freezeExpiryKey, negativeFlagKey, toLedgerUnits } from './ledger';
-import type { PipelineContext } from '../pipeline/types';
+} from './pre-consume.js';
+import { PreConsumeFailedError } from '../../lib/errors.js';
+import { getBalance, addBalance } from './balance.js';
+import { settleBilling } from './settle.js';
+import { computeCost } from './pricing.js';
+import { determineStreamBilling } from './settle-stream.js';
+import { balanceLedgerKey, freezeRecordKey, freezeExpiryKey, negativeFlagKey, toLedgerUnits } from './ledger.js';
+import type { PipelineContext } from '../pipeline/types.js';
 
 /** 生成唯一后缀（用户邮箱 / requestId 用） */
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

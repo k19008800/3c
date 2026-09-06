@@ -6,4 +6,4 @@
 -- 未填写 transfer_no 的存量/新建行（NULL）不受限，无需数据回填。
 -- 并发窗口兜底：应用层存在性校验（见 admin-finance-missing.ts 创建端点）之外，
 -- 并发双写由本唯一索引拒绝（23505 → 路由层转 409 TRANSFER_NO_DUPLICATE）。
-CREATE UNIQUE INDEX uq_recharge_orders_transfer_no ON recharge_orders ((metadata->>'transfer_no')) WHERE metadata->>'transfer_no' IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_recharge_orders_transfer_no ON recharge_orders ((metadata->>'transfer_no')) WHERE metadata->>'transfer_no' IS NOT NULL;

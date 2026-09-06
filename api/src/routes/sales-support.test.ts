@@ -31,15 +31,15 @@ vi.mock('../services/auth/jwt', () => ({
 }));
 
 vi.mock('../db', async () => {
-  const schemaModule = await import('../db/schema/index');
-  const { createFakeDb } = await import('./helpers/fake-db');
+  const schemaModule = await import('../db/schema/index.js');
+  const { createFakeDb } = await import('./helpers/fake-db.js');
   const db = createFakeDb(schemaModule);
   return { db, schema: schemaModule };
 });
 
-import { db, schema } from '../db';
-import { adminSupportExtraRoutes } from './admin-support-extra';
-import { meSalesRoutes } from './me-sales';
+import { db, schema } from '../db/index.js';
+import { adminSupportExtraRoutes } from './admin-support-extra.js';
+import { meSalesRoutes } from './me-sales.js';
 
 /**
  * 测试用假 DB 的辅助方法（运行时由 vi.mock 注入；类型上绕过真实 drizzle 实例，

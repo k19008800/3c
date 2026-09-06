@@ -20,10 +20,10 @@
  * 金额单位：DB/管理端为「元」（numeric 18,4），代理商端契约为「分」（×100/÷100）。
  */
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, sql, desc, gte, lte } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { UnauthorizedError, NotFoundError, ValidationError, AppError } from '../lib/errors';
+import { verifyToken } from '../services/auth/jwt.js';
+import { UnauthorizedError, NotFoundError, ValidationError, AppError } from '../lib/errors.js';
 import {
   listAgentSettlements,
   getAgentSettlementDetail,
@@ -32,7 +32,7 @@ import {
   getActiveInviteCode,
   regenerateInviteCode,
   listInviteRecords,
-} from '../services/agent/settlement';
+} from '../services/agent/settlement.js';
 
 async function jwtAuth(request: any, _reply: any) {
   const authHeader = request.headers.authorization;
@@ -59,7 +59,6 @@ async function requireAgent(request: any) {
 }
 
 const yuanToCents = (v: unknown): number => Math.round(Number(v ?? 0) * 100);
-const centsToYuan = (v: number): string => (v / 100).toFixed(4);
 
 function monthRange(): { start: Date; end: Date } {
   const now = new Date();

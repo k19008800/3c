@@ -1,6 +1,6 @@
-import { pgTable, serial, integer, varchar, timestamp, numeric, jsonb, text, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, serial, integer, varchar, timestamp, numeric, jsonb, uniqueIndex } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { users } from './users';
+import { users } from './users.js';
 
 /**
  * 消费异常事件表 — 后台「消费运营 → 消费异常检测」页面的数据源。

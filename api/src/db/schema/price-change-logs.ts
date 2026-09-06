@@ -1,5 +1,5 @@
-import { pgTable, serial, integer, varchar, timestamp, boolean, text, numeric } from 'drizzle-orm/pg-core';
-import { supplierModels } from './supplier-models';
+import { pgTable, serial, integer, varchar, timestamp, boolean, numeric } from 'drizzle-orm/pg-core';
+import { supplierModels } from './supplier-models.js';
 
 /**
  * 价格变更日志 — 销售价（vendor_pricing）变更时写入

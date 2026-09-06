@@ -12,14 +12,14 @@
 
 import type { FastifyInstance } from 'fastify';
 import crypto from 'crypto';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, sql, count } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { hashApiKey } from '../services/auth/apikey';
-import { UnauthorizedError, NotFoundError, ValidationError } from '../lib/errors';
+import { verifyToken } from '../services/auth/jwt.js';
+import { hashApiKey } from '../services/auth/apikey.js';
+import { UnauthorizedError, NotFoundError, ValidationError } from '../lib/errors.js';
 
 // Helper: JWT auth middleware (extracts user from Authorization header)
-async function jwtAuth(request: any, reply: any) {
+async function jwtAuth(request: any, _reply: any) {
   const authHeader = request.headers.authorization;
   const token = authHeader?.split(' ')[1];
   if (!token) throw new UnauthorizedError('Missing token');

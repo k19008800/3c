@@ -21,9 +21,9 @@
  * @module services/billing
  */
 
-import { getRedis } from '../../lib/redis';
-import type Redis from 'ioredis';
-import { db, schema } from '../../db';
+import { getRedis } from '../../lib/redis.js';
+import type { Redis } from 'ioredis';
+import { db, schema } from '../../db/index.js';
 import { eq } from 'drizzle-orm';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -139,16 +139,11 @@ export async function ensureLedger(userId: number): Promise<Redis> {
 
   const key = balanceLedgerKey(userId);
   // 残留 STRING（两段式初始化崩溃遗留）→ 删除重建；HASH 存在则复用
-  try {
-    if ((await r.exists(key)) === 0) {
-      await initLedgerFromPg(userId, r);
-    } else if ((await r.type(key)) !== 'hash') {
-      await r.del(key);
-      await initLedgerFromPg(userId, r);
-    }
-  } catch (err) {
-    // 初始化失败 → 抛错（调用方 fail-open 旁路）
-    throw err;
+  if ((await r.exists(key)) === 0) {
+    await initLedgerFromPg(userId, r);
+  } else if ((await r.type(key)) !== 'hash') {
+    await r.del(key);
+    await initLedgerFromPg(userId, r);
   }
   return r;
 }

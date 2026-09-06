@@ -9,7 +9,7 @@ import {
   numeric,
   jsonb,
 } from 'drizzle-orm/pg-core';
-import { users } from './users';
+import { users } from './users.js';
 
 /**
  * 实名认证记录表

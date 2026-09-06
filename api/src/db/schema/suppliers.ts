@@ -1,7 +1,7 @@
-import { pgTable, serial, varchar, pgEnum, timestamp, integer, text, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, pgEnum, timestamp, text, jsonb } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { supplierKeys } from './supplier-keys';
-import { supplierModels } from './supplier-models';
+import { supplierKeys } from './supplier-keys.js';
+import { supplierModels } from './supplier-models.js';
 
 export const supplierStatusEnum = pgEnum('supplier_status', [
   'active',

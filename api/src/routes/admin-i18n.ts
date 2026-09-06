@@ -25,10 +25,11 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, like, desc, count, inArray } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError } from '../lib/errors';
+import { verifyToken } from '../services/auth/jwt.js';
+import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError } from '../lib/errors.js';
+import { normalizeI18nLang, I18N_LANGS } from '../lib/i18n-langs.js';
 
 /** 允许的 scope 值（portal=门户默认；console/admin/error/email/notification 供管理页分组） */
 const SUPPORTED_SCOPES = ['portal', 'console', 'common', 'admin', 'error', 'email', 'notification'];
@@ -38,6 +39,25 @@ const SUPPORTED_STATUSES = ['active', 'disabled'];
 const KEY_MAX_LENGTH = 200;
 /** lang 最长长度（对齐表 varchar(10)） */
 const LANG_MAX_LENGTH = 10;
+
+/**
+ * 校验并归一语言代码（Gate-1 数据面根因：杜绝脏语言分裂同一 key 的唯一键）
+ *
+ * @param lang - 原始语言代码（如 `zh_cn` / `en_us`），须先去空白
+ * @param field - 字段名（错误提示用，默认 'lang'）
+ * @returns 规范化后的规范 I18nLang
+ * @throws {ValidationError} 空 / 超长 / 非白名单 → 400
+ */
+function requireValidLang(lang: string, field = 'lang'): string {
+  if (!lang || lang.length > LANG_MAX_LENGTH) {
+    throw new ValidationError(`${field} 必填且不超过 ${LANG_MAX_LENGTH} 字符`);
+  }
+  const normalized = normalizeI18nLang(lang);
+  if (!normalized) {
+    throw new ValidationError(`${field} 仅支持: ${I18N_LANGS.join('/')}`);
+  }
+  return normalized;
+}
 
 /* ───────── auth / audit helpers ───────── */
 
@@ -154,19 +174,20 @@ export async function adminI18nRoutes(app: FastifyInstance) {
     const status = String(b.status ?? 'active').trim();
 
     if (!key || key.length > KEY_MAX_LENGTH) throw new ValidationError(`key 必填且不超过 ${KEY_MAX_LENGTH} 字符`);
-    if (!lang || lang.length > LANG_MAX_LENGTH) throw new ValidationError(`lang 必填且不超过 ${LANG_MAX_LENGTH} 字符`);
+    // Gate-1：lang 过白名单归一（非仅限长度），非法 → 400
+    const normalizedLang = requireValidLang(lang);
     if (!value) throw new ValidationError('value 不能为空');
     if (!SUPPORTED_SCOPES.includes(scope)) throw new ValidationError(`scope 仅支持: ${SUPPORTED_SCOPES.join('/')}`);
     if (!SUPPORTED_STATUSES.includes(status)) throw new ValidationError(`status 仅支持: ${SUPPORTED_STATUSES.join('/')}`);
 
     const [exists] = await db.select({ id: schema.i18nEntries.id })
       .from(schema.i18nEntries)
-      .where(and(eq(schema.i18nEntries.key, key), eq(schema.i18nEntries.lang, lang)))
+      .where(and(eq(schema.i18nEntries.key, key), eq(schema.i18nEntries.lang, normalizedLang)))
       .limit(1);
     if (exists) {
       return reply.status(409).send({
         code: 409,
-        message: `已存在相同 key+lang 的翻译条目（key=${key}, lang=${lang}），请用 PUT 更新或先恢复`,
+        message: `已存在相同 key+lang 的翻译条目（key=${key}, lang=${normalizedLang}），请用 PUT 更新或先恢复`,
         requestId: request.id,
       });
     }
@@ -174,7 +195,7 @@ export async function adminI18nRoutes(app: FastifyInstance) {
     const ctx = (request as any).userContext ?? {};
     const [row] = await db.insert(schema.i18nEntries).values({
       key,
-      lang,
+      lang: normalizedLang,
       value,
       scope,
       status,
@@ -204,6 +225,11 @@ export async function adminI18nRoutes(app: FastifyInstance) {
 
     const b = (request.body || {}) as Record<string, unknown>;
     const setData: Record<string, unknown> = { updatedAt: new Date() };
+    if (b.lang !== undefined) {
+      // lang 是 (key, lang) 唯一键的一部分，不允许通过 PUT 修改；仍过白名单防脏语言
+      requireValidLang(String(b.lang));
+      throw new ValidationError('lang 不可修改（请删除该条目后重新创建）');
+    }
     if (b.value !== undefined) {
       if (typeof b.value !== 'string' || !b.value) throw new ValidationError('value 不能为空');
       setData.value = b.value;
@@ -307,9 +333,10 @@ export async function adminI18nRoutes(app: FastifyInstance) {
       const langObj = langMap as Record<string, unknown>;
       if (Object.keys(langObj).length === 0) { failed.push(key); continue; }
       for (const [lang, value] of Object.entries(langObj)) {
-        if (!lang.trim() || lang.length > LANG_MAX_LENGTH) continue;
         if (typeof value !== 'string' || !value) continue;
-        entries.push({ key: key.trim(), lang: lang.trim(), value });
+        // Gate-1：lang 过白名单归一（非法直接 400，不再静默跳过）
+        const normalized = requireValidLang(lang.trim());
+        entries.push({ key: key.trim(), lang: normalized, value });
       }
     }
     if (entries.length === 0) throw new ValidationError('导入内容为空：请提供 {key: {lang: value}} 格式的 JSON');

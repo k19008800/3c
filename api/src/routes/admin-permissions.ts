@@ -18,13 +18,13 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, sql, and, desc } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { UnauthorizedError, ForbiddenError, ValidationError, NotFoundError } from '../lib/errors';
+import { verifyToken } from '../services/auth/jwt.js';
+import { UnauthorizedError, ForbiddenError, ValidationError, NotFoundError } from '../lib/errors.js';
 // 权限树（PERM_GROUPS）与角色权限映射（ROLE_PERMS/effectivePerms）统一由
 // lib/permissions.ts 提供（R3 裁决 §5.1：权限树展示与路由鉴权单源一致，本文件不再维护副本）
-import { PERM_GROUPS, effectivePerms } from '../lib/permissions';
+import { PERM_GROUPS, effectivePerms } from '../lib/permissions.js';
 
 async function adminAuth(request: any, _reply: any) {
   const authHeader = request.headers.authorization;
@@ -46,8 +46,6 @@ const ROLES = [
   { id: 4, name: 'sales', label: '业务员', permissions: 6, is_system: true },
   { id: 5, name: 'finance', label: '财务审核员', permissions: 5, is_system: false },
 ];
-
-const ROLE_BY_NAME: Record<string, number> = Object.fromEntries(ROLES.map((r) => [r.name, r.id]));
 
 function permTree(roleName: string) {
   const eff = effectivePerms(roleName);

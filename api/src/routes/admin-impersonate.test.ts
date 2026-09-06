@@ -18,11 +18,11 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { and, eq, inArray } from 'drizzle-orm';
-import { generateAccessToken, verifyToken } from '../services/auth/jwt';
-import { adminCustomerRoutes } from './admin-customers';
-import { authRoutes } from './auth';
+import { generateAccessToken, verifyToken } from '../services/auth/jwt.js';
+import { adminCustomerRoutes } from './admin-customers.js';
+import { authRoutes } from './auth.js';
 
 // 独立 JWT 密钥（路由内 verifyToken 与测试签发共用同一 process.env 值）
 process.env.JWT_SECRET = 'test-admin-impersonate-secret';

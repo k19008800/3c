@@ -26,8 +26,8 @@
  * @module services/billing
  */
 
-import { db, schema } from '../../db';
-import { eq, and, lte, gte, isNotNull, desc } from 'drizzle-orm';
+import { db, schema } from '../../db/index.js';
+import { eq, and, lte, gte, isNotNull, desc, asc, sql } from 'drizzle-orm';
 
 // ============================================================
 // 常量
@@ -260,8 +260,27 @@ function toPricing(rows: Array<{
   return null;
 }
 
-/** 查询指定定价组下某模型的单价（L2/L4 共用） */
-async function queryPricingByGroup(model: string, groupName: string): Promise<ModelPricing | null> {
+/**
+ * 查询指定定价组下某模型的单价（L2/L4 共用）。
+ *
+ * 渠道化改造：新增可选 `supplierId` 过滤，按某渠道的 `supplier_models` 精确取价；
+ * 并补稳定排序（`pricing_group='default'` 优先、再按 id 升序），消除同组多行时
+ * `limit(1)` 的非确定性（架构评审 P0 #2 约束）。未传 `supplierId` 时行为与旧版
+ * "模型级合并价取第一条"保持一致（仅新增确定排序）。
+ *
+ * @param model - 平台模型名
+ * @param groupName - 定价组名（L2='default' / L4=用户分组名）
+ * @param supplierId - 可选；只取该渠道（suppliers.id）的渠道-模型定价
+ * @returns 命中单价；未命中 / 数据非法 → null
+ */
+async function queryPricingByGroup(model: string, groupName: string, supplierId?: number): Promise<ModelPricing | null> {
+  const conditions = [
+    eq(schema.supplierModels.modelName, model),
+    eq(schema.vendorPricing.pricingGroup, groupName),
+  ];
+  if (supplierId !== undefined) {
+    conditions.push(eq(schema.supplierModels.supplierId, supplierId));
+  }
   const rows = await db.select({
     inputPrice: schema.vendorPricing.inputPrice,
     outputPrice: schema.vendorPricing.outputPrice,
@@ -271,10 +290,11 @@ async function queryPricingByGroup(model: string, groupName: string): Promise<Mo
   })
     .from(schema.vendorPricing)
     .innerJoin(schema.supplierModels, eq(schema.vendorPricing.supplierModelId, schema.supplierModels.id))
-    .where(and(
-      eq(schema.supplierModels.modelName, model),
-      eq(schema.vendorPricing.pricingGroup, groupName),
-    ))
+    .where(and(...conditions))
+    .orderBy(
+      sql`(${schema.vendorPricing.pricingGroup} = 'default') DESC`,
+      asc(schema.vendorPricing.id),
+    )
     .limit(1);
   return toPricing(rows);
 }

@@ -11,10 +11,10 @@
  * 金额单位：元（DB numeric 18,4）
  */
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
-import { eq, and, sql, desc, inArray } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { UnauthorizedError, ForbiddenError, ValidationError, NotFoundError, AppError } from '../lib/errors';
+import { db, schema } from '../db/index.js';
+import { eq, and, sql, desc } from 'drizzle-orm';
+import { verifyToken } from '../services/auth/jwt.js';
+import { UnauthorizedError, ForbiddenError, ValidationError, NotFoundError, AppError } from '../lib/errors.js';
 
 async function jwtAuth(request: any, _reply: any) {
   const authHeader = request.headers.authorization;
@@ -44,18 +44,6 @@ const STATUS_LABEL: Record<string, string> = {
   completed: '已到账',
   rejected: '已驳回',
 };
-
-/** 解冻代理可提现余额（驳回时） */
-async function unfreezeAgentBalance(agentId: number, amount: string): Promise<void> {
-  const a = Number(amount ?? 0);
-  if (a <= 0) return;
-  await db.execute(sql`
-    UPDATE agents
-    SET available_balance = available_balance + ${a.toFixed(4)}::numeric,
-        updated_at = NOW()
-    WHERE id = ${agentId}
-  `);
-}
 
 /** 解析 account_info（JSON 或纯文本兜底） */
 function parseAccountInfo(info: string | null): { bank_name?: string; account_number?: string; account_holder?: string; raw?: string } {

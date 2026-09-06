@@ -2,7 +2,7 @@
  * 密码强度校验单测（R7-USER-DRILL-002）
  */
 import { describe, it, expect } from 'vitest';
-import { validatePasswordStrength } from './password';
+import { validatePasswordStrength } from './password.js';
 
 describe('validatePasswordStrength', () => {
   it('合法强密码通过（含字母+数字+长度≥8）', () => {

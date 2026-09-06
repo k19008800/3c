@@ -8,5 +8,5 @@
  * @see docs/iteration-plan-v2.md P0-2 四级限流强制落地
  */
 
-export * from './effective';
-export * from './enforcer';
+export * from './effective.js';
+export * from './enforcer.js';

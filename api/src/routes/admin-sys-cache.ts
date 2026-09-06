@@ -17,17 +17,17 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { getRedis } from '../lib/redis';
-import { db, schema } from '../db';
-import { verifyToken } from '../services/auth/jwt';
-import { UnauthorizedError, ForbiddenError, ValidationError } from '../lib/errors';
+import { getRedis } from '../lib/redis.js';
+import { db, schema } from '../db/index.js';
+import { verifyToken } from '../services/auth/jwt.js';
+import { UnauthorizedError, ForbiddenError, ValidationError } from '../lib/errors.js';
 import {
   getTempCacheStats,
   readTempCacheConfig,
   saveTempCacheConfig,
   type TempCacheConfig,
-} from '../services/upstream/temp-cleanup';
-import { getTempAssetDir } from '../services/upstream/temp-asset-store';
+} from '../services/upstream/temp-cleanup.js';
+import { getTempAssetDir } from '../services/upstream/temp-asset-store.js';
 
 async function adminAuth(request: any, _reply: any) {
   const authHeader = request.headers.authorization;

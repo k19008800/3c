@@ -13,7 +13,7 @@
  * @see docs/iteration-plan-v2.md P2-4 合规审计报告生成
  */
 
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { gte, sql, and, or, like } from 'drizzle-orm';
 
 /** 报告类型 */

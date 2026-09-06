@@ -22,13 +22,13 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { and, eq, inArray, desc, sql } from 'drizzle-orm';
-import { generateAccessToken } from '../services/auth/jwt';
-import { getRedis } from '../lib/redis';
-import { adminFinanceMissingRoutes } from './admin-finance-missing';
-import { enableTest2fa, op2faHeaders, clearCreditCounters } from './test-helpers';
-import { resetFinanceRulesCache } from '../lib/finance-rules';
+import { generateAccessToken } from '../services/auth/jwt.js';
+import { getRedis } from '../lib/redis.js';
+import { adminFinanceMissingRoutes } from './admin-finance-missing.js';
+import { enableTest2fa, op2faHeaders, clearCreditCounters } from './test-helpers.js';
+import { resetFinanceRulesCache } from '../lib/finance-rules.js';
 
 // 独立 JWT 密钥（路由内 verifyToken 与测试签发共用同一 process.env 值）
 process.env.JWT_SECRET = 'test-admin-manual-topup-secret';

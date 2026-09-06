@@ -5,14 +5,14 @@
  * 数据源：agents 表（join users）+ agent_customers + agent_commissions + agent_withdrawals。
  */
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, sql, inArray, gte, lte } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
+import { verifyToken } from '../services/auth/jwt.js';
 import {
   UnauthorizedError,
   ForbiddenError,
   ValidationError,
-} from '../lib/errors';
+} from '../lib/errors.js';
 
 /* ───────── helpers ───────── */
 

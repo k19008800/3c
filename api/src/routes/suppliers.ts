@@ -10,21 +10,21 @@
  */
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { db, schema } from '../db';
-import { eq, and, like, sql, desc, asc, inArray } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
+import { db, schema } from '../db/index.js';
+import { eq, and, sql, desc, asc, inArray } from 'drizzle-orm';
+import { verifyToken } from '../services/auth/jwt.js';
 import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
-} from '../lib/errors';
+} from '../lib/errors.js';
 import {
   testSupplierConnection,
   querySupplierBalances,
-} from '../services/supplier-ops';
-import { validatePricingUnit, PRICE_UNIT_SUSPECT_MESSAGE } from '../services/billing/pricing';
-import { requirePerm } from '../middleware/require-perm';
+} from '../services/supplier-ops.js';
+import { validatePricingUnit, PRICE_UNIT_SUSPECT_MESSAGE } from '../services/billing/pricing.js';
+import { requirePerm } from '../middleware/require-perm.js';
 
 /* ───────── helpers ───────── */
 

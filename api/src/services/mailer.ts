@@ -6,7 +6,7 @@
  */
 
 import nodemailer from 'nodemailer';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { inArray, eq } from 'drizzle-orm';
 
 export interface SmtpConfig {

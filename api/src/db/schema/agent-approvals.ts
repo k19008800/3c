@@ -1,7 +1,7 @@
 import { pgTable, serial, integer, varchar, text, timestamp, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { agents } from './agents';
-import { users } from './users';
+import { agents } from './agents.js';
+import { users } from './users.js';
 
 /**
  * 代理商客户报备审核（对齐原型 admin-agent-customer-approval.html / 报备划拨制）

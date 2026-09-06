@@ -9,7 +9,12 @@
  * - buildIdempotencySummary / buildEntryFromConsumptionRecord：摘要字段正确性
  * - isIdempotencyUniqueViolation：23505 / 约束名消息 / 非幂等错误
  * - findConsumptionByRequestId：DB 查询命中与未命中
- * - replayIdempotentRequest：缓存回放（非流式 body / 流式摘要）、DB 兜底补偿写回、未命中 false
+ * - replayIdempotentRequest：缓存回放（非流式 body / 流式摘要）、DB 兜底补偿写回、未命中 'none'
+ * - buildRequestFingerprint / canonicalizeBody / canonicalizePath / scopeIdempotencyKey：
+ *   统一 request fingerprint（user identity + method + canonical path + canonical body）确定性、
+ *   键序无关 body、路径规范化、user-scoped 键隔离
+ * - replayIdempotentRequest 异摘要校验：同 key 不同 user/参数 → 'conflict' 不回放（409），
+ *   相同指纹 → 'replayed' 正常回放
  *
  * @see coding-standards-api-db-test.md §3 测试规范
  * @module services/idempotency.test
@@ -20,7 +25,10 @@ import {
   acquireIdempotencyLock,
   buildEntryFromConsumptionRecord,
   buildIdempotencySummary,
+  buildRequestFingerprint,
   cacheIdempotentResponse,
+  canonicalizeBody,
+  canonicalizePath,
   findConsumptionByRequestId,
   getCachedIdempotentResponse,
   IDEMPOTENCY_LOCK_KEY_PREFIX,
@@ -29,7 +37,8 @@ import {
   releaseIdempotencyLock,
   replayIdempotentRequest,
   resolveIdempotencyKey,
-} from './idempotency';
+  scopeIdempotencyKey,
+} from './idempotency.js';
 
 // ============================================================
 // Module mocks（vi.hoisted 保证 factory 可引用）
@@ -427,7 +436,7 @@ describe('findConsumptionByRequestId', () => {
 });
 
 // ============================================================
-// replayIdempotentRequest（缓存 → DB 兜底 → false）
+// replayIdempotentRequest（缓存 → DB 兜底 → 'replayed' | 'conflict' | 'none'）
 // ============================================================
 
 describe('replayIdempotentRequest', () => {
@@ -444,7 +453,7 @@ describe('replayIdempotentRequest', () => {
     const fake = makeFakeReply();
     const handled = await replayIdempotentRequest(fake.reply as never, 'k1', false);
 
-    expect(handled).toBe(true);
+    expect(handled).toBe('replayed');
     expect(fake.headers.get('x-idempotent-replay')).toBe('true');
     expect(fake.sentBody).toEqual(entry.body);
   });
@@ -461,7 +470,7 @@ describe('replayIdempotentRequest', () => {
     const fake = makeFakeReply();
     const handled = await replayIdempotentRequest(fake.reply as never, 'k1', true);
 
-    expect(handled).toBe(true);
+    expect(handled).toBe('replayed');
     expect(fake.headers.get('x-idempotent-replay')).toBe('true');
     expect(fake.headers.get('content-type')).toContain('text/event-stream');
     expect(fake.sentBody).toBeUndefined();
@@ -478,7 +487,7 @@ describe('replayIdempotentRequest', () => {
     const { reply, headers, sseLines } = makeFakeReply();
     const handled = await replayIdempotentRequest(reply as never, 'idem-key-1', true);
 
-    expect(handled).toBe(true);
+    expect(handled).toBe('replayed');
     // 补偿写回：摘要缓存
     expect(mocks.redis.cacheSet).toHaveBeenCalledWith(
       `${IDEMPOTENCY_RESP_KEY_PREFIX}idem-key-1`,
@@ -489,12 +498,142 @@ describe('replayIdempotentRequest', () => {
     expect(sseLines.join('')).toContain('data: [DONE]');
   });
 
-  it('缓存与 DB 均未命中（首次请求仍在处理中）→ 返回 false', async () => {
+  it('缓存与 DB 均未命中（首次请求仍在处理中）→ 返回 none', async () => {
     mocks.redis.cacheGet.mockResolvedValue(null);
     mockDbConsumptionQuery([]);
 
     const { reply } = makeFakeReply();
     const handled = await replayIdempotentRequest(reply as never, 'k1', false);
-    expect(handled).toBe(false);
+    expect(handled).toBe('none');
+  });
+});
+
+// ============================================================
+// 统一 request fingerprint（user identity + method + canonical path + canonical body）
+// ============================================================
+
+describe('canonicalizeBody', () => {
+  it('对象键按字典序排序 → 键序不同语义相同 body 得到同一 JSON', () => {
+    const a = canonicalizeBody({ model: 'm', messages: [{ role: 'user', content: 'hi' }], stream: true });
+    const b = canonicalizeBody({ stream: true, messages: [{ role: 'user', content: 'hi' }], model: 'm' });
+    expect(a).toBe(b);
+    expect(a).toContain('"model":"m"');
+  });
+
+  it('数组保序（顺序不同 → 摘要不同）', () => {
+    expect(canonicalizeBody([1, 2])).not.toBe(canonicalizeBody([2, 1]));
+  });
+
+  it('undefined 值跳过，不影响其余键', () => {
+    expect(canonicalizeBody({ a: 1, b: undefined })).toBe(canonicalizeBody({ a: 1 }));
+  });
+
+  it('循环引用 → 兜底 "null"，不抛错', () => {
+    const obj: Record<string, unknown> = { a: 1 };
+    obj.self = obj;
+    expect(canonicalizeBody(obj)).toBe('null');
+  });
+});
+
+describe('canonicalizePath', () => {
+  it('去掉 query、折叠连续斜杠、去首尾斜杠、小写', () => {
+    expect(canonicalizePath('/v1/chat/completions')).toBe('v1/chat/completions');
+    expect(canonicalizePath(' //v1//Chat//Completions?stream=true ')).toBe('v1/chat/completions');
+  });
+});
+
+describe('buildRequestFingerprint', () => {
+  const base = { userId: 1, method: 'POST', path: '/v1/chat/completions', body: { messages: [{ role: 'user', content: 'hi' }] } };
+
+  it('确定性：同输入（含键序不同的 body）同指纹', () => {
+    const fp1 = buildRequestFingerprint(base);
+    const fp2 = buildRequestFingerprint({ ...base, body: { messages: [{ content: 'hi', role: 'user' }] } });
+    expect(fp1).toBe(fp2);
+    expect(fp1).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('user identity 不同 → 指纹不同（跨用户隔离）', () => {
+    expect(buildRequestFingerprint({ ...base, userId: 2 })).not.toBe(buildRequestFingerprint(base));
+  });
+
+  it('method 不同 → 指纹不同', () => {
+    expect(buildRequestFingerprint({ ...base, method: 'GET' })).not.toBe(buildRequestFingerprint(base));
+  });
+
+  it('path 不同 → 指纹不同', () => {
+    expect(buildRequestFingerprint({ ...base, path: '/v1/embeddings' })).not.toBe(buildRequestFingerprint(base));
+  });
+
+  it('body 不同 → 指纹不同（异参数不可复用作同幂等键）', () => {
+    expect(buildRequestFingerprint({ ...base, body: { messages: [{ role: 'user', content: 'bye' }] } })).not.toBe(buildRequestFingerprint(base));
+  });
+});
+
+describe('scopeIdempotencyKey', () => {
+  it('同一原始键 + 不同 userId → 不同 scoped key（跨用户同键不碰撞）', () => {
+    expect(scopeIdempotencyKey('K', 1)).not.toBe(scopeIdempotencyKey('K', 2));
+    expect(scopeIdempotencyKey('K', 1)).toBe('K:1');
+  });
+});
+
+// ============================================================
+// replayIdempotentRequest 指纹校验（异摘要不得回放 → 409 IDEMPOTENCY_CONFLICT）
+// ============================================================
+
+describe('replayIdempotentRequest 指纹校验', () => {
+  it('同 key 缓存指纹与当前指纹不一致 → 返回 conflict，不回放（异参数/异用户复用拦截）', async () => {
+    const entry = {
+      request_fingerprint: 'fp-user1-bodyX',
+      streamed: false,
+      body: { id: 'chatcmpl-first' },
+      summary: buildIdempotencySummary({
+        requestId: 'k1', model: 'm', inputTokens: 1, outputTokens: 1, cost: '0.0001', streamed: false,
+      }),
+    };
+    mocks.redis.cacheGet.mockResolvedValue(JSON.stringify(entry));
+
+    const fake = makeFakeReply();
+    const handled = await replayIdempotentRequest(fake.reply as never, 'k1', false, {
+      fingerprint: 'fp-user2-bodyY',
+    });
+
+    expect(handled).toBe('conflict');
+    // 未回放：无 X-Idempotent-Replay 头、未发送 body
+    expect(fake.headers.get('x-idempotent-replay')).toBeUndefined();
+    expect(fake.sentBody).toBeUndefined();
+  });
+
+  it('同 key 缓存指纹与当前指纹一致 → 正常回放', async () => {
+    const entry = {
+      request_fingerprint: 'fp-same',
+      streamed: false,
+      body: { id: 'chatcmpl-first' },
+      summary: buildIdempotencySummary({
+        requestId: 'k1', model: 'm', inputTokens: 1, outputTokens: 1, cost: '0.0001', streamed: false,
+      }),
+    };
+    mocks.redis.cacheGet.mockResolvedValue(JSON.stringify(entry));
+
+    const fake = makeFakeReply();
+    const handled = await replayIdempotentRequest(fake.reply as never, 'k1', false, { fingerprint: 'fp-same' });
+
+    expect(handled).toBe('replayed');
+    expect(fake.headers.get('x-idempotent-replay')).toBe('true');
+    expect(fake.sentBody).toEqual(entry.body);
+  });
+
+  it('DB 兜底记录重建的条目（无 request_fingerprint）→ 补偿回放，不误拦截合法恢复', async () => {
+    mocks.redis.cacheGet.mockResolvedValue(null);
+    mockDbConsumptionQuery([makeRecord()]);
+    mocks.redis.cacheSet.mockResolvedValue(undefined);
+
+    const { reply, headers } = makeFakeReply();
+    const handled = await replayIdempotentRequest(reply as never, 'k1', false, {
+      fingerprint: 'fp-current',
+      requestId: 'idem-key-1',
+    });
+
+    expect(handled).toBe('replayed');
+    expect(headers.get('x-idempotent-replay')).toBe('true');
   });
 });

@@ -16,9 +16,9 @@
  * @see docs/iteration-plan-v2.md P0-1 / P0-4
  */
 
-import { createStep } from '../executor';
-import { preConsume, releasePreConsume, type PreConsumeResult } from '../../billing/pre-consume';
-import { getStepResult, setStepResult, requireStepResult, STEP_KEYS } from './context';
+import { createStep } from '../executor.js';
+import { preConsume, releasePreConsume, type PreConsumeResult } from '../../billing/pre-consume.js';
+import { getStepResult, setStepResult, requireStepResult, STEP_KEYS } from './context.js';
 
 /**
  * 创建 pre-consume step

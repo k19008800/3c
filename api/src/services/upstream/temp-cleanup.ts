@@ -31,9 +31,9 @@
 import type { FastifyInstance } from 'fastify';
 import { readdir, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { sql } from 'drizzle-orm';
-import { getTempAssetDir } from './temp-asset-store';
+import { getTempAssetDir } from './temp-asset-store.js';
 
 /* ───────── 配置类型与默认值 ───────── */
 

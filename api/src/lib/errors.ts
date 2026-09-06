@@ -36,6 +36,22 @@ export class ForbiddenError extends AppError {
   }
 }
 
+/**
+ * 数据导出未授权（403 DATA_EXPORT_NOT_GRANTED）— 数据导出授权管理
+ *
+ * 用户端 /api/v1/me/data-export/* 中 request/requests/:id/:id/cancel 四接口，
+ * 在用户未获后台授权（无 data_export_grants 记录或 is_enabled=false）时抛出。
+ * download 接口不受此错误影响（见 PRD §4.3：已生成文件在有效期内仍可下载）。
+ *
+ * @see docs/PRD-数据导出授权管理.md §4.4 错误码与响应
+ */
+export class DataExportNotGrantedError extends AppError {
+  constructor() {
+    super('您暂未被授权使用数据导出功能，请联系管理员', 403, 'DATA_EXPORT_NOT_GRANTED');
+    this.name = 'DataExportNotGrantedError';
+  }
+}
+
 // Resource errors
 export class NotFoundError extends AppError {
   constructor(resource: string, id?: string | number) {
@@ -110,6 +126,24 @@ export class PreConsumeFailedError extends AppError {
   }
 }
 
+/**
+ * 支付必需（模型消费缺额）— 兼容表面（/v1/*、/anthropic/v1/*）专用（D-01 裁决）
+ *
+ * D-01：兼容表面消费缺额的 `INSUFFICIENT_BALANCE`(402) 与平台资金操作的
+ * `INSUFFICIENT_BALANCE`(422) 共用 code 名、HTTP 语义分裂。为两表面解耦，
+ * 兼容表面消费缺额改用专属 code `PAYMENT_REQUIRED`(402)。对客户端的原生
+ * `insufficient_balance` error.type 保持不变（兼容 OpenAI/Anthropic），
+ * 仅平台日志/trace 的 code 用 `PAYMENT_REQUIRED`。
+ *
+ * @see docs/_draft-rulings-D01-D08-2026-09.md D-01
+ */
+export class PaymentRequiredError extends AppError {
+  constructor(message = '余额不足，请充值后重试') {
+    super(message, 402, 'PAYMENT_REQUIRED', { guidance: '请前往「充值」页充值' });
+    this.name = 'PaymentRequiredError';
+  }
+}
+
 // Circuit breaker errors
 export class CircuitBreakerOpenError extends AppError {
   constructor(channelKey: string) {
@@ -128,6 +162,24 @@ export class IdempotencyConflictError extends AppError {
       { requestId, ...context },
     );
     this.name = 'IdempotencyConflictError';
+  }
+}
+
+/**
+ * 幂等基础设施不可用（503 IDEMPOTENCY_UNAVAILABLE）
+ *
+ * 资金写操作（充值/人工上账/退款/调账等）依赖的 Redis 幂等锁不可用时抛出，
+ * 禁止静默绕过（docs/05-api/idempotency.md §3 / errors.md §2.3，ADR-0009）。
+ * 与模型消费链路的 degraded 降级语义相反：资金写操作必须 fail-closed，
+ * 否则同一 Idempotency-Key 可能被并发重复入账。
+ *
+ * @see docs/05-api/errors.md §2.3 IDEMPOTENCY_UNAVAILABLE
+ * @see docs/05-api/idempotency.md §3 行为语义
+ */
+export class IdempotencyUnavailableError extends AppError {
+  constructor(context?: Record<string, unknown>) {
+    super('幂等服务暂时不可用，请稍后重试', 503, 'IDEMPOTENCY_UNAVAILABLE', context);
+    this.name = 'IdempotencyUnavailableError';
   }
 }
 

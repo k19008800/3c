@@ -1,10 +1,10 @@
 import {
-  pgTable, serial, integer, varchar, timestamp, boolean, text, jsonb, numeric,
+  pgTable, serial, integer, varchar, timestamp, boolean, jsonb, numeric,
   index, primaryKey, unique,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { users } from './users';
-import { apiKeys } from './api-keys';
+import { users } from './users.js';
+import { apiKeys } from './api-keys.js';
 
 /**
  * 消费记录表（P3-1 起为按月 RANGE 分区表，migration 0025）

@@ -16,7 +16,7 @@
  * @see docs/iteration-plan-v2.md P0-4
  */
 
-import type { PipelineContext } from '../types';
+import type { PipelineContext } from '../types.js';
 
 /** 网关步骤共享存储键（必须在此登记，避免魔法字符串散落各路由） */
 export const STEP_KEYS = {

@@ -11,7 +11,7 @@
  * @module services/supplier-ops
  */
 
-import { cacheGet as redisCacheGet, cacheSet as redisCacheSet } from '../lib/redis';
+import { cacheGet as redisCacheGet, cacheSet as redisCacheSet } from '../lib/redis.js';
 
 /** 连通性探测 / 余额查询超时（ms） */
 export const CONNECTION_TIMEOUT_MS = 5000;

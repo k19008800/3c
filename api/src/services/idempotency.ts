@@ -28,9 +28,9 @@
 
 import crypto from 'crypto';
 import type { FastifyReply } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq } from 'drizzle-orm';
-import { cacheGet, cacheSet, getRedis } from '../lib/redis';
+import { cacheGet, cacheSet, getRedis } from '../lib/redis.js';
 
 // ============================================================
 // 常量
@@ -58,7 +58,7 @@ const MAX_REQUEST_ID_LENGTH = 100;
  * 两者共同前缀为 consumption_records_（可选中间月份）_request_id，
  * 因此用 /consumption_records(?:_\d{4}_\d{2})?_request_id/ 一次匹配两种形态。
  */
-const IDEMPOTENCY_UNIQUE_MSG_RE = /consumption_records(?:_\d{4}_\d{2})?_request_id/i;
+const IDEMPOTENCY_UNIQUE_MSG_RE = /(?:consumption_records(?:_\d{4}_\d{2})?_request_id|uq_recharge_orders_idempotency_key)/i;
 
 /**
  * 释放锁的 Lua 脚本：仅当锁值等于调用方持有的 token 时才删除。
@@ -78,15 +78,32 @@ return 0
 // ============================================================
 
 /**
- * 幂等锁获取结果（三态）：
+ * 幂等锁获取结果（四态）：
  * - acquired：首获锁，继续处理（token 用于失败时释放）
  * - duplicate：同键请求已存在（已处理或处理中）→ 走回放
- * - degraded：Redis 不可用 → 降级放行（DB 唯一约束兜底）
+ * - degraded：Redis 不可用且未开启 failClosed → 降级放行（DB 唯一约束兜底），
+ *   用于模型消费链路（不阻断推理，见 pipeline/steps/idempotency.ts）
+ * - unavailable：Redis 不可用且开启 failClosed → 资金写路径拒绝，
+ *   调用方必须返回 503 IDEMPOTENCY_UNAVAILABLE，不得静默绕过（ADR-0009）
  */
 export type IdempotencyLockResult =
   | { status: 'acquired'; token: string }
   | { status: 'duplicate' }
-  | { status: 'degraded' };
+  | { status: 'degraded' }
+  | { status: 'unavailable' };
+
+/**
+ * acquireIdempotencyLock 选项。
+ */
+export interface IdempotencyLockOptions {
+  /**
+   * true = 严格模式（资金写路径）：Redis 不可用时返回 'unavailable'，
+   * 调用方必须转 503 IDEMPOTENCY_UNAVAILABLE，禁止静默绕过，防止同 Key 并发重复入账。
+   * false = 兼容降级（模型消费链路默认）：Redis 不可用时返回 'degraded'，
+   * 由 DB 唯一约束兜底，不阻断主链路（保留既有语义）。
+   */
+  failClosed?: boolean;
+}
 
 /**
  * 幂等命中摘要（流式请求 / DB 兜底回放时返回给客户端）
@@ -109,16 +126,42 @@ export interface IdempotencySummary {
  * 幂等缓存条目：
  * - 非流式：body = 首次完整响应体（回放用）+ summary（供流式重复请求回放摘要）
  * - 流式：仅 summary（无法回放完整 SSE）
+ *
+ * request_fingerprint 是幂等回放安全的关键护栏：
+ *   - 写入：路由 settle 必须把「本次请求指纹」（buildRequestFingerprint）写入该字段；
+ *   - 校验：replayIdempotentRequest 在回放前比对当前请求指纹与缓存条目，异摘要 → 不回放、返回
+ *     'conflict'（路由转 409 IDEMPOTENCY_CONFLICT），杜绝「同一幂等键不同参数/不同用户复用首次响应」。
+ *   - 跨用户隔离由 user-scoped 锁/缓存键（scopeIdempotencyKey）保证，本字段为同键异参数的第二道防线。
  */
 export interface IdempotencyCachedEntry {
   /** 首次请求是否流式 */
   streamed: boolean;
   /** 非流式完整响应体（仅 Redis 缓存可回放） */
   body?: unknown;
+  /** 本次请求指纹（buildRequestFingerprint 输出，SHA-256）；同一幂等键不得跨用户/参数复用 */
+  request_fingerprint?: string;
   /** usage/cost 摘要（流式命中 / DB 兜底时返回） */
   summary: IdempotencySummary;
   /** 缓存写入时间（诊断用）；由 cacheIdempotentResponse 写入，调用方无需提供 */
   cachedAt?: string;
+}
+
+/**
+ * 幂等重放结果三态：
+ * - 'replayed'：已回放（缓存命中且指纹一致 / DB 兜底命中）
+ * - 'conflict'：同幂等键命中但指纹不一致（异参数/异用户复用）→ 调用方返回 409 IDEMPOTENCY_CONFLICT
+ * - 'none'：无结果可回放（首次请求仍在处理中）→ 调用方返回 409「仍在处理」
+ */
+export type IdempotentReplayResult = 'replayed' | 'conflict' | 'none';
+
+/**
+ * replayIdempotentRequest 选项。
+ */
+export interface ReplayIdempotentOptions {
+  /** 当前请求指纹（buildRequestFingerprint 输出）；提供时与缓存/DB 条目比对拦截异摘要回放 */
+  fingerprint?: string;
+  /** 原始幂等键（= consumption_records.request_id）；L2 DB 兜底查询用 */
+  requestId?: string;
 }
 
 // ============================================================
@@ -147,6 +190,103 @@ export function resolveIdempotencyKey(
 }
 
 // ============================================================
+// 请求指纹（幂等回放安全护栏）
+// ============================================================
+
+/**
+ * 稳定 JSON 序列化：对象键按字典序排序、数组保序、跳过 undefined 值、
+ * 循环引用 / 序列化失败兜底 'null'。用于把请求体规范化为与键序无关的摘要输入，
+ * 保证「语义相同但对象键书写顺序不同」的两次请求得到同一指纹（幂等可命中）。
+ *
+ * @param body - 任意请求体
+ * @returns 规范化 JSON 字符串
+ */
+export function canonicalizeBody(body: unknown): string {
+  try {
+    return JSON.stringify(sortObjectKeys(body)) ?? 'null';
+  } catch {
+    return 'null';
+  }
+}
+
+/** 递归排序对象键（数组保序）；返回新结构，不改原对象。 */
+function sortObjectKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortObjectKeys);
+  if (value !== null && typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+    for (const k of Object.keys(obj).sort()) {
+      const v = obj[k];
+      if (v === undefined) continue; // undefined 不入指纹，避免脆弱
+      out[k] = sortObjectKeys(v);
+    }
+    return out;
+  }
+  return value;
+}
+
+/**
+ * 规范化路径：去首尾空白、去掉 query，折叠连续斜杠，去首尾斜杠，小写。
+ * 网关把 URL（如 /v1/chat/completions）作为指纹的 canonical path 分量。
+ *
+ * @param path - 原始路径（可含 query）
+ * @returns 规范化路径
+ */
+export function canonicalizePath(path: string): string {
+  const withoutQuery = String(path || '').trim().split('?')[0] ?? '';
+  return withoutQuery.replace(/\/+/g, '/').replace(/^\/+|\/+$/g, '').toLowerCase();
+}
+
+/**
+ * 统一 request fingerprint（SHA-256）。
+ *
+ * 分量（至少）：
+ *   1. user identity（userId）—— 跨用户同键隔离
+ *   2. method（规范化大写）   —— 方法不同即请求不同
+ *   3. canonical path         —— 路由不同即请求不同
+ *   4. canonical body（键序无关）—— 参数不同即请求不同
+ *
+ * 各分量用 '|' 连接后 SHA-256 摘要。userId 在指纹内再次出现，与 user-scoped 锁/缓存键
+ * 构成双重防线：锁键隔离保证跨用户不会碰撞，指纹比对拦截同键异参数/跨用户复用首次响应。
+ *
+ * @param input - 指纹输入
+ * @returns 64 位 hex SHA-256
+ */
+export function buildRequestFingerprint(input: {
+  userId: number;
+  method: string;
+  path: string;
+  body: unknown;
+}): string {
+  const canonicalBody = canonicalizeBody(input.body);
+  const raw = [
+    String(input.userId ?? 0),
+    (input.method || 'POST').toUpperCase(),
+    canonicalizePath(input.path || ''),
+    canonicalBody,
+  ].join('|');
+  return crypto.createHash('sha256').update(raw).digest('hex');
+}
+
+/**
+ * 用户作用域幂等键：把原始幂等键命名空间到 userId。
+ *
+ * 锁与响应缓存都用 `{原始幂等键}:{userId}` 作为实际存储 key，因此**跨用户同键不会碰撞**：
+ * 用户 B 用与用户 A 相同的 Idempotency-Key 时，二者落在不同的 Redis key 上，B 请求照常独立
+ * 处理，绝不会拿到 A 的首次响应（消除跨用户回放泄露）。
+ *
+ * consumption_records.request_id 仍写入原始幂等键（见 pipeline idempotency step），
+ * 保持 L2 DB 唯一约束口径不变。
+ *
+ * @param baseKey - 原始幂等键（Idempotency-Key 头或 requestId）
+ * @param userId - 鉴权后的用户 ID
+ * @returns user-scoped 幂等键
+ */
+export function scopeIdempotencyKey(baseKey: string, userId: number): string {
+  return `${baseKey}:${userId}`;
+}
+
+// ============================================================
 // L1: Redis 幂等锁
 // ============================================================
 
@@ -154,24 +294,33 @@ export function resolveIdempotencyKey(
  * 获取幂等锁：Redis SETNX（NX + EX，原子）。
  *
  * 同键首次请求返回 acquired（携带释放锁用的 token）；已存在返回 duplicate；
- * Redis 不可用/异常返回 degraded —— 降级放行，由 L2 DB 唯一约束兜底，不阻断主链路。
+ * Redis 不可用/异常时：
+ *   - failClosed=true（资金写路径）→ 返回 unavailable，调用方须转 503
+ *     IDEMPOTENCY_UNAVAILABLE，不得静默绕过（ADR-0009，防重复入账）；
+ *   - 否则（模型消费链路默认）→ 返回 degraded 降级放行，由 L2 DB 唯一约束兜底。
  *
- * @param key - 幂等键（= pipelineCtx.requestId）
+ * 两表面策略不可混用：资金写操作禁止降级。
+ *
+ * @param key - 幂等键（= pipelineCtx.requestId 或路由解析的 Idempotency-Key）
  * @param ttlSeconds - 锁 TTL（秒），默认与响应缓存一致（24h）
- * @returns 三态结果，见 IdempotencyLockResult
+ * @param options - 见 IdempotencyLockOptions（failClosed 资金写路径走严格模式）
+ * @returns 三态/四态结果，见 IdempotencyLockResult
  */
 export async function acquireIdempotencyLock(
   key: string,
   ttlSeconds: number = IDEMPOTENCY_TTL_SECONDS,
+  options: IdempotencyLockOptions = {},
 ): Promise<IdempotencyLockResult> {
   try {
     const r = getRedis();
-    if (!r) return { status: 'degraded' };
+    if (!r) {
+      return options.failClosed ? { status: 'unavailable' } : { status: 'degraded' };
+    }
     const token = crypto.randomUUID();
     const ok = await r.set(lockKey(key), token, 'EX', ttlSeconds, 'NX');
     return ok === 'OK' ? { status: 'acquired', token } : { status: 'duplicate' };
   } catch {
-    return { status: 'degraded' };
+    return options.failClosed ? { status: 'unavailable' } : { status: 'degraded' };
   }
 }
 
@@ -392,38 +541,54 @@ export async function sendIdempotentReplay(
 /**
  * 幂等命中统一处理：缓存优先 → DB 兜底 → 无结果（首次仍在处理中）。
  *
- * 调用方（路由）在 acquireIdempotencyLock 返回 duplicate 时调用：
- * - L1 缓存命中 → 回放完整响应/摘要，返回 true
- * - L2 DB 兜底命中 → 补偿写回缓存 + 回放摘要，返回 true
- * - 两者皆无 → 首次请求仍在处理中，返回 false（路由返回 409 幂等提示）
+ * 调用方（路由）在 acquireIdempotencyLock 返回 duplicate 时调用；key 须为
+ * user-scoped 幂等键（scopeIdempotencyKey 输出），保证跨用户查询隔离。
+ *
+ * - L1 缓存命中：
+ *   - 指纹比对一致（或无缓存的 request_fingerprint）→ 回放，返回 'replayed'
+ *   - 指纹不一致（opts.fingerprint ≠ cached.request_fingerprint）→ 不回放，返回 'conflict'（异参数复用）
+ * - L2 DB 兜底命中（Redis 缓存丢失）→ 补偿写回缓存 + 回放摘要，返回 'replayed'
+ *   （DB 记录不存指纹；跨用户已由 user-scoped 锁键在上游隔离，故不额外阻断合法恢复）
+ * - 两者皆无 → 首次请求仍在处理中，返回 'none'（路由返回 409「仍在处理」）
  *
  * @param reply - Fastify 响应
- * @param key - 幂等键
+ * @param key - user-scoped 幂等键（scopeIdempotencyKey 输出，用于锁/缓存查询）
  * @param isStreamRequest - 当前请求是否流式
- * @returns true = 已回放，路由直接结束；false = 无结果可回放，需返回 409
+ * @param opts - 见 ReplayIdempotentOptions（fingerprint 用于异摘要回放拦截；requestId 供 L2 DB 兜底查询）
+ * @returns IdempotentReplayResult：'replayed' 已回放 / 'conflict' 异摘要需 409 / 'none' 仍在处理需 409
  */
 export async function replayIdempotentRequest(
   reply: FastifyReply,
   key: string,
   isStreamRequest: boolean,
-): Promise<boolean> {
+  opts: ReplayIdempotentOptions = {},
+): Promise<IdempotentReplayResult> {
   const cached = await getCachedIdempotentResponse(key);
   if (cached) {
+    // 异摘要不得回放：同一幂等键但请求指纹（user+method+path+body）不同 → 冲突 409
+    if (opts.fingerprint && cached.request_fingerprint && cached.request_fingerprint !== opts.fingerprint) {
+      return 'conflict';
+    }
     await sendIdempotentReplay(reply, cached, isStreamRequest);
-    return true;
+    return 'replayed';
   }
 
   // L2 兜底：Redis 缓存丢失（崩溃/重启/写失败）→ 查 DB 补偿回放
-  const record = await findConsumptionByRequestId(key);
+  // requestId = 原始幂等键（consumption_records.request_id 口径）；跨用户已由上层的
+  // user-scoped 锁键隔离，DB 兜底仅在「同用户、同键、缓存丢失」时触发，可安全补偿回放。
+  const record = await findConsumptionByRequestId(opts.requestId ?? key);
   if (record) {
     const entry = buildEntryFromConsumptionRecord(record);
-    // 补偿写回缓存，后续同键请求直接 L1 命中
+    if (opts.fingerprint && entry.request_fingerprint && entry.request_fingerprint !== opts.fingerprint) {
+      return 'conflict';
+    }
+    // 补偿写回缓存，后续同键请求直接 L1 命中（user-scoped key）
     await cacheIdempotentResponse(key, entry);
     await sendIdempotentReplay(reply, entry, isStreamRequest);
-    return true;
+    return 'replayed';
   }
 
-  return false;
+  return 'none';
 }
 
 // ============================================================

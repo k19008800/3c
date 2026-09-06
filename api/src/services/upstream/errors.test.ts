@@ -2,7 +2,7 @@
  * 上游错误分类单测（R2-USER-DRILL-002）
  */
 import { describe, it, expect } from 'vitest';
-import { classifyUpstreamError, UpstreamAuthError } from './errors';
+import { classifyUpstreamError, UpstreamAuthError } from './errors.js';
 
 describe('classifyUpstreamError', () => {
   it('401/403 → auth（平台上游鉴权故障）', () => {

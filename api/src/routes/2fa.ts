@@ -19,7 +19,7 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq } from 'drizzle-orm';
 import {
   generateTokenPair,
@@ -27,18 +27,18 @@ import {
   verify2faTempToken,
   generateOperationToken,
   createSession,
-} from '../services/auth/jwt';
+} from '../services/auth/jwt.js';
 import {
   generateSecret,
   verifyTOTP,
   generateBackupCodes,
   verifyBackupCode,
   otpauthURL,
-} from '../services/auth/totp';
-import { AppError, UnauthorizedError, ValidationError } from '../lib/errors';
-import { getRedis } from '../lib/redis';
-import { getOperation2faConfig, type Operation2faConfig } from '../lib/finance-rules';
-import { assertOperationSummary } from '../lib/operation-summary';
+} from '../services/auth/totp.js';
+import { AppError, UnauthorizedError, ValidationError } from '../lib/errors.js';
+import { getRedis } from '../lib/redis.js';
+import { getOperation2faConfig, type Operation2faConfig } from '../lib/finance-rules.js';
+import { assertOperationSummary } from '../lib/operation-summary.js';
 
 /** setup 暂存态 TTL：10 分钟，超时需要重新 setup */
 const PENDING_SETUP_TTL_MS = 10 * 60 * 1000;

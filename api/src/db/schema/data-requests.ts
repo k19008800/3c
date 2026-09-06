@@ -1,5 +1,5 @@
 import { pgTable, serial, integer, varchar, text, timestamp } from 'drizzle-orm/pg-core';
-import { users } from './users';
+import { users } from './users.js';
 
 /**
  * 用户数据导出请求（P2-4，对齐 SPEC-§4 数据生命周期管理 / /me/data-export 契约）

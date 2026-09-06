@@ -4,7 +4,7 @@
 
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { eq } from 'drizzle-orm';
 
 const DEFAULT_SECRET = 'dev-secret-change-in-production';

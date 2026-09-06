@@ -1,6 +1,6 @@
 import { pgTable, serial, integer, varchar, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { agents } from './agents';
+import { agents } from './agents.js';
 
 export const agentBankAccounts = pgTable('agent_bank_accounts', {
   id: serial('id').primaryKey(),

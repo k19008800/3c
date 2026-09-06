@@ -1,6 +1,9 @@
 -- 手动调账记录（产品裁决 2026-08-15，对齐原型 admin-adjust.html）
-CREATE TYPE "public"."adjustment_status" AS ENUM('pending', 'pending_level2', 'approved', 'rejected', 'reversed');--> statement-breakpoint
-CREATE TABLE "adjustment_records" (
+DO $$ BEGIN
+  CREATE TYPE "public"."adjustment_status" AS ENUM('pending', 'pending_level2', 'approved', 'rejected', 'reversed');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "adjustment_records" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_id" integer NOT NULL,
 	"direction" varchar(10) NOT NULL,

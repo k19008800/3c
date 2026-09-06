@@ -6,13 +6,13 @@
  *   - GET /admin/finance/transactions — 最近交易列表（统一视图）
  */
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, gte, lte, sql, desc, inArray } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
+import { verifyToken } from '../services/auth/jwt.js';
 import {
   UnauthorizedError,
   ForbiddenError,
-} from '../lib/errors';
+} from '../lib/errors.js';
 
 /* ───────── helpers ───────── */
 

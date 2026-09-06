@@ -9,7 +9,7 @@
  *   - 写入失败仅 console.error，绝不阻断或改变请求结果
  *   - 与消费记录通过 requestId 一一对应，但失败 / 402 / 超时等无消费记录的请求同样留痕
  */
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import crypto from 'crypto';
 
 /** 供应商 Key 指纹：sha256 前缀（只存指纹，不存明文 Key） */

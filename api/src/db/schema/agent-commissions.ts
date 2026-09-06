@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, varchar, pgEnum, timestamp, numeric, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, serial, integer, pgEnum, timestamp, numeric, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const agentCommissionStatusEnum = pgEnum('agent_commission_status', [
   'pending',

@@ -16,9 +16,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
 import { Writable } from 'stream';
-import pino from 'pino';
+import { pino } from 'pino';
 import crypto from 'crypto';
-import { chatRoutes } from '../routes/chat';
+import { chatRoutes } from '../routes/chat.js';
 import {
   logGatewayRequest,
   logSlowRequest,
@@ -26,8 +26,8 @@ import {
   slowRequestOnResponseHook,
   GATEWAY_REQUEST_LOG_MSG,
   SLOW_REQUEST_LOG_MSG,
-} from './gateway-log';
-import type { GatewayLogFields, SlowRequestLogFields } from './gateway-log';
+} from './gateway-log.js';
+import type { GatewayLogFields, SlowRequestLogFields } from './gateway-log.js';
 
 // ============================================================
 // 测试工具：采集 pino 输出的 logger

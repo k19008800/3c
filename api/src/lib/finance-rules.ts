@@ -1,10 +1,10 @@
 /**
  * 资金规则配置读取 — system_config finance_rules（R1 人工上账单笔上限 + R5 分级审批 + R6 限额 + R7 2FA）
  *
- * 配置结构（ARCH v1.1 §2.1 + 调度终裁 B3/B20：上限统一 1,000,000）：
+ * 配置结构（以 accepted ADR-0001 为准：人工上账单笔上限 50,000）：
  * ```json
  * {
- *   "manual_topup": { "max_amount": 1000000 },
+ *   "manual_topup": { "max_amount": 50000 },
  *   "large_amount": {
  *     "single_review_max": 10000, "dual_review_threshold": 10000, "super_review_threshold": 100000,
  *     "review_exempt": { "enabled": false, "max_amount": 1000, "subjects": ["赠送","补偿","纠错"] },
@@ -26,7 +26,7 @@
  * （resetFinanceRulesCache 清空，配置保存端点/测试即时生效）。不引入新依赖。
  *
  * 裁决来源：
- * - R5 分级审批（ARCH §2 / 双签 B1/B2/B4/B18）；人工上账创建上限 50,000 → 1,000,000（终裁 B3/Q9）
+ * - R5 分级审批；人工上账创建单笔上限 ¥50,000（accepted ADR-0001）
  * - R6 24h 滚动限额（ARCH §3 / 双签 B5–B9、B19）；soft=升级审批 / hard=429 拒创建（终裁），exceed_action 可配置
  * - R7 操作级 2FA（ARCH §4 / 双签 B11–B14/B17）
  *
@@ -34,11 +34,11 @@
  * @module lib/finance-rules
  */
 
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq } from 'drizzle-orm';
 
-/** 人工上账单笔上限默认值（元；终裁 B3：50,000 → 1,000,000，>50,000 由分级审批承接） */
-export const MANUAL_TOPUP_MAX_AMOUNT = 1_000_000;
+/** 人工上账单笔上限默认值（元；accepted ADR-0001） */
+export const MANUAL_TOPUP_MAX_AMOUNT = 50_000;
 
 /** 单审档金额上限（元） */
 export const APPROVAL_LEVEL1_MAX = 10_000;
@@ -69,7 +69,7 @@ export const OPERATION_2FA_DEFAULTS: Operation2faConfig = {
   lockThreshold: 5,
   lockMinutes: 15,
   allowBackupCode: true,
-  scopes: ['manual_topup.create', 'manual_topup.review', 'adjust.create', 'adjust.approve', 'adjust.review', 'adjust.reject', 'adjust.reverse', 'recharge.audit', 'recharge.reject', 'refund.review', 'finance_rules.save'],
+  scopes: ['manual_topup.create', 'manual_topup.review', 'adjust.create', 'adjust.approve', 'adjust.review', 'adjust.reject', 'adjust.reverse', 'recharge.audit', 'recharge.reject', 'refund.review', 'reconciliation.mismatch.process', 'reconciliation.mismatch.resolve', 'finance_rules.save'],
 };
 
 /** 配置缓存 TTL（毫秒） */
@@ -278,7 +278,7 @@ export async function getFinanceRules(): Promise<FinanceRules> {
 /**
  * 读取人工上账单笔金额上限（元）。
  *
- * @returns 上限金额；配置缺失/损坏/读取失败时回退 MANUAL_TOPUP_MAX_AMOUNT（1,000,000）
+ * @returns 上限金额；配置缺失/损坏/读取失败时回退 MANUAL_TOPUP_MAX_AMOUNT（50,000）
  */
 export async function getManualTopupMaxAmount(): Promise<number> {
   const rules = await loadFinanceRules();

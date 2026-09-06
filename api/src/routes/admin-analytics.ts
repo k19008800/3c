@@ -13,10 +13,10 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, sql, desc, gte, lt } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { UnauthorizedError, ForbiddenError } from '../lib/errors';
+import { verifyToken } from '../services/auth/jwt.js';
+import { UnauthorizedError, ForbiddenError } from '../lib/errors.js';
 
 async function adminAuth(request: any, _reply: any) {
   const authHeader = request.headers.authorization;
@@ -181,11 +181,9 @@ export async function adminAnalyticsRoutes(app: FastifyInstance) {
       .where(gte(schema.consumptionRecords.createdAt, start))
       .groupBy(schema.consumptionRecords.supplierId, schema.suppliers.name);
 
-    let grandDaily = 0;
     const list = rows.map((r) => {
       const cost = toNum(r.cost);
       const daily = (r.dayCount ?? 0) > 0 ? cost / (r.dayCount ?? 1) : 0;
-      grandDaily += daily;
       // 简单线性外推：预测日均 = 当前日均 × 1.08（8% 温和增长假设，无历史序列时）
       const growth = 0.08;
       const predictedDaily = daily * (1 + growth);

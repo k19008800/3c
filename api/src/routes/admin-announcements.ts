@@ -18,10 +18,10 @@
  * @see src/db/schema/gap-fix-2026-08.ts announcementReads
  */
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, sql, desc } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError } from '../lib/errors';
+import { verifyToken } from '../services/auth/jwt.js';
+import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError } from '../lib/errors.js';
 
 /* ───────── 鉴权（对齐 admin-support-missing.ts 模式） ───────── */
 

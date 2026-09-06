@@ -48,8 +48,8 @@
  */
 
 import type { FastifyInstance, FastifyReply } from 'fastify';
-import { apiKeyAuth } from '../services/auth/apikey';
-import { selectTaskChannel, type SelectedChannel } from '../services/upstream/routing';
+import { apiKeyAuth } from '../services/auth/apikey.js';
+import { selectTaskChannel, type SelectedChannel } from '../services/upstream/routing.js';
 import {
   createTaskRecord,
   deleteTaskRecord,
@@ -57,10 +57,10 @@ import {
   listTasksForUser,
   getSupplierWithKey,
   type TaskRecord,
-} from '../services/task/task-store';
-import { getBalance } from '../services/billing/balance';
-import { recordChannelResult } from '../services/upstream/circuit-breaker';
-import { AppError, InsufficientBalanceError } from '../lib/errors';
+} from '../services/task/task-store.js';
+import { getBalance } from '../services/billing/balance.js';
+import { recordChannelResult } from '../services/upstream/circuit-breaker.js';
+import { AppError, InsufficientBalanceError } from '../lib/errors.js';
 import {
   runPipeline,
   createStep,
@@ -74,10 +74,10 @@ import {
   getStepResult,
   STEP_KEYS,
   type MockStepResult,
-} from '../services/pipeline';
-import type { PipelineContext } from '../services/pipeline';
-import { getPricingForModel, computeTaskCost, TASK_BILLING_UNIT_TOKENS, buildPricingContext } from '../services/billing/pricing';
-import { settleBilling } from '../services/billing/settle';
+} from '../services/pipeline/index.js';
+import type { PipelineContext } from '../services/pipeline/index.js';
+import { getPricingForModel, computeTaskCost, TASK_BILLING_UNIT_TOKENS, buildPricingContext } from '../services/billing/pricing.js';
+import { settleBilling } from '../services/billing/settle.js';
 import crypto from 'crypto';
 
 // ============================================================
@@ -590,6 +590,13 @@ export async function taskRelayRoutes(app: FastifyInstance) {
   app.post('/v1/suno/submit/:action', routeOptions, (request: any, reply: FastifyReply) =>
     handleTaskSubmit('suno', request, reply));
 
+  // 网关别名：/api/v1/v1/mj|suno/*（web-console MjSunoTasksPage 走 /api/v1/v1 前缀，
+  // 对齐 chat/messages/embeddings/completions/responses/rerank 的别名契约，见 docs/api-contract.md §4）
+  app.post('/api/v1/v1/mj/submit/:action', routeOptions, (request: any, reply: FastifyReply) =>
+    handleTaskSubmit('midjourney', request, reply));
+  app.post('/api/v1/v1/suno/submit/:action', routeOptions, (request: any, reply: FastifyReply) =>
+    handleTaskSubmit('suno', request, reply));
+
   // ═══════════════════════════════════════
   // 轮询任务状态（本地 DB 服务，不记账）：GET /v1/mj/task/:id/fetch、
   // GET /v1/suno/fetch/:id、POST /v1/suno/fetch
@@ -627,8 +634,33 @@ export async function taskRelayRoutes(app: FastifyInstance) {
   app.get('/v1/suno/fetch/:id', routeOptions, (request: any, reply: FastifyReply) =>
     handleTaskFetch('suno', request, reply));
 
+  // 网关别名（同上，web-console MjSunoTasksPage 用 /api/v1/v1 前缀）
+  app.get('/api/v1/v1/mj/task/:id/fetch', routeOptions, (request: any, reply: FastifyReply) =>
+    handleTaskFetch('midjourney', request, reply));
+
+  app.get('/api/v1/v1/suno/fetch/:id', routeOptions, (request: any, reply: FastifyReply) =>
+    handleTaskFetch('suno', request, reply));
+
   // Suno 批量轮询：POST /v1/suno/fetch（body: { ids: string[] }，本地 DB 服务）
   app.post('/v1/suno/fetch', routeOptions, async (request: any, reply: FastifyReply) => {
+    const userId = (request as any).apiKeyContext?.userId ?? 0;
+    try {
+      const body = (request.body ?? {}) as Record<string, unknown>;
+      const ids = Array.isArray(body.ids)
+        ? body.ids.map((i) => String(i).trim()).filter(Boolean)
+        : [];
+      const tasks = await listTasksForUser('suno', ids, userId);
+      return reply.send({ code: 'success', message: '', data: tasks.map(buildSunoTaskDto) });
+    } catch (err) {
+      if (err instanceof AppError) {
+        return sendOpenAIError(reply, err.statusCode, err.message, err.code.toLowerCase(), err.statusCode);
+      }
+      throw err;
+    }
+  });
+
+  // 网关别名（同上前缀对齐）
+  app.post('/api/v1/v1/suno/fetch', routeOptions, async (request: any, reply: FastifyReply) => {
     const userId = (request as any).apiKeyContext?.userId ?? 0;
     try {
       const body = (request.body ?? {}) as Record<string, unknown>;

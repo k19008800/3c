@@ -1,5 +1,5 @@
 import { pgTable, serial, integer, varchar, timestamp, numeric, text } from 'drizzle-orm/pg-core';
-import { users } from './users';
+import { users } from './users.js';
 
 /**
  * 消费争议记录（2026-08 补齐，对齐原型 admin-dispute.html）

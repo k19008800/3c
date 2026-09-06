@@ -17,7 +17,7 @@
  * @see docs/iteration-plan-v2.md P2-4
  */
 
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { and, eq, inArray, isNull, or, gt, sql } from 'drizzle-orm';
 
 /** IPv4 段数 */

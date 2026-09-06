@@ -25,14 +25,14 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, desc, sql, ne, isNull, or, inArray } from 'drizzle-orm';
-import { AppError, ValidationError, NotFoundError, ForbiddenError } from '../lib/errors';
-import { requirePerm, requireNotImpersonated } from '../middleware/require-perm';
-import { requireOperation2fa } from '../middleware/require-operation-2fa';
-import { creditBalance } from '../services/billing/balance';
-import { adjustLedgerAvailable, clearNegativeFlag } from '../services/billing/ledger';
-import { notifyUser } from '../services/notify';
+import { AppError, ValidationError, NotFoundError, ForbiddenError } from '../lib/errors.js';
+import { requirePerm, requireNotImpersonated } from '../middleware/require-perm.js';
+import { requireOperation2fa } from '../middleware/require-operation-2fa.js';
+import { creditBalance } from '../services/billing/balance.js';
+import { adjustLedgerAvailable, clearNegativeFlag } from '../services/billing/ledger.js';
+import { notifyUser } from '../services/notify.js';
 import {
   getApprovalRules,
   getCreditLimits,
@@ -40,14 +40,14 @@ import {
   calcEffectiveTier,
   isReviewExempt,
   type ApprovalRules,
-} from '../lib/finance-rules';
+} from '../lib/finance-rules.js';
 import {
   checkLimitsInTx,
   reserveInTx,
   syncRedisAdd,
   currentLimitContext,
   yuanToCents,
-} from '../services/billing/credit-limit';
+} from '../services/billing/credit-limit.js';
 
 function toNum(v: unknown): number {
   return Number(v ?? 0);

@@ -24,10 +24,10 @@
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { eq } from 'drizzle-orm';
-import { getRedis, cacheGet, cacheSet, cacheDel } from '../../lib/redis';
-import { getBalance, freezeBalance, settleFrozenBalance, releaseFrozenBalance, deductBalance } from './balance';
+import { getRedis, cacheGet, cacheSet, cacheDel } from '../../lib/redis.js';
+import { getBalance, freezeBalance, settleFrozenBalance, releaseFrozenBalance, deductBalance } from './balance.js';
 import {
   balanceLedgerKey,
   freezeRecordKey,
@@ -38,8 +38,8 @@ import {
   readLedgerAvailable,
   setNegativeFlag,
   isNegativeFlagged,
-} from './ledger';
-import { PreConsumeFailedError } from '../../lib/errors';
+} from './ledger.js';
+import { PreConsumeFailedError } from '../../lib/errors.js';
 
 // ============================================================
 // 常量

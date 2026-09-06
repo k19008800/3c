@@ -18,9 +18,9 @@
  * @module services/notify
  */
 
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq } from 'drizzle-orm';
-import { sendMail } from './mailer';
+import { sendMail } from './mailer.js';
 
 /** notifyUser 入参 */
 export interface NotifyParams {

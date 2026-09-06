@@ -23,7 +23,7 @@ import {
   uniqueIndex,
   index,
 } from 'drizzle-orm/pg-core';
-import { users } from './users';
+import { users } from './users.js';
 
 export const creditLimitEvents = pgTable('credit_limit_events', {
   id: serial('id').primaryKey(),

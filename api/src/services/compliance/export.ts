@@ -16,9 +16,9 @@
 
 import { mkdirSync, writeFileSync, existsSync } from 'fs';
 import { resolve, basename } from 'path';
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { eq, desc } from 'drizzle-orm';
-import { getBalance } from '../billing/balance';
+import { getBalance } from '../billing/balance.js';
 
 /** 导出文件目录（api/exports/），相对仓库根路径（ESM 下用 import.meta.dirname，Node ≥20.11） */
 export const EXPORT_DIR = resolve(import.meta.dirname, '../../../exports');

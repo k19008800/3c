@@ -15,13 +15,13 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { and, eq, inArray, sql } from 'drizzle-orm';
-import { generateAccessToken } from '../services/auth/jwt';
-import { rechargeRoutes } from './recharge';
-import { enableTest2fa, op2faHeaders, clearCreditCounters } from './test-helpers';
-import { calcApprovalTier } from '../lib/finance-rules';
-import { buildApprovalMeta } from '../services/billing/recharge-approval';
+import { generateAccessToken } from '../services/auth/jwt.js';
+import { rechargeRoutes } from './recharge.js';
+import { enableTest2fa, op2faHeaders, clearCreditCounters } from './test-helpers.js';
+import { calcApprovalTier } from '../lib/finance-rules.js';
+import { buildApprovalMeta } from '../services/billing/recharge-approval.js';
 
 process.env.JWT_SECRET = 'test-admin-recharge-orders-secret';
 

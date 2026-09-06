@@ -1,4 +1,4 @@
-import { PipelineContext, PipelineStep, PipelineResult } from './types';
+import { PipelineContext, PipelineStep, PipelineResult } from './types.js';
 
 /**
  * Execute a pipeline of steps with automatic rollback on failure.

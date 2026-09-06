@@ -10,17 +10,17 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
-import { eq, inArray } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
+import { db, schema } from '../db/index.js';
+import { inArray } from 'drizzle-orm';
+import { verifyToken } from '../services/auth/jwt.js';
 import {
   UnauthorizedError,
   ForbiddenError,
   ValidationError,
-} from '../lib/errors';
-import { sendMail, getSmtpConfig } from '../services/mailer';
-import { invalidateThresholdCache } from '../services/billing/pre-consume';
-import { invalidateCacheDiscountCache, invalidateCachePricingCache } from '../services/billing/cache-discount';
+} from '../lib/errors.js';
+import { sendMail, getSmtpConfig } from '../services/mailer.js';
+import { invalidateThresholdCache } from '../services/billing/pre-consume.js';
+import { invalidateCacheDiscountCache, invalidateCachePricingCache } from '../services/billing/cache-discount.js';
 
 /* ───────── helpers ───────── */
 

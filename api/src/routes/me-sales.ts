@@ -21,15 +21,15 @@
  * 写操作写 audit_logs 留痕。
  */
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, or, sql, desc, gte, inArray } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
+import { verifyToken } from '../services/auth/jwt.js';
 import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
-} from '../lib/errors';
+} from '../lib/errors.js';
 
 /* ───────── 鉴权 ───────── */
 
@@ -92,6 +92,21 @@ function periodStart(period: string): Date | undefined {
     }
   }
 }
+
+/**
+ * 销售侧可选客户标签预设（SPEC-§11.1 CRM 客户标签：多标签 企业客户/开发者/高价值/需跟进/流失预警/已签约）。
+ *
+ * customer_tags 表为自由字符串标签（无独立标签目录表），此处以 SPEC 列出的固定预设作为「可选用标签」枚举，
+ * GET /me/customer-tags 返回该列表；每条含 id（稳定序号）/name/color（前端 SalesCustomerDetailPage 渲染 chip 用）。
+ */
+const CUSTOMER_TAG_PRESETS: ReadonlyArray<{ id: number; name: string; color: string }> = [
+  { id: 1, name: '企业客户', color: '#6a8aff' },
+  { id: 2, name: '开发者', color: '#10b981' },
+  { id: 3, name: '高价值', color: '#f59e0b' },
+  { id: 4, name: '需跟进', color: '#ef4444' },
+  { id: 5, name: '流失预警', color: '#8b5cf6' },
+  { id: 6, name: '已签约', color: '#14b8a6' },
+];
 
 /** 客户状态白名单：中文 ↔ 英文（前端展示英文枚举 + 中文文案） */
 const STATUS_MAP: Record<string, string> = {
@@ -178,6 +193,18 @@ async function assertCustomerAccess(request: any, customerUserId: number): Promi
 }
 
 export async function meSalesRoutes(app: FastifyInstance) {
+  /* ═══════════ 0. 可选客户标签（SalesCustomerDetailPage 标签管理） ═══════════ */
+
+  /**
+   * GET /api/v1/me/customer-tags — 销售侧可选客户标签列表
+   *
+   * 对齐 web-console SalesCustomerDetailPage：`api.get('/me/customer-tags')` → `.data.data` 读 `{ list }`，
+   * list 项 = { id, name, color }。数据源为 SPEC-§11 固定预设标签枚举（无独立目录表）。
+   */
+  app.get('/api/v1/me/customer-tags', { preHandler: [jwtAuth] }, async (_request, reply) => {
+    return reply.send({ data: { list: CUSTOMER_TAG_PRESETS.map((t) => ({ ...t })) } });
+  });
+
   /* ═══════════ 1. 名下客户列表 ═══════════ */
 
   /**

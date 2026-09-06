@@ -16,8 +16,8 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { verifyToken } from '../services/auth/jwt';
-import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError } from '../lib/errors';
+import { verifyToken } from '../services/auth/jwt.js';
+import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError } from '../lib/errors.js';
 import {
   generateSettlements,
   listSettlements,
@@ -25,7 +25,7 @@ import {
   getSettlementCsv,
   matchSupplierBill,
   confirmSettlement,
-} from '../services/finance/vendor-settlement';
+} from '../services/finance/vendor-settlement.js';
 
 /* ───────── auth helpers ───────── */
 

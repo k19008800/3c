@@ -23,17 +23,17 @@
  * 写操作写 audit_logs 留痕；金额类字段统一用 Number() 转换（numeric 列返回 string）。
  */
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, desc, asc, sql, inArray } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
-import { verifyToken } from '../services/auth/jwt';
+import { verifyToken } from '../services/auth/jwt.js';
 import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
   AppError,
-} from '../lib/errors';
+} from '../lib/errors.js';
 
 /* ───────── 鉴权（对齐 admin-finance.ts 模式） ───────── */
 

@@ -1,6 +1,6 @@
 import { pgTable, serial, integer, varchar, timestamp, text, boolean, numeric, primaryKey, uniqueIndex, index } from 'drizzle-orm/pg-core';
-import { users } from './users';
-import { announcements } from './announcements';
+import { users } from './users.js';
+import { announcements } from './announcements.js';
 
 /**
  * 公告已读记录（2026-08-18 补齐，对齐原型 admin-announcement.html 阅读统计）
@@ -20,8 +20,8 @@ export const announcementReads = pgTable('announcement_reads', {
 /**
  * 退款申请（2026-08-18 补齐，对齐原型 admin-refund-review.html）
  *
- * 用户申请退款 → 管理员审核（approve/reject）→ approve 后经 balance.ts 退余额并写 balance_transactions(refund)。
- * status: pending | approved | rejected
+ * 用户申请退款 → 管理员审核（approve/reject）→ approved 后由 execute 执行余额退款并写 balance_transactions(refund)。
+ * status: pending | approved | processing | completed | failed | rejected
  */
 export const refundRequests = pgTable('refund_requests', {
   id: serial('id').primaryKey(),
@@ -30,6 +30,18 @@ export const refundRequests = pgTable('refund_requests', {
   reason: text('reason'),
   orderNo: varchar('order_no', { length: 100 }),
   status: varchar('status', { length: 20 }).notNull().default('pending'),
+  /** 资金路径；旧数据默认余额退款，禁止执行层猜测路径 */
+  refundType: varchar('refund_type', { length: 20 }).notNull().default('balance_refund'),
+  source: varchar('source', { length: 50 }),
+  reference: varchar('reference', { length: 100 }),
+  /** pending_level2/pending_super/approved，金额审批阶段的可审计权威字段 */
+  reviewStage: varchar('review_stage', { length: 20 }).notNull().default('pending'),
+  firstReviewedBy: integer('first_reviewed_by').references(() => users.id),
+  secondReviewedBy: integer('second_reviewed_by').references(() => users.id),
+  superReviewedBy: integer('super_reviewed_by').references(() => users.id),
+  executionAttempts: integer('execution_attempts').notNull().default(0),
+  lastError: text('last_error'),
+  manualInterventionRequired: boolean('manual_intervention_required').notNull().default(false),
   reviewNote: text('review_note'),
   reviewedBy: integer('reviewed_by').references(() => users.id),
   reviewedAt: timestamp('reviewed_at'),
@@ -38,6 +50,7 @@ export const refundRequests = pgTable('refund_requests', {
 }, (table) => ({
   statusIdx: index('idx_refund_requests_status').on(table.status),
   userIdIdx: index('idx_refund_requests_user').on(table.userId),
+  businessReferenceIdx: uniqueIndex('uq_refund_requests_business_reference').on(table.refundType, table.reference),
 }));
 
 /**

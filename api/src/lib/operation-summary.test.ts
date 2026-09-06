@@ -15,7 +15,7 @@ import {
   canonicalizeOperationSummary,
   hashOperationSummary,
   assertOperationSummary,
-} from './operation-summary';
+} from './operation-summary.js';
 
 describe('canonicalizeOperationSummary（canonical JSON）', () => {
   it('对象键按字典序排序（与书写顺序无关）', () => {

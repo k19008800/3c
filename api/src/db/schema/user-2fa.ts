@@ -20,7 +20,7 @@ import {
   timestamp,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
-import { users } from './users';
+import { users } from './users.js';
 
 export const user2fa = pgTable('user_2fa', {
   id: serial('id').primaryKey(),

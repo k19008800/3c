@@ -13,12 +13,12 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq } from 'drizzle-orm';
-import { ValidationError, ForbiddenError } from '../lib/errors';
-import { requirePerm } from '../middleware/require-perm';
-import { requireOperation2fa } from '../middleware/require-operation-2fa';
-import { getFinanceRules, resetFinanceRulesCache, type FinanceRules } from '../lib/finance-rules';
+import { ValidationError, ForbiddenError } from '../lib/errors.js';
+import { requirePerm } from '../middleware/require-perm.js';
+import { requireOperation2fa } from '../middleware/require-operation-2fa.js';
+import { getFinanceRules, resetFinanceRulesCache, type FinanceRules } from '../lib/finance-rules.js';
 
 const CFG_KEY = 'finance_rules';
 

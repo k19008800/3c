@@ -20,10 +20,10 @@
  * @see src/db/schema/gap-fix-2026-08.ts announcementReads / knowledgeBaseFeedback
  */
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, sql, desc, like, or, count, inArray } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { UnauthorizedError, ValidationError, NotFoundError } from '../lib/errors';
+import { verifyToken } from '../services/auth/jwt.js';
+import { UnauthorizedError, ValidationError, NotFoundError } from '../lib/errors.js';
 
 /* ───────── 鉴权（对齐 me.ts / webhooks.ts 模式） ───────── */
 
@@ -55,6 +55,130 @@ function parseId(raw: unknown): number {
   const id = Number(raw);
   if (!Number.isInteger(id) || id <= 0) throw new ValidationError('非法的 ID');
   return id;
+}
+
+/* ───────── 分页解析（对齐 recharge.ts） ───────── */
+
+/** 解析 page / page_size 为整数并裁剪到合法区间 */
+function parsePagination(q: Record<string, string | undefined>, defaultSize = 20, cap = 100) {
+  const page = Math.max(parseInt(q.page ?? '1', 10) || 1, 1);
+  const pageSize = Math.min(Math.max(parseInt(q.page_size ?? String(defaultSize), 10) || defaultSize, 1), cap);
+  return { page, pageSize };
+}
+
+/* ───────── 通知偏好（system_config 持久化，{data:prefs}） ─────────
+ * 对齐 NotificationSettingsPage.NotificationPrefs：
+ *   { emailEnabled, emailFrequency('realtime'|'daily'|'off'), emailDigestTime('HH:MM'),
+ *     inAppPreferences, emailPreferences, balanceLowThreshold }
+ * system_config key = `notify_pref.<uid>.prefs`，value = JSON.stringify(prefs)。
+ */
+
+/** 14 个通知事件 key（与前端一致；其中 login_anomaly / 2fa_changed 强制开启） */
+const NOTIFICATION_EVENT_KEYS = [
+  'recharge_success', 'consumption_notify', 'balance_low', 'refund_status', // 财务
+  'login_reminder', 'key_created_deleted', 'login_anomaly', '2fa_changed', // 安全（后两者强制）
+  'system_maintenance', 'api_changed', 'version_update', // 系统
+  'campaign_notify', 'promotion_info', 'product_update', // 营销
+];
+
+interface NotificationPrefs {
+  emailEnabled: boolean;
+  emailFrequency: 'realtime' | 'daily' | 'off';
+  emailDigestTime: string;
+  inAppPreferences: Record<string, boolean>;
+  emailPreferences: Record<string, boolean>;
+  balanceLowThreshold: number;
+}
+
+/** 默认通知偏好（GET 未存储时 / reset 时使用） */
+function defaultNotificationPrefs(): NotificationPrefs {
+  const inApp = Object.fromEntries(NOTIFICATION_EVENT_KEYS.map((k) => [k, true]));
+  const email = Object.fromEntries(NOTIFICATION_EVENT_KEYS.map((k) => [k, true]));
+  return {
+    emailEnabled: true,
+    emailFrequency: 'realtime',
+    emailDigestTime: '09:00',
+    inAppPreferences: inApp,
+    emailPreferences: email,
+    balanceLowThreshold: 10,
+  };
+}
+
+/**
+ * 校验 + 归一化前端上传的完整 prefs 对象：
+ *  - emailFrequency 仅允许 realtime|daily|off（否则 400）
+ *  - login_anomaly / 2fa_changed 在两个 map 中强制 true（服务端防线）
+ *  - balanceLowThreshold 取整并 >=1
+ *  - 未知/缺失事件键默认 true（与前端 `?? true` 一致）
+ */
+function normalizePrefs(body: unknown): NotificationPrefs {
+  const b = (body ?? {}) as Record<string, unknown>;
+  const emailFrequency = String(b.emailFrequency ?? 'realtime');
+  if (!['realtime', 'daily', 'off'].includes(emailFrequency)) {
+    throw new ValidationError('emailFrequency 必须是 realtime/daily/off 之一');
+  }
+  const toBoolMap = (v: unknown): Record<string, boolean> => {
+    const src = (v && typeof v === 'object') ? (v as Record<string, boolean>) : {};
+    const m: Record<string, boolean> = {};
+    for (const k of NOTIFICATION_EVENT_KEYS) m[k] = src[k] === false ? false : true;
+    // 强制开启的安全事件
+    m['login_anomaly'] = true;
+    m['2fa_changed'] = true;
+    return m;
+  };
+  let threshold = 10;
+  const rawThreshold = b.balanceLowThreshold;
+  if (rawThreshold !== undefined && rawThreshold !== null) {
+    const n = Math.floor(Number(rawThreshold));
+    if (Number.isFinite(n)) threshold = Math.max(1, n);
+  }
+
+  return {
+    emailEnabled: b.emailEnabled === true,
+    emailFrequency: emailFrequency as NotificationPrefs['emailFrequency'],
+    emailDigestTime: String(b.emailDigestTime ?? '09:00'),
+    inAppPreferences: toBoolMap(b.inAppPreferences),
+    emailPreferences: toBoolMap(b.emailPreferences),
+    balanceLowThreshold: threshold,
+  };
+}
+
+/** 当前用户通知偏好存储键 */
+function notifyPrefKey(uid: number): string {
+  return `notify_pref.${uid}.prefs`;
+}
+
+/** 读取当前用户通知偏好（缺失或解析失败 → null） */
+async function readPrefs(uid: number): Promise<NotificationPrefs | null> {
+  const rows = await db
+    .select({ value: schema.systemConfig.value })
+    .from(schema.systemConfig)
+    .where(eq(schema.systemConfig.key, notifyPrefKey(uid)))
+    .limit(1);
+  if (!rows[0]) return null;
+  try {
+    return JSON.parse(rows[0].value) as NotificationPrefs;
+  } catch {
+    return null;
+  }
+}
+
+/** upsert 到 system_config（对齐 POST /me/notification-settings/:type/email 的 onConflictDoUpdate） */
+async function writePrefs(uid: number, prefs: NotificationPrefs): Promise<NotificationPrefs> {
+  const key = notifyPrefKey(uid);
+  await db
+    .insert(schema.systemConfig)
+    .values({
+      key,
+      value: JSON.stringify(prefs),
+      description: `用户 ${uid} 的通知偏好`,
+      updatedBy: uid,
+    })
+    .onConflictDoUpdate({
+      target: schema.systemConfig.key,
+      set: { value: JSON.stringify(prefs), updatedBy: uid, updatedAt: new Date() },
+    });
+  return prefs;
 }
 
 /**
@@ -233,6 +357,93 @@ export async function meGapRoutes(app: FastifyInstance) {
   });
 
   /**
+   * GET /api/v1/me/chat/history — 在线客服会话历史（UserChatPage）
+   *
+   * 对齐 web-console UserChatPage：`{ data: { list: HistItem[] } }`，
+   * HistItem = { session_id, status('closed'|'active'|其他→等待中), created_at, msg_count }；
+   * 仅当前用户会话，按 updated_at 倒序，page/page_size（默认 20，上限 100）。
+   */
+  app.get('/api/v1/me/chat/history', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const { page, pageSize } = parsePagination((request.query ?? {}) as Record<string, string | undefined>);
+
+    // LEFT JOIN + GROUP BY（drizzle 对相关子查询在 orderBy/limit 下的渲染有兼容问题，
+    // 见 me-gap 勘察；此处按规范建议用 join 聚合 msg_count）。
+    // PG 按主键分组时对功能依赖列可直接 select/order。
+    const rows = await db
+      .select({
+        sessionId: schema.chatConversations.id,
+        status: schema.chatConversations.status,
+        createdAt: schema.chatConversations.createdAt,
+        msgCount: count(schema.chatMessages.id),
+      })
+      .from(schema.chatConversations)
+      .leftJoin(schema.chatMessages, eq(schema.chatMessages.conversationId, schema.chatConversations.id))
+      .where(eq(schema.chatConversations.userId, uid))
+      .groupBy(schema.chatConversations.id)
+      .orderBy(desc(schema.chatConversations.updatedAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+
+    return reply.send({
+      data: {
+        list: rows.map((r) => ({
+          session_id: r.sessionId,
+          status: r.status,
+          created_at: r.createdAt,
+          msg_count: Number(r.msgCount ?? 0),
+        })),
+      },
+    });
+  });
+
+  /**
+   * GET /api/v1/me/login-history — 登录历史（SecurityPage）
+   *
+   * 对齐 web-console SecurityPage：`{ data: { records: [...] } }`（key 为 records，非 list）。
+   * 行字段：login_at(ISO)、ip、city、browser、os、device_info、success(bool)、risk_level。
+   * 数据源 login_history（migration 0035），按用户 isolation，login_at 倒序，
+   * page/page_size（默认 20，上限 100）。
+   */
+  app.get('/api/v1/me/login-history', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const { page, pageSize } = parsePagination((request.query ?? {}) as Record<string, string | undefined>);
+
+    const rows = await db
+      .select({
+        id: schema.loginHistory.id,
+        loginAt: schema.loginHistory.loginAt,
+        ip: schema.loginHistory.ip,
+        city: schema.loginHistory.city,
+        browser: schema.loginHistory.browser,
+        os: schema.loginHistory.os,
+        deviceInfo: schema.loginHistory.deviceInfo,
+        success: schema.loginHistory.success,
+        riskLevel: schema.loginHistory.riskLevel,
+      })
+      .from(schema.loginHistory)
+      .where(eq(schema.loginHistory.userId, uid))
+      .orderBy(desc(schema.loginHistory.loginAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+
+    return reply.send({
+      data: {
+        records: rows.map((r) => ({
+          login_at: r.loginAt,
+          ip: r.ip,
+          city: r.city,
+          browser: r.browser,
+          os: r.os,
+          device_info: r.deviceInfo,
+          success: r.success === true,
+          risk_level: r.riskLevel,
+        })),
+      },
+    });
+  });
+
+  /**
    * GET /api/v1/me/knowledge-base — 帮助中心文章列表（R3-USER-DRILL-002）
    *
    * 仅返回 status='published' 的文章；支持 search（标题/分类/内容模糊）；
@@ -361,6 +572,41 @@ export async function meGapRoutes(app: FastifyInstance) {
       });
 
     return reply.send({ data: { ok: true, type, email: enabled } });
+  });
+
+  /**
+   * GET /api/v1/me/preferences/notifications — 通知偏好读取（NotificationSettingsPage）
+   *
+   * 返回当前用户存储的完整 prefs；未存储（或数据损坏）时返回默认值。
+   */
+  app.get('/api/v1/me/preferences/notifications', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const stored = await readPrefs(uid);
+    return reply.send({ data: stored ?? defaultNotificationPrefs() });
+  });
+
+  /**
+   * PUT /api/v1/me/preferences/notifications — 通知偏好保存（全量覆盖）
+   *
+   * body 为完整 NotificationPrefs；服务端校验/裁剪后持久化到 system_config，返回 { data: prefs }。
+   */
+  app.put('/api/v1/me/preferences/notifications', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const prefs = normalizePrefs(request.body);
+    await writePrefs(uid, prefs);
+    return reply.send({ data: prefs });
+  });
+
+  /**
+   * POST /api/v1/me/preferences/notifications/reset — 恢复默认通知偏好
+   *
+   * 无 body；写默认 prefs 并返回 { data: prefs }。
+   */
+  app.post('/api/v1/me/preferences/notifications/reset', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const prefs = defaultNotificationPrefs();
+    await writePrefs(uid, prefs);
+    return reply.send({ data: prefs });
   });
 
   /**

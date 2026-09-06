@@ -9,18 +9,19 @@
 
 import type { FastifyInstance } from 'fastify';
 import bcrypt from 'bcryptjs';
-import { db, schema } from '../db';
-import { eq, and, sql, count, desc, inArray } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { getBalance } from '../services/billing/balance';
-import { getUserGroup } from '../services/groups';
-import { AppError, UnauthorizedError, ValidationError, NotFoundError } from '../lib/errors';
-import { validatePasswordStrength } from '../lib/password';
-import { getPricingForModel } from '../services/billing/pricing';
-import { resolveCachePricing, getCachePricingMode } from '../services/billing/cache-discount';
+import { db, schema } from '../db/index.js';
+import { eq, and, sql, desc, inArray } from 'drizzle-orm';
+import { verifyToken } from '../services/auth/jwt.js';
+import { getBalance } from '../services/billing/balance.js';
+import { getUserGroup } from '../services/groups.js';
+import { AppError, UnauthorizedError, ValidationError, NotFoundError } from '../lib/errors.js';
+import { validatePasswordStrength } from '../lib/password.js';
+import { normalizeI18nLang, I18N_LANGS } from '../lib/i18n-langs.js';
+import { getPricingForModel } from '../services/billing/pricing.js';
+import { resolveCachePricing, getCachePricingMode } from '../services/billing/cache-discount.js';
 
 // ── JWT auth ─────────────────────────────────────────────
-async function jwtAuth(request: any, reply: any) {
+async function jwtAuth(request: any, _reply: any) {
   const authHeader = request.headers.authorization;
   const token = authHeader?.split(' ')[1];
   if (!token) throw new UnauthorizedError('Missing token');
@@ -645,11 +646,13 @@ export async function meRoutes(app: FastifyInstance) {
 
   // ═══ /me/change-password — 修改密码（P1-1）═══
   // 旧密码 bcrypt 校验 → 更新 passwordHash → 使该用户全部会话失效（提示重新登录）。
-  app.post('/api/v1/me/change-password', { preHandler: [jwtAuth] }, async (request, reply) => {
+  // 兼容两套约定：方法 POST/PUT 均可；字段 current_password|new_password（web-console
+  // SecurityPage）与 oldPassword|newPassword（早期客户端）均读取。
+  const changePasswordHandler = async (request: any, reply: any) => {
     const uid = userId(request);
     const body = (request.body || {}) as Record<string, unknown>;
-    const oldPassword = String(body.oldPassword ?? '');
-    const newPassword = String(body.newPassword ?? '');
+    const oldPassword = String(body.current_password ?? body.oldPassword ?? '');
+    const newPassword = String(body.new_password ?? body.newPassword ?? '');
 
     if (!oldPassword) throw new ValidationError('旧密码不能为空');
     if (newPassword.length < 8) throw new ValidationError('新密码至少 8 位');
@@ -676,7 +679,10 @@ export async function meRoutes(app: FastifyInstance) {
     await db.delete(schema.userSessions).where(eq(schema.userSessions.userId, uid));
 
     return reply.send({ message: '密码已更新，请重新登录' });
-  });
+  };
+
+  app.post('/api/v1/me/change-password', { preHandler: [jwtAuth] }, changePasswordHandler);
+  app.put('/api/v1/me/change-password', { preHandler: [jwtAuth] }, changePasswordHandler);
 
   // ═══ /me/change-email — 修改邮箱（P1-1）═══
   // 新邮箱唯一性校验（409 EMAIL_EXISTS）→ 更新 users.email。
@@ -1027,5 +1033,56 @@ export async function meRoutes(app: FastifyInstance) {
       .where(and(eq(schema.apiKeys.userId, uid), sql`${schema.apiKeys.status} != 'revoked'`))
       .returning({ id: schema.apiKeys.id });
     return reply.send({ message: '全部 API Key 已吊销', data: { revoked: rows.length } });
+  });
+
+  // ═══ /me/settings — 用户设置（Gate-1 i18n 契约；目前仅 language）═══
+
+  /**
+   * GET /api/v1/me/settings — 读取用户设置
+   *
+   * 目前仅返回语言偏好：`{ language }`。语言按账号维度独立（users.language）。
+   * 走现有 jwtAuth（22-30 行）+ userId()（32-34 行）。
+   *
+   * @see docs/多语言i18n改造方案.md §2.3（/me/settings 契约）
+   */
+  app.get('/api/v1/me/settings', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const [u] = await db
+      .select({ language: schema.users.language })
+      .from(schema.users)
+      .where(eq(schema.users.id, uid))
+      .limit(1);
+    if (!u) throw new UnauthorizedError('User not found');
+    return reply.send({ data: { language: u.language } });
+  });
+
+  /**
+   * PUT /api/v1/me/settings — 更新用户设置
+   *
+   * body: { language }。值域过白名单（normalizeI18nLang），非法 → 400
+   * （ValidationError，提示合法值）。写库后返回 `{ language }`。
+   *
+   * @param body.language - 目标语言，须为 8 语言白名单之一（支持 zh_cn/en_us 等变体归一）
+   * @returns 更新后的 `{ language }`
+   * @throws {ValidationError} language 非法 → 400
+   * @see docs/多语言i18n改造方案.md §2.3
+   */
+  app.put('/api/v1/me/settings', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const body = (request.body || {}) as Record<string, unknown>;
+    const rawLang = String(body.language ?? '').trim();
+    const language = normalizeI18nLang(rawLang);
+    if (!language) {
+      throw new ValidationError(`language 仅支持: ${I18N_LANGS.join('/')}`);
+    }
+
+    const [u] = await db
+      .update(schema.users)
+      .set({ language, updatedAt: new Date() })
+      .where(eq(schema.users.id, uid))
+      .returning({ language: schema.users.language });
+    if (!u) throw new UnauthorizedError('User not found');
+
+    return reply.send({ data: { language: u.language }, message: '语言偏好已更新' });
   });
 }

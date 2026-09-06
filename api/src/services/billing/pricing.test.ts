@@ -19,7 +19,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterEach } from 'vitest';
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { and, eq, like, inArray } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import {
@@ -32,7 +32,7 @@ import {
   AGENT_LEVEL_DISCOUNT_RATE,
   DEFAULT_INPUT_PRICE,
   DEFAULT_OUTPUT_PRICE,
-} from './pricing';
+} from './pricing.js';
 
 // ============================================================
 // 测试夹具

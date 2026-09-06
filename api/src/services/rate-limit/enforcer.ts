@@ -26,13 +26,13 @@
  * @see coding-standards-control-logic.md §九（配置驱动的限流参数）
  */
 
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 import { and, eq, inArray } from 'drizzle-orm';
-import { db, schema } from '../../db';
-import { getRedis } from '../../lib/redis';
-import { getUserGroup } from '../groups';
-import { RateLimitError } from '../../lib/errors';
-import { computeEffectiveLimits } from './effective';
+import { db, schema } from '../../db/index.js';
+import { getRedis } from '../../lib/redis.js';
+import { getUserGroup } from '../groups.js';
+import { RateLimitError } from '../../lib/errors.js';
+import { computeEffectiveLimits } from './effective.js';
 
 // ============================================================
 // 窗口常量（毫秒）

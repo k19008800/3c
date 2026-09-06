@@ -33,36 +33,36 @@
  */
 import type { FastifyInstance } from 'fastify';
 import crypto from 'crypto';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, desc, asc, sql, inArray } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { UnauthorizedError, ForbiddenError, ValidationError, NotFoundError, AppError, IdempotencyConflictError, IdempotencyUnavailableError } from '../lib/errors';
-import { requirePerm } from '../middleware/require-perm';
-import { requireOperation2fa } from '../middleware/require-operation-2fa';
-import { creditBalance } from '../services/billing/balance';
-import { adjustLedgerAvailable, clearNegativeFlag } from '../services/billing/ledger';
-import { notifyUser } from '../services/notify';
+import { verifyToken } from '../services/auth/jwt.js';
+import { UnauthorizedError, ForbiddenError, ValidationError, NotFoundError, AppError, IdempotencyConflictError, IdempotencyUnavailableError } from '../lib/errors.js';
+import { requirePerm } from '../middleware/require-perm.js';
+import { requireOperation2fa } from '../middleware/require-operation-2fa.js';
+import { creditBalance } from '../services/billing/balance.js';
+import { adjustLedgerAvailable, clearNegativeFlag } from '../services/billing/ledger.js';
+import { notifyUser } from '../services/notify.js';
 import {
   getManualTopupMaxAmount,
   getApprovalRules,
   getCreditLimits,
   calcApprovalTier,
   calcEffectiveTier,
-} from '../lib/finance-rules';
+} from '../lib/finance-rules.js';
 import {
   checkLimitsInTx,
   reserveInTx,
   syncRedisAdd,
   currentLimitContext,
   yuanToCents,
-} from '../services/billing/credit-limit';
+} from '../services/billing/credit-limit.js';
 import {
   buildApprovalMeta,
   resolveOrderApproval,
   nextPhaseAfterApprove,
   approveStagePatch,
   type RechargeApprovalPhase,
-} from '../services/billing/recharge-approval';
+} from '../services/billing/recharge-approval.js';
 import {
   resolveIdempotencyKey,
   acquireIdempotencyLock,
@@ -70,9 +70,9 @@ import {
   cacheIdempotentResponse,
   getCachedIdempotentResponse,
   IDEMPOTENCY_TTL_SECONDS,
-} from '../services/idempotency';
+} from '../services/idempotency.js';
 // campaign_coupon_codes 从表定义直接导入（与 recharge.ts 一致）
-import { campaignCouponCodes } from '../db/schema/coupons';
+import { campaignCouponCodes } from '../db/schema/coupons.js';
 
 /* ───────── auth / audit ───────── */
 

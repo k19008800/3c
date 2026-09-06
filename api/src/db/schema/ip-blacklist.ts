@@ -1,5 +1,5 @@
 import { pgTable, serial, varchar, text, integer, timestamp, index } from 'drizzle-orm/pg-core';
-import { users } from './users';
+import { users } from './users.js';
 
 /**
  * 系统级 IP 黑名单（P2-4，对齐 kb/3cloud/admin-security-ip-blacklist.md）

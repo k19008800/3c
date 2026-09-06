@@ -3,6 +3,7 @@
  *
  * 端点覆盖：
  *   GET   /api/v1/admin/credit/meta               — 全局限流默认值（企业/个人）+ 模型硬顶列表
+ *   GET   /api/v1/admin/credit/opened             — 已开通限流例外的客户列表（含各模型明细）
  *   GET   /api/v1/admin/credit/customers          — 搜索客户（邮箱/名称，附已开例外数）
  *   GET   /api/v1/admin/credit/rules              — 客户全部例外规则（含变更历史）
  *   POST  /api/v1/admin/credit/rules              — 批量开通例外（多模型一条规则一个 + 写历史）
@@ -15,16 +16,16 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, desc, sql, inArray } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { requireNotImpersonated } from '../middleware/require-perm';
+import { verifyToken } from '../services/auth/jwt.js';
+import { requireNotImpersonated } from '../middleware/require-perm.js';
 import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
-} from '../lib/errors';
+} from '../lib/errors.js';
 
 /* ───────── helpers ───────── */
 
@@ -41,13 +42,6 @@ async function adminAuth(request: any, _reply: any) {
   }
 }
 
-/** 全局限流默认键（与限流设置页 /admin/settings 共用） */
-const DEFAULT_KEYS = [
-  'enterprise_rpm',
-  'enterprise_tpm',
-  'personal_rpm',
-  'personal_tpm',
-] as const;
 const DEFAULTS: Record<string, number> = {
   enterprise_rpm: 300,
   enterprise_tpm: 1_000_000,
@@ -127,6 +121,70 @@ export async function adminCreditRoutes(app: FastifyInstance) {
         })),
       },
     });
+  });
+
+  /**
+   * GET /api/v1/admin/credit/opened — 已开通限流例外的客户列表（管理员少了搜索的一步）
+   * 返回所有拥有≥1条 active 例外规则的客户，附每客户已开模型数、按最近开通时间倒序，
+   * 及各模型例外明细（便于列表直接预览）。
+   */
+  app.get('/api/v1/admin/credit/opened', { preHandler: [adminAuth] }, async (_request, reply) => {
+    // 全量 active（生效中）例外规则，按客户聚合
+    const activeRules = await db
+      .select()
+      .from(schema.quotaExceptionRules)
+      .where(eq(schema.quotaExceptionRules.status, 'active'))
+      .orderBy(desc(schema.quotaExceptionRules.updatedAt));
+
+    if (activeRules.length === 0) return reply.send({ data: [] });
+
+    // 客户信息（role=customer）
+    const custIds = [...new Set(activeRules.map((r) => r.customerId))];
+    const users = await db
+      .select({
+        id: schema.users.id,
+        email: schema.users.email,
+        name: schema.users.name,
+        type: schema.users.customerType,
+      })
+      .from(schema.users)
+      .where(and(inArray(schema.users.id, custIds), eq(schema.users.role, 'customer')));
+    const userById = new Map(users.map((u) => [u.id, u]));
+
+    // 按客户聚合
+    const byCust = new Map<number, typeof activeRules>();
+    for (const r of activeRules) {
+      if (!byCust.has(r.customerId)) byCust.set(r.customerId, []);
+      byCust.get(r.customerId)!.push(r);
+    }
+
+    const list: any[] = [];
+    for (const [cid, rules] of byCust) {
+      const u = userById.get(cid);
+      if (!u) continue; // 客户不存在则跳过
+      const latest = rules.reduce((a, b) => (a.updatedAt >= b.updatedAt ? a : b));
+      list.push({
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        type: u.type,
+        activeRuleCount: rules.length,
+        updatedAt: latest.updatedAt,
+        rules: rules.map((r) => ({
+          model: r.modelName,
+          rpm: r.rpm,
+          tpm: r.tpm,
+          period: r.period,
+          start: r.startDate,
+          end: r.endDate,
+          reason: r.reason ?? '',
+        })),
+      });
+    }
+
+    // 按最近开通/更新时间倒序
+    list.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+    return reply.send({ data: list });
   });
 
   /**

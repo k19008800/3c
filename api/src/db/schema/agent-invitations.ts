@@ -1,6 +1,6 @@
 import { pgTable, serial, integer, varchar, timestamp, index } from 'drizzle-orm/pg-core';
-import { agents } from './agents';
-import { users } from './users';
+import { agents } from './agents.js';
+import { users } from './users.js';
 
 /**
  * 代理商邀请码（P1-2）

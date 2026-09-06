@@ -14,9 +14,9 @@
  *   - 可替代性：同类 = 活跃 supplier_models 中 model_name 相同数量（跨供应商同模型）
  */
 
-import { db, schema } from '../db';
-import { eq, and, gte, lte, isNull, desc, sql, inArray } from 'drizzle-orm';
-import { sendMail, getSmtpConfig } from './mailer';
+import { db, schema } from '../db/index.js';
+import { eq, and, gte, lte, isNull, sql, inArray } from 'drizzle-orm';
+import { sendMail, getSmtpConfig } from './mailer.js';
 
 /* ────────────────────────────────────────────────
  * 常量与类型
@@ -270,7 +270,7 @@ function notificationContent(result: EvaluationResult) {
   return `模型「${model.modelName}」销售价由 ¥${oldSalePrice} 调整为 ¥${newSalePrice}（${changeRate > 0 ? '+' : ''}${changeRate}%），${priceDirection(changeRate)}。生效时间：${effectiveAt.toLocaleString('zh-CN')}。`;
 }
 
-async function findAlternatives(modelName: string, newSalePrice: number) {
+async function findAlternatives(modelName: string, _newSalePrice: number) {
   const rows = await db.execute(sql`
     SELECT DISTINCT sm.model_name AS model_name,
            (SELECT vp2.output_price::numeric FROM vendor_pricing vp2
@@ -293,7 +293,7 @@ async function findAlternatives(modelName: string, newSalePrice: number) {
  * 分发（每小时任务 + 手动重发共用）
  * ──────────────────────────────────────────────── */
 
-export async function dispatchPriceChange(changeLogId: number, opts?: { manual?: boolean }): Promise<{ dispatched: boolean; tierCounts: { A: number; B: number; C: number }; total: number }> {
+export async function dispatchPriceChange(changeLogId: number, _opts?: { manual?: boolean }): Promise<{ dispatched: boolean; tierCounts: { A: number; B: number; C: number }; total: number }> {
   const result = await evaluateLog(changeLogId);
   const smtp = await getSmtpConfig();
 
@@ -424,7 +424,6 @@ export async function generateWeeklySummary() {
  * ──────────────────────────────────────────────── */
 
 const HOUR_MS = 3600 * 1000;
-const MINUTE_MS = 60 * 1000;
 
 let schedulerStarted = false;
 

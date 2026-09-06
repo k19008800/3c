@@ -20,13 +20,13 @@
  * @module middleware/require-operation-2fa
  */
 
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq } from 'drizzle-orm';
-import { AppError } from '../lib/errors';
-import { verifyOperationToken } from '../services/auth/jwt';
-import { getOperation2faConfig, getCreditLimits } from '../lib/finance-rules';
-import { getRedis } from '../lib/redis';
-import { assertOperationSummary } from '../lib/operation-summary';
+import { AppError } from '../lib/errors.js';
+import { verifyOperationToken } from '../services/auth/jwt.js';
+import { getOperation2faConfig, getCreditLimits } from '../lib/finance-rules.js';
+import { getRedis } from '../lib/redis.js';
+import { assertOperationSummary } from '../lib/operation-summary.js';
 
 /**
  * 资金写操作操作级 2FA 守卫（Fastify preHandler）。

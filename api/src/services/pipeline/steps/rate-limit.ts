@@ -10,7 +10,7 @@
  * @see docs/iteration-plan-v2.md P0-2 / P0-4
  */
 
-import { createStep } from '../executor';
+import { createStep } from '../executor.js';
 
 /**
  * 创建 rate-limit step

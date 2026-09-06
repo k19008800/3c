@@ -11,7 +11,7 @@
  *
  * 与主链路完全解耦：清理失败只打日志，不影响 API。
  */
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { lt, sql } from 'drizzle-orm';
 
 /* ───────── 常量 ───────── */

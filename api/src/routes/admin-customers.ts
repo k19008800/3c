@@ -20,17 +20,17 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, sql, desc, gte, lte, inArray } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
-import { verifyToken, generateTokenPair, createSession, invalidateSession } from '../services/auth/jwt';
-import { requireNotImpersonated } from '../middleware/require-perm';
+import { verifyToken, generateTokenPair, createSession, invalidateSession } from '../services/auth/jwt.js';
+import { requireNotImpersonated } from '../middleware/require-perm.js';
 import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
-} from '../lib/errors';
+} from '../lib/errors.js';
 
 /* ───────── helpers ───────── */
 

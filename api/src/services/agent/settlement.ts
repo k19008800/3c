@@ -21,12 +21,12 @@
  */
 
 import crypto from 'crypto';
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { eq, and, sql, desc, inArray, like, isNull, type SQL } from 'drizzle-orm';
 import type { PgTransaction } from 'drizzle-orm/pg-core';
 import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js';
 import type { ExtractTablesWithRelations } from 'drizzle-orm';
-import { ValidationError, AppError } from '../../lib/errors';
+import { ValidationError, AppError } from '../../lib/errors.js';
 
 /** 事务上下文：与 db.transaction 回调的 tx 同型（避免手写泛型漂移） */
 type Tx = PgTransaction<PostgresJsQueryResultHKT, typeof schema, ExtractTablesWithRelations<typeof schema>>;
@@ -389,25 +389,6 @@ function randomInviteCode(): string {
     code += INVITE_ALPHABET[bytes.readUInt8(i) % INVITE_ALPHABET.length];
   }
   return code;
-}
-
-/**
- * 生成唯一邀请码：查重冲突则重试（最多 10 次）。
- *
- * 碰撞概率极低（36^8+ 空间）；表上 code 唯一约束为最终兜底，
- * 极端并发下由 regenerateInviteCode 的 23505 捕获重试闭环。
- */
-async function generateUniqueInviteCode(): Promise<string> {
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const code = randomInviteCode();
-    const existing = await db
-      .select({ id: schema.agentInvitations.id })
-      .from(schema.agentInvitations)
-      .where(eq(schema.agentInvitations.code, code))
-      .limit(1);
-    if (existing.length === 0) return code;
-  }
-  throw new AppError('邀请码生成失败，请重试', 500, 'INVITE_CODE_GENERATE_FAILED');
 }
 
 /**

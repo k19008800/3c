@@ -15,11 +15,11 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
-import { eq, and, sql, desc, gte, lte } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { sendMail } from '../services/mailer';
-import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError, AppError } from '../lib/errors';
+import { db, schema } from '../db/index.js';
+import { eq, and, sql, desc, gte } from 'drizzle-orm';
+import { verifyToken } from '../services/auth/jwt.js';
+import { sendMail } from '../services/mailer.js';
+import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError } from '../lib/errors.js';
 
 /* ───────── auth / audit helpers ───────── */
 

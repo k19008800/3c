@@ -15,9 +15,9 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { db, schema } from '../../db';
-import { eq, sql } from 'drizzle-orm';
-import { getRedis } from '../../lib/redis';
+import { db, schema } from '../../db/index.js';
+import { eq } from 'drizzle-orm';
+import { getRedis } from '../../lib/redis.js';
 import {
   checkLimitsInTx,
   reserveInTx,
@@ -28,7 +28,7 @@ import {
   eventMember,
   yuanToCents,
   readRollingSumPg,
-} from './credit-limit';
+} from './credit-limit.js';
 
 const ts = Date.now();
 const WINDOW_MS = rollingWindowMs(24);
@@ -224,7 +224,7 @@ describe('reserveInTx 事件插行（幂等）', () => {
     const before = await readRollingSumPg(db, 'operator', uid, 24);
     expect(before).toBeGreaterThan(0);
     // 服务未导出回退能力（终裁 B19：lim_dec 不建）
-    const mod = await import('./credit-limit');
+    const mod = await import('./credit-limit.js');
     expect((mod as Record<string, unknown>).refund).toBeUndefined();
     expect((mod as Record<string, unknown>).syncRedisDecr).toBeUndefined();
   });

@@ -13,7 +13,7 @@
  *
  * @module services/upstream
  */
-import { AppError } from '../../lib/errors';
+import { AppError } from '../../lib/errors.js';
 
 export type UpstreamFault = 'auth' | 'retryable' | 'client';
 

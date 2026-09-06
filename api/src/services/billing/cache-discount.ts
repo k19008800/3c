@@ -19,11 +19,11 @@
  * @module services/billing
  */
 
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { eq } from 'drizzle-orm';
-import { cacheGet, cacheSet, cacheDel } from '../../lib/redis';
-import { CACHE_HIT_DISCOUNT, type TokenPricing } from './cache-billing';
-import { DEFAULT_INPUT_PRICE, type ModelPricing } from './pricing';
+import { cacheGet, cacheSet, cacheDel } from '../../lib/redis.js';
+import { CACHE_HIT_DISCOUNT, type TokenPricing } from './cache-billing.js';
+import { DEFAULT_INPUT_PRICE, type ModelPricing } from './pricing.js';
 
 // ============================================================
 // 常量

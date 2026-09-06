@@ -13,11 +13,11 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
-import { eq, and, gte, lte, inArray, desc, sql } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError } from '../lib/errors';
-import { evaluateLog, dispatchPriceChange, renotifyPriceChange, computeSubstitutability } from '../services/price-notification';
+import { db, schema } from '../db/index.js';
+import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
+import { verifyToken } from '../services/auth/jwt.js';
+import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError } from '../lib/errors.js';
+import { evaluateLog, renotifyPriceChange, computeSubstitutability } from '../services/price-notification.js';
 
 /* ───────── helpers ───────── */
 

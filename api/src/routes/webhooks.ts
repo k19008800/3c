@@ -19,10 +19,10 @@
 
 import type { FastifyInstance } from 'fastify';
 import crypto from 'crypto';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, desc } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { UnauthorizedError, ValidationError, NotFoundError } from '../lib/errors';
+import { verifyToken } from '../services/auth/jwt.js';
+import { UnauthorizedError, ValidationError, NotFoundError } from '../lib/errors.js';
 
 // ── JWT auth ─────────────────────────────────────────────
 async function jwtAuth(request: any, _reply: any) {

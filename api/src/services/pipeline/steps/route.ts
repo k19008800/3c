@@ -12,9 +12,9 @@
  * @see docs/iteration-plan-v2.md P0-4
  */
 
-import { createStep } from '../executor';
-import { selectChannel, type SelectedChannel } from '../../upstream/routing';
-import { setStepResult, STEP_KEYS } from './context';
+import { createStep } from '../executor.js';
+import { selectChannel } from '../../upstream/routing.js';
+import { setStepResult, STEP_KEYS } from './context.js';
 
 /**
  * 创建 route step

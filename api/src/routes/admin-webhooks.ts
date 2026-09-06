@@ -17,10 +17,10 @@
 
 import type { FastifyInstance } from 'fastify';
 import crypto from 'crypto';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, desc } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { UnauthorizedError, ForbiddenError, ValidationError, NotFoundError } from '../lib/errors';
+import { verifyToken } from '../services/auth/jwt.js';
+import { UnauthorizedError, ForbiddenError, ValidationError, NotFoundError } from '../lib/errors.js';
 
 async function adminAuth(request: any, _reply: any) {
   const authHeader = request.headers.authorization;

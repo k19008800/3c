@@ -17,19 +17,19 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
+import { verifyToken } from '../services/auth/jwt.js';
 import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
-} from '../lib/errors';
+} from '../lib/errors.js';
 import {
   syncSupplierModels,
   syncAllSuppliers,
-} from '../services/model-sync';
+} from '../services/model-sync.js';
 
 /** JWT 解析：成功则写入 request.userContext */
 async function jwtAuth(request: any, _reply: any) {

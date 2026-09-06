@@ -1,6 +1,6 @@
 import { pgTable, serial, integer, varchar, pgEnum, timestamp, numeric } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { supplierModels } from './supplier-models';
+import { supplierModels } from './supplier-models.js';
 
 export const pricingStatusEnum = pgEnum('pricing_status', [
   'draft',

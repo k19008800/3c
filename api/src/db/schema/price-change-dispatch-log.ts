@@ -1,5 +1,5 @@
 import { pgTable, serial, integer, timestamp, text } from 'drizzle-orm/pg-core';
-import { priceChangeLogs } from './price-change-logs';
+import { priceChangeLogs } from './price-change-logs.js';
 
 /**
  * 分发执行日志 — 对齐 PRD §3.4 price_change_dispatch_log

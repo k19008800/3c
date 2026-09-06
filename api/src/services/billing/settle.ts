@@ -19,14 +19,14 @@
  * @module services/billing
  */
 
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { eq } from 'drizzle-orm';
-import type { PipelineContext } from '../pipeline/types';
-import type { SelectedChannel } from '../upstream/routing';
-import { deductBalance } from './balance';
-import { recordConsumption } from './consumption-log';
-import { generateCommissionForConsumption } from '../agent/commission';
-import { settlePreConsume, recordNegativeBalanceRisk, type PreConsumeResult } from './pre-consume';
+import type { PipelineContext } from '../pipeline/types.js';
+import type { SelectedChannel } from '../upstream/routing.js';
+import { deductBalance } from './balance.js';
+import { recordConsumption } from './consumption-log.js';
+import { generateCommissionForConsumption } from '../agent/commission.js';
+import { settlePreConsume, recordNegativeBalanceRisk, type PreConsumeResult } from './pre-consume.js';
 
 /** settleBilling 记账标记（与原各路由 opts 完全一致） */
 export interface SettleOptions {

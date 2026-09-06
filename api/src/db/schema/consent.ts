@@ -1,5 +1,5 @@
 import { pgTable, serial, integer, varchar, timestamp, text } from 'drizzle-orm/pg-core';
-import { users } from './users';
+import { users } from './users.js';
 
 /**
  * 合规策略（隐私政策 / 服务条款等）— 2026-08 补齐，对齐原型 admin-consent.html

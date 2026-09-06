@@ -8,12 +8,12 @@
  * @module routes/test-helpers
  */
 
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { inArray } from 'drizzle-orm';
-import { generateOperationToken } from '../services/auth/jwt';
-import { generateSecret } from '../services/auth/totp';
-import { getRedis } from '../lib/redis';
-import { assertOperationSummary } from '../lib/operation-summary';
+import { generateOperationToken } from '../services/auth/jwt.js';
+import { generateSecret } from '../services/auth/totp.js';
+import { getRedis } from '../lib/redis.js';
+import { assertOperationSummary } from '../lib/operation-summary.js';
 
 /**
  * R7 测试共用操作摘要（ADR-0008：令牌须绑定 operation summary）。

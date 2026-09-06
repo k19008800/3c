@@ -22,7 +22,7 @@ import {
   uniqueIndex,
   index,
 } from 'drizzle-orm/pg-core';
-import { suppliers } from './suppliers';
+import { suppliers } from './suppliers.js';
 
 export const vendorSettlements = pgTable(
   'vendor_settlements',

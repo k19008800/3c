@@ -10,9 +10,8 @@
  */
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { generateAccessToken } from '../services/auth/jwt';
-import { schema } from '../db';
-import { meGapRoutes } from './me-gap';
+import { generateAccessToken } from '../services/auth/jwt.js';
+import { meGapRoutes } from './me-gap.js';
 
 /* ───────── mock db（select 按队列消费，支持多 select 端点） ───────── */
 
@@ -46,7 +45,7 @@ const chain = (result: unknown): any => {
 };
 
 vi.mock('../db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../db')>();
+  const actual = await importOriginal<typeof import('../db/index.js')>();
   const db = {
     select: (...args: unknown[]) => {
       dbState.calls.push({ method: 'select', args });

@@ -23,7 +23,7 @@
  * @see kb/3cloud/newapi-gap-analysis.md Batch 4 任务 4.2
  */
 
-import { db as defaultDb, schema } from '../db';
+import { db as defaultDb, schema } from '../db/index.js';
 import { eq, and, asc } from 'drizzle-orm';
 
 /** 上游 /v1/models 拉取超时（ms） */

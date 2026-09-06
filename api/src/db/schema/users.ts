@@ -17,6 +17,8 @@ export const users = pgTable('users', {
   status: varchar('status', { length: 20 }).notNull().default('active'),
   customerType: varchar('customer_type', { length: 20 }).notNull().default('personal'),
   realNameStatus: varchar('real_name_status', { length: 20 }).notNull().default('unverified'),
+  // i18n（Gate-1）：用户语言偏好，按账号维度独立；值域过白名单，默认 zh-CN（见 lib/i18n-langs.ts）
+  language: varchar('language', { length: 10 }).notNull().default('zh-CN'),
   isContract: boolean('is_contract').notNull().default(false),
   avatarUrl: varchar('avatar_url', { length: 500 }),
   phone: varchar('phone', { length: 30 }),

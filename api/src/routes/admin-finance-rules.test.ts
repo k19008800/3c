@@ -15,13 +15,13 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, inArray, and, desc } from 'drizzle-orm';
-import { generateAccessToken } from '../services/auth/jwt';
-import { adminFinanceRulesRoutes } from './admin-finance-rules';
-import { adminFinanceMissingRoutes } from './admin-finance-missing';
-import { enableTest2fa, op2faHeaders } from './test-helpers';
-import { resetFinanceRulesCache } from '../lib/finance-rules';
+import { generateAccessToken } from '../services/auth/jwt.js';
+import { adminFinanceRulesRoutes } from './admin-finance-rules.js';
+import { adminFinanceMissingRoutes } from './admin-finance-missing.js';
+import { enableTest2fa, op2faHeaders } from './test-helpers.js';
+import { resetFinanceRulesCache } from '../lib/finance-rules.js';
 
 process.env.JWT_SECRET = 'test-admin-finance-rules-secret';
 

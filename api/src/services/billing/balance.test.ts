@@ -11,9 +11,9 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { and, eq, inArray } from 'drizzle-orm';
-import { creditBalance } from './balance';
+import { creditBalance } from './balance.js';
 
 const ts = Date.now();
 

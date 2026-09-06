@@ -14,9 +14,9 @@
  * @module middleware/require-perm
  */
 
-import { verifyToken } from '../services/auth/jwt';
-import { hasPerm } from '../lib/permissions';
-import { UnauthorizedError, ForbiddenError, AppError } from '../lib/errors';
+import { verifyToken } from '../services/auth/jwt.js';
+import { hasPerm } from '../lib/permissions.js';
+import { UnauthorizedError, ForbiddenError, AppError } from '../lib/errors.js';
 
 /**
  * 权限点鉴权 preHandler 工厂。

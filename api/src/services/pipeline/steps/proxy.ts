@@ -16,19 +16,18 @@
  * @see docs/iteration-plan-v2.md P0-4
  */
 
-import { createStep } from '../executor';
-import { AppError } from '../../../lib/errors';
-import { streamRelay } from '../../upstream/proxy';
-import { recordChannelResult } from '../../upstream/circuit-breaker';
-import { classifyUpstreamError, UpstreamAuthError } from '../../upstream/errors';
-import type { SelectedChannel } from '../../upstream/routing';
-import type { PipelineContext } from '../types';
+import { createStep } from '../executor.js';
+import { AppError } from '../../../lib/errors.js';
+import { streamRelay } from '../../upstream/proxy.js';
+import { recordChannelResult } from '../../upstream/circuit-breaker.js';
+import { classifyUpstreamError, UpstreamAuthError } from '../../upstream/errors.js';
+import type { SelectedChannel } from '../../upstream/routing.js';
+import type { PipelineContext } from '../types.js';
 import {
-  getStepResult,
   setStepResult,
   requireStepResult,
   STEP_KEYS,
-} from './context';
+} from './context.js';
 
 /** 上游错误（透传上游状态码 + 错误体；路由 catch 原样转发，行为与旧实现等价） */
 export class UpstreamPassthroughError extends AppError {

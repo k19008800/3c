@@ -19,10 +19,10 @@
  * @see docs/iteration-plan-v2.md P0-4
  */
 
-import { createStep } from '../executor';
-import type { PreConsumeResult } from '../../billing/pre-consume';
-import type { PipelineContext } from '../types';
-import { getStepResult, STEP_KEYS } from './context';
+import { createStep } from '../executor.js';
+import type { PreConsumeResult } from '../../billing/pre-consume.js';
+import type { PipelineContext } from '../types.js';
+import { getStepResult, STEP_KEYS } from './context.js';
 
 /** settle step 选项 */
 export interface SettleStepOptions {

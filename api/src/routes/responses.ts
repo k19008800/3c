@@ -34,23 +34,23 @@
  */
 
 import type { FastifyInstance, FastifyReply } from 'fastify';
-import { apiKeyAuth } from '../services/auth/apikey';
-import { enforceRateLimitPreHandler } from '../services/rate-limit';
-import { responsesToChat, chatToResponses, type ResponsesRequest, type ResponsesInputItem } from '../services/upstream/responses-adapter';
-import { relayResponsesStream } from '../services/upstream/responses-stream';
-import { countTokens } from '../services/billing/token-counter';
-import { determineStreamBilling } from '../services/billing/settle-stream';
-import { computeUsageCost, computeStreamCost } from '../services/billing/cache-billing';
-import { getBalance } from '../services/billing/balance';
-import { recordChannelResult } from '../services/upstream/circuit-breaker';
-import { AppError, InsufficientBalanceError } from '../lib/errors';
+import { apiKeyAuth } from '../services/auth/apikey.js';
+import { enforceRateLimitPreHandler } from '../services/rate-limit/index.js';
+import { responsesToChat, chatToResponses, type ResponsesRequest, type ResponsesInputItem } from '../services/upstream/responses-adapter.js';
+import { relayResponsesStream } from '../services/upstream/responses-stream.js';
+import { countTokens } from '../services/billing/token-counter.js';
+import { determineStreamBilling } from '../services/billing/settle-stream.js';
+import { computeUsageCost, computeStreamCost } from '../services/billing/cache-billing.js';
+import { getBalance } from '../services/billing/balance.js';
+import { recordChannelResult } from '../services/upstream/circuit-breaker.js';
+import { AppError, InsufficientBalanceError } from '../lib/errors.js';
 import {
   resolveIdempotencyKey,
   replayIdempotentRequest,
   cacheIdempotentResponse,
   isIdempotencyUniqueViolation,
   buildIdempotencySummary,
-} from '../services/idempotency';
+} from '../services/idempotency.js';
 import {
   runPipeline,
   createStep,
@@ -69,14 +69,15 @@ import {
   STEP_KEYS,
   type ProxyStepOptions,
   type MockStepResult,
-} from '../services/pipeline';
-import type { PipelineContext } from '../services/pipeline';
-import type { SelectedChannel } from '../services/upstream/routing';
-import { getPricingForModel, computeCost, computeEstimatedCost, buildPricingContext, type ModelPricing } from '../services/billing/pricing';
-import { settleBilling } from '../services/billing/settle';
-import { releasePreConsume } from '../services/billing/pre-consume';
-import { preprocessRequestBody } from '../services/upstream/body-preprocessor';
-import type { StreamState } from '../services/upstream/proxy';
+  type IdempotencyStepResult,
+} from '../services/pipeline/index.js';
+import type { PipelineContext } from '../services/pipeline/index.js';
+import type { SelectedChannel } from '../services/upstream/routing.js';
+import { getPricingForModel, computeCost, computeEstimatedCost, buildPricingContext, type ModelPricing } from '../services/billing/pricing.js';
+import { settleBilling } from '../services/billing/settle.js';
+import { releasePreConsume } from '../services/billing/pre-consume.js';
+import { preprocessRequestBody } from '../services/upstream/body-preprocessor.js';
+import type { StreamState } from '../services/upstream/proxy.js';
 import crypto from 'crypto';
 
 // ============================================================
@@ -445,6 +446,10 @@ export async function responsesRoutes(app: FastifyInstance) {
           implement: async (c) => {
             const pricing = requireStepResult<ModelPricing>(c, STEP_KEYS.pricing);
             const mock = getStepResult<MockStepResult>(c, STEP_KEYS.mockResult);
+            // 幂等：user-scoped 缓存键 + 请求指纹（写缓存键须与 replay 查询键一致，指纹用于回放前异摘要拦截）
+            const idemResult = getStepResult<IdempotencyStepResult>(c, STEP_KEYS.idempotency);
+            const idemScopedKey = idemResult?.key ?? c.requestId;
+            const idemFp = idemResult?.fingerprint;
 
             // ── mock 回退路径（无可用渠道，同样记账扣费）──
             if (mock) {
@@ -482,7 +487,8 @@ export async function responsesRoutes(app: FastifyInstance) {
                 );
                 await relayResponsesStream(c, reply, mockResp, c.model);
                 // 幂等：relay 成功后才缓存流式摘要
-                await cacheIdempotentResponse(c.requestId, {
+                await cacheIdempotentResponse(idemScopedKey, {
+                  request_fingerprint: idemFp,
                   streamed: true,
                   summary: buildIdempotencySummary({
                     requestId: c.requestId,
@@ -498,7 +504,8 @@ export async function responsesRoutes(app: FastifyInstance) {
               }
 
               // 幂等：缓存首次非流式成功响应（命中时直接回放，不重复计费）
-              await cacheIdempotentResponse(c.requestId, {
+              await cacheIdempotentResponse(idemScopedKey, {
+                request_fingerprint: idemFp,
                 streamed: false,
                 body: mock.payload,
                 summary: buildIdempotencySummary({
@@ -546,7 +553,8 @@ export async function responsesRoutes(app: FastifyInstance) {
                   },
                 );
                 // 幂等：结算成功才缓存流式摘要（失败不缓存，避免回放未计费的"成功"）
-                await cacheIdempotentResponse(c.requestId, {
+                await cacheIdempotentResponse(idemScopedKey, {
+                  request_fingerprint: idemFp,
                   streamed: true,
                   summary: buildIdempotencySummary({
                     requestId: c.requestId,
@@ -614,7 +622,8 @@ export async function responsesRoutes(app: FastifyInstance) {
             const responsesBody = chatToResponses(parsedBody, c.requestId);
 
             // 幂等：缓存首次非流式成功响应（命中时直接回放，不重复计费）
-            await cacheIdempotentResponse(c.requestId, {
+            await cacheIdempotentResponse(idemScopedKey, {
+              request_fingerprint: idemFp,
               streamed: false,
               body: responsesBody,
               summary: buildIdempotencySummary({
@@ -636,8 +645,15 @@ export async function responsesRoutes(app: FastifyInstance) {
     } catch (err) {
       // 幂等锁重复（L1 命中）：回放首次结果，不重复扣费
       if (err instanceof IdempotencyConflictError) {
-        const replayed = await replayIdempotentRequest(reply, err.key, err.isStream);
-        if (replayed) return reply;
+        const replayed = await replayIdempotentRequest(reply, err.key, err.isStream, {
+          fingerprint: err.fingerprint,
+          requestId: err.requestId,
+        });
+        if (replayed === 'replayed') return reply;
+        // 异摘要（同 key 异参数/异用户复用）→ 409 IDEMPOTENCY_CONFLICT，不回放首次结果
+        if (replayed === 'conflict') {
+          return sendOpenAIError(reply, 409, 'Idempotency-Key reused with a different request body or user', 'idempotency_conflict', 409);
+        }
         // 首次请求仍在处理中（无缓存、无消费记录）→ 409 幂等提示，而非 500
         return sendOpenAIError(reply, 409, 'Duplicate request is still being processed', 'idempotency_conflict', 409);
       }

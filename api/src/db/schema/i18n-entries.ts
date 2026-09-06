@@ -1,5 +1,5 @@
 import { pgTable, serial, varchar, text, integer, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
-import { users } from './users';
+import { users } from './users.js';
 
 /**
  * 国际化翻译条目（P2-3，对齐 SPEC-§23 §23.4 i18n 国际化架构）

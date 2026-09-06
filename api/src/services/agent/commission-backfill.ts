@@ -6,9 +6,9 @@
  * 最近 24h 内「有消费记录但无 agent_commissions」的项，补生成佣金（幂等）。
  */
 
-import { db, schema } from '../../db';
-import { and, gte, sql } from 'drizzle-orm';
-import { generateCommissionForConsumption } from './commission';
+import { db } from '../../db/index.js';
+import { sql } from 'drizzle-orm';
+import { generateCommissionForConsumption } from './commission.js';
 
 let schedulerStarted = false;
 

@@ -11,9 +11,9 @@
  */
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { generateAccessToken } from '../services/auth/jwt';
-import { schema } from '../db';
-import { meGapRoutes } from './me-gap';
+import { generateAccessToken } from '../services/auth/jwt.js';
+import { schema } from '../db/index.js';
+import { meGapRoutes } from './me-gap.js';
 
 /* ───────── mock db：按表返回预设行队列 ───────── */
 
@@ -50,7 +50,7 @@ const { dbState, chain } = vi.hoisted(() => {
 });
 
 vi.mock('../db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../db')>();
+  const actual = await importOriginal<typeof import('../db/index.js')>();
   const db = {
     select: () => ({
       from: (table: unknown) => {

@@ -20,10 +20,10 @@
  */
 import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { generateAccessToken } from '../services/auth/jwt';
-import { schema } from '../db';
-import { adminAnnouncementsRoutes } from './admin-announcements';
-import { meGapRoutes } from './me-gap';
+import { generateAccessToken } from '../services/auth/jwt.js';
+import { schema } from '../db/index.js';
+import { adminAnnouncementsRoutes } from './admin-announcements.js';
+import { meGapRoutes } from './me-gap.js';
 
 /* ───────── mock db（链式可编排） ───────── */
 
@@ -74,7 +74,7 @@ const { dbState, chain } = vi.hoisted(() => {
 });
 
 vi.mock('../db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../db')>();
+  const actual = await importOriginal<typeof import('../db/index.js')>();
   const db = {
     select: (...args: unknown[]) => {
       dbState.calls.push({ method: 'select', args });
@@ -134,21 +134,7 @@ function callAfter(method: string, matcher: (args: unknown[]) => boolean, follow
   if (idx < 0) return undefined;
   return dbState.calls.slice(idx + 1).find((c) => c.method === follow);
 }
-
-/** 断言对某表的写操作已发生（audit_logs 等） */
-function expectTableWrite(table: unknown, follow: string, matcher?: (args: unknown[]) => boolean) {
-  const call = callAfter('insert', (args) => args[0] === table, follow);
-  if (matcher) {
-    expect(call).toBeDefined();
-    matcher(call!.args);
-  } else {
-    expect(call).toBeDefined();
-  }
-  return call;
-}
-
 /* ═══════════════ 管理端公告 CRUD ═══════════════ */
-
 describe('管理端公告 CRUD（admin-announcements）', () => {
   it('未登录访问公告管理 → 401', async () => {
     const res = await app.inject({ method: 'GET', url: '/api/v1/admin/announcements' });

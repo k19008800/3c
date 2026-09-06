@@ -1,5 +1,5 @@
 import { pgTable, serial, integer, varchar, pgEnum, timestamp, numeric, text, boolean } from 'drizzle-orm/pg-core';
-import { users } from './users';
+import { users } from './users.js';
 
 /** 调账状态：pending(一级待审) / pending_level2(二级待审) / pending_super(super_admin 终审待审，R5 tier3) / approved(已生效) / rejected(已驳回) / reversed(已红冲) */
 export const adjustmentStatusEnum = pgEnum('adjustment_status', [

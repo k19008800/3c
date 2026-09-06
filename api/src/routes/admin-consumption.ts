@@ -16,12 +16,12 @@
  * 审计约定：常规查询不写 audit_logs；处理 / 通知 / 配置保存等操作类写 audit_logs。
  */
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
-import { eq, and, gte, lte, sql, desc, count } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { sendMail } from '../services/mailer';
-import { scanConsumptionAnomalies } from '../services/consumption/anomaly';
-import { UnauthorizedError, ForbiddenError, ValidationError, NotFoundError } from '../lib/errors';
+import { db, schema } from '../db/index.js';
+import { eq, and, sql, desc } from 'drizzle-orm';
+import { verifyToken } from '../services/auth/jwt.js';
+import { sendMail } from '../services/mailer.js';
+import { scanConsumptionAnomalies } from '../services/consumption/anomaly.js';
+import { UnauthorizedError, ForbiddenError, ValidationError, NotFoundError } from '../lib/errors.js';
 
 /* ───────── 鉴权（对齐 admin-conversation-records.ts） ───────── */
 

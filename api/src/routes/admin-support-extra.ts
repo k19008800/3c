@@ -14,15 +14,15 @@
  */
 import type { FastifyInstance } from 'fastify';
 import { createHash, randomBytes } from 'node:crypto';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, or, like, desc, inArray } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
+import { verifyToken } from '../services/auth/jwt.js';
 import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
-} from '../lib/errors';
+} from '../lib/errors.js';
 
 /* ───────── 鉴权（对齐 admin-finance.ts / admin-support-missing.ts 模式） ───────── */
 
@@ -530,9 +530,6 @@ export async function adminSupportExtraRoutes(app: FastifyInstance) {
     const userMap = new Map(userRows.map((u) => [u.id, u]));
 
     // 总数（支持日志量级小，直接取全部匹配 id 计数）
-    const totalRows = await db.select({ id: schema.auditLogs.id }).from(schema.auditLogs).where(where);
-    const total = totalRows.length;
-
     const list = rows.map((r) => {
       const operator = userMap.get(r.userId as number);
       const detail = r.details == null ? '' : typeof r.details === 'string' ? r.details : JSON.stringify(r.details);

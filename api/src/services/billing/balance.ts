@@ -13,10 +13,10 @@
  * @module services/billing
  */
 
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { eq, sql } from 'drizzle-orm';
-import { AppError, InsufficientBalanceError } from '../../lib/errors';
-import { adjustLedgerAvailable, clearNegativeFlag } from './ledger';
+import { AppError, InsufficientBalanceError } from '../../lib/errors.js';
+import { adjustLedgerAvailable, clearNegativeFlag } from './ledger.js';
 
 /** deductBalance 可选参数 */
 export interface DeductOptions {
@@ -257,7 +257,7 @@ export async function addBalance(
   // 退款冲销钩子：客户退款（冲回消费）时，同步冲销该笔消费对应的代理佣金。
   // addBalance 是余额变更唯一咽喉，未来任何退款路径走这里即自动触发冲销。
   if (type === 'refund' && referenceType === 'consumption' && referenceId) {
-    const { cancelCommissionsForConsumption, resolveConsumptionRecordId } = await import('../agent/commission');
+    const { cancelCommissionsForConsumption, resolveConsumptionRecordId } = await import('../agent/commission.js');
     const consumptionRecordId = await resolveConsumptionRecordId(referenceId);
     if (consumptionRecordId) {
       await cancelCommissionsForConsumption({ consumptionRecordId }).catch((e) => {

@@ -1,5 +1,5 @@
 import { pgTable, serial, integer, varchar, text, timestamp, index } from 'drizzle-orm/pg-core';
-import { users } from './users';
+import { users } from './users.js';
 
 /**
  * 用户账号注销申请（P2-4，对齐 SPEC-§2 §2.11 用户账号注销）

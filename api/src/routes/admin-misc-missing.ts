@@ -32,17 +32,17 @@
  * @see docs/PRD-代理商体系-后台主导版.md（报备划拨制）
  */
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, or, ilike, sql, desc, inArray } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { getBalance } from '../services/billing/balance';
+import { verifyToken } from '../services/auth/jwt.js';
+import { getBalance } from '../services/billing/balance.js';
 import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
   AppError,
-} from '../lib/errors';
+} from '../lib/errors.js';
 
 /* ───────── 鉴权（对齐 admin-finance.ts 模式） ───────── */
 
@@ -241,7 +241,7 @@ function deletionListSelect() {
 }
 
 /** 注销数据清除（与 deletion.ts execute 同策略，单事务内执行；force 跳过冷静期校验） */
-async function executeDeletion(tx: any, deletionRequest: any, force: boolean) {
+async function executeDeletion(tx: any, deletionRequest: any, _force: boolean) {
   const uid = deletionRequest.userId;
   // 1. API Key 全部删除（立即失效）
   await tx.delete(schema.apiKeys).where(eq(schema.apiKeys.userId, uid));

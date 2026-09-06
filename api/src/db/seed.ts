@@ -5,7 +5,7 @@
  */
 import bcrypt from 'bcryptjs';
 import { sql, eq, and } from 'drizzle-orm';
-import { db, schema } from '.';
+import { db, schema } from './index.js';
 
 const ADMIN_EMAIL = 'admin@3cloud.dev';
 const ADMIN_PASSWORD = 'Admin@2024!';
@@ -428,6 +428,422 @@ async function main() {
     i18nUpserted++;
   }
   console.log(`✅ i18n_entries 门户翻译种子 upsert ${i18nUpserted} 条（幂等）`);
+
+  /* ── i18n_entries：补 8 语言（Gate-1） ──
+   * 目的（docs/多语言i18n改造方案.md §2.4 Gate-1）：让"8 语言 seed 结构存在、
+   * 覆盖率面板能计数、normalize 放开后不整页崩溃"。
+   * · zh-CN / en 来自上方 I18N 基准。
+   * · ja-JP / ko-KR：用下列 shell 术语表翻译（nav/footer/hero/cta/how/分节标题等），
+   *   未收录的 key（长描述/FAQ 长文）回退英文——低频 key 回退英文是可接受策略。
+   * · vi / th / id / fil：复用英文占位，显式标注【待翻译】。
+   * key+lang 幂等 upsert（与上方 I18N 同 pattern），可安全重跑。
+   */
+  // locale 术语表（key → 目标语言文本）；缺失的 key 自动回退英文。
+  const JA_TERMS: Record<string, string> = {
+    'nav.home': 'ホーム', 'nav.models': 'モデル一覧', 'nav.pricing': '価格表', 'nav.about': '会社概要',
+    'nav.status': 'システム状態', 'nav.blog': 'ブログ', 'nav.login': 'ログイン',
+    'footer.product': '製品', 'footer.resources': 'リソース', 'footer.legal': '法務',
+    'home.hero.title': 'ワンストップ AI API 集約プラットフォーム',
+    'home.hero.browseModels': 'モデル一覧を見る', 'home.hero.viewPricing': '価格表を見る',
+    'home.hero.signup': '登録 / ログイン', 'home.hero.quickstart': 'すぐに始める',
+    'home.stats.models': '接続モデル', 'home.stats.vendors': 'サプライヤー',
+    'home.stats.users': '利用ユーザー', 'home.stats.tokens': '累計トークン',
+    'home.features.title': '3Cloud を選ぶ理由',
+    'home.features.unified.title': '統合アクセス', 'home.features.routing.title': 'スマートルーティング',
+    'home.features.billing.title': '統合課金', 'home.features.vendors.title': '多数サプライヤー',
+    'home.features.security.title': '安全とコンプライアンス', 'home.features.multidevice.title': 'マルチデバイス対応',
+    'home.popular.title': '人気モデル', 'home.popular.viewAll': '全モデルを見る',
+    'home.how.title': '3 ステップで開始', 'home.how.step1.title': 'アカウント作成',
+    'home.how.step2.title': 'API キー作成', 'home.how.step3.title': 'モデルを呼び出し',
+    'home.dev.title': '開発者フレンドリー', 'home.pricing.title': '透明な価格設定',
+    'home.pricing.model': 'モデル', 'home.pricing.category': 'カテゴリ',
+    'home.pricing.input': '入力 / 1K tokens', 'home.pricing.output': '出力 / 1K tokens',
+    'home.pricing.context': 'コンテキスト', 'home.pricing.viewAll': '詳細価格を見る',
+    'home.faq.title': 'よくある質問', 'home.cta.title': '始める準備はできましたか？',
+    'home.cta.button': '無料登録', 'pricing.title': 'モデル価格', 'pricing.subtitle': '従量課金・隠れた費用なし',
+    'pricing.calculator': '価格計算ツール', 'pricing.allModels': '全モデル価格',
+    'pricing.allLabel': 'すべて', 'pricing.empty': 'モデルデータがありません',
+    'pricing.table.model': 'モデル名', 'pricing.table.vendor': 'サプライヤー',
+    'pricing.table.category': 'カテゴリ', 'pricing.table.input': '入力価格 / 1K tokens',
+    'pricing.table.output': '出力価格 / 1K tokens', 'pricing.table.context': 'コンテキスト長',
+    'pricing.faq.title': '課金について', 'pricing.calc.title': '価格計算ツール',
+    'pricing.calc.model': 'モデル', 'pricing.calc.inputTokens': '入力トークン',
+    'pricing.calc.outputTokens': '出力トークン', 'pricing.calc.estimate': '見積費用',
+    'blog.title': 'ブログ / ニュース', 'blog.empty': '記事はまだありません',
+    'blog.publishedAt': '公開日', 'blog.notFound': '記事が見つからないか非公開です',
+    'help.langSwitcher': '表示言語を切り替えます。未翻訳の文言は英語で表示されます。',
+  };
+  const KO_TERMS: Record<string, string> = {
+    'nav.home': '홈', 'nav.models': '모델 목록', 'nav.pricing': '요금제', 'nav.about': '회사 소개',
+    'nav.status': '시스템 상태', 'nav.blog': '블로그', 'nav.login': '로그인',
+    'footer.product': '제품', 'footer.resources': '리소스', 'footer.legal': '법률',
+    'home.hero.title': '올인원 AI API 통합 플랫폼',
+    'home.hero.browseModels': '모델 목록 보기', 'home.hero.viewPricing': '요금제 보기',
+    'home.hero.signup': '가입 / 로그인', 'home.hero.quickstart': '바로 시작',
+    'home.stats.models': '연결 모델', 'home.stats.vendors': '공급업체',
+    'home.stats.users': '플랫폼 사용자', 'home.stats.tokens': '누적 토큰',
+    'home.features.title': '3Cloud 를 선택하는 이유',
+    'home.features.unified.title': '통합 액세스', 'home.features.routing.title': '스마트 라우팅',
+    'home.features.billing.title': '통합 과금', 'home.features.vendors.title': '다중 공급업체',
+    'home.features.security.title': '보안 및 규정 준수', 'home.features.multidevice.title': '멀티 플랫폼',
+    'home.popular.title': '인기 모델', 'home.popular.viewAll': '전체 모델 보기',
+    'home.how.title': '3단계로 시작', 'home.how.step1.title': '계정 생성',
+    'home.how.step2.title': 'API 키 생성', 'home.how.step3.title': '모델 호출',
+    'home.dev.title': '개발자 친화적', 'home.pricing.title': '투명한 가격',
+    'home.pricing.model': '모델', 'home.pricing.category': '카테고리',
+    'home.pricing.input': '입력 / 1K 토큰', 'home.pricing.output': '출력 / 1K 토큰',
+    'home.pricing.context': '컨텍스트', 'home.pricing.viewAll': '전체 요금 보기',
+    'home.faq.title': '자주 묻는 질문', 'home.cta.title': '지금 시작할 준비가 되셨나요?',
+    'home.cta.button': '무료 가입', 'pricing.title': '모델 요금', 'pricing.subtitle': '종량제 · 숨은 수수료 없음',
+    'pricing.calculator': '요금 계산기', 'pricing.allModels': '전체 모델 요금',
+    'pricing.allLabel': '전체', 'pricing.empty': '모델 데이터가 없습니다',
+    'pricing.table.model': '모델명', 'pricing.table.vendor': '공급업체',
+    'pricing.table.category': '카테고리', 'pricing.table.input': '입력 가격 / 1K 토큰',
+    'pricing.table.output': '출력 가격 / 1K 토큰', 'pricing.table.context': '컨텍스트 길이',
+    'pricing.faq.title': '과금 안내', 'pricing.calc.title': '요금 계산기',
+    'pricing.calc.model': '모델', 'pricing.calc.inputTokens': '입력 토큰',
+    'pricing.calc.outputTokens': '출력 토큰', 'pricing.calc.estimate': '예상 비용',
+    'blog.title': '블로그 / 뉴스', 'blog.empty': '아직 글이 없습니다',
+    'blog.publishedAt': '게시일', 'blog.notFound': '글을 찾을 수 없거나 비공개입니다',
+    'help.langSwitcher': '표시 언어를 전환합니다. 번역되지 않은 문구는 영어로 표시됩니다.',
+  };
+  // 8 语言补全：zh/en（上方）+ 6 语言次要。vi/th/id/fil 用英文占位（待翻译）。
+  const EXTRA_LANGS = ['ja-JP', 'ko-KR', 'vi', 'th', 'id', 'fil'] as const;
+  const enByKey: Record<string, string> = {};
+  for (const [key, lang, value] of I18N) {
+    if (lang === 'en') enByKey[key] = value;
+  }
+  let i18nExtra = 0;
+  for (const [key, lang, value] of I18N) {
+    if (lang !== 'zh-CN') continue; // 每个 key 只需补一次
+    const enFallback = enByKey[key] ?? value;
+    for (const extraLang of EXTRA_LANGS) {
+      let v: string;
+      if (extraLang === 'ja-JP') v = JA_TERMS[key] ?? enFallback; // 未收录 key 回退英文
+      else if (extraLang === 'ko-KR') v = KO_TERMS[key] ?? enFallback; // 未收录 key 回退英文
+      else v = enFallback; // vi/th/id/fil：英文占位【待翻译】
+      await db.insert(schema.i18nEntries)
+        .values({ key, lang: extraLang, value: v, scope: 'portal', status: 'active', updatedBy: adminId })
+        .onConflictDoUpdate({
+          target: [schema.i18nEntries.key, schema.i18nEntries.lang],
+          set: { value: v, updatedBy: adminId },
+        });
+      i18nExtra++;
+    }
+  }
+  console.log(`✅ i18n_entries 8 语言补全 upsert ${i18nExtra} 条（zh/en + ja/ko 术语 + vi/th/id/fil 英文占位）`);
+
+  // ── i18n_entries：console/common scope 种子（P2 控制台关键页 8 语言） ──
+  // 数据来源：web-console/src/lib/i18n-manifest.json（P2 前端 key 化产出，en+zh_CN）。
+  // scope 归属：common.* → 'common'；console/dashboard/apikey.* → 'console'。
+  // 生态：zh-CN / en 来自下方表；ja-JP / ko-KR 用 CONSOLE_JA_TERMS / CONSOLE_KO_TERMS
+  //       术语表翻译，未收录 key 回退英文；vi/th/id/fil 复用英文占位【待翻译】。
+  // key+lang+scope 幂等 upsert，可安全重跑；与上方 portal 8 语言块同 pattern。
+  type ConsoleSeed = [key: string, scope: 'console' | 'common', en: string, zhCN: string];
+  const CONSOLE_SEED: ConsoleSeed[] = [
+    // ── common（通用）──
+    ['common.time', 'common', 'Time', '时间'],
+    ['common.model', 'common', 'Model', '模型'],
+    ['common.token', 'common', 'Tokens', 'Token'],
+    ['common.cost', 'common', 'Cost', '费用'],
+    ['common.currency', 'common', 'Amount', '金额'],
+    ['common.name', 'common', 'Name', '名称'],
+    ['common.copy', 'common', 'Copy', '复制'],
+    ['common.enable', 'common', 'Enable', '启用'],
+    ['common.disable', 'common', 'Disable', '禁用'],
+    ['common.status', 'common', 'Status', '状态'],
+    ['common.actions', 'common', 'Actions', '操作'],
+    ['common.back', 'common', 'Back', '返回'],
+    ['common.optional', 'common', 'Optional', '可选'],
+    ['common.cancel', 'common', 'Cancel', '取消'],
+    ['common.success', 'common', 'Success', '成功'],
+    ['common.failed', 'common', 'Failed', '失败'],
+    // ── dashboard（个人仪表盘）──
+    ['dashboard.title', 'console', 'Dashboard', '控制台'],
+    ['dashboard.help.overview', 'console', 'Overview of your account status.', '总览您的账户状态'],
+    ['dashboard.help.overviewDetail', 'console', 'Account overview: balance, spend, call volume and active API keys.', '总览您的账户状态：余额、消费、调用量和活跃 Key。'],
+    ['dashboard.balance', 'console', 'Account Balance', '账户余额'],
+    ['dashboard.rechargeNow', 'console', 'Recharge now', '立即充值'],
+    ['dashboard.monthlyCost', 'console', "This Month's Spend", '本月消费'],
+    ['dashboard.viewDetail', 'console', 'View details', '查看明细'],
+    ['dashboard.todayCalls', 'console', "Today's Calls", '今日调用'],
+    ['dashboard.activeKeys', 'console', 'Active API Keys', '活跃 API Key'],
+    ['dashboard.manageKeys', 'console', 'Manage', '管理'],
+    ['dashboard.subs.todayCalls', 'console', "Today's Calls", '今日调用次数'],
+    ['dashboard.subs.successRate', 'console', 'Success rate {rate}', '成功率 {rate}'],
+    ['dashboard.subs.tokenUsage', 'console', 'Token Usage', 'Token 消耗'],
+    ['dashboard.subs.todayCost', 'console', "Today's Cost", '消费金额'],
+    ['dashboard.subs.balance', 'console', 'Current Balance', '当前余额'],
+    ['dashboard.subs.estimatedDays', 'console', 'Est. available {days} days', '预计可用 {days} 天'],
+    ['dashboard.trend.title', 'console', 'Model Token Usage Curve', '模型 Token 消耗曲线'],
+    ['dashboard.trend.today', 'console', 'Today', '今天'],
+    ['dashboard.trend.yesterday', 'console', 'Yesterday', '昨天'],
+    ['dashboard.trend.week', 'console', 'This Week', '本周'],
+    ['dashboard.trend.lastMonth', 'console', 'Last Month', '上月'],
+    ['dashboard.trend.selected', 'console', 'Selected: {range}', '选中：{range}'],
+    ['dashboard.trend.missingBackend', 'console', 'Trend chart requires the backend /me/stats/trend endpoint', '趋势图需对接后端 /me/stats/trend 接口'],
+    ['dashboard.distribution.title', 'console', 'Model Call Distribution', '模型调用分布'],
+    ['dashboard.distribution.recentHour', 'console', 'Last hour', '近 1 小时'],
+    ['dashboard.distribution.callsTokens', 'console', '{calls} calls · {tokens} Token', '{calls} 次 · {tokens} Token'],
+    ['dashboard.recent.title', 'console', 'Recent Consumption', '最近消费'],
+    ['dashboard.recent.viewAll', 'console', 'View all', '查看全部'],
+    ['dashboard.quick.recharge', 'console', 'Recharge', '立即充值'],
+    ['dashboard.quick.createKey', 'console', 'Create API Key', '创建 API Key'],
+    ['dashboard.quick.logs', 'console', 'Consumption Details', '消费明细'],
+    ['dashboard.quick.ticket', 'console', 'Submit Ticket', '提交工单'],
+    // ── apikey（API Key 管理）──
+    ['apikey.title', 'console', 'API Key Management', 'API Key 管理'],
+    ['apikey.help.title', 'console', 'Manage API access keys. Supports 3 permission modes and IP allowlists.', '管理 API 调用密钥。支持 3 种权限模式和 IP 白名单'],
+    ['apikey.endpoint.title', 'console', 'Access Endpoints', '接入地址'],
+    ['apikey.endpoint.configHint', 'console', '(configurable under Admin → System Settings → API Services)', '（后台 系统设置 → API 服务 可配置）'],
+    ['apikey.endpoint.chat', 'console', 'Chat endpoints', '聊天端点'],
+    ['apikey.new.defaultName', 'console', 'New Key', '新 Key'],
+    ['apikey.create.button', 'console', 'Create Key', '创建 Key'],
+    ['apikey.create.title', 'console', 'Create API Key', '创建 API Key'],
+    ['apikey.help.create', 'console', 'Create a new API access key; you can specify permission mode and expiry.', '创建新的 API 调用密钥，可指定权限模式和过期时间'],
+    ['apikey.search.placeholder', 'console', 'Search key name…', '搜索 Key 名称…'],
+    ['apikey.created.oneTime', 'console', 'API Key created successfully — shown only once, copy it now', 'API Key 创建成功 — 仅展示一次，请立即复制'],
+    ['apikey.copy.key', 'console', 'Copy Key', '复制 Key'],
+    ['apikey.empty', 'console', 'No API keys yet. Click "Create Key" to get started.', '暂无 API Key，点击上方「创建 Key」开始'],
+    ['apikey.created.success', 'console', 'API Key created', 'API Key 创建成功'],
+    ['apikey.deleted.success', 'console', 'API Key deleted', 'API Key 已删除'],
+    ['apikey.copied', 'console', 'Copied to clipboard', '已复制到剪贴板'],
+    ['apikey.col.name', 'console', 'Name', '名称'],
+    ['apikey.col.mode', 'console', 'Permission Mode', '权限模式'],
+    ['apikey.col.lastUsed', 'console', 'Last Used', '最后调用'],
+    ['apikey.col.todayCalls', 'console', "Today's Calls", '今日调用'],
+    ['apikey.mode.vendor', 'console', 'A - Bind Vendor + Models', 'A - 绑定供应商+模型'],
+    ['apikey.mode.group', 'console', 'B - Bind Model Group', 'B - 绑定模型分组'],
+    ['apikey.mode.unlimited', 'console', 'C - Unlimited', 'C - 无限制'],
+    ['apikey.status.expiring', 'console', 'Expiring Soon', '即将过期'],
+    ['apikey.delete.confirm', 'console', 'Delete this API key?', '确定要删除该 API Key 吗？'],
+    ['apikey.form.name.placeholder', 'console', 'e.g. Production', '例如：生产环境'],
+    ['apikey.form.mode', 'console', 'Permission Mode', '权限模式'],
+    ['apikey.help.mode', 'console', 'A: Bind vendor + models / B: Bind model group / C: Unlimited', 'A: 绑定供应商+模型 / B: 绑定模型分组 / C: 无限制'],
+    ['apikey.form.group', 'console', 'Select Group', '选择分组'],
+    ['apikey.form.expiry', 'console', 'Expiry Time', '过期时间'],
+    ['apikey.form.ipHint', 'console', '(optional, one per line)', '（可选，一行一个）'],
+    ['apikey.form.creating', 'console', 'Creating...', '创建中...'],
+    ['apikey.form.confirm', 'console', 'Confirm Create', '确认创建'],
+    // ── 补充：customer 控制台导航 / 顶栏 / 公共按钮 / auth / vendor（P2 补齐，根因修复：缺这些 key
+    //    会让 menu 无论选哪种语言都回退 EN_DEFAULTS 英文） ──
+    ['common.login', 'common', 'Sign in', '登录'],
+    ['common.register', 'common', 'Sign up', '注册'],
+    ['common.logout', 'common', 'Sign out', '退出登录'],
+    ['common.save', 'common', 'Save', '保存'],
+    ['common.confirm', 'common', 'Confirm', '确认'],
+    ['common.submit', 'common', 'Submit', '提交'],
+    ['common.loading', 'common', 'Loading...', '加载中...'],
+    ['common.search', 'common', 'Search', '搜索'],
+    ['common.reset', 'common', 'Reset', '重置'],
+    ['common.add', 'common', 'Add', '新增'],
+    ['common.edit', 'common', 'Edit', '编辑'],
+    ['common.delete', 'common', 'Delete', '删除'],
+    ['common.create', 'common', 'Create', '创建'],
+    ['common.account', 'common', 'Account', '账户'],
+    ['common.balance', 'common', 'Balance', '余额'],
+    ['common.language', 'common', 'Language', '语言'],
+    ['common.help', 'common', 'Help', '帮助'],
+    ['common.enabled', 'common', 'Enabled', '已启用'],
+    ['common.disabled', 'common', 'Disabled', '已禁用'],
+    ['common.active', 'common', 'Active', '活跃'],
+    ['common.inactive', 'common', 'Inactive', '停用'],
+    ['common.pending', 'common', 'Pending', '待处理'],
+    ['common.required', 'common', 'Required', '必填'],
+    ['common.next', 'common', 'Next', '下一步'],
+    ['common.previous', 'common', 'Previous', '上一步'],
+    ['common.default', 'common', 'Default', '默认'],
+    // ── 导航（console scope；个人控制台 + 商务/财务/代理角色菜单） ──
+    ['nav.dashboard', 'console', 'Dashboard', '控制台'],
+    ['nav.statistics', 'console', 'Statistics', '数据统计'],
+    ['nav.apiKeys', 'console', 'API Keys', 'API Key'],
+    ['nav.logs', 'console', 'Logs', '调用日志'],
+    ['nav.recharge', 'console', 'Recharge', '充值'],
+    ['nav.billing', 'console', 'Billing', '账单'],
+    ['nav.invoices', 'console', 'Invoices', '发票'],
+    ['nav.playground', 'console', 'API Playground', 'API 调试'],
+    ['nav.mjTasks', 'console', 'MJ/Suno Tasks', 'MJ/Suno 任务'],
+    ['nav.topupRecords', 'console', 'Top-up Records', '充值记录'],
+    ['nav.redemption', 'console', 'Redemption', '兑换码'],
+    ['nav.announcements', 'console', 'Announcements', '公告'],
+    ['nav.realName', 'console', 'Real-name Verification', '实名认证'],
+    ['nav.notification', 'console', 'Notifications', '通知'],
+    ['nav.tickets', 'console', 'Tickets', '工单'],
+    ['nav.chat', 'console', 'Live Support', '在线客服'],
+    ['nav.security', 'console', 'Security', '安全设置'],
+    ['nav.dataExport', 'console', 'Data Export', '数据导出'],
+    ['nav.userGroups', 'console', 'User Groups', '用户分组'],
+    ['nav.vendorSelector', 'console', 'Vendor Selection', '供应商选择'],
+    ['nav.accountDeletion', 'console', 'Account Deletion', '账号注销'],
+    ['nav.help', 'console', 'Help', '帮助中心'],
+    ['nav.settings', 'console', 'Settings', '设置'],
+    ['nav.profile', 'console', 'Profile', '个人资料'],
+    ['nav.adminCockpit', 'console', 'Data Cockpit', '数据驾驶舱'],
+    ['nav.adminDashboard', 'console', 'Operations Dashboard', '运营工作台'],
+    ['nav.financeWorkbench', 'console', 'Finance Workbench', '财务工作台'],
+    ['nav.salesWorkbench', 'console', 'Sales Workbench', '销售工作台'],
+    ['nav.salesCustomers', 'console', 'Customer Management', '客户管理'],
+    ['nav.salesReminders', 'console', 'Follow-up Reminders', '跟进提醒'],
+    ['nav.salesPerformance', 'console', 'Performance Dashboard', '业绩看板'],
+    ['nav.financeTopup', 'console', 'Manual Top-up', '人工上账'],
+    ['nav.financeOrders', 'console', 'Recharge Orders', '充值订单'],
+    ['nav.financeRefunds', 'console', 'Refund Review', '退款审核'],
+    ['nav.financeReconciliation', 'console', 'Reconciliation Report', '对账报表'],
+    ['nav.financeCustomers', 'console', 'Customer List', '客户列表'],
+    ['nav.agentDashboard', 'console', 'Agent Workbench', '代理工作台'],
+    ['nav.agentCommission', 'console', 'Commission Records', '佣金记录'],
+    ['nav.agentConsumption', 'console', 'Customer Consumption', '客户消费'],
+    ['nav.agentCustomers', 'console', 'My Customers', '我的客户'],
+    ['nav.agentInvite', 'console', 'Invite Customers', '邀请客户'],
+    ['nav.agentRanking', 'console', 'Performance Ranking', '业绩排行'],
+    ['nav.agentWithdraw', 'console', 'Withdrawal Management', '提现管理'],
+    ['nav.agentSettings', 'console', 'Agent Settings', '代理设置'],
+    ['nav.agentSettlements', 'console', 'Settlement Reconciliation', '结算对账'],
+    // ── 顶栏 / 账户菜单 ──
+    ['topbar.account', 'console', 'Account', '账户'],
+    ['topbar.personalSettings', 'console', 'Personal Settings', '个人设置'],
+    ['topbar.changePassword', 'console', 'Change Password', '修改密码'],
+    ['topbar.balance', 'console', 'Balance', '余额'],
+    ['topbar.notifications', 'console', 'Notifications', '通知'],
+    ['topbar.languageSwitcher', 'console', 'Language', '语言'],
+    ['topbar.langHelp', 'console', 'Switch the console language; untranslated text falls back to English.', '切换控制台语言，未翻译文本将回退为英文。'],
+    ['topbar.roleAdmin', 'console', 'ADMIN', '管理员'],
+    // ── 金额 / 账单 ──
+    ['billing.balance', 'console', 'Balance', '余额'],
+    ['billing.todayCost', 'console', "Today's Cost", '今日消费'],
+    ['billing.totalCost', 'console', 'Total Cost', '累计消费'],
+    ['billing.rechargeNow', 'console', 'Recharge Now', '立即充值'],
+    // ── 登录 / 注册（登录前页面，控制台 scope） ──
+    ['auth.pageTitle', 'console', 'Sign in', '登录'],
+    ['auth.pageTitle2fa', 'console', 'Two-factor Verification', '双重验证'],
+    ['auth.registerTitle', 'console', 'Create Account', '注册账号'],
+    ['auth.title', 'console', 'Sign in to your account', '登录您的账户'],
+    ['auth.subtitle', 'console', 'Manage your API keys and view usage', '管理您的 API Key 并查看用量'],
+    ['auth.email', 'console', 'Email', '邮箱'],
+    ['auth.password', 'console', 'Password', '密码'],
+    ['auth.forgotPassword', 'console', 'Forgot password?', '忘记密码？'],
+    ['auth.captcha', 'console', 'Captcha', '验证码'],
+    ['auth.loginButton', 'console', 'Sign in', '登录'],
+    ['auth.loggingIn', 'console', 'Signing in...', '登录中...'],
+    ['auth.noAccount', 'console', "Don't have an account?", '还没有账号？'],
+    ['auth.register', 'console', 'Sign up', '注册'],
+    ['auth.registering', 'console', 'Signing up...', '注册中...'],
+    ['auth.registerNow', 'console', 'Register now', '立即注册'],
+    ['auth.haveAccount', 'console', 'Already have an account?', '已有账号？'],
+    ['auth.loginNow', 'console', 'Sign in now', '立即登录'],
+    ['auth.orUse', 'console', 'or use', '或使用'],
+    ['auth.welcomeBack', 'console', 'Welcome back!', '欢迎回来！'],
+    ['auth.otpCode', 'console', 'Authenticator code', '验证器验证码'],
+    ['auth.backupCode', 'console', 'Backup recovery code', '备用恢复码'],
+    ['auth.verifyAndLogin', 'console', 'Verify & sign in', '验证并登录'],
+    ['auth.verifying', 'console', 'Verifying...', '验证中...'],
+    ['auth.backToLogin', 'console', 'Back to password login', '返回密码登录'],
+    ['auth.2faHint', 'console', 'This account has two-factor authentication enabled. Enter your authenticator code or backup recovery code to finish signing in.', '该账号已开启双重验证，请输入验证器验证码或备用恢复码以完成登录。'],
+    ['auth.loginHelp', 'console', 'Sign in to your account to manage API keys and view usage records.', '登录您的账户，管理 API Key 并查看用量记录。'],
+    ['auth.emailHelp', 'console', 'Enter the email address you registered with.', '输入您注册时使用的邮箱地址。'],
+    ['auth.passwordHelp', 'console', 'Enter your login password.', '输入您的登录密码。'],
+    ['auth.registerHelp', 'console', 'Register to start using the 3Cloud API Token service.', '注册开始使用 3Cloud API Token 服务。'],
+    ['auth.emailPlaceholder', 'console', 'your@email.com', 'your@email.com'],
+    ['auth.passwordPlaceholder', 'console', 'Enter your password', '请输入密码'],
+    ['auth.captchaPlaceholder', 'console', 'Enter captcha', '请输入验证码'],
+    ['auth.sessionSuccess', 'console', 'Signed in successfully', '登录成功'],
+    ['auth.2faEnabledToast', 'console', 'This account has two-factor authentication enabled. Please enter the verification code to finish signing in.', '该账号已开启双重验证，请输入验证码完成登录。'],
+    ['auth.invalidResponse', 'console', 'Unexpected login response, please try again later.', '登录响应异常，请稍后重试。'],
+    ['auth.socialComingSoon', 'console', '{provider} sign-in is coming soon', '{provider} 登录即将上线'],
+    ['auth.registerSuccessTitle', 'console', 'Registration Succeeded!', '注册成功！'],
+    ['auth.activationSent', 'console', 'Activation link sent to', '激活链接已发送至'],
+    ['auth.openEmailToActivate', 'console', 'Please open the email and click the link to activate your account. The link validity is configured by the platform.', '请打开邮件并点击链接激活您的账号，链接有效期由平台配置。'],
+    ['auth.goToLogin', 'console', 'Go to sign in', '去登录'],
+    ['auth.emailRequired', 'console', 'Password must be at least 8 characters containing letters, numbers and special characters', '密码至少 8 位，需包含字母、数字和特殊字符'],
+    ['auth.passwordMismatch', 'console', 'Passwords do not match', '两次输入的密码不一致'],
+    ['auth.passwordStrength', 'console', 'Password strength:', '密码强度：'],
+    ['auth.strengthNotEntered', 'console', 'Not entered', '未输入'],
+    ['auth.strengthTooWeak', 'console', 'Weak — increase complexity', '弱 — 请增加复杂度'],
+    ['auth.strengthMedium', 'console', 'Medium — acceptable', '中等 — 可接受'],
+    ['auth.strengthStronger', 'console', 'Strong — recommended', '强 — 推荐'],
+    ['auth.strengthStrong', 'console', 'Strong — very secure', '非常强 — 很安全'],
+    ['auth.confirmPassword', 'console', 'Confirm password', '确认密码'],
+    ['auth.inviteCode', 'console', 'Invite code (optional)', '邀请码（可选）'],
+    ['auth.orUseEmail', 'console', 'Email', '邮箱'],
+    // ── 供应商 Vendor 自助端 ──
+    ['vendor.title', 'console', 'Vendor Self-service Platform', '供应商自助平台'],
+    ['vendor.subtitle', 'console', 'Sign in to manage your models, statistics and settlements', '登录以管理您的模型、统计与结算'],
+    ['vendor.loginButton', 'console', 'Sign in', '登录'],
+    ['vendor.loggingIn', 'console', 'Signing in...', '登录中...'],
+    ['vendor.emailLabel', 'console', 'Contact email', '联系邮箱'],
+    ['vendor.emailPlaceholder', 'console', 'Vendor registered email', '供应商注册邮箱'],
+    ['vendor.passwordLabel', 'console', 'Password', '密码'],
+    ['vendor.passwordPlaceholder', 'console', 'Password (at least 8 characters)', '密码（至少 8 位）'],
+    ['vendor.noAccount', 'console', "Don't have a vendor account?", '还没有供应商账号？'],
+    ['vendor.applyOnboard', 'console', 'Apply for onboarding', '申请入驻'],
+    ['vendor.registerTitle', 'console', 'Vendor Onboarding Application', '供应商入驻申请'],
+    ['vendor.registerSubtitle', 'console', 'Submit the required information; once approved you can integrate with the platform', '提交所需资料，审核通过后即可对接平台'],
+    ['vendor.submitApplication', 'console', 'Submit onboarding application', '提交入驻申请'],
+    ['vendor.submitting', 'console', 'Submitting...', '提交中...'],
+    ['vendor.basicInfo', 'console', 'Basic Information', '基本信息'],
+    ['vendor.apiInfo', 'console', 'API Integration Information', 'API 对接信息'],
+    ['vendor.goToLogin', 'console', 'Back to sign in', '返回登录'],
+    ['vendor.reviewMessage', 'console', 'The platform will review your application within 1-3 business days. Once approved, sign in with your registered email.', '平台将在 1-3 个工作日内审核您的申请，审核通过后请使用注册邮箱登录。'],
+    ['vendor.errorSubmit', 'console', 'Failed to submit. Please try again.', '提交失败，请重试。'],
+  ];
+
+  // console/common 关键高频词 ja/ko 术语表；未收录 key 回退英文。
+  const CONSOLE_JA_TERMS: Record<string, string> = {
+    'common.time': '時刻', 'common.model': 'モデル', 'common.token': 'トークン', 'common.cost': '費用',
+    'common.currency': '金額', 'common.name': '名前', 'common.copy': 'コピー', 'common.enable': '有効化',
+    'common.disable': '無効化', 'common.status': 'ステータス', 'common.actions': '操作', 'common.back': '戻る',
+    'common.optional': '任意', 'common.cancel': 'キャンセル', 'common.success': '成功', 'common.failed': '失敗',
+    'dashboard.title': 'ダッシュボード', 'dashboard.balance': 'アカウント残高', 'dashboard.rechargeNow': '今すぐチャージ',
+    'dashboard.monthlyCost': '今月の利用額', 'dashboard.viewDetail': '明細を見る', 'dashboard.todayCalls': '本日の呼び出し',
+    'dashboard.activeKeys': '有効な API キー', 'dashboard.manageKeys': '管理', 'dashboard.trend.today': '今日',
+    'dashboard.trend.yesterday': '昨日', 'dashboard.trend.week': '今週', 'dashboard.trend.lastMonth': '先月',
+    'dashboard.trend.title': 'モデルトークン消費曲線', 'dashboard.quick.recharge': 'チャージ', 'dashboard.quick.createKey': 'API キー作成',
+    'apikey.title': 'API キー管理', 'apikey.create.button': 'キー作成', 'apikey.create.title': 'API キーを作成',
+    'apikey.col.name': '名前', 'apikey.col.mode': '権限モード', 'apikey.col.lastUsed': '最終利用', 'apikey.col.todayCalls': '本日の呼び出し',
+    'apikey.form.mode': '権限モード', 'apikey.form.group': 'グループを選択', 'apikey.form.expiry': '有効期限',
+    'apikey.form.creating': '作成中...', 'apikey.form.confirm': '作成確認', 'apikey.copy.key': 'キーをコピー',
+    'apikey.created.success': 'API キーを作成しました', 'apikey.deleted.success': 'API キーを削除しました', 'apikey.copied': 'クリップボードにコピーしました',
+  };
+  const CONSOLE_KO_TERMS: Record<string, string> = {
+    'common.time': '시간', 'common.model': '모델', 'common.token': '토큰', 'common.cost': '비용',
+    'common.currency': '금액', 'common.name': '이름', 'common.copy': '복사', 'common.enable': '활성화',
+    'common.disable': '비활성화', 'common.status': '상태', 'common.actions': '작업', 'common.back': '뒤로',
+    'common.optional': '선택 사항', 'common.cancel': '취소', 'common.success': '성공', 'common.failed': '실패',
+    'dashboard.title': '대시보드', 'dashboard.balance': '계정 잔액', 'dashboard.rechargeNow': '충전하기',
+    'dashboard.monthlyCost': '이번 달 소비', 'dashboard.viewDetail': '내역 보기', 'dashboard.todayCalls': '오늘 호출',
+    'dashboard.activeKeys': '활성 API 키', 'dashboard.manageKeys': '관리', 'dashboard.trend.today': '오늘',
+    'dashboard.trend.yesterday': '어제', 'dashboard.trend.week': '이번 주', 'dashboard.trend.lastMonth': '지난달',
+    'dashboard.trend.title': '모델 토큰 소비 곡선', 'dashboard.quick.recharge': '충전', 'dashboard.quick.createKey': 'API 키 생성',
+    'apikey.title': 'API 키 관리', 'apikey.create.button': '키 생성', 'apikey.create.title': 'API 키 만들기',
+    'apikey.col.name': '이름', 'apikey.col.mode': '권한 모드', 'apikey.col.lastUsed': '마지막 사용', 'apikey.col.todayCalls': '오늘 호출',
+    'apikey.form.mode': '권한 모드', 'apikey.form.group': '그룹 선택', 'apikey.form.expiry': '만료일',
+    'apikey.form.creating': '생성 중...', 'apikey.form.confirm': '생성 확인', 'apikey.copy.key': '키 복사',
+    'apikey.created.success': 'API 키를 만들었습니다', 'apikey.deleted.success': 'API 키를 삭제했습니다', 'apikey.copied': '클립보드에 복사했습니다',
+  };
+  const CONSOLE_EXTRA_LANGS = ['ja-JP', 'ko-KR', 'vi', 'th', 'id', 'fil'] as const;
+  let i18nConsole = 0;
+  for (const [key, scope, en, zhCN] of CONSOLE_SEED) {
+    const pairs: Array<[lang: string, value: string]> = [
+      ['zh-CN', zhCN], ['en', en],
+    ];
+    for (const extraLang of CONSOLE_EXTRA_LANGS) {
+      let v: string;
+      if (extraLang === 'ja-JP') v = CONSOLE_JA_TERMS[key] ?? en; // 未收录回退英文
+      else if (extraLang === 'ko-KR') v = CONSOLE_KO_TERMS[key] ?? en; // 未收录回退英文
+      else v = en; // vi/th/id/fil：英文占位【待翻译】
+      pairs.push([extraLang, v]);
+    }
+    for (const [lang, value] of pairs) {
+      await db.insert(schema.i18nEntries)
+        .values({ key, lang, value, scope, status: 'active', updatedBy: adminId })
+        .onConflictDoUpdate({
+          target: [schema.i18nEntries.key, schema.i18nEntries.lang],
+          set: { value, updatedBy: adminId },
+        });
+      i18nConsole++;
+    }
+  }
+  console.log(`✅ i18n_entries console/common 8 语言种子 upsert ${i18nConsole} 条（scope=${CONSOLE_SEED.length} keys × 8 lang）`);
 
   // ── webhook_retry_config：默认回调重试策略（幂等，按 webhook_url 去重）──
   const [whExists] = await db

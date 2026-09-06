@@ -14,10 +14,10 @@
  * 自愈：内存游标 lastCompleted 记录已处理的桶起点，缺桶跨 tick 自动补。
  */
 
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { sql } from 'drizzle-orm';
-import { LATENCY_BOUNDARIES } from '../../lib/latency';
-import type { Histogram } from '../../lib/latency';
+import { LATENCY_BOUNDARIES } from '../../lib/latency.js';
+import type { Histogram } from '../../lib/latency.js';
 
 /** 桶宽（5 分钟） */
 export const BUCKET_MS = 5 * 60 * 1000;

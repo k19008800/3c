@@ -13,10 +13,10 @@
  * 每次查询 / 导出写入 audit_logs，满足「谁能查、查了什么」的监管留痕要求。
  */
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, gte, lte, like, sql, desc, count } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { UnauthorizedError, ForbiddenError, ValidationError } from '../lib/errors';
+import { verifyToken } from '../services/auth/jwt.js';
+import { UnauthorizedError, ForbiddenError, ValidationError } from '../lib/errors.js';
 import {
   readRetentionConfig,
   saveRetentionConfig,
@@ -25,9 +25,7 @@ import {
   pollPeriodKey,
   RETAIN_UNITS,
   POLL_UNITS,
-  type RetainUnit,
-  type PollUnit,
-} from '../services/audit/retention';
+} from '../services/audit/retention.js';
 
 /* ───────── 鉴权（对齐 admin-finance.ts 模式） ───────── */
 

@@ -28,18 +28,19 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { createReadStream, existsSync } from 'fs';
-import { db, schema } from '../db';
-import { and, desc, eq, or, sql, count as drizzleCount } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
+import { createReadStream } from 'fs';
+import { db, schema } from '../db/index.js';
+import { and, desc, eq, sql, count as drizzleCount } from 'drizzle-orm';
+import { verifyToken } from '../services/auth/jwt.js';
 import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
   AppError,
-} from '../lib/errors';
-import { gatherUserData, writeExportFile, exportFileExists, resolveExportPath, ensureExportDir } from '../services/compliance/export';
+} from '../lib/errors.js';
+import { gatherUserData, writeExportFile, exportFileExists, resolveExportPath, ensureExportDir } from '../services/compliance/export.js';
+import { assertDataExportGranted } from '../services/compliance/data-export-grant.service.js';
 
 /** 导出文件有效期（小时） */
 const EXPORT_FILE_TTL_HOURS = 72;
@@ -147,6 +148,8 @@ export async function dataRequestsRoutes(app: FastifyInstance) {
    */
   app.post('/api/v1/me/data-export/request', { preHandler: [jwtAuth] }, async (request: any, reply) => {
     const uid = userId(request);
+    // 授权入口校验：未授权（无记录或 is_enabled=false）→ 403 DATA_EXPORT_NOT_GRANTED
+    await assertDataExportGranted(uid);
     const body = (request.body || {}) as Record<string, unknown>;
     const dataScope = String(body.dataScope || 'all');
     const reason = body.reason != null ? String(body.reason).trim() : undefined;
@@ -182,6 +185,8 @@ export async function dataRequestsRoutes(app: FastifyInstance) {
    */
   app.get('/api/v1/me/data-export/requests', { preHandler: [jwtAuth] }, async (request: any, reply) => {
     const uid = userId(request);
+    // 授权入口校验：未授权 → 403 DATA_EXPORT_NOT_GRANTED
+    await assertDataExportGranted(uid);
     const { page, pageSize, offset } = parsePagination((request.query || {}) as Record<string, string | undefined>);
 
     const [rows, totalRows] = await Promise.all([
@@ -212,6 +217,8 @@ export async function dataRequestsRoutes(app: FastifyInstance) {
    */
   app.get('/api/v1/me/data-export/:id', { preHandler: [jwtAuth] }, async (request: any, reply) => {
     const uid = userId(request);
+    // 授权入口校验：未授权 → 403 DATA_EXPORT_NOT_GRANTED
+    await assertDataExportGranted(uid);
     const id = parseInt(String(request.params.id), 10);
     if (isNaN(id) || id <= 0) throw new ValidationError('Invalid id');
 
@@ -229,6 +236,8 @@ export async function dataRequestsRoutes(app: FastifyInstance) {
    */
   app.post('/api/v1/me/data-export/:id/cancel', { preHandler: [jwtAuth] }, async (request: any, reply) => {
     const uid = userId(request);
+    // 授权入口校验：未授权 → 403 DATA_EXPORT_NOT_GRANTED
+    await assertDataExportGranted(uid);
     const id = parseInt(String(request.params.id), 10);
     if (isNaN(id) || id <= 0) throw new ValidationError('Invalid id');
 

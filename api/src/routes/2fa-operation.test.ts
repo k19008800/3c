@@ -15,13 +15,13 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import jwt from 'jsonwebtoken';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, inArray } from 'drizzle-orm';
-import { generateAccessToken, generate2faTempToken } from '../services/auth/jwt';
-import { generateSecret, generateTOTP, generateBackupCodes } from '../services/auth/totp';
-import { getRedis } from '../lib/redis';
-import { twoFactorRoutes } from './2fa';
-import { assertOperationSummary } from '../lib/operation-summary';
+import { generateAccessToken, generate2faTempToken } from '../services/auth/jwt.js';
+import { generateSecret, generateTOTP, generateBackupCodes } from '../services/auth/totp.js';
+import { getRedis } from '../lib/redis.js';
+import { twoFactorRoutes } from './2fa.js';
+import { assertOperationSummary } from '../lib/operation-summary.js';
 
 process.env.JWT_SECRET = 'test-2fa-operation-secret';
 

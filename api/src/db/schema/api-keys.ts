@@ -1,5 +1,5 @@
-import { pgTable, serial, integer, varchar, pgEnum, timestamp, text, jsonb } from 'drizzle-orm/pg-core';
-import { users } from './users';
+import { pgTable, serial, integer, varchar, pgEnum, timestamp, jsonb } from 'drizzle-orm/pg-core';
+import { users } from './users.js';
 
 export const apiKeyStatusEnum = pgEnum('api_key_status', [
   'active',

@@ -24,18 +24,18 @@
  */
 
 import { randomUUID } from 'crypto';
-import { AppError } from '../../lib/errors';
-import type { PipelineContext } from '../pipeline/types';
-import { selectChannel, type SelectedChannel } from './routing';
-import { recordChannelResult } from './circuit-breaker';
-import { parseSSELines } from './sse-parser';
-import type { StreamState } from './proxy';
-import { determineStreamBilling, type StreamBillingResult } from '../billing/settle-stream';
-import { getBalance } from '../billing/balance';
-import { countTokens } from '../billing/token-counter';
-import { getPricingForModel, computeCost, DEFAULT_MAX_OUTPUT_TOKENS, type PricingContext } from '../billing/pricing';
-import { settleBilling } from '../billing/settle';
-import { preConsume as sharedPreConsume, releasePreConsume as sharedReleasePreConsume, type PreConsumeResult } from '../billing/pre-consume';
+import { AppError } from '../../lib/errors.js';
+import type { PipelineContext } from '../pipeline/types.js';
+import { selectChannel, type SelectedChannel } from './routing.js';
+import { recordChannelResult } from './circuit-breaker.js';
+import { parseSSELines } from './sse-parser.js';
+import type { StreamState } from './proxy.js';
+import { determineStreamBilling, type StreamBillingResult } from '../billing/settle-stream.js';
+import { getBalance } from '../billing/balance.js';
+import { countTokens } from '../billing/token-counter.js';
+import { getPricingForModel, computeCost, DEFAULT_MAX_OUTPUT_TOKENS, type PricingContext } from '../billing/pricing.js';
+import { settleBilling } from '../billing/settle.js';
+import { preConsume as sharedPreConsume, releasePreConsume as sharedReleasePreConsume, type PreConsumeResult } from '../billing/pre-consume.js';
 
 // ============================================================
 // 常量
@@ -679,7 +679,7 @@ export async function relayWebSocket(opts: WsRelayOptions): Promise<WsRelayResul
   let balance: { availableBalance?: string | number | null } | null = null;
   try {
     balance = await deps.getBalance(opts.ctx.userId);
-  } catch (err) {
+  } catch {
     sendError(500, 'balance check failed');
     finishClose(4000, 'internal_error');
     return { settled: false, error: { code: 500, message: 'balance check failed' } };
@@ -706,7 +706,7 @@ export async function relayWebSocket(opts: WsRelayOptions): Promise<WsRelayResul
   // ── 4. selectChannel（无可用 → mock 回退）──
   try {
     channelRef = await deps.selectChannel(first.model);
-  } catch (err) {
+  } catch {
     // P0-1：选路失败未结算 → 解冻预扣
     await releasePre();
     sendError(502, 'channel selection failed');
@@ -764,7 +764,7 @@ export async function relayWebSocket(opts: WsRelayOptions): Promise<WsRelayResul
     let upstream: UpstreamSocket;
     try {
       upstream = deps.connectUpstreamWs(wsUrl, headers);
-    } catch (err) {
+    } catch {
       // P0-1：上游连接失败未结算 → 解冻预扣
       await releasePre();
       sendError(502, 'upstream ws connect failed');
@@ -849,7 +849,7 @@ export async function relayWebSocket(opts: WsRelayOptions): Promise<WsRelayResul
       },
       body: JSON.stringify(upstreamBody),
     });
-  } catch (err) {
+  } catch {
     awaitingStream = false; // 上游请求失败（未产生任何消费）→ 不结算
     await deps.recordChannelResult(cbKey, false).catch(() => {});
     // P0-1：上游请求失败未结算 → 解冻预扣

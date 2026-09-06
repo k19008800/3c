@@ -18,7 +18,7 @@
 
 import type { FastifyInstance } from 'fastify';
 import crypto from 'crypto';
-import { createSession, verifyToken } from '../services/auth/jwt';
+import { createSession, verifyToken } from '../services/auth/jwt.js';
 import {
   getGitHubOAuthConfig,
   getGitHubOAuthUrl,
@@ -27,8 +27,8 @@ import {
   bindOAuthAccount,
   unbindOAuthAccount,
   OAuthNotConfiguredError,
-} from '../services/auth/oauth';
-import { UnauthorizedError, ValidationError } from '../lib/errors';
+} from '../services/auth/oauth.js';
+import { UnauthorizedError, ValidationError } from '../lib/errors.js';
 
 // ── JWT 鉴权 preHandler：从 Authorization: Bearer 解析用户，注入 request.userContext ──
 // 与 me.ts / 2fa.ts 的 jwtAuth 同一模式（3cloud 未抽取公共鉴权插件，各域路由自行声明）

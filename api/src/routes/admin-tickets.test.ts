@@ -20,11 +20,11 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, inArray, gte } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
-import { generateAccessToken } from '../services/auth/jwt';
-import { adminTicketsRoutes } from './admin-tickets';
+import { generateAccessToken } from '../services/auth/jwt.js';
+import { adminTicketsRoutes } from './admin-tickets.js';
 
 /** 生成唯一后缀（邮箱 / 标题用） */
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

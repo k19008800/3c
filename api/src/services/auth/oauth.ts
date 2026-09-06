@@ -27,10 +27,10 @@
 
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { and, desc, eq } from 'drizzle-orm';
-import { AppError, ValidationError } from '../../lib/errors';
-import { generateTokenPair, type TokenPair } from './jwt';
+import { AppError, ValidationError } from '../../lib/errors.js';
+import { generateTokenPair, type TokenPair } from './jwt.js';
 
 // ============================================================
 // 常量与错误类型

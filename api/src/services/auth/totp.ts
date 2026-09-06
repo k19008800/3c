@@ -205,7 +205,8 @@ export function generateBackupCodes(count = DEFAULT_BACKUP_CODE_COUNT): { codes:
  *
  * @example
  * ```ts
- * if (await verifyBackupCode(hash, 'ABCD-EFGH-IJKL')) { /* 通过 *​/ }
+ * const ok = await verifyBackupCode(hash, 'ABCD-EFGH-IJKL');
+ * // ok === true 表示备用码验证通过
  * ```
  */
 export async function verifyBackupCode(hash: string, code: string): Promise<boolean> {

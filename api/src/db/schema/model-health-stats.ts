@@ -1,7 +1,7 @@
 import { pgTable, serial, integer, varchar, timestamp, jsonb, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { suppliers } from './suppliers';
-import { supplierModels } from './supplier-models';
+import { suppliers } from './suppliers.js';
+import { supplierModels } from './supplier-models.js';
 
 /**
  * 模型健康度桶表 — Admin 模型市场（/models/marketplace）的数据底座

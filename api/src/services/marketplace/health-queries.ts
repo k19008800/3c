@@ -10,7 +10,7 @@
  * 只查预聚合桶表 model_health_stats，不实时扫明细。
  */
 
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { and, eq, gte } from 'drizzle-orm';
 import {
   successRate,
@@ -18,8 +18,8 @@ import {
   histogramPercentile,
   mergeHistograms,
   healthStatus,
-} from '../../lib/latency';
-import type { HealthStatus, Histogram } from '../../lib/latency';
+} from '../../lib/latency.js';
+import type { HealthStatus, Histogram } from '../../lib/latency.js';
 
 export const WINDOWS = ['5m', '1h', '24h'] as const;
 export type WindowParam = (typeof WINDOWS)[number];

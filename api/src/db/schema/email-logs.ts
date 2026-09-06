@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, varchar, timestamp, text } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, timestamp, text } from 'drizzle-orm/pg-core';
 
 /**
  * 邮件发送日志 — 供 AdminEmailTemplatesPage「发送日志」Tab 与分发邮件记录

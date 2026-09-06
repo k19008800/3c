@@ -22,11 +22,10 @@
 import type { FastifyInstance } from 'fastify';
 import { mkdir, writeFile, readdir, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
-import crypto from 'node:crypto';
-import { db, schema } from '../db';
-import { eq, sql } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { UnauthorizedError, ForbiddenError, ValidationError, NotFoundError } from '../lib/errors';
+import { db, schema } from '../db/index.js';
+import { sql } from 'drizzle-orm';
+import { verifyToken } from '../services/auth/jwt.js';
+import { UnauthorizedError, ForbiddenError, ValidationError, NotFoundError } from '../lib/errors.js';
 
 const CONFIG_KEY = 'payment_config';
 

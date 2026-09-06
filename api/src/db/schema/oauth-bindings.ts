@@ -12,7 +12,7 @@
  */
 
 import { pgTable, serial, integer, varchar, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
-import { users } from './users';
+import { users } from './users.js';
 
 export const userOauthBindings = pgTable('user_oauth_bindings', {
   id: serial('id').primaryKey(),

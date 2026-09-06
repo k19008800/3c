@@ -20,8 +20,8 @@ import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
 import { rm } from 'node:fs/promises';
 import path from 'node:path';
-import { chatRoutes } from '../../routes/chat';
-import { internalAssetsRoutes } from '../../routes/internal-assets';
+import { chatRoutes } from '../../routes/chat.js';
+import { internalAssetsRoutes } from '../../routes/internal-assets.js';
 import {
   runPipeline,
   createStep,
@@ -35,8 +35,8 @@ import {
   setStepResult,
   getStepResult,
   STEP_KEYS,
-} from './index';
-import type { PipelineContext } from './types';
+} from './index.js';
+import type { PipelineContext } from './types.js';
 
 // ============================================================
 // Module mocks（链路级与路由级共用）
@@ -52,6 +52,10 @@ const mocks = vi.hoisted(() => ({
     cacheIdempotentResponse: vi.fn(),
     isIdempotencyUniqueViolation: vi.fn(),
     buildIdempotencySummary: vi.fn(),
+    buildRequestFingerprint: vi.fn(),
+    canonicalizePath: vi.fn(),
+    canonicalizeBody: vi.fn(),
+    scopeIdempotencyKey: vi.fn(),
   },
   routing: { selectChannel: vi.fn() },
   circuitBreaker: { recordChannelResult: vi.fn(), isCircuitOpen: vi.fn() },
@@ -90,6 +94,13 @@ vi.mock('../../services/idempotency', () => ({
   cacheIdempotentResponse: mocks.idempotency.cacheIdempotentResponse,
   isIdempotencyUniqueViolation: mocks.idempotency.isIdempotencyUniqueViolation,
   buildIdempotencySummary: mocks.idempotency.buildIdempotencySummary,
+  // 幂等指纹（idempotency step 计算指纹/作用域键需要）：
+  // 提供确定性 mock 实现，保持与真实实现一致的可复现、user-scoped 语义。
+  canonicalizePath: (p: string) => String(p || '').replace(/\/+/g, '/').replace(/^\/+|\/+$/g, '').toLowerCase(),
+  canonicalizeBody: (b: unknown) => JSON.stringify(b) ?? 'null',
+  scopeIdempotencyKey: (k: string, uid: number) => `${k}:${uid}`,
+  buildRequestFingerprint: (input: { userId: number; body: unknown }) =>
+    `fp-${input.userId}-${JSON.stringify(input.body)}`,
 }));
 vi.mock('../../services/upstream/routing', () => ({ selectChannel: mocks.routing.selectChannel }));
 vi.mock('../../services/upstream/circuit-breaker', () => ({
@@ -239,7 +250,7 @@ describe('Pipeline 完整链路（steps 集成）', () => {
     // 解冻携带冻结结果
     expect(mocks.preConsume.releasePreConsume).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ mode: 'frozen' }));
     // 锁按幂等键释放
-    expect(mocks.idempotency.releaseIdempotencyLock).toHaveBeenCalledWith('req-1', 't1');
+    expect(mocks.idempotency.releaseIdempotencyLock).toHaveBeenCalledWith('req-1:1', 't1');
   });
 
   it('noRollbackOn 标记步骤失败 → 不触发回滚', async () => {
@@ -261,7 +272,7 @@ describe('Pipeline 完整链路（steps 集成）', () => {
   });
 
   it('余额不足（pre-consume 失败）→ 402 且未调上游（route/proxy 均未执行）', async () => {
-    const { PreConsumeFailedError } = await import('../../lib/errors');
+    const { PreConsumeFailedError } = await import('../../lib/errors.js');
     mocks.preConsume.preConsume.mockRejectedValue(new PreConsumeFailedError('0', '0.001'));
 
     const ctx = makeCtx();
@@ -276,7 +287,7 @@ describe('Pipeline 完整链路（steps 集成）', () => {
     expect(mocks.routing.selectChannel).not.toHaveBeenCalled();
     expect(mocks.fetch).not.toHaveBeenCalled();
     // 锁被回滚释放（允许同键重试）
-    expect(mocks.idempotency.releaseIdempotencyLock).toHaveBeenCalledWith('req-1', 't1');
+    expect(mocks.idempotency.releaseIdempotencyLock).toHaveBeenCalledWith('req-1:1', 't1');
   });
 
   it('无可用渠道且无 mock 回退 → 502（NO_AVAILABLE_CHANNEL）+ 解冻预扣', async () => {
@@ -329,7 +340,7 @@ describe('Pipeline 网关集成（chat 路由）', () => {
     mocks.idempotency.resolveIdempotencyKey.mockImplementation((_req: unknown, fallback: string) => fallback);
     mocks.idempotency.acquireIdempotencyLock.mockResolvedValue({ status: 'acquired', token: 't1' });
     mocks.idempotency.releaseIdempotencyLock.mockResolvedValue(undefined);
-    mocks.idempotency.replayIdempotentRequest.mockResolvedValue(false);
+    mocks.idempotency.replayIdempotentRequest.mockResolvedValue('none' as never);
     mocks.idempotency.cacheIdempotentResponse.mockResolvedValue(undefined);
     mocks.idempotency.isIdempotencyUniqueViolation.mockReturnValue(false);
     mocks.idempotency.buildIdempotencySummary.mockImplementation((p: Record<string, unknown>) => ({ ...p }));
@@ -390,7 +401,7 @@ describe('Pipeline 网关集成（chat 路由）', () => {
   });
 
   it('余额不足（pre-consume 抛 402）→ 402 且未调上游，幂等锁已释放', async () => {
-    const { PreConsumeFailedError } = await import('../../lib/errors');
+    const { PreConsumeFailedError } = await import('../../lib/errors.js');
     mocks.preConsume.preConsume.mockRejectedValue(new PreConsumeFailedError('0', '0.001'));
 
     const res = await app.inject({ method: 'POST', url: '/v1/chat/completions', payload });
@@ -469,9 +480,8 @@ describe('Pipeline 网关集成（chat 路由）', () => {
 
   it('内网资产端点：GET /internal/assets/:name 可下载已上传临时文件', async () => {
     process.env.MULTIMODAL_TMP_DIR = TEST_TMP_DIR;
-    const { storeTempAsset } = await import('../../services/upstream/temp-asset-store');
+    const { storeTempAsset } = await import('../../services/upstream/temp-asset-store.js');
     const url = await storeTempAsset('data:image/png;base64,aGVsbG8=');
-    const fileName = url.split('/').pop()!;
 
     const res = await app.inject({ method: 'GET', url });
     expect(res.statusCode).toBe(200);

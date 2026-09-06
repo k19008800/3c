@@ -27,19 +27,27 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import crypto from 'node:crypto';
+import { db, schema } from '../db/index.js';
 import { and, desc, eq, gte, lt, sql } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { adjustLedgerAvailable, clearNegativeFlag } from '../services/billing/ledger';
-import { requirePerm } from '../middleware/require-perm';
-import { requireOperation2fa } from '../middleware/require-operation-2fa';
+import { verifyToken } from '../services/auth/jwt.js';
+import { adjustLedgerAvailable, clearNegativeFlag } from '../services/billing/ledger.js';
+import { requirePerm } from '../middleware/require-perm.js';
+import { requireOperation2fa } from '../middleware/require-operation-2fa.js';
 import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
   AppError,
-} from '../lib/errors';
+} from '../lib/errors.js';
+import {
+  acquireIdempotencyLock,
+  cacheIdempotentResponse,
+  getCachedIdempotentResponse,
+  IDEMPOTENCY_TTL_SECONDS,
+} from '../services/idempotency.js';
+import { IdempotencyUnavailableError } from '../lib/errors.js';
 
 /* ───────── auth / audit / 通用 helpers ───────── */
 
@@ -103,6 +111,33 @@ function parsePositiveInt(value: unknown, fallback: number, max?: number): numbe
   const n = parseInt(String(value ?? ''), 10);
   if (isNaN(n) || n <= 0) return fallback;
   return max && n > max ? max : n;
+}
+
+/** Financial mutations bind idempotency to operator, method, path and body digest. */
+function refundIdempotency(request: any, body: unknown) {
+  const raw = request.headers?.['idempotency-key'];
+  const supplied = typeof raw === 'string' && raw.trim() ? raw.trim() : crypto.randomUUID();
+  const path = request.url.split('?')[0];
+  const operator = String(request.userContext?.userId ?? 'anonymous');
+  const canonical = `${operator}|${request.method}|${path}|${JSON.stringify(body ?? {})}`;
+  const fingerprint = crypto.createHash('sha256').update(canonical).digest('hex');
+  return { key: `refund:${operator}:${request.method}:${path}:${supplied}`.slice(0, 100), fingerprint };
+}
+
+async function acquireRefundIdempotency(request: any, body: unknown) {
+  const { key, fingerprint } = refundIdempotency(request, body);
+  // 资金写路径严格模式（failClosed）：Redis 幂等锁不可用必须 503，不得静默降级绕过
+  const lock = await acquireIdempotencyLock(key, IDEMPOTENCY_TTL_SECONDS, { failClosed: true });
+  if (lock.status === 'unavailable') {
+    throw new IdempotencyUnavailableError({ requestId: key });
+  }
+  if (lock.status === 'duplicate') {
+    const cached = await getCachedIdempotentResponse(key);
+    if (cached?.request_fingerprint !== fingerprint) throw new AppError('幂等键对应请求摘要不一致', 409, 'IDEMPOTENCY_CONFLICT');
+    if (cached?.body) return { replay: cached.body };
+    throw new AppError('幂等请求正在处理中或响应已过期', 409, 'IDEMPOTENCY_CONFLICT');
+  }
+  return { key, fingerprint };
 }
 
 /** period → 起始时间（week 近 7 天 / month 本月 / quarter 本季 / year 本年） */
@@ -214,6 +249,9 @@ async function settledSupplierIds(): Promise<Set<number>> {
 const REFUND_STATUS_LABEL: Record<string, string> = {
   pending: '待审核',
   approved: '已通过',
+  processing: '执行中',
+  completed: '已完成',
+  failed: '执行失败',
   rejected: '已驳回',
 };
 
@@ -449,8 +487,8 @@ export function adminFinanceStatsRoutes(app: FastifyInstance) {
     const q = (request.query ?? {}) as Record<string, unknown>;
     const pageSize = parsePositiveInt(q.page_size, 50, 200);
     const status = String(q.status ?? '').trim();
-    if (status && !['pending', 'approved', 'rejected'].includes(status)) {
-      throw new ValidationError('status 仅支持 pending / approved / rejected');
+    if (status && !['pending', 'approved', 'processing', 'completed', 'failed', 'rejected'].includes(status)) {
+      throw new ValidationError('status 状态不合法');
     }
 
     const whereClause = status ? eq(schema.refundRequests.status, status) : undefined;
@@ -463,6 +501,10 @@ export function adminFinanceStatsRoutes(app: FastifyInstance) {
           amount: schema.refundRequests.amount,
           reason: schema.refundRequests.reason,
           orderNo: schema.refundRequests.orderNo,
+          refundType: schema.refundRequests.refundType,
+          reviewStage: schema.refundRequests.reviewStage,
+          executionAttempts: schema.refundRequests.executionAttempts,
+          manualInterventionRequired: schema.refundRequests.manualInterventionRequired,
           status: schema.refundRequests.status,
           reviewNote: schema.refundRequests.reviewNote,
           reviewedBy: schema.refundRequests.reviewedBy,
@@ -487,6 +529,10 @@ export function adminFinanceStatsRoutes(app: FastifyInstance) {
       amount: toNum(r.amount),
       reason: r.reason ?? null,
       order_no: r.orderNo ?? null,
+      refund_type: r.refundType,
+      review_stage: r.reviewStage,
+      execution_attempts: r.executionAttempts,
+      manual_intervention_required: r.manualInterventionRequired,
       status: r.status,
       status_label: REFUND_STATUS_LABEL[r.status] ?? r.status,
       review_note: r.reviewNote ?? null,
@@ -503,7 +549,7 @@ export function adminFinanceStatsRoutes(app: FastifyInstance) {
     });
   });
 
-  /* ═══════════ 6. 退款审核 ═══════════ */
+  /* ═══════════ 6. 退款审核/执行 ═══════════ */
 
   /** POST /api/v1/admin/refunds/:id/review — body { action: approve|reject, note }
    * 鉴权：requirePerm('finance.refund') + requireOperation2fa（双签 B16：退款审核纳入 R7，
@@ -516,6 +562,8 @@ export function adminFinanceStatsRoutes(app: FastifyInstance) {
     if (!Number.isInteger(refundId) || refundId <= 0) throw new ValidationError('退款申请 ID 非法');
 
     const body = (request.body ?? {}) as Record<string, unknown>;
+    const idem = await acquireRefundIdempotency(request, body);
+    if ('replay' in idem) return reply.send(idem.replay);
     const action = String(body.action ?? '').trim();
     if (action !== 'approve' && action !== 'reject') {
       throw new ValidationError('action 必须为 approve 或 reject');
@@ -524,18 +572,48 @@ export function adminFinanceStatsRoutes(app: FastifyInstance) {
     const operatorId = (request as any).userContext?.userId ?? null;
 
     const [req] = await db
-      .select({ id: schema.refundRequests.id, userId: schema.refundRequests.userId, amount: schema.refundRequests.amount })
+      .select({ id: schema.refundRequests.id, userId: schema.refundRequests.userId, amount: schema.refundRequests.amount, reviewStage: schema.refundRequests.reviewStage })
       .from(schema.refundRequests)
       .where(eq(schema.refundRequests.id, refundId))
       .limit(1);
     if (!req) throw new NotFoundError('退款申请', refundId);
 
-    // P1-2（评审）：状态更新与入账放同一事务——UPDATE 原子守卫（仅 pending，0 行→409）
-    // + 事务内余额增加 + 流水；addBalance 失败 → 整体回滚（状态不变，可重试），杜绝"已通过未退款"。
-    const result = await db.transaction(async (tx) => {
+    // 审批阶段：金额阈值由服务端强制，阶段字段提供可审计的多级审批。
+    const amount = Number(req.amount);
+    const required = amount > 100000 ? 'super' : amount > 10000 ? 'second' : 'first';
+    const expectedStage = req.reviewStage === 'pending'
+      ? 'first'
+      : req.reviewStage === 'pending_level2'
+        ? 'second'
+        : req.reviewStage === 'pending_super' ? 'super' : null;
+    const requestedStage = String(body.stage ?? expectedStage ?? '');
+    if (action === 'approve' && !expectedStage) {
+      throw new AppError('退款申请当前不在可审批阶段', 409, 'INVALID_REVIEW_STAGE');
+    }
+    if (action === 'approve' && requestedStage !== expectedStage) {
+      throw new AppError('审批阶段与当前单据阶段不匹配', 409, 'INVALID_REVIEW_STAGE');
+    }
+    // 审核只推进状态；资金入账必须由 execute 端点完成。
+    await db.transaction(async (tx) => {
+      const [current] = await tx.select({ stage: schema.refundRequests.reviewStage, status: schema.refundRequests.status, first: schema.refundRequests.firstReviewedBy, second: schema.refundRequests.secondReviewedBy }).from(schema.refundRequests).where(eq(schema.refundRequests.id, refundId)).limit(1);
+      if (!current || current.status !== 'pending') throw new AppError('退款申请已处理，不能重复审核', 409, 'REFUND_ALREADY_PROCESSED');
+      if (action === 'approve' && requestedStage !== 'first' && (!current.first || current.first === operatorId)) throw new AppError('审批职责不分离', 403, 'REVIEW_SOD_VIOLATION');
+      if (action === 'approve' && requestedStage === 'super' && (!current.second || current.second === operatorId)) throw new AppError('终审职责不分离', 403, 'REVIEW_SOD_VIOLATION');
+      const nextStage = action === 'reject'
+        ? 'rejected'
+        : required === 'first'
+          ? 'approved'
+          : required === 'second'
+            ? requestedStage === 'first' ? 'pending_level2' : 'approved'
+            : requestedStage === 'first' ? 'pending_level2' : requestedStage === 'second' ? 'pending_super' : 'approved';
+      const stageSet: any = { reviewStage: nextStage };
+      if (requestedStage === 'first') stageSet.firstReviewedBy = operatorId;
+      if (requestedStage === 'second') stageSet.secondReviewedBy = operatorId;
+      if (requestedStage === 'super') stageSet.superReviewedBy = operatorId;
       const [updated] = await tx.update(schema.refundRequests)
         .set({
-          status: action === 'approve' ? 'approved' : 'rejected',
+          status: nextStage === 'rejected' ? 'rejected' : nextStage === 'approved' ? 'approved' : 'pending',
+          ...stageSet,
           reviewNote: note,
           reviewedBy: operatorId,
           reviewedAt: new Date(),
@@ -543,15 +621,81 @@ export function adminFinanceStatsRoutes(app: FastifyInstance) {
         })
         .where(and(
           eq(schema.refundRequests.id, refundId),
-          eq(schema.refundRequests.status, 'pending'),
+          eq(schema.refundRequests.status, 'pending'), eq(schema.refundRequests.reviewStage, current.stage),
         ))
         .returning({ id: schema.refundRequests.id, status: schema.refundRequests.status });
       if (!updated) {
         throw new AppError('退款申请已处理，不能重复审核', 409, 'REFUND_ALREADY_PROCESSED');
       }
 
-      // approve：事务内退余额（refund 类型，写 balance_transactions；与 addBalance 同语义，无行 → 404 回滚）
-      if (action === 'approve') {
+      return { updated };
+    });
+
+    await writeAudit(request, `refund.review.${action}`, 'refund_request', refundId, {
+      userId: req.userId,
+      amount: toNum(req.amount),
+      action,
+      note,
+    });
+
+    const responseStatus = action === 'reject'
+      ? 'rejected'
+      : required === 'first' || (required === 'second' && requestedStage === 'second') || (required === 'super' && requestedStage === 'super')
+        ? 'approved'
+        : 'pending';
+    const responseStage = action === 'reject'
+      ? 'rejected'
+      : required === 'first'
+        ? 'approved'
+        : required === 'second'
+          ? requestedStage === 'first' ? 'pending_level2' : 'approved'
+          : requestedStage === 'first' ? 'pending_level2' : requestedStage === 'second' ? 'pending_super' : 'approved';
+    const response = {
+      data: { id: refundId, status: responseStatus, review_stage: responseStage },
+      message: responseStatus === 'approved' ? '退款审核通过，待执行' : action === 'approve' ? '本级审核通过，等待下一级审核' : '退款申请已驳回',
+    };
+    await cacheIdempotentResponse(idem.key, { streamed: false, body: response, request_fingerprint: idem.fingerprint, summary: {} as any });
+    return reply.send(response);
+  });
+
+  /** POST /api/v1/admin/refunds/:id/execute — approved/failed → processing → completed/failed */
+  app.post('/api/v1/admin/refunds/:id/execute', { preHandler: [requirePerm('finance.refund'), requireOperation2fa] }, async (request, reply) => {
+    const refundId = Number((request.params as any)?.id);
+    if (!Number.isInteger(refundId) || refundId <= 0) throw new ValidationError('退款申请 ID 非法');
+    const body = (request.body ?? {}) as Record<string, unknown>;
+    const idem = await acquireRefundIdempotency(request, body);
+    if ('replay' in idem) return reply.send(idem.replay);
+
+    const [req] = await db.select({
+      id: schema.refundRequests.id,
+      userId: schema.refundRequests.userId,
+      amount: schema.refundRequests.amount,
+      status: schema.refundRequests.status,
+      refundType: schema.refundRequests.refundType,
+      executionAttempts: schema.refundRequests.executionAttempts,
+      manualInterventionRequired: schema.refundRequests.manualInterventionRequired,
+    }).from(schema.refundRequests).where(eq(schema.refundRequests.id, refundId)).limit(1);
+    if (!req) throw new NotFoundError('退款申请', refundId);
+    if (req.status !== 'approved' && req.status !== 'failed') {
+      throw new AppError('退款单已处理或尚未审核', 409, 'REFUND_ALREADY_PROCESSED');
+    }
+    if (req.manualInterventionRequired || Number(req.executionAttempts) >= 3) {
+      throw new AppError('退款执行已达到重试上限，需要人工介入', 409, 'MANUAL_INTERVENTION_REQUIRED');
+    }
+
+    // 状态条件更新是并发/重复执行的最终守卫；failed 可重试。
+    const [claimed] = await db.update(schema.refundRequests)
+      .set({ status: 'processing', executionAttempts: sql`${schema.refundRequests.executionAttempts} + 1`, updatedAt: new Date() })
+      .where(and(eq(schema.refundRequests.id, refundId), eq(schema.refundRequests.status, req.status)))
+      .returning({ id: schema.refundRequests.id });
+    if (!claimed) throw new AppError('退款单已处理或尚未审核', 409, 'REFUND_ALREADY_PROCESSED');
+
+    try {
+      if (req.refundType === 'channel_refund') throw new AppError('支付通道退款适配器未配置', 503, 'CHANNEL_REFUND_NOT_CONFIGURED');
+      if (req.refundType === 'reversal') throw new AppError('红冲请使用调账反向接口', 501, 'REVERSAL_NOT_IMPLEMENTED');
+      const result = await db.transaction(async (tx) => {
+        const prior = await tx.execute(sql`SELECT 1 FROM balance_transactions WHERE reference_type = 'refund_request' AND reference_id = ${String(refundId)} LIMIT 1`);
+        if (prior.length) throw new AppError('退款流水已存在', 409, 'DUPLICATE_BUSINESS_REFERENCE');
         const upd = await tx.execute(sql`
           UPDATE customer_balances
           SET available_balance = available_balance + ${String(req.amount)}::numeric,
@@ -571,27 +715,31 @@ export function adminFinanceStatsRoutes(app: FastifyInstance) {
           referenceType: 'refund_request',
           referenceId: String(refundId),
         });
-      }
-
-      return { updated };
-    });
-
-    // 事务提交后：同步 Redis 热账本 + 充值回正清除负余额标记（尽力而为，不阻塞主响应）
-    if (action === 'approve') {
+        const [completed] = await tx.update(schema.refundRequests)
+          .set({ status: 'completed', updatedAt: new Date() })
+          .where(and(eq(schema.refundRequests.id, refundId), eq(schema.refundRequests.status, 'processing')))
+          .returning({ id: schema.refundRequests.id });
+        if (!completed) throw new AppError('退款状态更新失败', 409, 'REFUND_ALREADY_PROCESSED');
+        return row.balanceAfter;
+      });
       await adjustLedgerAvailable(req.userId, Number(req.amount));
       await clearNegativeFlag(req.userId);
+      await writeAudit(request, 'refund.execute.completed', 'refund_request', refundId, {
+        userId: req.userId, amount: toNum(req.amount), fromStatus: req.status, status: 'completed',
+      });
+      const response = { data: { id: refundId, status: 'completed', balance_after: toNum(result) }, message: '退款执行完成' };
+      await cacheIdempotentResponse(idem.key, { streamed: false, body: response, request_fingerprint: idem.fingerprint, summary: {} as any });
+      return reply.send(response);
+    } catch (error) {
+      // 资金事务失败时余额/流水已整体回滚；仅单独标记 failed，允许安全重试。
+      const attempts = Number(req.executionAttempts) + 1;
+      await db.update(schema.refundRequests).set({ status: 'failed', lastError: String((error as any)?.message ?? error).slice(0, 1000), manualInterventionRequired: attempts >= 3, updatedAt: new Date() })
+        .where(and(eq(schema.refundRequests.id, refundId), eq(schema.refundRequests.status, 'processing')));
+      await writeAudit(request, 'refund.execute.failed', 'refund_request', refundId, {
+        userId: req.userId, amount: toNum(req.amount), fromStatus: req.status, status: 'failed',
+        errorCode: (error as any)?.code ?? 'REFUND_EXECUTE_FAILED',
+      });
+      throw error;
     }
-
-    await writeAudit(request, `refund.review.${action}`, 'refund_request', refundId, {
-      userId: req.userId,
-      amount: toNum(req.amount),
-      action,
-      note,
-    });
-
-    return reply.send({
-      data: { id: refundId, status: action === 'approve' ? 'approved' : 'rejected' },
-      message: action === 'approve' ? '退款已通过，余额已退回用户账户' : '退款申请已驳回',
-    });
   });
 }

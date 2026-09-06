@@ -15,8 +15,8 @@
  */
 
 import { eq } from 'drizzle-orm';
-import { db, schema } from '../db';
-import { cacheGet, cacheSet } from '../lib/redis';
+import { db, schema } from '../db/index.js';
+import { cacheGet, cacheSet } from '../lib/redis.js';
 
 export const USER_GROUP_CACHE_TTL = 300;
 export const USER_GROUP_CACHE_PREFIX = 'user_group:';

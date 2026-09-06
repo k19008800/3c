@@ -60,7 +60,7 @@
 
 ### 2026-09-04 追加未决（真实发布基线执行时登记，见 `docs/07-quality-and-acceptance/release-baseline.md` 实跑记录）
 
-22. **🔴 P0 阻断：API 生产构建产物不可运行**：`pnpm --filter @3cloud/api start`（`node dist/index.js`）启动即抛 `ERR_MODULE_NOT_FOUND: Cannot find module '.../dist/app'`。根因：`tsconfig.base.json` 使用 `moduleResolution: "bundler"`（允许无扩展名相对导入），`tsc` 输出的 ESM `.js` 保留 `from './app'` 等无扩展名导入（全量 846 处），Node ESM 无法解析。影响 `deploy/ecosystem.config.js`（`script: 'api/dist/index.js'`）与 `pnpm start` 生产路径；dev（tsx）不受影响。**修复方向**：以 Node 可运行的模块解析（`NodeNext` + 相对导入补 `.js`，或 `rewriteRelativeImportExtensions`）重新编译并验证 `node dist/index.js` 可启动、`/health` 200。**未修复前禁止部署生产。**
+22. **~~🔴 P0 阻断：API 生产构建产物不可运行~~：已关闭（2026-09-06）**。根因 `moduleResolution: "bundler"` 使 tsc 输出无扩展名相对导入（846+ 处），Node ESM 无法解析。修复：`api/tsconfig.json` 改为 `module/moduleResolution: NodeNext`，源码全部相对导入补 `.js`（899 处文件导入 + 151 处目录导入改 `/index.js`，脚本 `fix-nodenext-imports.cjs` / `fix-dir-imports.cjs` 一次性完成，可删）；ioredis 默认导入改 named（`import { Redis } from 'ioredis'`，NodeNext CJS interop）；src 内测试文件 pino 改 named。验证：`pnpm build` 成功（postbuild-fix-imports patched 0，无残留）、`node dist/index.js` 启动正常、`/api/v1/health` → 200、API 全量回归 90 文件 / 1321 测试全绿、`tsc --noEmit` 通过。`postbuild-fix-imports.mjs` 保留为幂等兜底。
 
 23. **🟠 API 全量单测存在非确定性 flaky（`admin-competitive-marketplace.test.ts` A5）**：全量跑 3 次中 2 次失败 `expected 0.2 to be 0.1`（`src/routes/admin-competitive-marketplace.test.ts:140`）。根因：A5 测试假设市场卡片按模型唯一（`list.find(m => m.model_name === MODEL)` 取到 sell 价 0.10），但 `/admin/marketplace` 端点**按供应商×模型出卡片**（本测试为 `MODEL` 建了供应商 A=0.10 与 B=0.20 两张卡），`.orderBy(modelName)` 对同名键无确定性次序 → 并发/并行执行计划下可能先取到 0.20 卡。单文件隔离每次 7/7 通过。**修复方向**：使 A5 断言对多卡取价保持确定性（如按供应商名定位目标卡，或断言该模型 `min(sell_input_price)===0.10`），保持端点行为不变；禁用"改断言掩盖"。
 
@@ -74,4 +74,4 @@
 
 26. **🟠 结算/对账资金操作的独立 2FA 与补账/核销事务证据**（2026-09-06 自 #25 拆分）：差异处理端点已接入操作级 2FA（`requireOperation2fa`），但结算/对账资金操作（补账/核销事务）的独立 2FA 专项证据、真实迁移/备份恢复证据仍未完成。实现 open / TEST/OPS evidence open，不得与 #25 相互替代。
 
-> 以上 #22–26 为真实执行结果或 accepted ADR 对照实现后显示的生产阻断/失败项。修复任务均已给出方向；在 #22、#26 关闭与 #23/#24 flaky 稳定或取证前，发布基线保持 `not_ready`。
+> 以上 #22–26 为真实执行结果或 accepted ADR 对照实现后显示的生产阻断/失败项。修复任务均已给出方向；在 #26 关闭与 #23/#24 flaky 稳定或取证前，发布基线保持 `not_ready`。

@@ -35,17 +35,17 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { and, desc, eq, inArray, sql, count as drizzleCount } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { getBalance } from '../services/billing/balance';
+import { verifyToken } from '../services/auth/jwt.js';
+import { getBalance } from '../services/billing/balance.js';
 import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
   AppError,
-} from '../lib/errors';
+} from '../lib/errors.js';
 
 /** 审核通过后的冷静期（天） */
 const COOL_DOWN_DAYS = 7;

@@ -25,16 +25,16 @@
  * @module routes/admin-tickets
  */
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, or, like, inArray, sql, desc, count } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
-import { verifyToken } from '../services/auth/jwt';
+import { verifyToken } from '../services/auth/jwt.js';
 import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
-} from '../lib/errors';
+} from '../lib/errors.js';
 
 /* ───────── 鉴权（对齐 admin-support-missing.ts 模式） ───────── */
 

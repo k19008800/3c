@@ -21,18 +21,18 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
-import { and, desc, eq, ilike, or, sql, count as drizzleCount } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
-import { isValidIpOrCidr } from '../services/security/ip-blacklist';
-import { buildComplianceReport, normalizePeriodDays, reportToCsv, type ComplianceReportType } from '../services/compliance/report';
+import { db, schema } from '../db/index.js';
+import { and, desc, eq, ilike, sql, count as drizzleCount } from 'drizzle-orm';
+import { verifyToken } from '../services/auth/jwt.js';
+import { isValidIpOrCidr } from '../services/security/ip-blacklist.js';
+import { buildComplianceReport, normalizePeriodDays, reportToCsv, type ComplianceReportType } from '../services/compliance/report.js';
 import {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
   AppError,
-} from '../lib/errors';
+} from '../lib/errors.js';
 
 /** 合法 scope */
 const VALID_SCOPES = ['api', 'admin', 'all'] as const;

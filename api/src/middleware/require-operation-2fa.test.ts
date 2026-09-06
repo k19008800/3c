@@ -15,14 +15,14 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import jwt from 'jsonwebtoken';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { inArray } from 'drizzle-orm';
-import { generateAccessToken, generate2faTempToken, generateOperationToken } from '../services/auth/jwt';
-import { requirePerm } from './require-perm';
-import { requireOperation2fa } from './require-operation-2fa';
-import { enableTest2fa } from '../routes/test-helpers';
-import { getRedis } from '../lib/redis';
-import { assertOperationSummary } from '../lib/operation-summary';
+import { generateAccessToken, generate2faTempToken, generateOperationToken } from '../services/auth/jwt.js';
+import { requirePerm } from './require-perm.js';
+import { requireOperation2fa } from './require-operation-2fa.js';
+import { enableTest2fa } from '../routes/test-helpers.js';
+import { getRedis } from '../lib/redis.js';
+import { assertOperationSummary } from '../lib/operation-summary.js';
 
 process.env.JWT_SECRET = 'test-require-operation-2fa-secret';
 
@@ -286,7 +286,7 @@ describe('ISSUE #25 三缺口专项（ADR-0008：summary 绑定 / 一次性消�
   });
 
   it('fail-closed①：Redis 不可用 + confirmed → 403 OPERATION_2FA_UNAVAILABLE（不绕过后端校验）', async () => {
-    const redisLib = await import('../lib/redis');
+    const redisLib = await import('../lib/redis.js');
     const spy = vi.spyOn(redisLib, 'getRedis').mockReturnValue(null as any);
     try {
       const token = generateOperationToken({ userId: enabledUserId, email: `op2fa-en-${ts}@test.com`, role: 'admin', seq: 1, summaryHash: SUMMARY_HASH });
@@ -303,7 +303,7 @@ describe('ISSUE #25 三缺口专项（ADR-0008：summary 绑定 / 一次性消�
   });
 
   it('fail-closed②：Redis 读取异常（get 抛错）+ confirmed → 403 OPERATION_2FA_UNAVAILABLE', async () => {
-    const redisLib = await import('../lib/redis');
+    const redisLib = await import('../lib/redis.js');
     const fake = { get: async () => { throw new Error('redis down'); } } as any;
     const spy = vi.spyOn(redisLib, 'getRedis').mockReturnValue(fake);
     try {
@@ -321,7 +321,7 @@ describe('ISSUE #25 三缺口专项（ADR-0008：summary 绑定 / 一次性消�
   });
 
   it('fail-closed③：Redis 不可用 + 非 confirmed → 放行到二次确认检查（OPERATION_CONFIRM_REQUIRED，非静默放行）', async () => {
-    const redisLib = await import('../lib/redis');
+    const redisLib = await import('../lib/redis.js');
     const spy = vi.spyOn(redisLib, 'getRedis').mockReturnValue(null as any);
     try {
       const token = generateOperationToken({ userId: enabledUserId, email: `op2fa-en-${ts}@test.com`, role: 'admin', seq: 1, summaryHash: SUMMARY_HASH });

@@ -13,9 +13,10 @@
  * @see SPEC-§25-供应商增强.md（结算/对账）
  */
 
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { eq, and, gte, lt, sql, inArray, desc } from 'drizzle-orm';
-import type { NewVendorSettlement, NewVendorSettlementItem } from '../../db/schema/vendor-settlements';
+import type { NewVendorSettlement, NewVendorSettlementItem } from '../../db/schema/vendor-settlements.js';
+import { AppError } from '../../lib/errors.js';
 
 /* ───────── types ───────── */
 
@@ -426,13 +427,18 @@ export async function confirmSettlement(id: number) {
     .limit(1);
   if (!settlement) return null;
 
-  if (settlement.status !== 'confirmed') {
-    const [updated] = await db
-      .update(schema.vendorSettlements)
-      .set({ status: 'confirmed', updatedAt: new Date() })
-      .where(eq(schema.vendorSettlements.id, id))
-      .returning();
-    return updated;
+  if (settlement.status === 'confirmed') return settlement;
+  if (settlement.status !== 'draft') {
+    throw new AppError(`结算单状态不可确认：${settlement.status}`, 409, 'SETTLEMENT_STATUS_MISMATCH');
   }
-  return settlement;
+  const [updated] = await db
+    .update(schema.vendorSettlements)
+    .set({ status: 'confirmed', updatedAt: new Date() })
+    .where(and(eq(schema.vendorSettlements.id, id), eq(schema.vendorSettlements.status, 'draft')))
+    .returning();
+  // Concurrent confirmer lost the draft guard: re-read for idempotent confirmed result.
+  if (updated) return updated;
+  const [current] = await db.select().from(schema.vendorSettlements).where(eq(schema.vendorSettlements.id, id)).limit(1);
+  if (current?.status === 'confirmed') return current;
+  throw new AppError(`结算单状态不可确认：${current?.status ?? 'missing'}`, 409, 'SETTLEMENT_STATUS_MISMATCH');
 }

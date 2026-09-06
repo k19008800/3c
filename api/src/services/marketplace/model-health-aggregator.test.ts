@@ -19,7 +19,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { LATENCY_BOUNDARIES } from '../../lib/latency';
+import { LATENCY_BOUNDARIES } from '../../lib/latency.js';
 
 const mocks = vi.hoisted(() => ({
   db: { execute: vi.fn(), insert: vi.fn() },
@@ -44,7 +44,7 @@ vi.mock('../../db', () => ({
   schema: mocks.schema,
 }));
 
-import { aggregateBucket } from './model-health-aggregator';
+import { aggregateBucket } from './model-health-aggregator.js';
 
 /** 记录 insert values 的链式 mock（values → onConflictDoUpdate） */
 let insertValues: Array<Record<string, unknown>>;

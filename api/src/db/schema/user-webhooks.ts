@@ -1,5 +1,5 @@
 import { pgTable, serial, integer, varchar, jsonb, boolean, timestamp, index } from 'drizzle-orm/pg-core';
-import { users } from './users';
+import { users } from './users.js';
 
 /**
  * 用户端 Webhook 订阅配置（P1-1，对齐 SPEC-§22 数据结构）

@@ -5,7 +5,7 @@
 import type { FastifyInstance } from 'fastify';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import {
   generateTokenPair,
@@ -14,13 +14,13 @@ import {
   invalidateSession,
   refreshAccessToken,
   generate2faTempToken,
-} from '../services/auth/jwt';
-import { AppError, UnauthorizedError, ValidationError } from '../lib/errors';
-import { initBalance, addBalance, getBalance } from '../services/billing/balance';
-import { sendMail } from '../services/mailer';
-import { getRedis } from '../lib/redis';
-import { findInviteByCode, consumeInviteCode } from '../services/agent/settlement';
-import { validatePasswordStrength } from '../lib/password';
+} from '../services/auth/jwt.js';
+import { AppError, UnauthorizedError, ValidationError } from '../lib/errors.js';
+import { initBalance, addBalance, getBalance } from '../services/billing/balance.js';
+import { sendMail } from '../services/mailer.js';
+import { getRedis } from '../lib/redis.js';
+import { findInviteByCode, consumeInviteCode } from '../services/agent/settlement.js';
+import { validatePasswordStrength } from '../lib/password.js';
 
 // ============================================================
 // Helpers
@@ -35,6 +35,49 @@ function hashPassword(password: string): string {
 
 function verifyPassword(password: string, hash: string): boolean {
   return bcrypt.compareSync(password, hash);
+}
+
+/* ───────── 登录历史（login_history，migration 0035） ───────── */
+
+/** best-effort 从 User-Agent 解析浏览器 / 操作系统（无法识别返回 null，不阻断登录） */
+function parseUserAgent(ua: unknown): { os: string | null; browser: string | null } {
+  const s = typeof ua === 'string' ? ua : '';
+  let os: string | null = null;
+  let browser: string | null = null;
+  if (s) {
+    if (/Windows NT/i.test(s)) os = 'Windows';
+    else if (/Mac OS X|Macintosh/i.test(s)) os = 'macOS';
+    else if (/Linux/i.test(s)) os = 'Linux';
+    else if (/iPhone|iPad|iPod/i.test(s)) os = 'iOS';
+    else if (/Android/i.test(s)) os = 'Android';
+    else os = 'Unknown';
+
+    if (/Edg\//i.test(s)) browser = 'Edge';
+    else if (/Firefox/i.test(s)) browser = 'Firefox';
+    else if (/Chrome\/|CriOS\//i.test(s)) browser = 'Chrome';
+    else if (/Safari/i.test(s)) browser = 'Safari';
+    else if (/MicroMessenger/i.test(s)) browser = 'WeChat';
+    else browser = 'Unknown';
+  }
+  return { os, browser };
+}
+
+/** 写一条登录历史（成功/失败）。为 best-effort：任何 DB 异常仅告警，不影响登录主流程。 */
+async function recordLogin(userId: number, success: boolean, ip: string | null, deviceInfo: Record<string, unknown> | null): Promise<void> {
+  try {
+    await db.insert(schema.loginHistory).values({
+      userId,
+      success,
+      ip,
+      city: null,
+      browser: deviceInfo?.browser ? String(deviceInfo.browser) : null,
+      os: deviceInfo?.os ? String(deviceInfo.os) : null,
+      deviceInfo: deviceInfo as any,
+      riskLevel: null,
+    });
+  } catch (err) {
+    console.error('[auth] failed to record login_history:', err);
+  }
 }
 
 // ============================================================
@@ -124,7 +167,7 @@ export async function authRoutes(app: FastifyInstance) {
     await addBalance(user.id, WELCOME_BONUS, 'adjustment', 'welcome_bonus', String(user.id));
 
     return reply.status(201).send({
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, language: 'zh-CN' },
       ...tokens,
       // P2-2：携带有效邀请码注册成功 → invite_ok=true；未携带 → false
       invite_ok: inviteOk,
@@ -141,13 +184,27 @@ export async function authRoutes(app: FastifyInstance) {
       .from(schema.users)
       .where(eq(schema.users.email, email))
       .limit(1);
+    const user0 = users[0];
 
-    if (users.length === 0 || !verifyPassword(password, users[0]!.passwordHash)) {
+    // 登录历史（login_history）：best-effort 解析 UA，成功/失败均记录；
+    // 未知邮箱（无 user_id 可关联）不记录，避免无效行与枚举信号。
+    const uaInfo = parseUserAgent(request.headers['user-agent']);
+    const deviceInfo = {
+      os: uaInfo.os,
+      browser: uaInfo.browser,
+      user_agent: typeof request.headers['user-agent'] === 'string' ? request.headers['user-agent'] : null,
+    };
+
+    if (!user0 || !verifyPassword(password, user0.passwordHash)) {
+      if (user0) {
+        await recordLogin(user0.id, false, request.ip ?? null, deviceInfo);
+      }
       throw new UnauthorizedError('Invalid email or password');
     }
 
-    const user = users[0]!;
+    const user = user0;
     if (user.status !== 'active') {
+      await recordLogin(user.id, false, request.ip ?? null, deviceInfo);
       throw new UnauthorizedError('Account is disabled');
     }
 
@@ -170,8 +227,11 @@ export async function authRoutes(app: FastifyInstance) {
       .set({ lastLoginAt: new Date(), lastLoginIp: request.ip || null })
       .where(eq(schema.users.id, user.id));
 
+    // 成功登录记录
+    await recordLogin(user.id, true, request.ip ?? null, deviceInfo);
+
     return reply.send({
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, language: user.language },
       ...tokens,
     });
   });
@@ -218,6 +278,7 @@ export async function authRoutes(app: FastifyInstance) {
       name: schema.users.name,
       role: schema.users.role,
       status: schema.users.status,
+      language: schema.users.language,
     }).from(schema.users).where(eq(schema.users.id, payload.userId)).limit(1);
 
     if (users.length === 0) throw new UnauthorizedError('User not found');
@@ -240,6 +301,7 @@ export async function authRoutes(app: FastifyInstance) {
       name: schema.users.name,
       role: schema.users.role,
       status: schema.users.status,
+      language: schema.users.language,
     }).from(schema.users).where(eq(schema.users.id, payload.userId)).limit(1);
 
     if (users.length === 0) throw new UnauthorizedError('User not found');
@@ -256,6 +318,7 @@ export async function authRoutes(app: FastifyInstance) {
       status: user.status,
       balance: Number(balance.availableBalance || 0),
       realNameStatus: null,
+      language: user.language,
     });
   });
 

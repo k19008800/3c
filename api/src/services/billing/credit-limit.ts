@@ -20,11 +20,11 @@
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { db, schema } from '../../db';
+import { db, schema } from '../../db/index.js';
 import { and, eq, sql } from 'drizzle-orm';
-import { AppError } from '../../lib/errors';
-import { getRedis } from '../../lib/redis';
-import { getCreditLimits, type CreditLimits } from '../../lib/finance-rules';
+import { AppError } from '../../lib/errors.js';
+import { getRedis } from '../../lib/redis.js';
+import { getCreditLimits, type CreditLimits } from '../../lib/finance-rules.js';
 
 /** 计数维度：operator = 操作人；user = 被入账用户 */
 export type CreditScope = 'operator' | 'user';
@@ -38,9 +38,6 @@ type TxContext = Parameters<Parameters<typeof db.transaction>[0]>[0];
 /** Redis ZSET 键前缀（v1.1 §3.1，无日期后缀——事件级滚动窗口） */
 const OP_KEY_PREFIX = 'lim:op:';
 const USER_KEY_PREFIX = 'lim:user:';
-
-/** Redis ZSET TTL：48h（每次写刷新；无事件后自动消失） */
-const REDIS_KEY_TTL_SECONDS = 172800;
 
 // ── Lua 脚本加载（对齐 pre-consume.ts loadLuaScript 双路径约定） ──
 

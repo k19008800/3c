@@ -159,7 +159,7 @@ export function buildResponsesStreamStart(ctx: ResponsesStreamContext, createdAt
 export function chatChunkToResponsesEvents(
   chunk: Record<string, unknown>,
   state: ResponsesStreamState,
-  ctx: ResponsesStreamContext,
+  _ctx: ResponsesStreamContext,
 ): ResponsesStreamEvent[] {
   const events: ResponsesStreamEvent[] = [];
   state.totalChunks++;

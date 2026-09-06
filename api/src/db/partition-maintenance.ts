@@ -28,7 +28,7 @@
 import { sql } from 'drizzle-orm';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { db } from './index';
+import { db } from './index.js';
 
 /** 已分区的两张大表 */
 export const PARTITIONED_TABLES = ['consumption_records', 'balance_transactions'] as const;

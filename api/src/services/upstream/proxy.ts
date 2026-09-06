@@ -164,9 +164,6 @@ export async function streamRelay(
         reply.raw.write(`data: ${data}\n`);
       });
     }
-  } catch (err) {
-    // 中断时保留 state 中已累积的数据，外层负责计费决策
-    throw err;
   } finally {
     // 确保连接关闭
     reply.raw.end();

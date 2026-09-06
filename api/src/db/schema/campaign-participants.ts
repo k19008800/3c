@@ -1,6 +1,6 @@
 import { pgTable, serial, integer, varchar, timestamp, numeric } from 'drizzle-orm/pg-core';
-import { campaigns } from './campaigns';
-import { users } from './users';
+import { campaigns } from './campaigns.js';
+import { users } from './users.js';
 
 /**
  * 营销活动参与记录（2026-08 补齐，对齐原型 admin-campaigns.html 参与者列表）

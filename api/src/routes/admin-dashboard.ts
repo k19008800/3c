@@ -5,13 +5,13 @@
  *   - GET /admin/dashboard — 充值排行榜 Top 10（充值客户聚合）
  */
 import type { FastifyInstance } from 'fastify';
-import { db, schema } from '../db';
+import { db, schema } from '../db/index.js';
 import { eq, sql, desc } from 'drizzle-orm';
-import { verifyToken } from '../services/auth/jwt';
+import { verifyToken } from '../services/auth/jwt.js';
 import {
   UnauthorizedError,
   ForbiddenError,
-} from '../lib/errors';
+} from '../lib/errors.js';
 
 /* ───────── helpers ───────── */
 

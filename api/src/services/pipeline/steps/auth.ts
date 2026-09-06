@@ -12,9 +12,9 @@
  * @see docs/iteration-plan-v2.md P0-4
  */
 
-import { AppError } from '../../../lib/errors';
-import { createStep } from '../executor';
-import { getStepResult, STEP_KEYS } from './context';
+import { AppError } from '../../../lib/errors.js';
+import { createStep } from '../executor.js';
+import { getStepResult, STEP_KEYS } from './context.js';
 
 /** preHandler apiKeyAuth 注入的认证上下文形状（对齐 services/auth/apikey.ts） */
 export interface ApiKeyAuthContext {

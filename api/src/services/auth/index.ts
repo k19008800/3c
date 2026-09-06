@@ -8,10 +8,10 @@ export {
   refreshAccessToken,
   generate2faTempToken,
   verify2faTempToken,
-} from './jwt';
-export type { TokenPayload, TokenPair, TwoFactorTempPayload } from './jwt';
-export { hashApiKey, extractApiKeyFromHeader, verifyApiKey, apiKeyAuth } from './apikey';
-export type { ApiKeyContext } from './apikey';
+} from './jwt.js';
+export type { TokenPayload, TokenPair, TwoFactorTempPayload } from './jwt.js';
+export { hashApiKey, extractApiKeyFromHeader, verifyApiKey, apiKeyAuth } from './apikey.js';
+export type { ApiKeyContext } from './apikey.js';
 export {
   generateSecret,
   generateTOTP,
@@ -20,4 +20,4 @@ export {
   verifyBackupCode,
   otpauthURL,
   normalizeBackupCode,
-} from './totp';
+} from './totp.js';
