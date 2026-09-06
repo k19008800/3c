@@ -1,0 +1,5 @@
+﻿构建产物（2026-09-06 17:52:49）:
+  packages/shared/dist : 16 files, 0.01 MB
+  api/dist : 1088 files, 6.34 MB
+  web-console/dist : 3 files, 1.84 MB
+  web-portal/.next : 148 files, 114.78 MB

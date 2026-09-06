@@ -83,3 +83,9 @@
 - **2026-09-06 二次收口（补账/核销已闭环）**：前端实际使用的对账差异处理端点 `POST /admin/reconciliation/diffs/:id/:op`（resolve/ignore，补账/核销资金操作入口）此前未挂 2FA——本轮挂载 `[adminAuth, requireOperation2fa]` 并前端接入 withOperation2fa；专测 `admin-settlement-2fa.test.ts` 扩至 5/5。至此结算/对账资金写端点操作级 2FA 全覆盖（结算确认/月结锁账/解锁/标记结算/人工上账/调账/冲正/对账差异处理）。
 
 > 以上 #22–26 为真实执行结果或 accepted ADR 对照实现后显示的生产阻断/失败项。#22/#25/#23/#24/#26 均已关闭（2026-09-06）；备份恢复门禁已真实执行 PASS（证据 `evidence/finance/v0.1.0/restore/`，见 release-baseline）。2026-09-06 二次收口：候选发布提交 `a7958ad` 已确定（可发布源码与 evidence/audit/docs/test-reports 分离后提交，API 1327/1327 + build patched 0 + 前端 build 通过）；T-04 补账/核销事务证据已闭环（diffs 端点 2FA + 专测 5/5）。发布基线整体 `ready`（见 release-baseline）；非阻断登记项：#17 独立全新库迁移演练、前端 paid/dispute 按钮后端缺口、T-04 长线项（Redis 分布式锁/异步补偿/outbox/外部账单导入/跨系统对账/正式结算周期）。
+
+---
+
+### 2026-09-06 追加未决（候选提交 `8d3cad7` 全量基线重跑时登记，见 `ops/baseline-2026-09-06/REPORT.md`）
+
+27. **🟠 verify chat 真实上游失败（本地渠道定价数据缺口，代码无回归）**：全量重跑 verify 16/17，唯一失败 `Chat completions (real upstream)`——`POST /v1/chat/completions`（model `DeepSeek-V4-Flash-0731`）返回 `{"mock":true}`。**根因（已定位到数据层）**：`api/src/services/upstream/routing.ts` `selectChannel` 以 `vendor_pricing.status='active'` 为必要条件（innerJoin），而本地库 `vendor_pricing` 中 wanwu（supplier 2633 / supplier_model 2317）与天翼云（2824 / 2503）**均无定价记录**（wanwu pricing rows=0，deepseek 系列全表 0 条）→ 路由返回 null → mock 回退。**可达性实测**：wanwu `http://47.110.226.233:8072` + `supplier_keys.id=192`（wanwu-main，active）直调 → HTTP 200 真实 completion（total_tokens=6）；天翼云超时、deepseek 官方 401。**转 ready 路径（需产品/发布裁决后执行）**：① 裁决 `DeepSeek-V4-Flash-0731`（wanwu）input/output 定价 → 补 `vendor_pricing`（supplier_model_id=2317，status=active，pricing_status 枚举 draft/active/archived）→ 重跑 verify 即全绿；② 修正 `scripts/test-integration.cjs` 注释（可用渠道=wanwu，非天翼云）；③ `e2e/tests/fullflow.spec.ts` ③ 增加 `mock !== true` 断言（当前仅断言 `total_tokens>0`，mock 计费也通过，fullflow ③ 的"真实调度"字样不构成真实上游证据）。**不影响**：代码门禁全绿（typecheck/lint/API 1327/web-console 46/build 4 端/E2E 37），发布基线按严格门禁口径 `not_ready`（见 release-baseline）。
