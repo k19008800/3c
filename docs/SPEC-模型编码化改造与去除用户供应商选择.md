@@ -1,9 +1,10 @@
 # SPEC — 模型编码化改造：去除用户侧"供应商选择"，以"模型编码"为唯一路由键
 
 > **文档类型**：实现规格（产品定稿后由架构/后端据此实现）
-> **版本**：v1.1（**已定稿**）
-> **上游**：`docs/PRD-模型编码化改造与去除用户供应商选择.md`
+> **版本**：v1.2（**已定稿**，并入补充1）
+> **上游**：`docs/PRD-模型编码化改造与去除用户供应商选择.md`（v1.2）
 > **状态**：**已评审定稿** ✅（决策 M-S-01~07 已拍板，见 §〇）→ 按 `kb/3cloud/spawn-protocol.md` 派发 backend / front / product / test
+> **v1.2 变更（2026-09-06）**：并入《PRD-模型编码化改造与去除用户供应商选择-补充1-编码规则自定义.md》：编码规则**后台可自定义、默认「厂商+模型」**（M-S-03 → M-S-03R、S-C-1 → S-C-1R），编码示例随规则更新。
 > **基础约束**：遵循 `AGENTS.md` —— 每个功能页面标题旁与每个操作按钮旁必须有 `[?]` 帮助说明。
 
 ---
@@ -14,7 +15,7 @@
 |------|------------------------------|
 | M-S-01 | 用户侧删除"供应商/渠道选择"菜单；用户只选"模型" |
 | M-S-02 | 全局唯一 **模型编码（model_code）** 作为 API `model` 参数的权威路由键，一对一路由到 `supplier_models` 记录 |
-| M-S-03 | 编码命名：**平台短 code**（如 `dsv4f-vb`），仅 `[a-zA-Z0-9_-]`，**不含 `@`**；显示层用"模型名（供应商名）" |
+| M-S-03R | 编码命名（v1.2 修订）：**默认模板「厂商+模型」** = `{supplier_code}-{model_name}`（如 `vb-deepseek-v4-flash`）；**后台可自定义编码规则模板**（变量白名单/清洗/校验见 PRD 补充1 §2）；仅 `[a-zA-Z0-9_-]`，**不含 `@`**；显示层用"模型名（供应商名）" |
 | M-S-04 | **纯编码，无自动兜底**：`model` 字段必须是有效 `model_code`，非编码一律无效；`selectChannel` 移除"按模型名自动选供应商"语义 |
 | M-S-05 | **立即切换，无兼容窗口**：旧裸模型名 / `model@vendor` 一律按编码解析，不匹配即 `MODEL_CODE_NOT_FOUND`(404) |
 | M-S-06 | `/me/models` 列表 DB 空时回退 `DEFAULT_MODELS`（仅列表展示；不影响调用侧严格校验） |
@@ -63,7 +64,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_supplier_models_model_code
 
 ### 2.3 编码生成规则
 
-- **规则 S-C-1**：编码 = 与供应商绑定的稳定短码。推荐格式：`{逻辑模型缩写}-{供应商code}`（例 `dsv4f-vb`）；仅限 `[a-zA-Z0-9_-]`（不含 `@`，避免与旧语法混淆）。
+- **规则 S-C-1R**（v1.2 修订）：编码 = 与供应商绑定的稳定唯一编码。**默认模板「厂商+模型」**：`{supplier_code}-{model_name}`（例 `vb-deepseek-v4-flash`）；**后台可自定义模板**（变量白名单 `supplier_code/supplier_name/model_name/model_short/platform_model/seq`）；仅限 `[a-zA-Z0-9_-]`（渲染后清洗，不含 `@`，避免与旧语法混淆）；唯一冲突追加 `-{seq}`；模板变更只对未生成编码的映射生效（M-C-07）。完整规格见 PRD 补充1 §2。
 - **规则 S-C-2**：编码一经生成，**不可复用、不可改码**；改码必须走迁移流程（§四）。
 - **规则 S-C-3**：同一逻辑模型同一供应商只允许一个 `active` 编码（显示层不重复）。
 
@@ -116,7 +117,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_supplier_models_model_code
 
 ```json
 {
-  "model_code": "dsv4f-vb",
+  "model_code": "vb-deepseek-v4-flash",
   "model_name": "deepseek-v4-flash",
   "display_name": "deepseek-v4-flash（云供应商B）",
   "supplier_code": "vendor_b",
@@ -159,7 +160,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_supplier_models_model_code
 
 | 项 | 规则 |
 |----|------|
-| 存量 `supplier_models` 回填 `model_code` | 按规则 S-C-1 批量生成，唯一冲突时追加序号；一次性脚本 + 校验 |
+| 存量 `supplier_models` 回填 `model_code` | 按当前模板（默认「厂商+模型」= `{supplier_code}-{model_name}`，S-C-1R）批量生成，唯一冲突时追加序号；一次性脚本 + 校验 |
 | 存量 `consumption_records`/`call_logs` | 能由 `supplier_model_id` 回溯的则回填 `model_code`；否则置空（不影响资金准确性，仅影响按编码筛选历史） |
 | 旧调用 `model`（裸模型名 / `name@vendorCode`） | **不映射、无兼容窗口**：一律作为编码解析，不命中即 404（定稿 M-S-05）。已有客户端需在切换前更新 `model` 为有效编码 |
 | `/me/models` 列表 | DB 空回退 `DEFAULT_MODELS`（仅列表）|
@@ -224,7 +225,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_supplier_models_model_code
 ## 八、测试要点（交付 test-agent）
 
 1. 同逻辑模型多供应商：各编码独立路由、独立计费、日志正确记录 `model_code`。
-2. 编码精确：`dsv4f-vb` 命中；不存在/空/裸名/含 `@` 一律 `MODEL_CODE_NOT_FOUND`(404)；编码下架/维护中 400+可选清单；分组排除 403。
+2. 编码精确：`vb-deepseek-v4-flash` 命中；不存在/空/裸名/含 `@` 一律 `MODEL_CODE_NOT_FOUND`(404)；编码下架/维护中 400+可选清单；分组排除 403。
 3. **无自动、无兼容**：不带有效编码不降级，直接 404；旧 `name@vendorCode` 与裸名同规则。
 4. 默认编码偏好：保存/读取/清除；发起时按偏好回填；默认编码下线时返回可选项让用户重选。
 5. `/me/models` DB 空 → 列表回退 `DEFAULT_MODELS`。

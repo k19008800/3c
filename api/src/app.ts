@@ -27,6 +27,7 @@ import { twoFactorRoutes } from './routes/2fa.js';
 import { apiKeyRoutes } from './routes/apikeys.js';
 import { supplierRoutes } from './routes/suppliers.js';
 import { adminModelSyncRoutes } from './routes/admin-model-sync.js';
+import { adminModelCodesRoutes } from './routes/admin-model-codes.js';
 import { adminCustomerRoutes } from './routes/admin-customers.js';
 import { adminCreditRoutes } from './routes/admin-credit.js';
 import { adminRealNameRoutes } from './routes/admin-real-name.js';
@@ -221,6 +222,7 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   await app.register(apiKeyRoutes);
   await app.register(supplierRoutes);
   await app.register(adminModelSyncRoutes);
+  await app.register(adminModelCodesRoutes);
   await app.register(adminCustomerRoutes);
   await app.register(adminCreditRoutes);
   await app.register(adminRealNameRoutes);
