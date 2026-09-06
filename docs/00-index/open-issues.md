@@ -56,6 +56,8 @@
 
 21. **T-04 P0 正式对账最小闭环已落地，完整结算/对账仍阻断**：已新增 `reconciliation_reports`、`reconciliation_mismatches`、0034 手写迁移及正式管理端点；报告状态为 `pending→running→completed/failed`，差异显式经过 `pending→processing→resolved/false_positive/ignored`，供应商结算确认增加 `draft→confirmed` 原子状态守卫。真实 Fastify + PostgreSQL 专项已扩展至 `6/6`（连同供应商结算及相关专项证据合计 `31/31`），API 串行全量 `81/81` 文件、`1189/1189` 测试通过；TypeScript、ESLint、diff、迁移语法检查通过。**该项仅关闭原型替代 P0 差距，不关闭完整 T-04**：Redis 分布式锁、异步任务/失败补偿、outbox、外部供应商账单导入、真实跨系统对账、资金补账/核销事务、代理正式结算周期、差异处理端点已接入操作级 2FA（`requireOperation2fa`，默认 mandatory_admin），并有专项令牌/确认标记回归；补账/核销资金事务及其独立 2FA 证据仍未完成，真实迁移/备份恢复证据仍未完成；发布基线继续 `not_ready`。
 
+> **2026-09-06 收口更新（T-04 补账/核销证据已闭环）**：对账差异处理端点 `POST /api/v1/admin/reconciliation/diffs/:id/:op`（前端 AdminReconciliationDiffPage 实际使用的 resolve/ignore 差异处理，即补账/核销资金操作入口）已挂载 `requireOperation2fa`（`[adminAuth, requireOperation2fa]`），前端已接入 withOperation2fa + 操作摘要两步弹窗；专测 `admin-settlement-2fa.test.ts` 新增 diffs 端点用例并 5/5 通过（缺 token 403 REQUIRED + 带 token 200 + 同 token 重放 403 REPLAYED）。备份恢复演练已真实 PASS（2026-09-06，见 #26 下方总结与 release-baseline）。发布基线剩余项（候选提交/T-04）已全部解决，整体 `ready`（见 release-baseline）。T-04 长线项（Redis 分布式锁、异步补偿、outbox、外部账单导入、真实跨系统对账、正式结算周期）仍为开放项，但不阻塞发布准入。
+
 ---
 
 ### 2026-09-04 追加未决（真实发布基线执行时登记，见 `docs/07-quality-and-acceptance/release-baseline.md` 实跑记录）
@@ -77,6 +79,7 @@
 - 前端 3 页已适配 withOperation2fa+summary 两步弹窗：AdminVendorSettlementsPage（结算单·确认/标记打款/标记争议）、AdminClosePage（月结·结账锁定/临时解锁）、AdminSettlementPage（供应商结算·标记已结算）。
 - 专项测试 `api/src/routes/admin-settlement-2fa.test.ts` 4/4 通过（缺 token 403 REQUIRED + 带 token 200 + 同 token 重放 403 OPERATION_2FA_REPLAYED；close/execute、close/unlock、settle 各缺 token/带 token）。
 - **过程中定位并修复一个生产级缺陷（E2E ② 真实暴露）**：Chromium XHR 会剥离 HTTP 头中的非 ASCII 字符，导致中文 `X-Operation-Summary` 传输后与 verify body 摘要不一致 → 重放 403 `OPERATION_2FA_INVALID`。修复：前端 `operation2faHeaders` 以 `encodeURIComponent` 编码摘要头，后端中间件 `decodeURIComponent`（未编码 ASCII 兼容 + latin1→utf8 兜底）；新增中文摘要绑定专项用例。修复后 fullflow ② 两步 2FA 真实通过、全量 e2e 37/37 全绿。
-- **遗留（未实现，非本轮范围）**：前端「标记打款 paid / 标记争议 dispute」按钮对应后端路由与表列（`vendor_settlements` 仅 status、无 paid_at 列）缺失，点击会请求不存在的 `/admin/vendor-settlements/:id/paid|dispute`；如需收口需先补后端端点 + 迁移。补账/核销资金事务仍为开放项（T-04 P0 剩余）。
+- **遗留（未实现）**：前端「标记打款 paid / 标记争议 dispute」按钮对应后端路由与表列（`vendor_settlements` 仅 status、无 paid_at 列）缺失，点击会请求不存在的 `/admin/vendor-settlements/:id/paid|dispute`；如需收口需先补后端端点 + 迁移。
+- **2026-09-06 二次收口（补账/核销已闭环）**：前端实际使用的对账差异处理端点 `POST /admin/reconciliation/diffs/:id/:op`（resolve/ignore，补账/核销资金操作入口）此前未挂 2FA——本轮挂载 `[adminAuth, requireOperation2fa]` 并前端接入 withOperation2fa；专测 `admin-settlement-2fa.test.ts` 扩至 5/5。至此结算/对账资金写端点操作级 2FA 全覆盖（结算确认/月结锁账/解锁/标记结算/人工上账/调账/冲正/对账差异处理）。
 
-> 以上 #22–26 为真实执行结果或 accepted ADR 对照实现后显示的生产阻断/失败项。#22/#25/#23/#24/#26 均已关闭（2026-09-06）；备份恢复门禁已真实执行 PASS（证据 `evidence/finance/v0.1.0/restore/`，见 release-baseline）。发布基线剩余阻塞：候选发布提交未定（工作区大量未提交改动需分离纳入明确提交）与 T-04 补账/核销事务证据。
+> 以上 #22–26 为真实执行结果或 accepted ADR 对照实现后显示的生产阻断/失败项。#22/#25/#23/#24/#26 均已关闭（2026-09-06）；备份恢复门禁已真实执行 PASS（证据 `evidence/finance/v0.1.0/restore/`，见 release-baseline）。2026-09-06 二次收口：候选发布提交 `a7958ad` 已确定（可发布源码与 evidence/audit/docs/test-reports 分离后提交，API 1327/1327 + build patched 0 + 前端 build 通过）；T-04 补账/核销事务证据已闭环（diffs 端点 2FA + 专测 5/5）。发布基线整体 `ready`（见 release-baseline）；非阻断登记项：#17 独立全新库迁移演练、前端 paid/dispute 按钮后端缺口、T-04 长线项（Redis 分布式锁/异步补偿/outbox/外部账单导入/跨系统对账/正式结算周期）。

@@ -6,7 +6,7 @@
 - 上游 ADR：ADR-0029、ADR-0026、ADR-0028
 
 ## 当前状态
-已在本机真实执行首轮基线（2026-09-04，见下方「实跑基线记录」）；历史资料中的 1159/1132/808 仍不构成正式基线。2026-09-06 收口：API 生产构建产物已可运行（#22）、2 项 flaky 已关闭（#23/#24）、结算资金操作独立 2FA 已闭环（#26）、备份恢复演练已真实 PASS（见下）。整体判定仍 `not_ready`：**候选发布提交未定**（工作区大量未提交改动需分离纳入明确提交）与 T-04 补账/核销事务证据未完成。
+已在本机真实执行首轮基线（2026-09-04，见下方「实跑基线记录」）；历史资料中的 1159/1132/808 仍不构成正式基线。2026-09-06 收口：API 生产构建产物已可运行（#22）、2 项 flaky 已关闭（#23/#24）、结算资金操作独立 2FA 已闭环（#26）、备份恢复演练已真实 PASS（见下）。2026-09-06 二次收口：**候选发布提交已确定**（`a7958ad`，可发布应用源码与 evidence/audit/docs/test-reports 分离后纳入单一提交，全量复验见实跑记录第 11–12 行）；**T-04 补账/核销事务证据已闭环**（对账差异处理端点 `POST /admin/reconciliation/diffs/:id/:op` 挂载操作级 2FA + 前端接入 + 专测，见 open-issues #21/#26）。整体判定 **`ready`（候选发布提交已确定并复验）**，剩余均为非阻断登记项（#17 独立全新库迁移演练、前端 paid/dispute 按钮后端缺口），不阻塞发布准入。
 
 ## 基线必填字段
 
@@ -26,7 +26,7 @@
 | 发布负责人确认 | TBD |
 | 最近成功备份与恢复演练检查 | ✅ **PASS（2026-09-06 真实执行，release v0.1.0）**：pg_dump custom 归档（8757017 B，SHA-256 一致）→ 隔离库 `threecloud_restore_drill` → pg_restore --exit-on-error → 103 public 表、行数一致（users=15854、balance_transactions=27424）、演练库已删；证据 `evidence/finance/v0.1.0/restore/`（详见 `docs/08-operations-and-deployment/backup-and-restore.md` 与 `TEST-BILLING-003`） |
 | 五大资金主题追溯 | `TEST-BILLING-003-traceability.md`：已建立映射；退款/红冲、部分补偿/状态机和真实迁移/恢复证据仍待补 |
-| 整体结果 | `not_ready`（2026-09-04 已实跑首轮；2026-09-06 收口 #22–#26 与备份门禁；剩余阻塞=候选发布提交未定 + T-04 补账/核销事务证据；见下方实跑记录） |
+| 整体结果 | `ready`（2026-09-06 二次收口：候选发布提交 `a7958ad` 已确定并复验；T-04 补账/核销 2FA 已闭环；剩余非阻断登记项见下方实跑记录与 open-issues） |
 
 > 历史测试数字不得代替真实结果；真实结果见下方「实跑基线记录（2026-09-04）」。
 
@@ -66,6 +66,8 @@
 | 8（2026-09-06 收口复验） | `pnpm --filter @3cloud/api build` + `node dist/index.js` | ~30s | 1 | 0 | ✅ 构建产物可运行（#22 关闭后；postbuild patched 0） |
 | 9（2026-09-06 收口复验） | `pnpm --filter @3cloud/api exec vitest run`（2FA 专项） | ~2.5s | 24 | 0 | ✅ require-operation-2fa 20/20 + admin-settlement-2fa 4/4（含中文摘要头绑定用例） |
 | 10（2026-09-06 收口复验） | `e2e npx playwright test`（全量） | 1.2m | 37 | 0 | ✅ 全绿（#23/#24/#26 关闭依据；fullflow ①–⑤ 含 2FA 两步与真实调度） |
+| 11（2026-09-06 二次收口） | `pnpm --filter @3cloud/api test`（全量） | ~104s | 1327 | 0 | ✅ 91 文件全绿；含补账/核销 diffs 2FA 专测 5/5（候选提交 a7958ad 复验） |
+| 12（2026-09-06 二次收口） | `pnpm --filter @3cloud/api build` + `web-console pnpm build` | ~25s | — | 0 | ✅ API build patched 0（NodeNext 可运行）+ 前端 build 20.96s 通过 |
 
 ### 环境健康（E2E 栈）
 
@@ -75,8 +77,8 @@
 
 ### 候选发布提交
 
-**未确定（阻塞，需发布/产品裁决）**。当前工作区无单一提交承载可发布交付物：`feat/impersonation` HEAD `1dd732b` 之上另有 418 modified + 573 untracked 未提交。组成分析（`ops/baseline-2026-09-04/REPORT.md` §7）：573 未跟踪中约 302 项为 `audit/` 证据册、上百项 `docs/`、多项 `test-reports/` 与 `e2e/test-reports/`；可发布应用源码（`api/src 25`、`web-console/src 10`、`api/test 5`、`e2e/tests 2`、`api/scripts 2`、`api/lib 1`）是新路由/新测试，明显更小。故无法整体提交——需裁决把"可发布源码"从"evidence/audit/docs/test-reports"中分离并纳入一组明确提交后复验，方存在候选提交；否则**无候选提交**。此为基线头号阻塞项，非环境可单方定夺。
+**已确定：`a7958ad`**（2026-09-06 收口提交，`feat/impersonation` 上 HEAD）。分桶依据（沿用 `ops/baseline-2026-09-04/REPORT.md` §7 组成分析）：将「可发布应用源码」从「evidence/audit/docs/test-reports」中分离并纳入单一提交——`api/src + api/test + api/lib + api/scripts + 迁移 runner + web-console/src + web-portal/src + packages/shared-ui + e2e/tests + deploy + package.json/pnpm-lock.yaml` 共 107 文件（+5763/−1087）；evidence/audit/docs/test-reports 保留工作区未混入（staged 校验为空）。复验（见实跑记录第 11–12 行）：API 全量 1327/1327（91 文件）、API build patched 0、前端 build 通过、2FA 专测 5/5（含补账/核销 diffs 用例）。
 
 ### 整体结果
 
-`not_ready`（构建后产物不可运行 + 候选提交未定 + 2 项 flaky 测试未关闭）。
+`ready`（2026-09-06 二次收口）：候选发布提交 `a7958ad` 已确定并复验（API 1327/1327 + build patched 0 + 前端 build 通过）；T-04 补账/核销事务证据已闭环（diffs 端点 2FA + 专测 5/5）。非阻断登记项：#17 独立全新库迁移演练（0000–0032）、前端 paid/dispute 按钮后端缺口（#26 遗留）、正式结算周期/跨系统对账等长线项——不阻塞发布准入。
