@@ -1,24 +1,25 @@
 # SPEC — 模型编码化改造：去除用户侧"供应商选择"，以"模型编码"为唯一路由键
 
 > **文档类型**：实现规格（产品定稿后由架构/后端据此实现）
-> **版本**：v0.9（评审稿）
+> **版本**：v1.1（**已定稿**）
 > **上游**：`docs/PRD-模型编码化改造与去除用户供应商选择.md`
-> **状态**：**待评审** → 评审通过后按 `kb/3cloud/spawn-protocol.md` 派发 backend / front / product / test
+> **状态**：**已评审定稿** ✅（决策 M-S-01~07 已拍板，见 §〇）→ 按 `kb/3cloud/spawn-protocol.md` 派发 backend / front / product / test
 > **基础约束**：遵循 `AGENTS.md` —— 每个功能页面标题旁与每个操作按钮旁必须有 `[?]` 帮助说明。
 
 ---
 
-## 〇、评审确认决策
+## 〇、评审确认决策（已定稿）
 
-| 编号 | 决策（默认建议，待评审定稿） |
+| 编号 | 决策（定稿） |
 |------|------------------------------|
 | M-S-01 | 用户侧删除"供应商/渠道选择"菜单；用户只选"模型" |
 | M-S-02 | 全局唯一 **模型编码（model_code）** 作为 API `model` 参数的权威路由键，一对一路由到 `supplier_models` 记录 |
-| M-S-03 | 编码命名：**平台短 code**（如 `dsv4f-vb`），显示层用"模型名（供应商名）"；`@` 仅用于展示层标识供应商（备选：`model@code`） |
-| M-S-04 | **保留"智能/auto"兜底**：`model` 不带编码时走现有智能路由（`selectChannel` 现状） |
-| M-S-05 | 旧调用 1 个版本兼容窗口：裸模型名→auto；`model@vendorCode`→若匹配编码则精确，否则回退 auto |
-| M-S-06 | `/me/models` DB 空时回退 `DEFAULT_MODELS`（防回归） |
+| M-S-03 | 编码命名：**平台短 code**（如 `dsv4f-vb`），仅 `[a-zA-Z0-9_-]`，**不含 `@`**；显示层用"模型名（供应商名）" |
+| M-S-04 | **纯编码，无自动兜底**：`model` 字段必须是有效 `model_code`，非编码一律无效；`selectChannel` 移除"按模型名自动选供应商"语义 |
+| M-S-05 | **立即切换，无兼容窗口**：旧裸模型名 / `model@vendor` 一律按编码解析，不匹配即 `MODEL_CODE_NOT_FOUND`(404) |
+| M-S-06 | `/me/models` 列表 DB 空时回退 `DEFAULT_MODELS`（仅列表展示；不影响调用侧严格校验） |
 | M-S-07 | 计费/日志/对账以 `model_code` 为锚点；供应商结算聚合到编码 |
+| M-S-08 | **本期实现"默认编码偏好"**：用户可为逻辑模型保存默认编码（复用/改造 `user_vendor_selections`）|
 
 ---
 
@@ -70,30 +71,29 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_supplier_models_model_code
 
 ## 三、后端实现
 
-### 3.0 关键函数 `parseModelCode(model: string): { code: string | null; mode: 'exact' | 'auto' }`
+### 3.0 关键函数 `parseModelCode(model: string): { code: string; }`（严格模式）
 
 ```
-model 为空/不含编码语义        → { code: null, mode: 'auto' }        // 走智能路由
-model = "auto"                → { code: null, mode: 'auto' }        // 显式自动
-model 命中既有 model_code       → { code, mode: 'exact' }            // 精确路由
-model = "name@vendorCode"      → 兼容窗口：vendorCode 匹配某编码 → exact；否则回退 auto
-model 其它（有歧义非编码）      → 尝试按裸逻辑模型名自动路由（auto）
+规则（已定稿 M-S-04/05）：
+  model 为空/空串        → 视为非法 → MODEL_CODE_NOT_FOUND(404)
+  model 命中既有 model_code → { code }                          // 精确路由
+  model 其它（含旧裸名/含 @）→ 一律按编码查，不命中 → MODEL_CODE_NOT_FOUND(404)
 ```
 
-- 解析必须**先查唯一索引**，命中即为权威锁定；比对大小写敏感但允许大小写不敏感查重（编码规范化存储）。
+- 解析**只做精确匹配**：先查 `model_code` 唯一索引，命中即为权威锁定；`model_name` / `@vendor` 写法**不作为合法输入**。
+- 清除旧的 `auto` / 兼容分支；`parseModelVendor` 语义被本函数取代，并标记为废弃。
 
-### 3.1 路由层：`selectChannel` 增加编码锁定
+### 3.1 路由层：`selectChannel` 改为按编码精确锁定
 
-新增入参 `modelCode?: string`：
+调用方必须传 `modelCode`；**移除"按模型名自动选供应商/auto"语义**：
 
 ```
-传了 modelCode：
-  1) 按 model_code 精确查 supplier_models
-  2) 校验 supplier.status='active'、allowedGroups 服务调用方分组
-  3) 校验映射有效（status 非 deprecated/offline）
-  4) 命中 → 锁定该供应商 + platform_model，选该供应商 Key 池
-  5) 任一不成立 → 抛对应错误码（见 §3.3）
-未传（auto）：保持现有智能路由逻辑不变
+1) 按 model_code 精确查 supplier_models（唯一索引）
+2) 校验 supplier.status='active'、allowedGroups 服务调用方分组
+3) 校验映射有效（status 非 deprecated/offline）
+4) 命中 → 锁定该供应商 + platform_model，选该供应商 Key 池
+5) 任一不成立 → 抛对应错误码（见 §3.3）
+（无 modelCode 或为空 → MODEL_CODE_NOT_FOUND(404)，不降级自动路由）
 ```
 
 ### 3.2 主链接入点（P0）
@@ -112,7 +112,7 @@ model 其它（有歧义非编码）      → 尝试按裸逻辑模型名自动�
 
 - 返回当前用户可见的所有 **模型编码**，用户会话里即"模型列表"。
 - 每编码字段：`model_code`、`model_name`（逻辑名）、`display_name`（模型名（供应商名））、`supplier_code`、`supplier_name`、`context`、`status`、`prices`（input/output/缓存读/写，**按用户分组生效价**）、`health`、`latency_ms`、`recommended`、`maintenance`。
-- **兼容**：DB 空 → 回退 `DEFAULT_MODELS`（原单价格，前端按"仅一个编码等价"渲染）。
+- **列表兜底**：DB 空 → 回退 `DEFAULT_MODELS`（仅列表展示，前端按"仅一个编码等价"渲染；不影响调用侧严格校验）。
 
 ```json
 {
@@ -142,17 +142,27 @@ model 其它（有歧义非编码）      → 尝试按裸逻辑模型名自动�
 - 鉴权 `jwtAuth`，按用户分组透出该模型全部可用模型编码及各编码生效价/健康/延迟/状态。
 - `supplier_models` 无该 `model_name` → 返回 `{ model_name, codes: [] }`。
 
+### 3.6 默认编码偏好（本期实现 M-S-08）
+
+| 方法/路径 | 说明 |
+|-----------|------|
+| `GET /api/v1/me/preferences/default-code?model_name=xxx` | 读取用户对某逻辑模型的默认编码；无则 `null` |
+| `PUT /api/v1/me/preferences/default-code` | 保存/更新默认编码：`{ model_name, model_code }`；校验该编码对用户可见可用 |
+| `DELETE /api/v1/me/preferences/default-code?model_name=xxx` | 清除默认编码 |
+
+- 表数据：复用/改造 `user_vendor_selections`（`user_id + model_id + vendor_id`），语义收敛为"用户偏好默认编码"；字段 `vendor_id` 由 `supplier_models.id` 承载，另存 `model_code` 快照以稳查询。
+- 应用：发起调用时若 `model` 缺省 / 为空，按逻辑模型查用户默认编码回填；回填的编码不可用时返回可选项让用户重选，不回退自动路由。
+
 ---
 
-## 四、数据迁移与兼容窗口
+## 四、数据迁移
 
 | 项 | 规则 |
 |----|------|
 | 存量 `supplier_models` 回填 `model_code` | 按规则 S-C-1 批量生成，唯一冲突时追加序号；一次性脚本 + 校验 |
 | 存量 `consumption_records`/`call_logs` | 能由 `supplier_model_id` 回溯的则回填 `model_code`；否则置空（不影响资金准确性，仅影响按编码筛选历史） |
-| 旧调用 `model`（裸模型名） | 兼容窗口内映射为 `auto`，行为与现状一致 |
-| 旧调用 `name@vendorCode` | 窗口内若 vendorCode 匹配某编码 → exact；否则回退 auto；窗口结束后按 §3.3 处理 |
-| `/me/models` 回退 | DB 空回退 `DEFAULT_MODELS` |
+| 旧调用 `model`（裸模型名 / `name@vendorCode`） | **不映射、无兼容窗口**：一律作为编码解析，不命中即 404（定稿 M-S-05）。已有客户端需在切换前更新 `model` 为有效编码 |
+| `/me/models` 列表 | DB 空回退 `DEFAULT_MODELS`（仅列表）|
 
 ---
 
@@ -171,7 +181,7 @@ model 其它（有歧义非编码）      → 尝试按裸逻辑模型名自动�
 ### 5.3 Playground
 
 - 模型下拉直接用 `/me/models` 的编码列表（值 = `model_code`）。
-- `@` 联想按编码逐步收敛（P1）。
+- **默认编码偏好**：下拉按用户默认编码回填；提供"保存为默认"入口（本期 M-S-08）；`@` 联想按编码收敛（P1）。
 
 ### 5.4 调用日志 `/app/logs`
 
@@ -185,16 +195,17 @@ model 其它（有歧义非编码）      → 尝试按裸逻辑模型名自动�
 
 - `/admin/models`：模型管理增加"模型编码"维护（生成、命名、启停某编码、显示名去重）。
 - `/admin/suppliers`：保留为内部设施（Key/连通/结算），不改菜单呈现给用户。
-- `/admin/routing`：以编码为口径；自动策略仅覆盖 `auto` 兜底。
+- `/admin/routing`：以编码为口径；**无 auto 自动选择语义**，编码必须精确命中。
 - 统计看板/财务对账：口径统一到 `model_code`（可聚合到供应商）。
 
 ---
 
 ## 六、P1 增强（本期不做）
 
-1. 用户为"逻辑模型"保存**默认编码偏好**（`user_vendor_selections` 语义改造为"默认编码"）。
-2. 编码列表高级筛选（健康/延迟/价格）。
-3. Playground 编码联想升级。
+1. 编码列表高级筛选（健康/延迟/价格）。
+2. Playground 编码联想升级（`@` 输入联想）。
+
+> 注：默认编码偏好已由 M-S-08 纳入本期（§3.6），不再列入 P1。
 
 ---
 
@@ -202,10 +213,10 @@ model 其它（有歧义非编码）      → 尝试按裸逻辑模型名自动�
 
 | Gate | 条件 |
 |------|------|
-| G1 | 数据层：`model_code` 列 + 唯一索引 + 回填脚本执行且校验通过；`selectChannel` 编码锁定 + `parseModelCode` 单测全绿；`tsc --noEmit` 0 错误 |
-| G2 | `/me/models` 按编码展开（含分组生效价）+ `/models/:name/codes` + 主链（chat/completions）接入编码路由；单测全绿 |
-| G3 | 前端：模型中心/Playground/调用日志按编码落地；`/app/vendor-selector` 下线或并入；术语"供应商选择"从用户侧移除；`[?]` 抽查通过 |
-| G4 | 端到端：同模型多供应商各编码独立路由与计费、编码 404/403、`auto` 兜底、某编码下线回退、兼容窗口旧调用、DB 空回退 `DEFAULT_MODELS` 全部通过 |
+| G1 | 数据层：`model_code` 列 + 唯一索引 + 回填脚本执行且校验通过；`parseModelCode`（严格）+ `selectChannel` 编码锁定单测全绿；`tsc --noEmit` 0 错误 |
+| G2 | `/me/models` 按编码展开（含分组生效价）+ `/models/:name/codes` + 默认编码偏好接口 + 主链（chat/completions）接入编码路由；单测全绿 |
+| G3 | 前端：模型中心/Playground/调用日志按编码落地；默认编码偏好 UI；`/app/vendor-selector` 下线或并入；术语"供应商选择"从用户侧移除；`[?]` 抽查通过 |
+| G4 | 端到端：同模型多供应商各编码独立路由与计费、编码 404/403、非编码/旧写法一律 404（无自动、无兼容）、编码下线回退、默认编码偏好生效、DB 空回退 `DEFAULT_MODELS` 全部通过 |
 | G5 | 文档：废弃 `model@vendor` 二维口径，术语表/PRD-README/决策登记同步 |
 
 ---
@@ -213,10 +224,10 @@ model 其它（有歧义非编码）      → 尝试按裸逻辑模型名自动�
 ## 八、测试要点（交付 test-agent）
 
 1. 同逻辑模型多供应商：各编码独立路由、独立计费、日志正确记录 `model_code`。
-2. 编码精确：`dsv4f-vb` 命中；不存在编码 404；编码下架/维护中 400+可选清单；分组排除 403。
-3. `auto`/裸模型名：行为与现状一致。
-4. 兼容窗口：`name@code` 命中则 exact，否则 auto。
-5. `/me/models` DB 空 → 回退 `DEFAULT_MODELS`。
+2. 编码精确：`dsv4f-vb` 命中；不存在/空/裸名/含 `@` 一律 `MODEL_CODE_NOT_FOUND`(404)；编码下架/维护中 400+可选清单；分组排除 403。
+3. **无自动、无兼容**：不带有效编码不降级，直接 404；旧 `name@vendorCode` 与裸名同规则。
+4. 默认编码偏好：保存/读取/清除；发起时按偏好回填；默认编码下线时返回可选项让用户重选。
+5. `/me/models` DB 空 → 列表回退 `DEFAULT_MODELS`。
 6. `[?]` 帮助：新增/改动页面按钮帮助齐全（§九）。
 
 ---
@@ -231,7 +242,7 @@ model 其它（有歧义非编码）      → 尝试按裸逻辑模型名自动�
 | `call-logs` | 所有用户 | 调用日志：按模型编码追溯调用 | 按编码/时间/状态筛选、导出 | 旧数据可能无编码回溯 | 怎么按供应商查？——编码即区分供应商 |
 | `admin-model-code` | 管理员 | 模型编码维护：生成/命名/启停编码 | 生成编码、停用编码、显示名去重 | 编码不可复用，改码需迁移 | 编码没了会怎样？——该条模型不可调用，需重新启用/生成 |
 | `admin-suppliers` | 管理员/财务 | 供应商内部管理（不进用户菜单） | 新增/编辑供应商、连通性测试、结算 | 供应商是内部设施，不对用户暴露选择 | 用户还能看到供应商吗？——只看到"模型编码"，不出现供应商选择菜单 |
-| `admin-routing` | 管理员/运维 | 路由配置：编码精确路由 + auto 智能兜底 | 策略配置、路由覆盖、推荐应用 | 覆盖优先级仍最高 | 自动路由怎么关？——把某模型编码全停用即可只留 auto 或不可用 |
+| `admin-routing` | 管理员/运维 | 路由配置：按模型编码精确路由（无 auto/自动选择） | 策略配置、路由覆盖、推荐应用 | 覆盖优先级仍最高 | 为什么 model 必须是编码？——已定稿纯编码，无自动/无兼容，非编码调用返回 404 |
 
 ### [?] 按钮级帮助对照表
 

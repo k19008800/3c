@@ -23,8 +23,8 @@
 | 24 小时滚动窗口 | `now - 24h ≤ created_at ≤ now`，不按自然日重置 |
 | platform_ledger | 当前版本不启用的架构预留总账对象 |
 | approved | 仅用于调账已生效或退款审核通过待执行，不作为充值/人工上账中间态 |
-| 模型编码 | （新增）以"模型编码（model_code）"为权威可路由标识：一个「逻辑模型 × 供应商」= 一条唯一编码，一对一映射到 `supplier_models` 记录，作为用户 API `model` 参数的权威值；用户侧不出现独立的"供应商/渠道"选择维度 |
-| `model@vendor`（被淘汰语义） | （新增）`user-vendor-selection.md` 与"用户自选渠道"（`方案-渠道化改造…`）为本方案取代的二维设计，仅保留兼容窗口，不得用于新集成。权威口径见 `SPEC-模型编码化改造与去除用户供应商选择.md` |
+| 模型编码 | （新增，已定稿）以"模型编码（model_code）"为权威可路由标识：一个「逻辑模型 × 供应商」= 一条唯一编码（短 code，如 `dsv4f-vb`，不含 `@`），一对一映射到 `supplier_models` 记录，作为用户 API `model` 参数的权威值；用户侧不出现独立的"供应商/渠道"选择维度。**纯编码、无自动、无兼容窗口** |
+| `model@vendor`（已废止语义） | （新增，已废止）`user-vendor-selection.md` 与"用户自选渠道"（`方案-渠道化改造…`）为本方案取代的二维设计，**不再有任何兼容窗口**，不得用于新集成。权威口径见 `SPEC-模型编码化改造与去除用户供应商选择.md` |
 | canonical 角色 | `customer`、`agent`、`sales`、`admin`、`super_admin` |
 | 权限优先级 | 显式 deny → 管理员强制策略 → 显式 grant → 角色权限并集 → 默认最小权限 |
 | 权限覆写 API | 规划中的 `GET/PUT/DELETE /api/v1/admin/users/:id/permissions`；未核验实现前不得标记 implemented |
