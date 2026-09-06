@@ -843,6 +843,7 @@ export async function supplierRoutes(app: FastifyInstance) {
       cacheWriteInputPrice: schema.vendorPricing.cacheWriteInputPrice,
       currency: schema.vendorPricing.currency,
       modelName: schema.supplierModels.modelName,
+      modelCode: schema.supplierModels.modelCode,
       supplierName: schema.suppliers.name,
     })
       .from(schema.vendorPricing)
