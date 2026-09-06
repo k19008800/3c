@@ -10,14 +10,15 @@
 import type { FastifyInstance } from 'fastify';
 import bcrypt from 'bcryptjs';
 import { db, schema } from '../db/index.js';
-import { eq, and, sql, desc, inArray } from 'drizzle-orm';
+import { eq, and, sql, desc, asc, inArray } from 'drizzle-orm';
 import { verifyToken } from '../services/auth/jwt.js';
 import { getBalance } from '../services/billing/balance.js';
 import { getUserGroup } from '../services/groups.js';
 import { AppError, UnauthorizedError, ValidationError, NotFoundError } from '../lib/errors.js';
 import { validatePasswordStrength } from '../lib/password.js';
 import { normalizeI18nLang, I18N_LANGS } from '../lib/i18n-langs.js';
-import { getPricingForModel } from '../services/billing/pricing.js';
+import { getPricingForModel, getSupplierModelPricingById } from '../services/billing/pricing.js';
+import { assertModelCodeAvailable } from '../services/upstream/routing.js';
 import { resolveCachePricing, getCachePricingMode } from '../services/billing/cache-discount.js';
 
 // ── JWT auth ─────────────────────────────────────────────
@@ -145,23 +146,84 @@ export async function meRoutes(app: FastifyInstance) {
     return reply.send(keys);
   });
 
-  // ═══ /me/models — Playground 模型下拉（F09：列表项增加 cache_read_input_price，可空）═══
-  app.get('/api/v1/me/models', { preHandler: [jwtAuth] }, async (_request, reply) => {
-    // 轻量透出：逐模型解析生效缓存读取价；无缓存计费能力 → null（P4 空态）
-    const items = await Promise.all(DEFAULT_MODELS.map(async (m) => {
-      let cache_read_input_price: number | null = null;
-      try {
-        const pricing = await getPricingForModel(m.name);
-        const resolved = await resolveCachePricing(pricing);
-        if (resolved.cacheReadPrice != null && Number.isFinite(resolved.cacheReadPrice) && resolved.cacheReadPrice > 0) {
-          cache_read_input_price = Number(resolved.cacheReadPrice.toFixed(8));
+  // ═══ /me/models — 模型列表（按模型编码展开，「模型编码化改造」）═══
+  app.get('/api/v1/me/models', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const group = await getUserGroup(uid);
+    const groupName = group?.name ?? undefined;
+
+    // 查询：active 供应商 + active 映射 + 有 model_code
+    const rows = await db.select({
+      id: schema.supplierModels.id,
+      supplierId: schema.supplierModels.supplierId,
+      modelName: schema.supplierModels.modelName,
+      platformModel: schema.supplierModels.platformModel,
+      modelCode: schema.supplierModels.modelCode,
+      maxTokens: schema.supplierModels.maxTokens,
+      supplierName: schema.suppliers.name,
+      supplierCode: schema.suppliers.code,
+      supplierStatus: schema.suppliers.status,
+      supplierHealth: schema.suppliers.healthStatus,
+      supplierAllowedGroups: schema.suppliers.allowedGroups,
+    })
+      .from(schema.supplierModels)
+      .innerJoin(schema.suppliers, eq(schema.supplierModels.supplierId, schema.suppliers.id))
+      .where(and(
+        eq(schema.suppliers.status, 'active'),
+        eq(schema.supplierModels.status, 'active'),
+      ))
+      .orderBy(asc(schema.supplierModels.modelName), asc(schema.supplierModels.id));
+
+    const codes: Array<Record<string, unknown>> = [];
+    for (const r of rows) {
+      if (!r.modelCode) continue;
+      // 分组供给过滤
+      const allowed = Array.isArray(r.supplierAllowedGroups) ? r.supplierAllowedGroups.filter(Boolean) : [];
+      if (allowed.length > 0 && !(groupName && allowed.includes(groupName))) continue;
+
+      const pricing = await getSupplierModelPricingById(r.id, groupName);
+      const maintenance = r.supplierStatus === 'maintenance';
+      codes.push({
+        model_code: r.modelCode,
+        model_name: r.modelName,
+        display_name: `${r.modelName}（${r.supplierName}）`,
+        supplier_code: r.supplierCode,
+        supplier_name: r.supplierName,
+        context: r.maxTokens ?? null,
+        status: maintenance ? 'maintenance' : 'available',
+        pricing_group: groupName ?? 'default',
+        health: typeof r.supplierHealth === 'string' && r.supplierHealth !== 'unknown' ? r.supplierHealth : null,
+        latency_ms: null,
+        recommended: false,
+        maintenance,
+        prices: {
+          input_price: pricing.input,
+          output_price: pricing.output,
+          cache_read_input_price: pricing.cacheReadInputPrice,
+          cache_write_input_price: pricing.cacheWriteInputPrice,
+        },
+      });
+    }
+
+    // 列表兜底：DB 无编码数据 → 回退旧 DEFAULT_MODELS（仅列表，调用侧仍严格校验）
+    if (codes.length === 0) {
+      const items = await Promise.all(DEFAULT_MODELS.map(async (m) => {
+        let cache_read_input_price: number | null = null;
+        try {
+          const pricing = await getPricingForModel(m.name);
+          const resolved = await resolveCachePricing(pricing);
+          if (resolved.cacheReadPrice != null && Number.isFinite(resolved.cacheReadPrice) && resolved.cacheReadPrice > 0) {
+            cache_read_input_price = Number(resolved.cacheReadPrice.toFixed(8));
+          }
+        } catch {
+          // 解析失败 → 该项缓存价为空，不阻断列表
         }
-      } catch {
-        // 解析失败（无定价记录/DB 抖动）→ 该项缓存价为空，不阻断列表
-      }
-      return { ...m, cache_read_input_price };
-    }));
-    return reply.send(items);
+        return { ...m, cache_read_input_price };
+      }));
+      return reply.send(items);
+    }
+
+    return reply.send(codes);
   });
 
   // ═══ /me/models/:id/price — 单模型定价查询（F09：prices 增加缓存读/写价 + 计费模式 + 回退来源）═══
@@ -190,6 +252,68 @@ export async function meRoutes(app: FastifyInstance) {
       // 回退来源说明（D-4）：explicit | discount_rate | global_discount | fallback
       cache_read_price_source: resolved.source,
     });
+  });
+
+  // ═══ 默认编码偏好（模型编码化改造 M-S-08，本期）═══
+  // GET/PUT/DELETE /api/v1/me/preferences/default-code
+  app.get('/api/v1/me/preferences/default-code', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const modelName = String((request.query as Record<string, string>).model_name ?? '').trim();
+    if (!modelName) throw new ValidationError('model_name is required');
+
+    const [row] = await db
+      .select({ modelCode: schema.userModelDefaultCodes.modelCode })
+      .from(schema.userModelDefaultCodes)
+      .where(and(
+        eq(schema.userModelDefaultCodes.userId, uid),
+        eq(schema.userModelDefaultCodes.modelName, modelName),
+      ))
+      .limit(1);
+    return reply.send({ model_name: modelName, model_code: row?.modelCode ?? null });
+  });
+
+  app.put('/api/v1/me/preferences/default-code', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const body = (request.body || {}) as { model_name?: string; model_code?: string };
+    const modelName = String(body.model_name ?? '').trim();
+    const modelCode = String(body.model_code ?? '').trim();
+    if (!modelName) throw new ValidationError('model_name is required');
+    if (!modelCode) throw new ValidationError('model_code is required');
+
+    // 校验该编码对当前用户可见可用（纯编码、无自动、无兼容）
+    const group = await getUserGroup(uid);
+    const groupName = group?.name ?? undefined;
+    await assertModelCodeAvailable(modelCode, groupName ? [groupName] : undefined);
+
+    await db
+      .insert(schema.userModelDefaultCodes)
+      .values({
+        userId: uid,
+        modelName,
+        modelCode,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [schema.userModelDefaultCodes.userId, schema.userModelDefaultCodes.modelName],
+        set: { modelCode, updatedAt: new Date() },
+      });
+
+    return reply.send({ model_name: modelName, model_code: modelCode });
+  });
+
+  app.delete('/api/v1/me/preferences/default-code', { preHandler: [jwtAuth] }, async (request, reply) => {
+    const uid = userId(request);
+    const modelName = String((request.query as Record<string, string>).model_name ?? '').trim();
+    if (!modelName) throw new ValidationError('model_name is required');
+
+    await db
+      .delete(schema.userModelDefaultCodes)
+      .where(and(
+        eq(schema.userModelDefaultCodes.userId, uid),
+        eq(schema.userModelDefaultCodes.modelName, modelName),
+      ));
+    return reply.send({ model_name: modelName, deleted: true });
   });
 
   // ═══ /me/logs — 调用日志 ═══

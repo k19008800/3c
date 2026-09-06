@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, varchar, pgEnum, timestamp, text, jsonb, numeric } from 'drizzle-orm/pg-core';
+import { pgTable, serial, integer, varchar, pgEnum, timestamp, text, jsonb, numeric, uniqueIndex } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { suppliers } from './suppliers.js';
 
@@ -14,6 +14,14 @@ export const supplierModels = pgTable('supplier_models', {
   supplierId: integer('supplier_id').notNull().references(() => suppliers.id, { onDelete: 'cascade' }),
   modelName: varchar('model_name', { length: 200 }).notNull(),
   platformModel: varchar('platform_model', { length: 200 }).notNull(),
+  /**
+   * 模型编码（model_code）——「模型编码化改造」引入的全局唯一可路由编码。
+   * 一个（逻辑模型 × 供应商）= 一条唯一编码，作为用户 API `model` 参数的权威值，
+   * 一对一映射本行（supplier + model_name + platform_model）。
+   * 命名：平台短 code（如 `dsv4f-vb`，仅 [a-zA-Z0-9_-]，不含 `@`）。
+   * 唯一性：部分唯一索引（model_code IS NOT NULL），防复用/改码。
+   */
+  modelCode: varchar('model_code', { length: 200 }),
   inputPrice: varchar('input_price', { length: 30 }).notNull().default('0'),
   outputPrice: varchar('output_price', { length: 30 }).notNull().default('0'),
   /**
@@ -36,7 +44,10 @@ export const supplierModels = pgTable('supplier_models', {
   syncedAt: timestamp('synced_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (table) => ({
+  /** 模型编码部分唯一索引：仅供有编码的行约束唯一，容忍存量行无编码 */
+  modelCodeUniqueIdx: uniqueIndex('uq_supplier_models_model_code').on(table.modelCode),
+}));
 
 export const supplierModelsRelations = relations(supplierModels, ({ one }) => ({
   supplier: one(suppliers, {

@@ -27,7 +27,7 @@
  */
 
 import { db, schema } from '../../db/index.js';
-import { eq, and, lte, gte, isNotNull, desc, asc, sql } from 'drizzle-orm';
+import { eq, and, or, lte, gte, isNotNull, desc, asc, sql } from 'drizzle-orm';
 
 // ============================================================
 // 常量
@@ -302,6 +302,47 @@ async function queryPricingByGroup(model: string, groupName: string, supplierId?
 /** L2 模型覆盖价：pricing_group='default' 按模型名取价 */
 async function queryDefaultPricing(model: string): Promise<ModelPricing | null> {
   return queryPricingByGroup(model, DEFAULT_PRICING_GROUP);
+}
+
+/**
+ * 按「供应商-模型」记录取价（分渠道取价，「模型编码化改造」SPEC §3.0）
+ *
+ * 服务 `/me/models` 按编码展开与 `/models/:name/codes`：每个 model_code 对应一条
+ * supplier_models，其展示价为该 supplier_model 的 vendor_pricing（优先级：
+ * 用户分组生效价 → 兜底 default 组）。
+ *
+ * @param supplierModelId - supplier_models.id
+ * @param groupName - 用户分组定价组名（可空；空则只看 default 组）
+ * @returns 该供应商-模特性的生效价；无记录回退平台默认价（L1）
+ */
+export async function getSupplierModelPricingById(
+  supplierModelId: number,
+  groupName?: string,
+): Promise<ModelPricing> {
+  const supplierCond = eq(schema.vendorPricing.supplierModelId, supplierModelId);
+  const groupCond = groupName && groupName !== DEFAULT_PRICING_GROUP
+    ? or(
+        eq(schema.vendorPricing.pricingGroup, groupName),
+        eq(schema.vendorPricing.pricingGroup, DEFAULT_PRICING_GROUP),
+      )
+    : eq(schema.vendorPricing.pricingGroup, DEFAULT_PRICING_GROUP);
+  const rows = await db.select({
+    inputPrice: schema.vendorPricing.inputPrice,
+    outputPrice: schema.vendorPricing.outputPrice,
+    cacheDiscountRate: schema.vendorPricing.cacheDiscountRate,
+    cacheReadInputPrice: schema.vendorPricing.cacheReadInputPrice,
+    cacheWriteInputPrice: schema.vendorPricing.cacheWriteInputPrice,
+  })
+    .from(schema.vendorPricing)
+    .where(and(supplierCond, groupCond))
+    .orderBy(
+      sql`(${schema.vendorPricing.pricingGroup} = 'default') DESC`,
+      asc(schema.vendorPricing.id),
+    )
+    .limit(1);
+
+  const pricing = toPricing(rows);
+  return pricing ?? { ...DEFAULT_PRICING };
 }
 
 /**

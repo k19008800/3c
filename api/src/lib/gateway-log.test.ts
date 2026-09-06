@@ -273,7 +273,7 @@ const mocks = vi.hoisted(() => ({
       totalTokens: {}, cost: {}, finishReason: {}, streamed: {},
     },
   },
-  routing: { selectChannel: vi.fn() },
+  routing: { selectChannel: vi.fn(), validateModelCode: vi.fn().mockResolvedValue(undefined) },
   circuitBreaker: { recordChannelResult: vi.fn(), isCircuitOpen: vi.fn() },
   balance: { getBalance: vi.fn(), deductBalance: vi.fn(), addBalance: vi.fn(), initBalance: vi.fn() },
   consumption: { recordConsumption: vi.fn(), getUserConsumptionStats: vi.fn() },
@@ -294,7 +294,7 @@ vi.mock('../services/auth/apikey', () => ({
   extractApiKeyFromHeader: vi.fn(),
   verifyApiKey: vi.fn(),
 }));
-vi.mock('../services/upstream/routing', () => ({ selectChannel: mocks.routing.selectChannel }));
+vi.mock('../services/upstream/routing', () => ({ selectChannel: mocks.routing.selectChannel, validateModelCode: mocks.routing.validateModelCode }));
 vi.mock('../services/upstream/circuit-breaker', () => ({
   recordChannelResult: mocks.circuitBreaker.recordChannelResult,
   isCircuitOpen: mocks.circuitBreaker.isCircuitOpen,

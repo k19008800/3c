@@ -28,6 +28,8 @@ const { dbMock, dbState } = vi.hoisted(() => {
     suppliers: [] as any[],
     /** select().from(supplierModels) 的返回值 */
     models: [] as any[],
+    /** select().from(supplierKeys) 的返回值（selectChannel 选 Key） */
+    keys: [] as any[],
     /** select().from(vendorPricing) 的返回值（selectChannel 候选） */
     routingRows: [] as any[],
     /** select().from(circuitBreakerState) 的返回值 */
@@ -69,6 +71,7 @@ const { dbMock, dbState } = vi.hoisted(() => {
     const s = dbState.schema;
     if (table === s?.suppliers) return dbState.suppliers;
     if (table === s?.supplierModels) return dbState.models;
+    if (table === s?.supplierKeys) return dbState.keys;
     if (table === s?.vendorPricing) return dbState.routingRows;
     if (table === s?.circuitBreakerState) return dbState.circuitStates;
     return [];
@@ -124,6 +127,7 @@ afterAll(async () => {
 beforeEach(() => {
   dbState.suppliers = [];
   dbState.models = [];
+  dbState.keys = [];
   dbState.routingRows = [];
   dbState.circuitStates = [];
   dbState.updates = [];
@@ -303,56 +307,65 @@ describe('POST /api/v1/admin/suppliers/:id/models/batch-status — 批量状态�
 // 3. selectChannel — 禁用（inactive）模型不参与路由
 // ═════════════════════════════════════════════
 
-describe('selectChannel — 模型禁用后自动跳过路由', () => {
-  const ACTIVE_CANDIDATE = {
-    supplierModelId: 11,
+describe('selectChannel — 按模型编码精确锁定（纯编码、无自动、无兼容）', () => {
+  const MODEL_CODE = 'gpt4o-ts-1';
+  const MODEL_ROW = {
+    id: 11,
+    supplierId: 1,
     modelName: 'gpt-4o',
     platformModel: 'gpt-4o',
-    supplierModelStatus: 'active',
+    status: 'active',
+    modelCode: MODEL_CODE,
+  };
+  const SUPPLIER_ROW = {
+    id: 1,
+    name: 'Test Supplier',
+    code: 'ts',
+    baseUrl: 'https://api.example.com',
+    status: 'active',
+    healthStatus: null,
+    allowedGroups: [],
+  };
+  const KEY_ROW = {
+    id: 21,
     supplierId: 1,
-    supplierName: 'Test Supplier',
-    supplierCode: 'TS',
-    supplierBaseUrl: 'https://api.example.com',
-    supplierStatus: 'active',
-    supplierHealthStatus: null,
-    keyId: 21,
     keyValue: 'sk-test-1',
-    keyName: 'K1',
-    keyStatus: 'active',
-    keySelectMode: 'single',
-    keyPriority: 10,
-    keyCurrentBalance: '100',
+    name: 'K1',
+    status: 'active',
+    selectMode: 'single',
+    priority: 10,
+    currentBalance: '100',
   };
 
-  it('查询 where 条件包含 supplierModels.status=active（禁用模型在 SQL 层被排除）', async () => {
-    dbState.routingRows = [ACTIVE_CANDIDATE];
+  it('编码不存在（supplier_models 无该 model_code）→ 抛 ModelCodeNotFoundError（非 null）', async () => {
+    dbState.models = [];
+    const { ModelCodeNotFoundError } = await import('../src/services/upstream/errors.js');
 
-    await selectChannel('gpt-4o');
-
-    const { sql, params } = routingWhere();
-    expect(sql).toContain('"supplier_models"."status"');
-    // active 值以参数（$n）或字面量形式出现在 where 中，二者取其一
-    const activeMentioned = sql.includes("'active'") || params.includes('active');
-    expect(activeMentioned).toBe(true);
+    await expect(selectChannel('no-such-code')).rejects.toBeInstanceOf(ModelCodeNotFoundError);
   });
 
-  it('候选模型均为 inactive（DB 按 where 过滤后为空）→ 返回 null', async () => {
-    // 模拟真实 DB：where(status='active') 把 inactive 行全部过滤掉 → 无候选
-    dbState.routingRows = [];
+  it('编码存在于 supplier_models 但供应商 inactive → 抛 ModelCodeUnavailableError', async () => {
+    dbState.models = [MODEL_ROW];
+    dbState.suppliers = [{ ...SUPPLIER_ROW, status: 'inactive' }];
+    dbState.keys = [KEY_ROW];
+    const { ModelCodeUnavailableError } = await import('../src/services/upstream/errors.js');
 
-    const result = await selectChannel('gpt-4o');
-
-    expect(result).toBeNull();
+    await expect(selectChannel(MODEL_CODE)).rejects.toBeInstanceOf(ModelCodeUnavailableError);
   });
 
-  it('候选模型为 active → 正常选中渠道（返回 supplier + key + modelMapping）', async () => {
-    dbState.routingRows = [ACTIVE_CANDIDATE];
+  it('编码有效且供应商 active → 正常选中渠道（返回 supplier + key + modelMapping）', async () => {
+    dbState.models = [MODEL_ROW];
+    dbState.suppliers = [SUPPLIER_ROW];
+    dbState.keys = [KEY_ROW];
 
-    const result = await selectChannel('gpt-4o');
+    const result = await selectChannel(MODEL_CODE);
 
     expect(result).not.toBeNull();
-    expect(result!.supplier.id).toBe(1);
-    expect(result!.key.keyValue).toBe('sk-test-1');
-    expect(result!.modelMapping.status).toBe('active');
+    expect(result.supplier.id).toBe(1);
+    expect(result.supplier.code).toBe('ts');
+    expect(result.key.keyValue).toBe('sk-test-1');
+    expect(result.modelMapping.platformModel).toBe('gpt-4o');
+    expect(result.modelMapping.modelName).toBe('gpt-4o');
+    expect(result.modelMapping.status).toBe('active');
   });
 });

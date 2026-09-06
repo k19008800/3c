@@ -57,7 +57,7 @@ const mocks = vi.hoisted(() => ({
     canonicalizeBody: vi.fn(),
     scopeIdempotencyKey: vi.fn(),
   },
-  routing: { selectChannel: vi.fn() },
+  routing: { selectChannel: vi.fn(), validateModelCode: vi.fn().mockResolvedValue(undefined) },
   circuitBreaker: { recordChannelResult: vi.fn(), isCircuitOpen: vi.fn() },
   balance: { getBalance: vi.fn(), deductBalance: vi.fn(), addBalance: vi.fn(), initBalance: vi.fn() },
   consumption: { recordConsumption: vi.fn(), getUserConsumptionStats: vi.fn() },
@@ -102,7 +102,7 @@ vi.mock('../../services/idempotency', () => ({
   buildRequestFingerprint: (input: { userId: number; body: unknown }) =>
     `fp-${input.userId}-${JSON.stringify(input.body)}`,
 }));
-vi.mock('../../services/upstream/routing', () => ({ selectChannel: mocks.routing.selectChannel }));
+vi.mock('../../services/upstream/routing', () => ({ selectChannel: mocks.routing.selectChannel, validateModelCode: mocks.routing.validateModelCode }));
 vi.mock('../../services/upstream/circuit-breaker', () => ({
   recordChannelResult: mocks.circuitBreaker.recordChannelResult,
   isCircuitOpen: mocks.circuitBreaker.isCircuitOpen,
@@ -428,13 +428,14 @@ describe('Pipeline 网关集成（chat 路由）', () => {
     expect(mocks.idempotency.releaseIdempotencyLock).toHaveBeenCalledWith(expect.any(String), 't1');
   });
 
-  it('无可用渠道 → mock 回退 200（同记账，不调上游）', async () => {
-    mocks.routing.selectChannel.mockResolvedValue(null);
+  it('编码不可用（selectChannel 抛错）→ 返回错误非 mock，且不调上游', async () => {
+    const { ModelCodeUnavailableError } = await import('../../services/upstream/errors.js');
+    mocks.routing.selectChannel.mockRejectedValue(new ModelCodeUnavailableError('dsv4f-vb'));
     const res = await app.inject({ method: 'POST', url: '/v1/chat/completions', payload });
-    expect(res.statusCode).toBe(200);
-    expect(res.json().mock).toBe(true);
+    expect(res.statusCode).toBe(400);
+    // 非 mock 成功响应（纯编码下编码不可用必须失败，绝不降级 mock）
+    expect(res.json().mock).toBeUndefined();
     expect(mocks.fetch).not.toHaveBeenCalled();
-    expect(mocks.consumption.recordConsumption).toHaveBeenCalledWith(expect.objectContaining({ fallback: true, trustUpstream: false }));
   });
 
   it('大 base64（>10MB）→ 上传临时文件、替换为内网 URL 后转发', async () => {

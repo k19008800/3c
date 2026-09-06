@@ -46,5 +46,9 @@ export const BusinessErrorCodes = {
   // 供应商
   VENDOR_OFFLINE: "VENDOR_OFFLINE",
   VENDOR_KEY_EXHAUSTED: "VENDOR_KEY_EXHAUSTED",
+  // 模型编码（模型编码化改造 §3.3）
+  MODEL_CODE_NOT_FOUND: "MODEL_CODE_NOT_FOUND",
+  MODEL_CODE_UNAVAILABLE: "MODEL_CODE_UNAVAILABLE",
+  GROUP_FORBIDDEN: "GROUP_FORBIDDEN",
 } as const;
 export type BusinessErrorCodes = (typeof BusinessErrorCodes)[keyof typeof BusinessErrorCodes];

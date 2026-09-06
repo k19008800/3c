@@ -20,6 +20,11 @@ import { eq, and, asc, desc, sql } from 'drizzle-orm';
 import { selectKey, type SupplierKey as SelectableKey } from './key-selector.js';
 import { isCircuitOpen } from './circuit-breaker.js';
 import { getUserGroup } from '../groups.js';
+import {
+  ModelCodeNotFoundError,
+  ModelCodeUnavailableError,
+  GroupForbiddenError,
+} from './errors.js';
 
 // ============================================================
 // 类型定义
@@ -99,30 +104,133 @@ export function channelServesGroups(
 // 公共 API
 // ============================================================
 
+// ============================================================
+// 模型编码解析辅助（纯编码、无自动、无兼容窗口 — M-S-04/05）
+// ============================================================
+
 /**
- * 为指定模型选择最优 supplier + key 组合
+ * 模型编码进制校验 + 模型编码不存在检查（预扣前校验用，纯查询无副作用）
  *
- * 优先级策略：
- * 1. 通过 vendor_pricing 表找到所有提供该模型的供应商模型
- * 2. 按 supplier_keys.priority DESC 排序
- * 3. 依次尝试每个供应商模型，调用 selectKey 选 key
- * 4. 跳过熔断状态为 'open' 的 key
- * 5. 渠道分组供给过滤：供应商 allowed_groups 非空且与 opts.groups / 用户分组无交集 → 跳过
- * 6. 返回第一个可用组合
+ * 判定无效（抛 ModelCodeNotFoundError，404）：
+ *   - modelCode 为空/空串
+ *   - modelCode 含 '@'（旧 model@vendor 语义，明令禁止）
+ *   - 数据库 `supplier_models.model_code` 无该编码
+ * 判定分组排除（抛 GroupForbiddenError，403）：
+ *   - 供应商 allowed_groups 非空且与调用方分组无交集
  *
- * @param model - 用户请求的模型名（如 "gpt-4o"、"deepseek-chat"）
- * @param opts - 分组供给选项：{ groups } 显式传分组名；{ userId } 内部解析用户分组；
- *   都不传 = 不做分组过滤（与旧行为一致，供系统内部/测试调用）
- * @returns 选择结果，无可供应时返回 null
- *
- * @example
- * ```ts
- * const channel = await selectChannel('deepseek-chat', { userId: 42 });
- * if (!channel) throw new ChannelUnavailableError();
- * // channel.supplier.baseUrl + channel.key.keyValue → 发起上游请求
- * ```
+ * @param modelCode - 用户传入的 model_code
+ * @param userGroups - 调用方分组名数组；undefined = 不限制
+ * @returns 匹配的 supplier_models 行（模型编码 + model_name + platform_model + supplier）
  */
-export async function selectChannel(model: string, opts?: SelectChannelOptions): Promise<SelectedChannel | null> {
+export async function assertModelCodeAvailable(
+  modelCode: string,
+  userGroups?: string[],
+): Promise<{
+  row: { id: number; supplierId: number; modelName: string; platformModel: string; status: string; modelCode: string | null };
+  supplier: Supplier;
+}> {
+  if (!modelCode || !modelCode.trim()) throw new ModelCodeNotFoundError(modelCode || '');
+  if (modelCode.includes('@')) throw new ModelCodeNotFoundError(modelCode);
+
+  const [row] = await db
+    .select({
+      id: schema.supplierModels.id,
+      supplierId: schema.supplierModels.supplierId,
+      modelName: schema.supplierModels.modelName,
+      platformModel: schema.supplierModels.platformModel,
+      status: schema.supplierModels.status,
+      modelCode: schema.supplierModels.modelCode,
+    })
+    .from(schema.supplierModels)
+    .innerJoin(schema.suppliers, eq(schema.supplierModels.supplierId, schema.suppliers.id))
+    .where(and(
+      eq(schema.supplierModels.modelCode, modelCode),
+    ))
+    .limit(1);
+
+  if (!row) throw new ModelCodeNotFoundError(modelCode);
+
+  const supplier: Supplier = {
+    id: row.supplierId,
+    name: '',
+    code: '',
+    baseUrl: '',
+    status: 'active',
+    healthStatus: null,
+    allowedGroups: [],
+  };
+  const [supp] = await db
+    .select({
+      id: schema.suppliers.id,
+      name: schema.suppliers.name,
+      code: schema.suppliers.code,
+      baseUrl: schema.suppliers.baseUrl,
+      status: schema.suppliers.status,
+      healthStatus: schema.suppliers.healthStatus,
+      allowedGroups: schema.suppliers.allowedGroups,
+    })
+    .from(schema.suppliers)
+    .where(eq(schema.suppliers.id, row.supplierId))
+    .limit(1);
+  if (supp) {
+    supplier.id = supp.id;
+    supplier.name = supp.name;
+    supplier.code = supp.code;
+    supplier.baseUrl = supp.baseUrl;
+    supplier.status = supp.status;
+    supplier.healthStatus = supp.healthStatus;
+    supplier.allowedGroups = Array.isArray(supp.allowedGroups) ? supp.allowedGroups : [];
+  }
+
+  // 供应商/映射活性：非 active → 400 MODEL_CODE_UNAVAILABLE（预扣前拦截）
+  if (supplier.status !== 'active' || row.status !== 'active') {
+    throw new ModelCodeUnavailableError(modelCode, await listAvailableCodesForUser(userGroups));
+  }
+
+  // 分组供给过滤：allowed_groups 非空且与调用方分组无交集 → 403
+  if (!channelServesGroups(supplier.allowedGroups, userGroups)) {
+    throw new GroupForbiddenError(modelCode);
+  }
+
+  return { row, supplier };
+}
+
+/**
+ * 模型编码预扣前校验（按 userId 解析分组）
+ *
+ * 供各主链 validate 步骤在预扣前调用：非空/不含 @/编码存在/供应商与映射 active/
+ * 分组可用，任一不满足即抛 404/400/403，从而在预扣前拦截无效编码。
+ *
+ * @param modelCode - 用户传入的 model_code
+ * @param userId - 调用方用户 ID；传则按用户分组校验
+ */
+export async function validateModelCode(modelCode: string, userId?: number): Promise<void> {
+  let userGroups: string[] | undefined;
+  if (userId) {
+    const group = await getUserGroup(userId);
+    userGroups = group ? [group.name] : undefined;
+  }
+  await assertModelCodeAvailable(modelCode, userGroups);
+}
+
+/**
+ * 「模型编码化改造」M-S-04/05：`model` 参数即 model_code，一对一锁定唯一
+ * `supplier_models` + supplier；只在该 supplier 的 Key 池内选 Key，不得切换到
+ * 其他供应商或其他编码。不再有"按 model_name 自动选第一个供应商"语义。
+ *
+ * 错误（沿用 errors.ts 模型编码错误）：
+ *   - 编码不存在/空/含 @ → ModelCodeNotFoundError(404)
+ *   - 分组排除 → GroupForbiddenError(403)
+ *   - 供应商/编码停用或 Key 池不可用 → ModelCodeUnavailableError(400)
+ *
+ * @param modelCode - 用户请求的模型编码（API `model` 参数，须精确命中）
+ * @param opts - 分组供给选项：{ groups } 显式传分组名；{ userId } 内部解析用户分组
+ * @returns 选择结果（锁定供应商 + 模型映射 + key）
+ */
+export async function selectChannel(
+  modelCode: string,
+  opts?: SelectChannelOptions,
+): Promise<SelectedChannel> {
   // 0. 解析生效分组名列表（显式 groups 优先；否则按 userId 解析用户分组）
   let userGroups: string[] | undefined = opts?.groups;
   if (userGroups === undefined && opts?.userId) {
@@ -130,163 +238,92 @@ export async function selectChannel(model: string, opts?: SelectChannelOptions):
     userGroups = group ? [group.name] : undefined;
   }
 
-  // 1. 查询 compatible model + active pricing
-  const candidates = await db
+  // 1. 模型编码精确校验（不存在/含 @ → 404；分组排除 → 403）
+  const { row, supplier } = await assertModelCodeAvailable(modelCode, userGroups);
+
+  // 2. 供应商/映射活性校验
+  if (supplier.status !== 'active' || row.status !== 'active') {
+    throw new ModelCodeUnavailableError(modelCode, await listAvailableCodesForUser(userGroups));
+  }
+
+  // 3. 查该 supplier 的 active keys，按 priority 选（熔断跳过）
+  const keys = await db
     .select({
-      supplierModelId: schema.vendorPricing.supplierModelId,
-      modelName: schema.supplierModels.modelName,
-      platformModel: schema.supplierModels.platformModel,
-      supplierModelStatus: schema.supplierModels.status,
-      supplierId: schema.suppliers.id,
-      supplierName: schema.suppliers.name,
-      supplierCode: schema.suppliers.code,
-      supplierBaseUrl: schema.suppliers.baseUrl,
-      supplierAllowedGroups: schema.suppliers.allowedGroups,
-      supplierStatus: schema.suppliers.status,
-      supplierHealthStatus: schema.suppliers.healthStatus,
-      keyId: schema.supplierKeys.id,
+      id: schema.supplierKeys.id,
+      supplierId: schema.supplierKeys.supplierId,
       keyValue: schema.supplierKeys.keyValue,
-      keyName: schema.supplierKeys.name,
-      keyStatus: schema.supplierKeys.status,
-      keySelectMode: schema.supplierKeys.selectMode,
-      keyPriority: schema.supplierKeys.priority,
-      keyCurrentBalance: schema.supplierKeys.currentBalance,
+      name: schema.supplierKeys.name,
+      status: schema.supplierKeys.status,
+      selectMode: schema.supplierKeys.selectMode,
+      priority: schema.supplierKeys.priority,
+      currentBalance: schema.supplierKeys.currentBalance,
     })
-    .from(schema.vendorPricing)
-    .innerJoin(
-      schema.supplierModels,
-      eq(schema.vendorPricing.supplierModelId, schema.supplierModels.id),
-    )
-    .innerJoin(
-      schema.suppliers,
-      eq(schema.supplierModels.supplierId, schema.suppliers.id),
-    )
-    .innerJoin(
-      schema.supplierKeys,
-      eq(schema.supplierKeys.supplierId, schema.suppliers.id),
-    )
+    .from(schema.supplierKeys)
+    .where(and(
+      eq(schema.supplierKeys.supplierId, supplier.id),
+      eq(schema.supplierKeys.status, 'active'),
+    ))
+    .orderBy(desc(schema.supplierKeys.priority));
+
+  // 4. 选第一个未熔断的 key
+  let selectedKey: SelectableKey | null = null;
+  for (const k of keys) {
+    const cbKey = `supplier:${supplier.id}:key:${k.id}`;
+    if (await isCircuitOpen(cbKey)) continue;
+    selectedKey = k;
+    break;
+  }
+
+  if (!selectedKey) {
+    throw new ModelCodeUnavailableError(modelCode, await listAvailableCodesForUser(userGroups));
+  }
+
+  return {
+    supplier,
+    key: selectedKey,
+    modelMapping: {
+      id: row.id,
+      supplierId: row.supplierId,
+      modelName: row.modelName,
+      platformModel: row.platformModel,
+      status: row.status,
+    },
+  };
+}
+
+/**
+ * 列出调用方可用的模型编码清单（供不可用错误的 `availableModelCodes` 载荷）
+ *
+ * 仅聚合 active 供应商 + active 映射 + 分组供给过滤后的编码。
+ *
+ * @param userGroups - 调用方分组名数组；undefined = 不限制
+ */
+export async function listAvailableCodesForUser(userGroups?: string[]): Promise<string[]> {
+  const rows = await db
+    .select({
+      modelCode: schema.supplierModels.modelCode,
+      supplierStatus: schema.suppliers.status,
+      modelStatus: schema.supplierModels.status,
+      allowedGroups: schema.suppliers.allowedGroups,
+    })
+    .from(schema.supplierModels)
+    .innerJoin(schema.suppliers, eq(schema.supplierModels.supplierId, schema.suppliers.id))
     .where(
       and(
-        eq(schema.supplierModels.modelName, model),
-        eq(schema.supplierModels.status, 'active'),
-        eq(schema.vendorPricing.status, 'active'),
         eq(schema.suppliers.status, 'active'),
+        eq(schema.supplierModels.status, 'active'),
       ),
-    )
-    .orderBy(sql`${schema.supplierKeys.priority} DESC NULLS LAST`);
+    );
 
-  if (candidates.length === 0) {
-    return null;
-  }
-
-  // 2. 按 supplierId 分组，每个 supplier 收集所有 keys
-  const supplierMap = new Map<number, {
-    supplier: Supplier;
-    modelMapping: SupplierModelMapping;
-    keys: SelectableKey[];
-  }>();
-
-  for (const row of candidates) {
-    if (!supplierMap.has(row.supplierId)) {
-      // 渠道分组供给：allowedGroups 非空且与调用方分组无交集 → 直接排除该渠道
-      if (!channelServesGroups(row.supplierAllowedGroups, userGroups)) {
-        continue;
-      }
-      supplierMap.set(row.supplierId, {
-        supplier: {
-          id: row.supplierId,
-          name: row.supplierName,
-          code: row.supplierCode,
-          baseUrl: row.supplierBaseUrl,
-          status: row.supplierStatus,
-          healthStatus: row.supplierHealthStatus,
-          allowedGroups: Array.isArray(row.supplierAllowedGroups) ? row.supplierAllowedGroups : [],
-        },
-        modelMapping: {
-          id: row.supplierModelId,
-          supplierId: row.supplierId,
-          modelName: row.modelName,
-          platformModel: row.platformModel,
-          status: row.supplierModelStatus,
-        },
-        keys: [],
-      });
+  const codes: string[] = [];
+  for (const r of rows) {
+    if (!r.modelCode) continue;
+    const allowed = Array.isArray(r.allowedGroups) ? r.allowedGroups.filter(Boolean) : [];
+    if (userGroups === undefined || allowed.length === 0 || allowed.some((g) => userGroups.includes(g))) {
+      codes.push(r.modelCode);
     }
-
-    supplierMap.get(row.supplierId)!.keys.push({
-      id: row.keyId,
-      supplierId: row.supplierId,
-      keyValue: row.keyValue,
-      name: row.keyName,
-      status: row.keyStatus,
-      selectMode: row.keySelectMode,
-      priority: row.keyPriority,
-      currentBalance: row.keyCurrentBalance,
-    });
   }
-
-  // 3. 按 priority 排序 suppliers（取 keys 中最高 priority）
-  const sortedSuppliers = Array.from(supplierMap.entries())
-    .map(([, group]) => group)
-    .sort((a, b) => {
-      const aMaxPriority = Math.max(...a.keys.map((k) => k.priority ?? 0));
-      const bMaxPriority = Math.max(...b.keys.map((k) => k.priority ?? 0));
-      return bMaxPriority - aMaxPriority;
-    });
-
-  // 4. 对每个 supplier 尝试选 key，跳过熔断的 key
-  for (const group of sortedSuppliers) {
-    // 获取可用的 key（非 disabled）
-    const availableKeys = group.keys.filter((k) => k.status === 'active');
-    if (availableKeys.length === 0) continue;
-
-    if (availableKeys.length === 1) {
-      // 单个 key：检查是否熔断
-      const key = availableKeys[0]!;
-      const cbKey = `supplier:${group.supplier.id}:key:${key.id}`;
-      if (await isCircuitOpen(cbKey)) continue;
-
-      return {
-        supplier: group.supplier,
-        key,
-        modelMapping: group.modelMapping,
-      };
-    }
-
-    // 多个 key：用 selectKey 选择
-    const mode = availableKeys[0]!.selectMode;
-    const selected = selectKey(availableKeys, mode as 'single' | 'polling' | 'random', undefined);
-
-    if (!selected) continue;
-
-    // 检查该 key 是否熔断
-    const cbKey = `supplier:${group.supplier.id}:key:${selected.key.id}`;
-    if (await isCircuitOpen(cbKey)) {
-      // 尝试下一个 key（排除已否的）
-      const remaining = availableKeys.filter((_, i) => i !== selected.index);
-      if (remaining.length === 0) continue;
-
-      const retrySelected = selectKey(remaining, mode as 'single' | 'polling' | 'random', undefined);
-      if (!retrySelected) continue;
-
-      const cbKey2 = `supplier:${group.supplier.id}:key:${retrySelected.key.id}`;
-      if (await isCircuitOpen(cbKey2)) continue;
-
-      return {
-        supplier: group.supplier,
-        key: retrySelected.key,
-        modelMapping: group.modelMapping,
-      };
-    }
-
-    return {
-      supplier: group.supplier,
-      key: selected.key,
-      modelMapping: group.modelMapping,
-    };
-  }
-
-  return null;
+  return codes;
 }
 
 // ============================================================

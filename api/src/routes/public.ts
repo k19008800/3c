@@ -20,7 +20,8 @@
 
 import type { FastifyInstance } from 'fastify';
 import { db, schema } from '../db/index.js';
-import { eq, and, desc, sql, inArray, count } from 'drizzle-orm';
+import { eq, and, desc, asc, sql, inArray, count } from 'drizzle-orm';
+import { getSupplierModelPricingById } from '../services/billing/pricing.js';
 import { isWindowParam, foldModelStats, activeModelCatalog, buildModelStat } from '../services/marketplace/health-queries.js';
 import { HEALTH_ORDER } from '../lib/latency.js';
 import { buildApiConfig, DEFAULT_API_DOMAIN } from '../services/config/api-domain.js';
@@ -92,6 +93,7 @@ export async function publicRoutes(app: FastifyInstance) {
   app.get('/api/v1/public/models', async (_request, reply) => {
     const models = await db.select({
       name: schema.supplierModels.modelName,
+      model_code: schema.supplierModels.modelCode,
       display_name: schema.supplierModels.platformModel,
       category: sql<string>`null`,
       context_length: schema.supplierModels.maxTokens,
@@ -466,5 +468,90 @@ export async function publicRoutes(app: FastifyInstance) {
     });
 
     return reply.send({ data: { model: name, channels } });
+  });
+
+  /**
+   * GET /api/v1/models/:name/codes — 单逻辑模型下的「模型编码」清单（模型编码化改造 §3.5）
+   *
+   * 无鉴权（public 域）。一个 code = 一个（模型 × 供应商）的全局唯一编码，一对一
+   * 映射 supplier_models。返回该逻辑模型（model_name）下所有带 model_code 的可服务编码。
+   *
+   * 字段（对照 web-console ModelCode 类型）：
+   *   model_code / display_name（「模型名（供应商名）」）/ supplier_code / supplier_name
+   *   / context（max_tokens）/ status / prices / pricing_group / health / latency_ms
+   *   / recommended / maintenance。价格取该 supplier_model 的 vendor_pricing（无用户分组语境 → default）。
+   *
+   * model 无该模型 → 返回 `{ model_name, codes: [] }`（200，非 404）。
+   */
+  app.get('/api/v1/models/:name/codes', async (request, reply) => {
+    const name = String((request.params as { name?: string }).name ?? '').trim();
+
+    const rows = await db.select({
+      id: schema.supplierModels.id,
+      modelCode: schema.supplierModels.modelCode,
+      maxTokens: schema.supplierModels.maxTokens,
+      supId: schema.suppliers.id,
+      supName: schema.suppliers.name,
+      supCode: schema.suppliers.code,
+      supStatus: schema.suppliers.status,
+      supHealth: schema.suppliers.healthStatus,
+      modelStatus: schema.supplierModels.status,
+    })
+      .from(schema.supplierModels)
+      .innerJoin(schema.suppliers, eq(schema.supplierModels.supplierId, schema.suppliers.id))
+      .where(and(
+        eq(schema.supplierModels.modelName, name),
+        sql`${schema.supplierModels.modelName} NOT LIKE 'market-test-%'
+            AND ${schema.supplierModels.modelName} NOT LIKE 'alias-%'
+            AND ${schema.supplierModels.modelName} NOT LIKE 'compat-%'
+            AND ${schema.supplierModels.modelName} NOT LIKE 'verify-%'`,
+      ))
+      .orderBy(asc(schema.supplierModels.id));
+
+    function healthToScore(health: string | null | undefined): number | null {
+      if (health === 'healthy') return 100;
+      if (health === 'degraded') return 50;
+      if (health === 'down') return 0;
+      return null;
+    }
+
+    const codes: Array<Record<string, unknown>> = [];
+    for (const r of rows) {
+      if (!r.modelCode) continue;
+      const maintenance = r.supStatus === 'maintenance';
+      let status: string;
+      if (
+        r.modelStatus === 'inactive' || r.modelStatus === 'deprecated'
+        || r.supStatus === 'offline' || r.supStatus === 'deprecated'
+      ) {
+        status = 'offline';
+      } else if (maintenance) {
+        status = 'maintenance';
+      } else {
+        status = 'active';
+      }
+      const pricing = await getSupplierModelPricingById(r.id);
+      codes.push({
+        model_code: r.modelCode,
+        display_name: `${name}（${r.supName}）`,
+        supplier_code: r.supCode ?? String(r.supId),
+        supplier_name: r.supName,
+        context: r.maxTokens ?? null,
+        status,
+        pricing_group: 'default',
+        health: healthToScore(r.supHealth),
+        latency_ms: null,
+        recommended: false,
+        maintenance,
+        prices: {
+          input_price: pricing.input,
+          output_price: pricing.output,
+          cache_read_input_price: pricing.cacheReadInputPrice,
+          cache_write_input_price: pricing.cacheWriteInputPrice,
+        },
+      });
+    }
+
+    return reply.send({ model_name: name, codes });
   });
 }

@@ -44,3 +44,54 @@ export class UpstreamAuthError extends AppError {
     this.upstreamStatus = upstreamStatus;
   }
 }
+
+// ============================================================
+// 模型编码错误（「模型编码化改造」§3.3）— 纯编码、无自动、无兼容窗口
+// ============================================================
+
+/**
+ * 模型编码不存在（404 MODEL_CODE_NOT_FOUND）
+ *
+ * 纯编码模型下，`model` 字段必须是有效 model_code；空串 / 裸模型名 / 含 `@`
+ * / 数据库无此编码 → 一律抛此错误。不降级自动路由、不做兼容映射。
+ */
+export class ModelCodeNotFoundError extends AppError {
+  public readonly modelCode: string;
+  constructor(modelCode: string) {
+    super(`模型编码不存在: ${modelCode}`, 404, 'MODEL_CODE_NOT_FOUND', { modelCode });
+    this.name = 'ModelCodeNotFoundError';
+    this.modelCode = modelCode;
+  }
+}
+
+/**
+ * 模型编码当前不可用（400 MODEL_CODE_UNAVAILABLE）
+ *
+ * 编码存在但供应商维护/下线、编码映射停用、或该供应商 Key 池不可用。
+ * payload 附带 `availableModelCodes` 供用户修正。
+ */
+export class ModelCodeUnavailableError extends AppError {
+  public readonly modelCode: string;
+  public readonly availableModelCodes: string[];
+  constructor(modelCode: string, availableModelCodes: string[] = []) {
+    super(`模型编码当前不可用: ${modelCode}`, 400, 'MODEL_CODE_UNAVAILABLE', {
+      modelCode,
+      availableModelCodes,
+    });
+    this.name = 'ModelCodeUnavailableError';
+    this.modelCode = modelCode;
+    this.availableModelCodes = availableModelCodes;
+  }
+}
+
+/**
+ * 模型编码被分组供给排除（403 GROUP_FORBIDDEN）
+ *
+ * 供应商 allowed_groups 非空且与调用方分组无交集 → 该编码对该用户不可用。
+ */
+export class GroupForbiddenError extends AppError {
+  constructor(modelCode: string) {
+    super(`当前分组无权使用该模型编码: ${modelCode}`, 403, 'GROUP_FORBIDDEN', { modelCode });
+    this.name = 'GroupForbiddenError';
+  }
+}

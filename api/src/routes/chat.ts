@@ -28,6 +28,7 @@ import { estimateMultimodalContentTokens } from '../services/billing/multimodal-
 import { determineStreamBilling } from '../services/billing/settle-stream.js';
 import { computeUsageCost, computeStreamCost, STREAM_INCLUDE_USAGE_ENABLED } from '../services/billing/cache-billing.js';
 import { getBalance } from '../services/billing/balance.js';
+import { validateModelCode } from '../services/upstream/routing.js';
 import { recordChannelResult } from '../services/upstream/circuit-breaker.js';
 import { recordConversationContext, fingerprintKey } from '../services/audit/conversation-context.js';
 import { AppError, InsufficientBalanceError } from '../lib/errors.js';
@@ -307,6 +308,9 @@ export async function chatRoutes(app: FastifyInstance) {
           c.stream = isStream;
           trace.requestedModel = req.model;
           trace.messages = req.messages as unknown[];
+
+          // 2. 模型编码预扣前校验（纯编码、无自动、无兼容）：不可用/无效 → 404/403/400，预扣前拦截
+          await validateModelCode(req.model, c.userId || undefined);
 
           // 2. Count input tokens
           const estimatedInputTokens = estimateInputTokens(req.messages as any, req.model);

@@ -84,3 +84,5 @@ export { announcementReads, refundRequests, followReminders, customerTags, custo
 export { loginHistory } from './login-history.js';
 // 数据导出授权管理（PRD-数据导出授权管理，migration 0036）：用户端数据导出能力开关
 export { dataExportGrants } from './data-export-grants.js';
+// 模型编码化改造（migration 0038）：用户默认模型编码偏好
+export { userModelDefaultCodes } from './user-model-default-codes.js';
