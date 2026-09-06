@@ -39,10 +39,14 @@ const mocks = vi.hoisted(() => ({
       requestId: {}, model: {}, inputTokens: {}, outputTokens: {},
       totalTokens: {}, cost: {}, finishReason: {}, streamed: {},
     },
+    customerBalances: { userId: {}, availableBalance: {}, frozenBalance: {} },
   },
   routing: { selectChannel: vi.fn() },
   circuitBreaker: { recordChannelResult: vi.fn(), isCircuitOpen: vi.fn() },
-  balance: { getBalance: vi.fn(), deductBalance: vi.fn(), addBalance: vi.fn(), initBalance: vi.fn() },
+  balance: {
+    getBalance: vi.fn(), deductBalance: vi.fn(), addBalance: vi.fn(), initBalance: vi.fn(),
+    freezeBalance: vi.fn(), settleFrozenBalance: vi.fn(), releaseFrozenBalance: vi.fn(),
+  },
   consumption: { recordConsumption: vi.fn(), getUserConsumptionStats: vi.fn() },
   commission: { generateCommissionForConsumption: vi.fn() },
   conversation: { recordConversationContext: vi.fn(), fingerprintKey: vi.fn() },
@@ -71,6 +75,9 @@ vi.mock('../src/services/billing/balance', () => ({
   deductBalance: mocks.balance.deductBalance,
   addBalance: mocks.balance.addBalance,
   initBalance: mocks.balance.initBalance,
+  freezeBalance: mocks.balance.freezeBalance,
+  settleFrozenBalance: mocks.balance.settleFrozenBalance,
+  releaseFrozenBalance: mocks.balance.releaseFrozenBalance,
 }));
 vi.mock('../src/services/billing/consumption-log', () => ({
   recordConsumption: mocks.consumption.recordConsumption,
@@ -105,7 +112,19 @@ let lockStore: Map<string, string>;
 /** Redis 响应缓存存储（idem:resp:{key} → JSON） */
 let respStore: Map<string, string>;
 /** 假 Redis 客户端（set 支持 NX 语义，eval 支持值匹配删除） */
-let redisClient: { set: ReturnType<typeof vi.fn>; eval: ReturnType<typeof vi.fn> };
+// Keep this fake aligned with the Redis surface used by ledger.ts.  The gateway
+// currently exercises the idempotency commands only, but omitting exists/type
+// here makes any ledger initialization silently take its degraded path.
+let redisClient: {
+  set: ReturnType<typeof vi.fn>;
+  eval: ReturnType<typeof vi.fn>;
+  exists: ReturnType<typeof vi.fn>;
+  type: ReturnType<typeof vi.fn>;
+  del: ReturnType<typeof vi.fn>;
+  get: ReturnType<typeof vi.fn>;
+  hget: ReturnType<typeof vi.fn>;
+  hincrby: ReturnType<typeof vi.fn>;
+};
 /** L2 DB 兜底：consumption_records 按 request_id 查询结果（用例可覆写） */
 let consumptionLookup: () => Promise<unknown[]>;
 
@@ -179,18 +198,46 @@ beforeEach(async () => {
   // ── Redis 状态（默认 Redis 可用）──
   lockStore = new Map();
   respStore = new Map();
+  const valueStore = new Map<string, string>();
+  const hashStore = new Map<string, Map<string, string>>();
   redisClient = {
     set: vi.fn(async (key: string, token: string) => {
       if (lockStore.has(key)) return null;
       lockStore.set(key, token);
+      valueStore.set(key, token);
       return 'OK';
     }),
-    eval: vi.fn(async (_script: string, _numKeys: number, key: string, token: string) => {
+    eval: vi.fn(async (_script: string, numKeys: number, key: string, token: string, ...args: string[]) => {
+      // ledger initialization uses a one-key Lua script; model its HASH result
+      // instead of letting the gateway silently fall back to bypass mode.
+      if (numKeys === 1 && key.startsWith('bal:')) {
+        const hash = hashStore.get(key) ?? new Map<string, string>();
+        hash.set('available', token);
+        hash.set('frozen', args[0] ?? '0');
+        hashStore.set(key, hash);
+        return 1;
+      }
       if (lockStore.get(key) === token) {
         lockStore.delete(key);
         return 1;
       }
       return 0;
+    }),
+    exists: vi.fn(async (key: string) => (valueStore.has(key) || hashStore.has(key) ? 1 : 0)),
+    type: vi.fn(async (key: string) => (hashStore.has(key) ? 'hash' : valueStore.has(key) ? 'string' : 'none')),
+    del: vi.fn(async (...keys: string[]) => keys.reduce((n, key) => {
+      const removed = Number(valueStore.delete(key) || hashStore.delete(key));
+      lockStore.delete(key);
+      return n + removed;
+    }, 0)),
+    get: vi.fn(async (key: string) => valueStore.get(key) ?? null),
+    hget: vi.fn(async (key: string, field: string) => hashStore.get(key)?.get(field) ?? null),
+    hincrby: vi.fn(async (key: string, field: string, delta: number) => {
+      const hash = hashStore.get(key) ?? new Map<string, string>();
+      const next = Number(hash.get(field) ?? 0) + Number(delta);
+      hash.set(field, String(next));
+      hashStore.set(key, hash);
+      return next;
     }),
   };
   mocks.redis.getRedis.mockReturnValue(redisClient);
@@ -210,6 +257,9 @@ beforeEach(async () => {
         if (table === mocks.schema.consumptionRecords) {
           return { where: vi.fn().mockReturnValue({ limit: consumptionLimit }) };
         }
+        if (table === mocks.schema.customerBalances) {
+          return { where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ availableBalance: '100', frozenBalance: '0' }]) }) };
+        }
         return { innerJoin: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: pricingLimit }) }) };
       }),
     };
@@ -219,11 +269,22 @@ beforeEach(async () => {
   });
 
   // ── 业务默认值 ──
+  // 支持跨用户用例：通过 x-test-user 头模拟不同 userId（幂等指纹含 user identity；
+  // 默认 userId=1 保持既有用例行为不变）。
   mocks.apikey.apiKeyAuth.mockImplementation(async (request: any) => {
-    request.apiKeyContext = { userId: 1, apiKeyId: 11, keyHash: 'test-hash' };
+    const uid = Number(request.headers?.['x-test-user'] ?? 1);
+    request.apiKeyContext = { userId: uid, apiKeyId: uid === 1 ? 11 : uid * 10, keyHash: `hash-${uid}` };
   });
   mocks.balance.getBalance.mockResolvedValue({ totalBalance: '100', availableBalance: '100', frozenBalance: '0', currency: 'CNY' });
   mocks.balance.deductBalance.mockResolvedValue({ balanceAfter: '99.999', version: 2 });
+  mocks.balance.freezeBalance.mockResolvedValue(undefined);
+  // The gateway assertions historically count the final charge via
+  // deductBalance. Keep that observable accounting hook while the actual
+  // pre-consume path uses freeze/settle APIs (no Redis fallback).
+  mocks.balance.settleFrozenBalance.mockImplementation(async (...args: unknown[]) => {
+    await mocks.balance.deductBalance(...args);
+  });
+  mocks.balance.releaseFrozenBalance.mockResolvedValue(undefined);
   mocks.consumption.recordConsumption.mockResolvedValue({ id: 1 });
   mocks.commission.generateCommissionForConsumption.mockResolvedValue(null);
   mocks.circuitBreaker.recordChannelResult.mockResolvedValue({ shouldBan: false });
@@ -294,7 +355,7 @@ describe('幂等：流式同 key 二次提交', () => {
     expect(String(res1.headers['content-type'])).toContain('text/event-stream');
     expect(res1.body).toContain('data: [DONE]');
     await vi.waitFor(() => {
-      expect(respStore.has('idem:resp:idem-key-stream')).toBe(true);
+      expect(respStore.has('idem:resp:idem-key-stream:1')).toBe(true);
     });
 
     // 二次：幂等命中 → 摘要回放 + 标记，不重复计费
@@ -437,9 +498,99 @@ describe('幂等：DB 唯一约束兜底与 Redis 降级', () => {
     expect(body2.input_tokens).toBe(5);
     expect(body2.output_tokens).toBe(2);
 
-    // 未重复扣费 + 补偿写回缓存
+    // 未重复扣费 + 补偿写回缓存（user-scoped：idem:resp:{key}:{userId}）
     expect(mocks.fetch).toHaveBeenCalledTimes(1);
     expect(mocks.balance.deductBalance).toHaveBeenCalledTimes(1);
-    expect(respStore.has('idem:resp:idem-key-dbfallback')).toBe(true);
+    expect(respStore.has('idem:resp:idem-key-dbfallback:1')).toBe(true);
+  });
+});
+
+// ============================================================
+// 幂等指纹：跨用户同 key 不泄露 / 异 body 同 key 409 / 消费不重复
+// ============================================================
+
+describe('幂等指纹安全', () => {
+  it('跨用户同 Idempotency-Key → 不泄露首次请求结果（各自独立处理，不回放）', async () => {
+    mocks.routing.selectChannel.mockResolvedValue(makeChannel());
+    mockUpstreamJsonResponse();
+
+    const headersA = { 'idempotency-key': 'idem-cross-user', 'x-test-user': '1' };
+    const headersB = { 'idempotency-key': 'idem-cross-user', 'x-test-user': '2' };
+    const payload = { model: 'deepseek-v3', messages: [{ role: 'user', content: 'secret-conversation' }] };
+
+    // 用户 A（userId=1）：首次请求 → 正常处理
+    const resA = await app.inject({ method: 'POST', url: '/v1/chat/completions', headers: headersA, payload });
+    expect(resA.statusCode).toBe(200);
+    expect(resA.headers['x-idempotent-replay']).toBeUndefined();
+
+    // 用户 B（userId=2）使用相同 Idempotency-Key + 相同 body：必须独立处理，不得回放 A 的结果
+    const resB = await app.inject({ method: 'POST', url: '/v1/chat/completions', headers: headersB, payload });
+    expect(resB.statusCode).toBe(200);
+    // B 无回放标记 = 未拿到 A 的首次响应（无泄露）
+    expect(resB.headers['x-idempotent-replay']).toBeUndefined();
+
+    // 上游/扣费/消费各 2 次（各自真实消费一次，A 的结果未被打到 B 头上）
+    expect(mocks.fetch).toHaveBeenCalledTimes(2);
+    expect(mocks.balance.deductBalance).toHaveBeenCalledTimes(2);
+    expect(mocks.consumption.recordConsumption).toHaveBeenCalledTimes(2);
+    // 两个用户作用域下的响应缓存彼此独立
+    expect(respStore.has('idem:resp:idem-cross-user:1')).toBe(true);
+    expect(respStore.has('idem:resp:idem-cross-user:2')).toBe(true);
+  });
+
+  it('同用户同 Idempotency-Key 异 body → 409 IDEMPOTENCY_CONFLICT，不回放、不重复消费', async () => {
+    mocks.routing.selectChannel.mockResolvedValue(makeChannel());
+    mockUpstreamJsonResponse();
+
+    const headers = { 'idempotency-key': 'idem-diff-body' };
+
+    // 首次：body X → 正常处理
+    const payloadX = { model: 'deepseek-v3', messages: [{ role: 'user', content: 'first-prompt' }] };
+    const res1 = await app.inject({ method: 'POST', url: '/v1/chat/completions', headers, payload: payloadX });
+    expect(res1.statusCode).toBe(200);
+
+    // 二次：同一 key 但 body 不同（异摘要）→ 409，不得回放首次响应，也不得再次扣费
+    const payloadY = { model: 'deepseek-v3', messages: [{ role: 'user', content: 'second-prompt' }] };
+    const res2 = await app.inject({ method: 'POST', url: '/v1/chat/completions', headers, payload: payloadY });
+    expect(res2.statusCode).toBe(409);
+    expect(res2.statusCode).not.toBe(500);
+    const errBody = res2.json();
+    expect(errBody.error.type).toBe('idempotency_conflict');
+    expect(errBody.error.code).toBe(409);
+
+    // 未回放首次结果、未重复消费（上游/扣费/消费各 1 次）
+    expect(res2.headers['x-idempotent-replay']).toBeUndefined();
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    expect(mocks.balance.deductBalance).toHaveBeenCalledTimes(1);
+    expect(mocks.consumption.recordConsumption).toHaveBeenCalledTimes(1);
+  });
+
+  it('同用户同 Idempotency-Key 同 body（键序不同）→ 指纹一致正常回放，消费记录不重复', async () => {
+    mocks.routing.selectChannel.mockResolvedValue(makeChannel());
+    mockUpstreamJsonResponse();
+
+    const headers = { 'idempotency-key': 'idem-same-body-reordered' };
+    const payload1 = {
+      messages: [{ role: 'user', content: 'hi' }],
+      model: 'deepseek-v3',
+    };
+    const payload2 = {
+      model: 'deepseek-v3',
+      messages: [{ role: 'user', content: 'hi' }],
+    };
+
+    const res1 = await app.inject({ method: 'POST', url: '/v1/chat/completions', headers, payload: payload1 });
+    expect(res1.statusCode).toBe(200);
+
+    // 键序无关：payload1/payload2 语义相同 → 同指纹 → 正常回放
+    const res2 = await app.inject({ method: 'POST', url: '/v1/chat/completions', headers, payload: payload2 });
+    expect(res2.statusCode).toBe(200);
+    expect(res2.headers['x-idempotent-replay']).toBe('true');
+    expect(JSON.parse(res2.payload)).toEqual(JSON.parse(res1.payload));
+
+    // 消费/扣费不重复：各自只发生一次
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    expect(mocks.balance.deductBalance).toHaveBeenCalledTimes(1);
+    expect(mocks.consumption.recordConsumption).toHaveBeenCalledTimes(1);
   });
 });

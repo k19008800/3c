@@ -159,6 +159,29 @@ describe('POST /api/v1/me/change-password', () => {
     });
     expect(res.statusCode).toBe(401);
   });
+
+  it('PUT + current_password/new_password（web-console SecurityPage 契约）→ 200 且新密码可登录', async () => {
+    const email = `cp-put-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@test.com`;
+    const reg = await app.inject({
+      method: 'POST', url: '/api/v1/auth/register',
+      payload: { email, password: 'Test1234!', name: 'CP PUT' },
+    });
+    const body = reg.json();
+    const accessToken = body.accessToken;
+
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/me/change-password',
+      headers: auth(accessToken),
+      payload: { current_password: 'Test1234!', new_password: 'PutNew123!' },
+    });
+    expect(res.statusCode).toBe(200);
+
+    const loginNew = await app.inject({
+      method: 'POST', url: '/api/v1/auth/login', payload: { email, password: 'PutNew123!' },
+    });
+    expect(loginNew.statusCode).toBe(200);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════

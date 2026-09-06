@@ -5,7 +5,6 @@ import {
   HelpIcon,
   Table,
   StatusBadge,
-  Modal,
   SkeletonGroup,
   EmptyState,
   useToast,

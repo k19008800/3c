@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "node scripts/clean-dist.mjs && tsc && node scripts/postbuild-fix-imports.mjs",
     "typecheck": "tsc --noEmit",
     "start": "node dist/index.js",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:migrate:manual": "node run-manual-migrations.cjs",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx src/db/seed.ts",
     "test": "vitest run",

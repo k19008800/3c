@@ -20,7 +20,7 @@ import { withOperation2fa, isOperation2faCanceled, operation2faErrorText, operat
 import type { OperationSummaryItem } from "../components/Operation2faModal";
 import { HelpIcon, EmptyState, SkeletonGroup, useToast } from "@3cloud/shared-ui";
 
-/** 风控规则配置（ARCH v1.1 §2.1 schema；manual_topup.max_amount 按调度终裁 = 1,000,000） */
+/** 风控规则配置；人工上账默认单笔上限以 accepted ADR-0001 为准（¥50,000） */
 interface FinanceRules {
   manual_topup?: { max_amount?: number };
   large_amount?: {
@@ -74,7 +74,7 @@ interface Draft {
 
 function rulesToDraft(r: FinanceRules): Draft {
   return {
-    maxAmount: String(r.manual_topup?.max_amount ?? 1000000),
+    maxAmount: String(r.manual_topup?.max_amount ?? 50000),
     singleReviewMax: String(r.large_amount?.single_review_max ?? 10000),
     dualThreshold: String(r.large_amount?.dual_review_threshold ?? 10000),
     superThreshold: String(r.large_amount?.super_review_threshold ?? 100000),
@@ -104,7 +104,7 @@ function draftToRules(d: Draft): FinanceRules {
   };
   const splitList = (s: string): string[] => s.split(/[,，]/).map((x) => x.trim()).filter(Boolean);
   return {
-    manual_topup: { max_amount: toNum(d.maxAmount, 1000000) },
+    manual_topup: { max_amount: toNum(d.maxAmount, 50000) },
     large_amount: {
       single_review_max: toNum(d.singleReviewMax, 10000),
       dual_review_threshold: toNum(d.dualThreshold, 10000),
@@ -137,7 +137,7 @@ function draftToRules(d: Draft): FinanceRules {
 
 /* PRD §8 按钮级帮助对照表（P1 不可降级） */
 const HELP_SAVE = "保存大额规则/限额/2FA 策略修改；配置即时生效（存量单据按提交时点固化），保存需操作级 2FA + 二次确认";
-const HELP_MAX_AMOUNT = "人工上账创建单笔上限（元）：默认 ¥1,000,000；>¥10,000 进入多人审批，>¥100,000 需 super_admin 终审（分级审批承接大额）";
+const HELP_MAX_AMOUNT = "人工上账创建单笔上限（元）：默认 ¥50,000（accepted ADR-0001）；审批阈值与单笔上限分别校验";
 const HELP_LARGE = "统一大额审批规则：≤单审上限单审；>双人触发线双人复核；>终审触发线追加 super_admin 终审；白名单科目免审仅限赠送/补偿/纠错且 ≤ 免审上限（调增）";
 const HELP_LIMITS = "24h 累计限额（soft 升级 / hard 拒绝）：soft 阈值（默认 ¥50,000）内单审、超 soft → 升级双人审批（exceed_action=escalate，默认）；超 hard 阈值（默认 ¥100,000）→ 429 拒绝（或 exceed_action=reject 时超 soft 即拒）；操作人与被入账用户同值；exempt_roles 豁免角色（默认空，super_admin 不豁免）";
 const HELP_2FA = "操作级 2FA 策略（仅 super_admin 可改）：mandatory_admin 强制资金角色启用；token_ttl_seconds 令牌有效期（秒，默认 300）；lock_threshold/lock_minutes 连续失败锁定阈值与时长（与登录共享计数）";
@@ -176,7 +176,6 @@ export default function AdminFinanceRiskConfigPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
 
   const rulesQ = useQuery({
     queryKey: ["admin-finance-rules"],

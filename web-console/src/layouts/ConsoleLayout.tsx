@@ -4,11 +4,14 @@ import { useAuthStore } from "../store/auth";
 import { usePerm } from "../lib/permissions";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
+import { useI18n } from "../lib/i18n-context";
+import { CONSOLE_LANGS, type I18nLang } from "../lib/i18n";
+import { fmtMoney } from "../lib/fmt";
 import ConsentBanner from "../components/ConsentBanner";
 import { PageHeaderProvider, usePageHeader, HelpIcon } from "@3cloud/shared-ui";
 import "@3cloud/shared-ui/src/admin-system.css";
 
-type NavItem = { to: string; label: string; icon: string };
+type NavItem = { to: string; label: string; icon: string; permKey?: string };
 type NavGroup = { group: string; icon: string; items: NavItem[] };
 
 const ADMIN_NAV: NavGroup[] = [
@@ -17,6 +20,8 @@ const ADMIN_NAV: NavGroup[] = [
     { to: "/admin/customers", label: "客户列表", icon: "📋" },
     { to: "/admin/customers/quotas", label: "额度管理", icon: "🪙" },
     { to: "/admin/customers/verifications", label: "实名认证审核", icon: "🆔" },
+    // 数据导出授权管理（PRD §5.2）：按用户维度定向授权，挂在客户管理组
+    { to: "/admin/config/data-export-grants", label: "数据导出授权", icon: "📦", permKey: "dataExportGrant.view" },
   ]},
   { group: "财务结算", icon: "💰", items: [
     { to: "/admin/finance/dashboard", label: "财务工作台", icon: "🏦" },
@@ -136,9 +141,9 @@ const ADMIN_NAV: NavGroup[] = [
 ];
 
 const SALES_NAV: NavItem[] = [
-  { to: "/sales/customers", label: "客户管理", icon: "👥" },
-  { to: "/sales/reminders", label: "跟进提醒", icon: "⏰" },
-  { to: "/sales/performance", label: "业绩看板", icon: "📊" },
+  { to: "/sales/customers", label: "nav.salesCustomers", icon: "👥" },
+  { to: "/sales/reminders", label: "nav.salesReminders", icon: "⏰" },
+  { to: "/sales/performance", label: "nav.salesPerformance", icon: "📊" },
 ];
 
 /**
@@ -146,54 +151,64 @@ const SALES_NAV: NavItem[] = [
  * 逐项按权限点 usePerm 过滤；完整权限菜单收敛随 SPEC-§30 动态权限二期统一。
  */
 const FINANCE_NAV: (NavItem & { permKey: string })[] = [
-  { to: "/admin/finance/manual-topup", label: "人工上账", icon: "✋", permKey: "finance.topup" },
-  { to: "/admin/finance/orders", label: "充值订单", icon: "🧾", permKey: "finance.topup" },
-  { to: "/admin/finance/refunds", label: "退款审核", icon: "↩️", permKey: "finance.refund" },
-  { to: "/admin/finance/invoices", label: "发票审核", icon: "📄", permKey: "finance.invoice" },
-  { to: "/admin/finance/reconciliation", label: "对账报表", icon: "📊", permKey: "finance.reconciliation" },
-  { to: "/admin/customers", label: "客户列表", icon: "📋", permKey: "customer.view" },
+  { to: "/admin/finance/manual-topup", label: "nav.financeTopup", icon: "✋", permKey: "finance.topup" },
+  { to: "/admin/finance/orders", label: "nav.financeOrders", icon: "🧾", permKey: "finance.topup" },
+  { to: "/admin/finance/refunds", label: "nav.financeRefunds", icon: "↩️", permKey: "finance.refund" },
+  { to: "/admin/finance/invoices", label: "nav.invoices", icon: "📄", permKey: "finance.invoice" },
+  { to: "/admin/finance/reconciliation", label: "nav.financeReconciliation", icon: "📊", permKey: "finance.reconciliation" },
+  { to: "/admin/customers", label: "nav.financeCustomers", icon: "📋", permKey: "customer.view" },
 ];
 
 const PORTAL_NAV: NavItem[] = [
-  { to: "/", label: "仪表盘", icon: "📊" },
-  { to: "/api-keys", label: "API Keys", icon: "🔑" },
-  { to: "/playground", label: "API 调试", icon: "🧪" },
-  { to: "/mj-tasks", label: "MJ/Suno 任务", icon: "🎨" },
-  { to: "/logs", label: "调用日志", icon: "📋" },
-  { to: "/recharge", label: "充值中心", icon: "💰" },
-  { to: "/topup-records", label: "充值记录", icon: "📋" },
-  { to: "/billing", label: "账单中心", icon: "📄" },
-  { to: "/invoices", label: "发票开具", icon: "🧾" },
-  { to: "/redemption", label: "兑换中心", icon: "🎟️" },
-  { to: "/announcements", label: "公告", icon: "📢" },
-  { to: "/real-name", label: "实名认证", icon: "🆔" },
-  { to: "/notification", label: "通知设置", icon: "🔔" },
-  { to: "/tickets", label: "我的工单", icon: "🎫" },
-  { to: "/chat", label: "在线客服", icon: "💬" },
-  { to: "/security", label: "安全中心", icon: "🛡️" },
-  { to: "/data-export", label: "数据导出", icon: "📦" },
-  { to: "/user-groups", label: "用户组", icon: "👥" },
-  { to: "/vendor-selector", label: "供应商选品", icon: "🏭" },
-  { to: "/account-deletion", label: "账号注销", icon: "🗑️" },
+  { to: "/", label: "nav.dashboard", icon: "📊" },
+  { to: "/api-keys", label: "nav.apiKeys", icon: "🔑" },
+  { to: "/playground", label: "nav.playground", icon: "🧪" },
+  { to: "/mj-tasks", label: "nav.mjTasks", icon: "🎨" },
+  { to: "/logs", label: "nav.logs", icon: "📋" },
+  { to: "/recharge", label: "nav.recharge", icon: "💰" },
+  { to: "/topup-records", label: "nav.topupRecords", icon: "📋" },
+  { to: "/billing", label: "nav.billing", icon: "📄" },
+  { to: "/invoices", label: "nav.invoices", icon: "🧾" },
+  { to: "/redemption", label: "nav.redemption", icon: "🎟️" },
+  { to: "/announcements", label: "nav.announcements", icon: "📢" },
+  { to: "/real-name", label: "nav.realName", icon: "🆔" },
+  { to: "/notification", label: "nav.notification", icon: "🔔" },
+  { to: "/tickets", label: "nav.tickets", icon: "🎫" },
+  { to: "/chat", label: "nav.chat", icon: "💬" },
+  { to: "/security", label: "nav.security", icon: "🛡️" },
+  { to: "/data-export", label: "nav.dataExport", icon: "📦", permKey: "portal.dataExport" },
+  { to: "/user-groups", label: "nav.userGroups", icon: "👥" },
+  { to: "/vendor-selector", label: "nav.vendorSelector", icon: "🏭" },
+  { to: "/account-deletion", label: "nav.accountDeletion", icon: "🗑️" },
 ];
 
 const AGENT_NAV: NavItem[] = [
-  { to: "/agent/dashboard", label: "代理工作台", icon: "📈" },
-  { to: "/agent/commission", label: "佣金记录", icon: "💰" },
-  { to: "/agent/consumption", label: "客户消费", icon: "📊" },
-  { to: "/agent/customers", label: "我的客户", icon: "👥" },
-  { to: "/agent/invite", label: "邀请客户", icon: "🔗" },
-  { to: "/agent/ranking", label: "业绩排行", icon: "🏆" },
-  { to: "/agent/withdraw", label: "提现管理", icon: "💳" },
-  { to: "/agent/settings", label: "代理设置", icon: "🏢" },
-  { to: "/agent/settlements", label: "结算对账", icon: "📑" },
+  { to: "/agent/dashboard", label: "nav.agentDashboard", icon: "📈" },
+  { to: "/agent/commission", label: "nav.agentCommission", icon: "💰" },
+  { to: "/agent/consumption", label: "nav.agentConsumption", icon: "📊" },
+  { to: "/agent/customers", label: "nav.agentCustomers", icon: "👥" },
+  { to: "/agent/invite", label: "nav.agentInvite", icon: "🔗" },
+  { to: "/agent/ranking", label: "nav.agentRanking", icon: "🏆" },
+  { to: "/agent/withdraw", label: "nav.agentWithdraw", icon: "💳" },
+  { to: "/agent/settings", label: "nav.agentSettings", icon: "🏢" },
+  { to: "/agent/settlements", label: "nav.agentSettlements", icon: "📑" },
 ];
 
 export default function ConsoleLayout() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const impersonatedBy = useAuthStore((s) => s.impersonatedBy);
+  const stopImpersonation = useAuthStore((s) => s.stopImpersonation);
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const { t } = useI18n();
+
+  // 角色标志（声明在授权状态查询之前，供其 enabled 条件使用）
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+  const isSales = user?.role === "sales";
+  const isAgent = user?.role === "agent";
+  const isFinance = user?.role === "finance";
+  const roleLabel = isAdmin ? "ADMIN" : isAgent ? "AGENT" : isSales ? "SALES" : isFinance ? "FINANCE" : "";
 
   const unreadQ = useQuery({
     queryKey: ["me-announcements-unread"],
@@ -201,19 +216,40 @@ export default function ConsoleLayout() {
     refetchInterval: 60000,
   });
 
+  /**
+   * 数据导出授权状态查询（PRD §4.1 + 验收 D1-D4）：
+   * 用户端「数据导出」菜单仅当 granted && isEnabled 时显示。
+   * 仅普通门户用户需要查询（管理员走独立后台授权管理页，不展示该入口）。
+   * 后端字段名优先匹配 PRD 契约 isEnabled，对接时对 enabled 命名做容错。
+   */
+  const dataExportGrantQ = useQuery({
+    queryKey: ["me-data-export-grant-status"],
+    queryFn: async () => {
+      const r = await api.get<{ data: { granted: boolean; isEnabled?: boolean; enabled?: boolean } }>(
+        "/me/data-export/grant-status",
+      );
+      const d = r.data.data;
+      return {
+        granted: !!d?.granted,
+        // 兼容 isEnabled / enabled 两种后端字段命名
+        enabled: !!(d?.isEnabled ?? d?.enabled),
+      };
+    },
+    // 非管理员门户用户才触发查询；管理员/代理/销售/财务角色不查询（避免多余请求）
+    enabled: !isAdmin && !isAgent && !isSales && !isFinance,
+    retry: false,
+  });
+  /** 门户「数据导出」菜单显隐条件 = granted && isEnabled（PRD §4.1） */
+  const canDataExport = !!(dataExportGrantQ.data?.granted && dataExportGrantQ.data?.enabled);
+
   const toggleGroup = (name: string) => {
     setCollapsed(prev => {
       const next = new Set(prev);
-      next.has(name) ? next.delete(name) : next.add(name);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
       return next;
     });
   };
-
-  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
-  const isSales = user?.role === "sales";
-  const isAgent = user?.role === "agent";
-  const isFinance = user?.role === "finance";
-  const roleLabel = isAdmin ? "ADMIN" : isAgent ? "AGENT" : isSales ? "SALES" : isFinance ? "FINANCE" : "";
 
   // 财务导航逐项权限点（usePerm 为 hook，固定次数顶层调用，避免条件调用）
   const finPerms: Record<string, boolean> = {
@@ -223,6 +259,18 @@ export default function ConsoleLayout() {
     "finance.reconciliation": usePerm("finance.reconciliation"),
     "customer.view": usePerm("customer.view"),
   };
+
+  // 管理端菜单权限点（usePerm 固定次数顶层调用，避免在 JSX map 内条件调用）
+  // 数据导出授权管理：查看权限点 dataExportGrant.view（PRD §9 / 验收 F1）
+  const adminPerms: Record<string, boolean> = {
+    "dataExportGrant.view": usePerm("dataExportGrant.view"),
+    "dataExportGrant.edit": usePerm("dataExportGrant.edit"),
+  };
+
+  /** 管理端导航：组内菜单项按权限点过滤（无权限项的组整组隐藏） */
+  const adminNavGroups = ADMIN_NAV
+    .map(g => ({ ...g, items: g.items.filter(it => !it.permKey || adminPerms[it.permKey]) }))
+    .filter(g => g.items.length > 0);
 
   const handleLogout = () => { logout(); navigate("/login"); };
 
@@ -235,44 +283,84 @@ export default function ConsoleLayout() {
         <nav style={{ flex: 1, overflowY: "auto", marginTop: 4 }}>
           {/* ── Admin ── */}
           {isAdmin && <>
-            <SidebarLink to="/admin/cockpit" icon="🚀" label="数据驾驶舱" />
-            <SidebarLink to="/admin/dashboard" icon="📊" label="业务看板" />
-            {ADMIN_NAV.map(g => (
+            <SidebarLink to="/admin/cockpit" icon="🚀" label={t("nav.adminCockpit")} />
+            <SidebarLink to="/admin/dashboard" icon="📊" label={t("nav.adminDashboard")} />
+            {adminNavGroups.map(g => (
               <div key={g.group}>
                 <div onClick={() => toggleGroup(g.group)} style={{ padding: "12px 20px", display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#666", cursor: "pointer", userSelect: "none" }}>
-                  <span>{g.icon}</span><span style={{ flex: 1 }}>{g.group}</span>
+                  <span>{g.icon}</span><span style={{ flex: 1 }}>{t(g.group)}</span>
                   <span style={{ fontSize: 10, transform: collapsed.has(g.group) ? "rotate(0deg)" : "rotate(90deg)", transition: "transform .2s" }}>▶</span>
                 </div>
                 {!collapsed.has(g.group) && g.items.map(item => (
-                  <SidebarSubLink key={item.to} to={item.to} label={item.label} icon={item.icon} />
+                  <SidebarSubLink key={item.to} to={item.to} label={t(item.label)} icon={item.icon} />
                 ))}
               </div>
             ))}
           </>}
 
           {/* ── Agent ── */}
-          {isAgent && AGENT_NAV.map(item => <SidebarLink key={item.to} to={item.to} icon={item.icon} label={item.label} />)}
+          {isAgent && AGENT_NAV.map(item => <SidebarLink key={item.to} to={item.to} icon={item.icon} label={t(item.label)} />)}
 
           {/* ── Sales ── */}
           {isSales && <>
-            <div style={{ padding: "16px 20px 6px", fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>业务员工作台</div>
-            {SALES_NAV.map(item => <SidebarLink key={item.to} to={item.to} icon={item.icon} label={item.label} />)}
+            <div style={{ padding: "16px 20px 6px", fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>{t("nav.salesWorkbench")}</div>
+            {SALES_NAV.map(item => <SidebarLink key={item.to} to={item.to} icon={item.icon} label={t(item.label)} />)}
           </>}
 
           {/* ── Finance（最小财务导航，逐项权限点过滤） ── */}
           {isFinance && <>
-            <div style={{ padding: "16px 20px 6px", fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>财务工作台</div>
+            <div style={{ padding: "16px 20px 6px", fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>{t("nav.financeWorkbench")}</div>
             {FINANCE_NAV.filter(item => finPerms[item.permKey] ?? false).map(item => (
-              <SidebarLink key={item.to} to={item.to} icon={item.icon} label={item.label} />
+              <SidebarLink key={item.to} to={item.to} icon={item.icon} label={t(item.label)} />
             ))}
           </>}
 
           {/* ── User portal ── */}
-          {!isAdmin && !isAgent && !isSales && !isFinance && PORTAL_NAV.map(item => <SidebarLink key={item.to} to={item.to} icon={item.icon} label={item.label} />)}
+          {!isAdmin && !isAgent && !isSales && !isFinance && PORTAL_NAV
+            .filter(item => !(item.permKey === "portal.dataExport" && !canDataExport)) // 数据导出菜单按授权状态条件渲染（PRD §4.1）
+            .map(item => <SidebarLink key={item.to} to={item.to} icon={item.icon} label={t(item.label)} />)}
         </nav>
       </aside>
 
       <div style={{ marginLeft: 220, flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        {/* 模拟模式横幅 — PRD §5.4：impersonatedBy 存在时常驻显示，一键退出模拟 */}
+        {impersonatedBy && user && (
+          <div
+            style={{
+              background: "#fff3cd",
+              borderBottom: "2px solid #ffc107",
+              color: "#7a4f01",
+              padding: "8px 20px",
+              fontSize: 13,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+              zIndex: 120,
+              position: "sticky",
+              top: 0,
+            }}
+          >
+            <span style={{ fontWeight: 600 }}>
+              🔓 正在以 {user.email} 身份查看（由 {impersonatedBy.email} 模拟）
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <HelpIcon text="当前正以目标用户身份模拟登录客户后台，用于排障/演示。模拟期间敏感资金与权限写操作被禁用，操作全程留痕；点击「退出模拟」恢复原管理员会话。" />
+              <button
+                type="button"
+                className="c3-btn c3-btn--default c3-btn--sm"
+                style={{ fontWeight: 600, borderColor: "#b8860b", color: "#7a4f01" }}
+                onClick={() => {
+                  stopImpersonation();
+                  navigate("/admin/customers");
+                }}
+              >
+                退出模拟
+              </button>
+            </span>
+          </div>
+        )}
         <PageHeaderProvider>
           <TopbarAndOutlet userEmail={user?.email ?? ""} roleLabel={roleLabel} balance={user?.balance ?? 0} unread={unreadQ.data} isAdmin={isAdmin || isFinance} onLogout={handleLogout} />
         </PageHeaderProvider>
@@ -295,6 +383,7 @@ function TopbarAndOutlet(props: {
   onLogout: () => void;
 }) {
   const { userEmail, roleLabel, balance, unread, isAdmin, onLogout } = props;
+  const { t, lang, setLanguage } = useI18n();
   const info = usePageHeader();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -313,21 +402,25 @@ function TopbarAndOutlet(props: {
         </div>
         <div className="c3-topbar__right">
           <span className="c3-user-email">{userEmail}</span>
-          <Link to="/announcements" className="c3-bell" aria-label="通知">
+          <Link to="/announcements" className="c3-bell" aria-label={t("topbar.notifications")}>
             🔔{unread ? <span className="c3-bell__badge">{unread > 99 ? "99+" : unread}</span> : null}
           </Link>
+
+          {/* ── 语言切换下拉（8 语言；保持当前路由不跳走、不清空表单） ── */}
+          <LanguageSwitcher lang={lang} onSelect={setLanguage} />
+
           <div className={`c3-action-dropdown${menuOpen ? " c3-action-dropdown--open" : ""}`}>
             <button type="button" className="c3-action-trigger" onClick={() => setMenuOpen(o => !o)}>
-              {roleLabel || "账户"} <span style={{ fontSize: 10 }}>▼</span>
+              {roleLabel || t("topbar.account")} <span style={{ fontSize: 10 }}>▼</span>
             </button>
             <div className="c3-dropdown-menu" onMouseLeave={() => setMenuOpen(false)}>
-              <div className="c3-dropdown-menu__item" onClick={() => { setMenuOpen(false); navigate("/security"); }}>个人设置</div>
-              <div className="c3-dropdown-menu__item" onClick={() => { setMenuOpen(false); navigate("/security"); }}>修改密码</div>
+              <div className="c3-dropdown-menu__item" onClick={() => { setMenuOpen(false); navigate("/security"); }}>{t("topbar.personalSettings")}</div>
+              <div className="c3-dropdown-menu__item" onClick={() => { setMenuOpen(false); navigate("/security"); }}>{t("topbar.changePassword")}</div>
               {!isAdmin && (
-                <div className="c3-dropdown-menu__item" onClick={() => { setMenuOpen(false); navigate("/recharge"); }}>余额: ¥{balance.toLocaleString("zh-CN", { maximumFractionDigits: 2 })}</div>
+                <div className="c3-dropdown-menu__item" onClick={() => { setMenuOpen(false); navigate("/recharge"); }}>{t("topbar.balance")}: {fmtMoney(balance)}</div>
               )}
               <div className="c3-dropdown-menu__divider" />
-              <div className="c3-dropdown-menu__item c3-dropdown-menu__item--danger" onClick={onLogout}>退出登录</div>
+              <div className="c3-dropdown-menu__item c3-dropdown-menu__item--danger" onClick={onLogout}>{t("common.logout")}</div>
             </div>
           </div>
         </div>
@@ -337,6 +430,59 @@ function TopbarAndOutlet(props: {
         <Outlet />
       </main>
     </>
+  );
+}
+
+/** 顶栏语言切换下拉：8 语言，切换后调 setLanguage（保持当前路由与表单状态）。 */
+function LanguageSwitcher({ lang, onSelect }: { lang: I18nLang; onSelect: (l: I18nLang) => void }) {
+  const [open, setOpen] = useState(false);
+  const labelMap: Record<I18nLang, string> = {
+    "zh-CN": "简体中文",
+    en: "English",
+    "ja-JP": "日本語",
+    "ko-KR": "한국어",
+    vi: "Tiếng Việt",
+    th: "ไทย",
+    id: "Bahasa Indonesia",
+    fil: "Filipino",
+  };
+  return (
+    <div style={{ position: "relative", display: "inline-flex" }}>
+      <button
+        type="button"
+        aria-label="Switch language"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          background: "transparent", border: "1px solid rgba(0,0,0,.12)", borderRadius: 6,
+          padding: "4px 10px", cursor: "pointer", fontSize: 13,
+        }}
+      >
+        🌐 {labelMap[lang]}
+      </button>
+      {open && (
+        <div
+          style={{
+            position: "absolute", right: 0, top: "100%", marginTop: 4, zIndex: 200,
+            background: "#fff", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8,
+            boxShadow: "0 4px 16px rgba(0,0,0,.12)", padding: 4, minWidth: 150,
+          }}
+        >
+          {CONSOLE_LANGS.map(l => (
+            <button
+              key={l}
+              type="button"
+              onClick={() => { onSelect(l); setOpen(false); }}
+              style={{
+                display: "block", width: "100%", textAlign: "left", background: l === lang ? "#eef2ff" : "transparent",
+                border: "none", borderRadius: 6, padding: "8px 12px", cursor: "pointer", fontSize: 13,
+              }}
+            >
+              {labelMap[l]}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

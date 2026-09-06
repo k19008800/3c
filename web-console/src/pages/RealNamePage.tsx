@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
-import { HelpIcon, StatusBadge, Modal, useToast } from "@3cloud/shared-ui";
+import { HelpIcon, Modal, useToast } from "@3cloud/shared-ui";
 
 /**
  * 实名认证 — 对齐原型 portal-verification.html
@@ -167,15 +167,6 @@ export default function RealNamePage() {
     const reader = new FileReader();
     reader.onload = (ev) => setter(ev.target?.result as string);
     reader.readAsDataURL(file);
-  };
-
-  const getStatusBadge = () => {
-    const currentSt = verifyStatus;
-    switch (currentSt) {
-      case "verified": return <StatusBadge status="success">已认证</StatusBadge>;
-      case "review": return <StatusBadge status="warning">审核中</StatusBadge>;
-      default: return <StatusBadge status="default">未认证</StatusBadge>;
-    }
   };
 
   /* ========== Render ========== */

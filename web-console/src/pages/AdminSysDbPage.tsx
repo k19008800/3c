@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api, extractError } from "../lib/api";
+import { api } from "../lib/api";
 import { HelpIcon } from "@3cloud/shared-ui";
 
 /**

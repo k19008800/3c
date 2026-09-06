@@ -4,7 +4,6 @@ import { api } from "../lib/api";
 import {
   HelpIcon,
   Table,
-  StatusBadge,
   SkeletonGroup,
   EmptyState,
 } from "@3cloud/shared-ui";

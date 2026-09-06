@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "../lib/api";
-import { HelpIcon, Table, StatusBadge, Modal, useToast } from "@3cloud/shared-ui";
+import { HelpIcon, Modal, useToast } from "@3cloud/shared-ui";
 
 interface UndoRecord { id: number; operation_type: string; operation_label: string; target_type: string; target_id: number; operator_id: number; operator_name: string; snapshot: any; reverted: boolean; expires_at: string; created_at: string; }
 

@@ -25,7 +25,6 @@ import AgentSettlementPage from "./pages/AgentSettlementPage";
 import AgentWithdrawPage from "./pages/AgentWithdrawPage";
 import AdminAffiliatePage from "./pages/AdminAffiliatePage";
 import AdminAgentsPage from "./pages/AdminAgentsPage";
-import AdminApikeySecurityPage from "./pages/AdminApikeySecurityPage";
 import AdminWithdrawalsPage from "./pages/AdminWithdrawalsPage";
 import AdminI18nPage from "./pages/AdminI18nPage";
 import AdminModelsPage from "./pages/AdminModelsPage";
@@ -43,7 +42,6 @@ import AdminSmtpSettingsPage from "./pages/admin/AdminSmtpSettingsPage";
 import AdminCampaignsPage from "./pages/AdminCampaignsPage";
 import AdminActivityPage from "./pages/AdminActivityPage";
 import NotificationPage from "./pages/NotificationPage";
-import AdminVendorSettlementsPage from "./pages/AdminVendorSettlementsPage";
 import AdminFinancePage from "./pages/AdminFinancePage";
 import AdminFundsAccountsPage from "./pages/AdminFundsAccountsPage";
 import AdminClosePage from "./pages/AdminClosePage";
@@ -68,6 +66,7 @@ import SalesPerformancePage from "./pages/SalesPerformancePage";
 import AdminCustomersPage from "./pages/AdminCustomersPage";
 import AdminGroupsPage from "./pages/AdminGroupsPage";
 import AdminDataRequestPage from "./pages/AdminDataRequestPage";
+import AdminDataExportGrantPage from "./pages/AdminDataExportGrantPage";
 import AdminConversationRecordsPage from "./pages/AdminConversationRecordsPage";
 import AdminDiscountEnginePage from "./pages/AdminDiscountEnginePage";
 import AdminDisputePage from "./pages/AdminDisputePage";
@@ -293,6 +292,8 @@ export default function App() {
         <Route path="admin/config/webhooks" element={<AdminWebhooksPage />} />
         <Route path="admin/config/cache" element={<AdminSysCachePage />} />
         <Route path="admin/config/compliance" element={<AdminConsentPage />} />
+        {/* 数据导出授权管理（PRD §5.2）：按用户维度定向授权，挂在客户管理组 */}
+        <Route path="admin/config/data-export-grants" element={<AdminDataExportGrantPage />} />
         {/* ── 审计合规 ── */}
         <Route path="admin/audit/login-logs" element={<AdminAuditLogPage />} />
         <Route path="admin/audit/operations" element={<AdminAuditLogPage />} />
@@ -339,6 +340,7 @@ export default function App() {
         <Route path="help" element={<HelpCenterPage />} />
         <Route path="account-deletion" element={<DeletionPage />} />
         <Route path="user-groups" element={<UserGroupsPage />} />
+        <Route path="me/channels" element={<VendorSelectorPage />} />
         <Route path="vendor-selector" element={<VendorSelectorPage />} />
         <Route path="sales/customers" element={<SalesCustomersPage />} />
         <Route path="sales/customers/:userId" element={<SalesCustomerDetailPage />} />

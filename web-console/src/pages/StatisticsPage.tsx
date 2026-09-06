@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Chart, registerables } from "chart.js";
-import { api } from "../lib/api";
 import {
   HelpIcon,
   Table,

@@ -7,7 +7,7 @@ const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, 
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
 
 export default function AdminRiskPage() {
-  const [period, setPeriod] = useState("today");
+  const [period] = useState("today");
 
   const riskQ = useQuery({
     queryKey: ["admin-risk-dashboard", period],

@@ -44,7 +44,7 @@ vi.mock("../lib/api", () => ({
     patch: vi.fn(),
     put: vi.fn(),
   },
-  extractError: (err: unknown) => "mock-error",
+  extractError: () => "mock-error",
 }));
 
 const adminUser: User = {

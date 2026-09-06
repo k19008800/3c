@@ -10,6 +10,7 @@ set -euo pipefail
 BRANCH=${1:-main}
 PROJECT_DIR="/root/3cloud"
 API_DIR="$PROJECT_DIR/api"
+BACKUP_DIR="${BACKUP_DIR:-/var/backups/3cloud}"
 LOG_PREFIX="[3cloud-deploy]"
 
 echo "$LOG_PREFIX 部署开始 branch=$BRANCH time=$(date)"
@@ -26,36 +27,47 @@ git fetch origin
 git checkout "$BRANCH"
 git pull origin "$BRANCH"
 
+# Load production variables for build-time migrations and runtime checks.
+if [ ! -f "$API_DIR/.env" ]; then
+  echo "❌ missing $API_DIR/.env (production config must be created first)"
+  exit 1
+fi
+set -a
+. "$API_DIR/.env"
+set +a
+
 # 2. 安装依赖（pnpm workspace）
 corepack enable 2>/dev/null || true
 pnpm install --frozen-lockfile
 
-# 3. 构建（shared → api → web-console → web-portal）
+# 3. 构建（先把 Console dist 合入 Portal /app，再构建全部包）
+node scripts/prepare-app.cjs
 pnpm build
 
-# 4. 数据库迁移
-# ⚠️ 分区表（consumption_records/balance_transactions）为手工 DDL migration 0025，
-#    用 node 脚本直跑（db:push 有 TTY 交互坑，且无法表达分区 DDL）
-echo "$LOG_PREFIX 应用迁移..."
-if [ -f "$API_DIR/run-migrations-0017-0022.cjs" ]; then
-  (cd "$API_DIR" && node run-migrations-0017-0022.cjs)
-fi
-# 其余 migration 按需：node api/apply-migrations.cjs（若存在）
+# 4. 数据库备份 + 迁移
+echo "$LOG_PREFIX 迁移前备份..."
+mkdir -p "$BACKUP_DIR"
+BACKUP_FILE="$BACKUP_DIR/threecloud_v3-$(date +%Y%m%d-%H%M%S).dump"
+pg_dump --dbname="$DATABASE_URL" --format=custom --file="$BACKUP_FILE"
+echo "✅ backup: $BACKUP_FILE"
 
-# 5. 数据库备份（迁移前已做？建议迁移前先备份一次）
-echo "$LOG_PREFIX 迁移前备份：pg_dump ..."
+echo "$LOG_PREFIX 应用 drizzle journal migrations..."
+pnpm --filter @3cloud/api db:migrate
+echo "$LOG_PREFIX 应用 hand-written migrations 0017-0032..."
+(cd "$API_DIR" && pnpm run db:migrate:manual)
 
-# 6. PM2 部署 api + worker
+# 5. PM2 部署 API + Portal
 cd "$PROJECT_DIR"
-pm2 reload ecosystem.config.js --update-env || pm2 start ecosystem.config.js
+mkdir -p /var/log/3cloud
+pm2 reload deploy/ecosystem.config.js --update-env || pm2 start deploy/ecosystem.config.js --env production
 
-# 7. 同步前端产物到 Nginx 目录
+# 6. 同步前端产物到 Nginx 目录
 # web-console dist 已由 prepare-app 合入 web-portal/public/app/，web-portal build 后整体部署
 # 实际路径以生产 nginx 配置为准（宝塔 /www/wwwroot/3c/）
 # rsync -a --delete "$PROJECT_DIR/web-portal/.next/standalone/" /www/wwwroot/3c/portal/
 # rsync -a --delete "$PROJECT_DIR/web-portal/.next/static/" /www/wwwroot/3c/portal/_next/static/
 
-# 8. 验证
+# 7. 验证
 sleep 3
 curl -sf http://localhost:3000/health | grep -q '"status":"ok"' && echo "✅ 健康检查通过" || { echo "❌ 健康检查失败"; exit 1; }
 curl -sf http://localhost:3000/docs -o /dev/null && echo "✅ Swagger 可访问" || echo "⚠️ Swagger 不可访问（检查）"

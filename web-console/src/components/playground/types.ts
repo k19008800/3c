@@ -25,6 +25,21 @@ export interface ModelRow {
   context?: number;
   inputPrice: number;
   outputPrice: number;
+  channels?: Array<{
+    channel_code: string;
+    channel_name: string;
+    input_price: string | number;
+    output_price: string | number;
+    cache_read_input_price?: string | number | null;
+    cache_write_input_price?: string | number | null;
+    pricing_group?: string | null;
+    status?: string | null;
+    health?: number | null;
+    latency_ms?: number | null;
+    recommended?: boolean | null;
+    credit?: string | null;
+    maintenance?: boolean | null;
+  }>;
 }
 
 /** 单个 SSE 事件（chat 流只有 data 行，event 名为 null；Responses 流带 event 名） */
@@ -59,4 +74,5 @@ export interface PlaygroundTabProps {
   onSelectedKeyId: (id: number | null) => void;
   onFullKey: (v: string) => void;
   models?: ModelRow[];
+  initialModel?: string;
 }

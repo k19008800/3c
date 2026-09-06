@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
-import { HelpIcon, StatusBadge, useToast } from "@3cloud/shared-ui";
+import { HelpIcon, useToast } from "@3cloud/shared-ui";
 
 /**
  * 账号注销与数据管理 — 对齐原型 portal-account-deletion.html
@@ -25,11 +25,6 @@ const btn: React.CSSProperties = {
 const btnPrimary: React.CSSProperties = { ...btn, border: "none", background: "var(--color-primary)", color: "#fff" };
 const btnDanger: React.CSSProperties = { ...btn, border: "1px solid var(--color-danger-text)", color: "var(--color-danger-text)" };
 const btnWarning: React.CSSProperties = { ...btn, border: "1px solid #ffa726", color: "#ffa726" };
-const inp: React.CSSProperties = {
-  width: "100%", padding: "10px 14px", borderRadius: 6, border: "1px solid var(--color-border)",
-  background: "var(--color-panel)", color: "var(--color-text)", fontSize: 14,
-  outline: "none", boxSizing: "border-box", fontFamily: "inherit",
-};
 
 type ViewMode = "normal" | "pending";
 
@@ -65,20 +60,6 @@ export default function DeletionPage() {
   const [deletionCodeCountdown, setDeletionCodeCountdown] = useState(0);
   const [cancelCodeCountdown, setCancelCodeCountdown] = useState(0);
   const [countdownText, setCountdownText] = useState("");
-
-  // Checks from backend
-  const checksQ = useQuery({
-    queryKey: ["me/deletion/checks"],
-    queryFn: () => api.get("/me/deletion/checks").then((r) => r.data.data),
-  });
-  const checks = checksQ.data as any;
-  const allPassed = checks?.passed ?? true;
-
-  // Deletion status
-  const statusQ = useQuery({
-    queryKey: ["me/deletion/status"],
-    queryFn: () => api.get("/me/deletion/status").then((r) => r.data.data),
-  });
 
   // Mutations
   const requestMut = useMutation({
@@ -429,7 +410,8 @@ export default function DeletionPage() {
                   checked={selectedScopes.has(scope.key)}
                   onChange={() => {
                     const next = new Set(selectedScopes);
-                    next.has(scope.key) ? next.delete(scope.key) : next.add(scope.key);
+                    if (next.has(scope.key)) next.delete(scope.key);
+                    else next.add(scope.key);
                     setSelectedScopes(next);
                   }}
                   style={{ width: 16, height: 16, accentColor: "var(--color-primary)" }}

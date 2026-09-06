@@ -2,10 +2,15 @@
  * Portal 轻量 i18n 层（P2-3）— 零新增依赖
  *
  * 方案（已文档化取舍）：
- * - 语言：zh-CN（默认）/ en；语言选择存 cookie（3cloud_portal_lang），
- *   页面同时支持 ?lang=en 查询参数（优先级高于 cookie），便于 hreflang/SEO 直链。
+ * - 语言：8 种（zh-CN 默认 + en/ja-JP/ko-KR/vi/th/id/fil），对齐后端白名单
+ *   api/src/lib/i18n-langs.ts（docs/多语言i18n改造方案.md §2.1 统一语言模型）。
+ *   语言选择存 cookie（3cloud_portal_lang），页面同时支持 ?lang=xxx 查询参数
+ *   （优先级高于 cookie），便于 hreflang/SEO 直链。
  *   未采用 SPEC-§23 建议的 /zh /en URL 子路径（全站改造量大、破坏既有 URL 与
  *   控制台 redirects），取舍说明见最终交付报告。
+ * - 数据源：服务端拉取 GET /api/v1/public/i18n/entries?lang=xx（no-store），
+ *   返回 { key: value } 映射；8 语言词典由 seed 提供，vi/th/id/fil 部分条目为
+ *   英文占位【待翻译】，缺 key 时按下方回退策略显示英文原文。
  * - 数据源：服务端拉取 GET /api/v1/public/i18n/entries?lang=xx（no-store），
  *   返回 { key: value } 映射；只含 status='active' + scope='portal' 的条目。
  * - 回退：英文为默认源语（EN_DEFAULTS 内嵌英文原文）；任何语言缺 key 时
@@ -15,7 +20,20 @@
  * @module lib/i18n
  */
 
-export const PORTAL_LANGS = ["zh-CN", "en"] as const;
+/**
+ * Portal 支持语言（8 种，与后端 i18n-langs 白名单一致）
+ * @see api/src/lib/i18n-langs.ts I18N_LANGS
+ */
+export const PORTAL_LANGS = [
+  "zh-CN",
+  "en",
+  "ja-JP",
+  "ko-KR",
+  "vi",
+  "th",
+  "id",
+  "fil",
+] as const;
 export type PortalLang = (typeof PORTAL_LANGS)[number];
 export const DEFAULT_LANG: PortalLang = "zh-CN";
 /** 语言 cookie 名（前端语言切换器写入） */
@@ -155,10 +173,15 @@ export const EN_DEFAULTS: Record<string, string> = {
   "help.blogPost": "Blog post: article content. Role: all visitors.",
 };
 
-/** 规范化语言代码：仅接受 en，其余回落 zh-CN */
+/**
+ * 规范化语言代码：命中 8 语言白名单（大小写不敏感）则返回规范形，否则回落 zh-CN。
+ * 与后端 normalizeI18nLang 语义对齐（见 api/src/lib/i18n-langs.ts）。
+ */
 export function normalizeLang(v: string | null | undefined): PortalLang {
-  if (v === "en") return "en";
-  return "zh-CN";
+  if (!v) return DEFAULT_LANG;
+  const flat = v.toLowerCase().replace(/[-_\s]/g, "");
+  const hit = PORTAL_LANGS.find((l) => l.toLowerCase().replace(/[-_\s]/g, "") === flat);
+  return hit ?? DEFAULT_LANG;
 }
 
 /** 解析语言：查询参数（?lang=）优先，其次 cookie，最后默认 zh-CN */
@@ -198,16 +221,14 @@ export function makeT(dict: Record<string, string>) {
 }
 
 /**
- * 站点 metadata alternates（hreflang 最佳实践；cookie 方案下 en 用 ?lang=en 直链）
+ * 站点 metadata alternates（hreflang 最佳实践；cookie 方案下非默认语言用 ?lang= 直链）
  *
  * @param path - 当前页面路径（默认根路径）
  */
 export function siteAlternates(path = "/") {
-  const enHref = path === "/" ? "/?lang=en" : `${path}?lang=en`;
-  return {
-    languages: {
-      "zh-CN": path,
-      "en": enHref,
-    },
-  };
+  const languages: Record<string, string> = {};
+  for (const lang of PORTAL_LANGS) {
+    languages[lang] = lang === DEFAULT_LANG ? path : `${path}?lang=${encodeURIComponent(lang)}`;
+  }
+  return { languages };
 }

@@ -81,7 +81,7 @@ export default function AdminI18nPage() {
         if (new Date(it.updated_at) > new Date(row.updated_at)) row.updated_at = it.updated_at;
       }
       setRows([...byKey.values()]);
-    } catch {}
+    } catch { /* 拉取失败：保持现有行 */ }
   }
 
   function langValue(row: I18nRow, l: { code: string; lang: string }): string {

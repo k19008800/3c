@@ -2,11 +2,12 @@
  * #26 专项 — 结算/对账资金写操作的操作级 2FA 契约测试。
  *
  * 覆盖 R7（ARCH v1.1 §4.4）：所有资金写端点必须由 requireOperation2fa 强制操作级 2FA。
- * 本次收口挂载的 4 个端点：
+ * 本次收口挂载的端点：
  *   - POST /admin/vendor-settlements/:id/confirm          结算单确认
  *   - POST /admin/finance/close/execute                   月结锁账
  *   - POST /admin/finance/close/:period/unlock            超管临时解锁
  *   - POST /admin/settlements/:id/settle                  供应商标记已结算
+ *   - POST /admin/reconciliation/diffs/:id/:op            对账差异处理（补账/核销，T-04）
  *
  * 契约断言（每个端点）：
  *   - 缺 X-Operation-Token → 403 OPERATION_2FA_REQUIRED
@@ -21,6 +22,7 @@ import { generateAccessToken } from '../services/auth/jwt.js';
 import { financeDashboardRoutes } from './admin-finance.js';
 import { adminVendorSettlementsRoutes } from './admin-vendor-settlements.js';
 import { adminFinanceStatsRoutes } from './admin-finance-stats.js';
+import { adminFinanceMissingRoutes } from './admin-finance-missing.js';
 import { enableTest2fa, op2faHeaders, clearCreditCounters } from './test-helpers.js';
 
 process.env.JWT_SECRET = 'test-admin-settlement-2fa-secret';
@@ -45,6 +47,7 @@ beforeAll(async () => {
   await app.register(financeDashboardRoutes);
   await app.register(adminVendorSettlementsRoutes);
   await app.register(adminFinanceStatsRoutes);
+  await app.register(adminFinanceMissingRoutes);
   await app.ready();
 
   // 操作人（admin + super_admin）启用 2FA
@@ -76,10 +79,24 @@ beforeAll(async () => {
   const stRows = await db.select().from(schema.vendorSettlements)
     .where(and(eq(schema.vendorSettlements.supplierId, supplierId), eq(schema.vendorSettlements.period, '2099-01')));
   settlementId = stRows[0]!.id;
+
+  // 对账差异（diffs 端点，T-04 补账/核销语义）：注入一条 unresolved 差异
+  await db.insert(schema.systemConfig).values({
+    key: 'reconciliation_diffs',
+    value: JSON.stringify([{
+      id: 900001, created_at: '2099-01-01T00:00:00.000Z', vendor_name: 'settle-2fa-supplier',
+      diff_type: 'amount', platform_amount: 100, vendor_amount: 99.5, amount_diff: 0.5, status: 'unresolved',
+    }]),
+    description: 'test diff (2fa)',
+  }).onConflictDoUpdate({ target: schema.systemConfig.key, set: { value: JSON.stringify([{
+    id: 900001, created_at: '2099-01-01T00:00:00.000Z', vendor_name: 'settle-2fa-supplier',
+    diff_type: 'amount', platform_amount: 100, vendor_amount: 99.5, amount_diff: 0.5, status: 'unresolved',
+  }]) } });
 });
 
 afterAll(async () => {
   try {
+    await db.delete(schema.systemConfig).where(eq(schema.systemConfig.key, 'reconciliation_diffs'));
     await db.delete(schema.user2fa).where(inArray(schema.user2fa.userId, [adminId, superId]));
     await db.delete(schema.vendorSettlements).where(eq(schema.vendorSettlements.supplierId, supplierId));
     await db.delete(schema.suppliers).where(eq(schema.suppliers.id, supplierId));
@@ -164,5 +181,27 @@ describe('结算/对账资金写操作 · 操作级 2FA（#26）', () => {
       headers: op2faHeaders(adminToken(), adminId, ADMIN_EMAIL, 'admin'),
     });
     expect(ok.statusCode).toBe(200);
+  });
+
+  it('POST /reconciliation/diffs/:id/resolve — 补账/核销差异处理：缺令牌 403 REQUIRED；带令牌 200；同令牌重放 403 REPLAYED', async () => {
+    const noToken = await app.inject({
+      method: 'POST',
+      url: '/api/v1/admin/reconciliation/diffs/900001/resolve',
+      headers: { authorization: `Bearer ${adminToken()}` },
+    });
+    expect(noToken.statusCode).toBe(403);
+    expect(noToken.json().code).toBe('OPERATION_2FA_REQUIRED');
+
+    const opHeaders = op2faHeaders(adminToken(), adminId, ADMIN_EMAIL, 'admin');
+    const ok = await app.inject({
+      method: 'POST', url: '/api/v1/admin/reconciliation/diffs/900001/resolve', headers: opHeaders, payload: { reason: 'test' },
+    });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json().data?.status).toBe('resolved');
+    const replay = await app.inject({
+      method: 'POST', url: '/api/v1/admin/reconciliation/diffs/900001/ignore', headers: opHeaders, payload: { reason: 'test' },
+    });
+    expect(replay.statusCode).toBe(403);
+    expect(replay.json().code).toBe('OPERATION_2FA_REPLAYED');
   });
 });

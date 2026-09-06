@@ -1,537 +1,227 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../lib/api";
-import { HelpIcon, SkeletonGroup } from "@3cloud/shared-ui";
+import { useNavigate } from "react-router-dom";
+import { api, extractError } from "../lib/api";
+import { HelpIcon, SkeletonGroup, EmptyState } from "@3cloud/shared-ui";
+import { ChannelPriceMatrixModal } from "../components/ChannelPriceMatrixModal";
+import {
+  availableChannels,
+  buildSelectionPreview,
+  dedupeModelOptions,
+  getChannelStatusLabel,
+  getModelChannels,
+  isChannelSelectable,
+  sortChannels,
+  type ChannelPricingRow,
+  type MeModelRow,
+  type ModelChannelsResponse,
+} from "../lib/channelization";
 
-/* ============ 类型 ============ */
-interface Vendor {
-  id: string;
-  name: string;
-  desc: string;
-  logoColor: string;
-  logoText: string;
-  inputPrice: number;
-  outputPrice: number;
-  credit: string;
-  creditClass: string;
-  recommended: boolean;
-  recommendReason?: string;
-  health: number;
-  latency: number;
-  maintenance: boolean;
+const card: React.CSSProperties = { background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.06)", marginBottom: 20 };
+const btnBase: React.CSSProperties = { padding: "10px 18px", borderRadius: 8, border: "1px solid var(--color-border)", cursor: "pointer", fontWeight: 600, fontSize: 14, display: "inline-flex", alignItems: "center", gap: 6 };
+
+function unwrapList<T>(data: T[] | { data?: T[] | { list?: T[] } }): T[] {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.data)) return data.data;
+  if (data.data && !Array.isArray(data.data) && Array.isArray(data.data.list)) return data.data.list;
+  return [];
 }
 
-interface ModelOption {
-  id: string;
-  label: string;
-  vendors: Vendor[];
+function unwrapChannels(data: ModelChannelsResponse | { data?: ModelChannelsResponse }): ModelChannelsResponse {
+  return "channels" in data ? data : data.data ?? { model: "", channels: [] };
 }
 
-/* ============ 模拟模型-厂商数据（后端缺失 /vendors/by-model） ============ */
-const MODEL_VENDORS: Record<string, Vendor[]> = {
-  "glm-5.2": [
-    { id: "vendor_a", name: "智谱AI", desc: "原厂直供，官方授权服务商", logoColor: "#4f6ef7", logoText: "智", inputPrice: 1.00, outputPrice: 2.00, credit: "AAA", creditClass: "aaa", recommended: true, recommendReason: "原厂直供，稳定性最高，响应速度最优", health: 99, latency: 180, maintenance: false },
-    { id: "vendor_b", name: "云厂商B", desc: "规模化部署，高性价比之选", logoColor: "#e67e22", logoText: "B", inputPrice: 0.80, outputPrice: 1.60, credit: "AA", creditClass: "aa", recommended: false, health: 97, latency: 210, maintenance: false },
-    { id: "vendor_c", name: "云厂商C", desc: "经济型选择，适合低频调用", logoColor: "#16a085", logoText: "C", inputPrice: 0.70, outputPrice: 1.40, credit: "A", creditClass: "a", recommended: false, health: 95, latency: 250, maintenance: false },
-  ],
-  "deepseek-v4": [
-    { id: "vendor_a", name: "DeepSeek", desc: "原厂直供，官方授权", logoColor: "#1a73e8", logoText: "D", inputPrice: 0.50, outputPrice: 1.20, credit: "AAA", creditClass: "aaa", recommended: true, recommendReason: "原厂直供，最低延迟，最高稳定性", health: 98, latency: 160, maintenance: false },
-    { id: "vendor_b", name: "云厂商B", desc: "分布式部署，多区域容灾", logoColor: "#e67e22", logoText: "B", inputPrice: 0.45, outputPrice: 1.08, credit: "AA", creditClass: "aa", recommended: false, health: 96, latency: 200, maintenance: false },
-  ],
-  "gpt-4o": [
-    { id: "vendor_a", name: "OpenAI 官方", desc: "原厂 API，官方授权", logoColor: "#10a37f", logoText: "O", inputPrice: 2.50, outputPrice: 10.00, credit: "AAA", creditClass: "aaa", recommended: true, recommendReason: "官方直供，无中间环节，稳定性最高", health: 99, latency: 220, maintenance: false },
-    { id: "vendor_b", name: "云厂商B", desc: "中转代理，经济实惠", logoColor: "#e67e22", logoText: "B", inputPrice: 2.20, outputPrice: 8.80, credit: "AA", creditClass: "aa", recommended: false, health: 94, latency: 280, maintenance: false },
-    { id: "vendor_c", name: "云厂商C", desc: "经济型中转", logoColor: "#16a085", logoText: "C", inputPrice: 2.00, outputPrice: 8.00, credit: "A", creditClass: "a", recommended: false, health: 88, latency: 320, maintenance: true },
-  ],
-  "claude-4-sonnet": [
-    { id: "vendor_a", name: "Anthropic 官方", desc: "原厂直供", logoColor: "#d97706", logoText: "A", inputPrice: 3.00, outputPrice: 15.00, credit: "AAA", creditClass: "aaa", recommended: true, recommendReason: "官方直供，无中间环节", health: 98, latency: 200, maintenance: false },
-    { id: "vendor_b", name: "云厂商B", desc: "代理中转", logoColor: "#e67e22", logoText: "B", inputPrice: 2.70, outputPrice: 13.50, credit: "AA", creditClass: "aa", recommended: false, health: 92, latency: 260, maintenance: false },
-  ],
-  "qwen3-72b": [
-    { id: "vendor_a", name: "阿里云", desc: "原厂直供，通义千问官方", logoColor: "#ff6a00", logoText: "阿", inputPrice: 0.40, outputPrice: 1.00, credit: "AAA", creditClass: "aaa", recommended: true, recommendReason: "原厂直供，最优价格与延迟", health: 99, latency: 150, maintenance: false },
-    { id: "vendor_b", name: "云厂商B", desc: "代理部署", logoColor: "#e67e22", logoText: "B", inputPrice: 0.36, outputPrice: 0.90, credit: "AA", creditClass: "aa", recommended: false, health: 95, latency: 220, maintenance: false },
-  ],
-};
-
-function healthColor(score: number): string {
+function healthColor(score: number | null | undefined): string {
+  if (score == null) return "#999";
   if (score >= 95) return "#22c55e";
   if (score >= 80) return "#f0ad4e";
   return "#e53935";
 }
 
-function sortVendors(vendors: Vendor[]): Vendor[] {
-  return [...vendors].sort((a, b) => {
-    if (a.recommended && !b.recommended) return -1;
-    if (!a.recommended && b.recommended) return 1;
-    if (a.inputPrice !== b.inputPrice) return a.inputPrice - b.inputPrice;
-    const order = { AAA: 3, AA: 2, A: 1 };
-    return (order[b.credit as keyof typeof order] || 0) - (order[a.credit as keyof typeof order] || 0);
-  });
+function fmtPrice(value: string | number | null | undefined): string {
+  if (value == null || value === "") return "—";
+  return `¥${value}`;
+}
+
+function priceRange(channels: ChannelPricingRow[], field: "input_price" | "output_price"): string {
+  const values = channels
+    .map((channel) => Number(channel[field]))
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => a - b);
+  if (values.length === 0) return "—";
+  const min = values[0]!;
+  const max = values[values.length - 1]!;
+  return min === max ? `¥${min}` : `¥${min} ~ ¥${max}`;
+}
+
+function ChannelCard(props: { channel: ChannelPricingRow; selected: boolean; onSelect: () => void }) {
+  const { channel, selected, onSelect } = props;
+  const selectable = isChannelSelectable(channel);
+  return (
+    <div
+      onClick={() => selectable && onSelect()}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 16,
+        padding: "16px 20px",
+        borderBottom: "1px solid #f5f5f5",
+        cursor: selectable ? "pointer" : "not-allowed",
+        background: selected ? "#eef1ff" : selectable ? "transparent" : "#fafafa",
+        opacity: selectable ? 1 : 0.58,
+      }}
+    >
+      <input type="radio" name="channel" checked={selected} disabled={!selectable} onChange={() => {}} style={{ width: 18, height: 18, accentColor: "#4f6ef7" }} />
+      <div style={{ width: 48, height: 48, borderRadius: 12, background: "#4f6ef7", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, flexShrink: 0 }}>
+        {(channel.channel_name || channel.channel_code).slice(0, 1)}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontWeight: 700, color: "#333" }}>{channel.channel_name}</span>
+          <code style={{ color: "#888", fontSize: 12 }}>{channel.channel_code}</code>
+          <span style={{ padding: "2px 8px", borderRadius: 4, background: channel.credit === "AAA" ? "#e8f5e9" : channel.credit === "AA" ? "#e3f2fd" : "#f5f5f5", color: channel.credit === "AAA" ? "#2e7d32" : channel.credit === "AA" ? "#1565c0" : "#888", fontSize: 11, fontWeight: 700 }}>{channel.credit ?? "—"}</span>
+          {channel.recommended && <span title="推荐理由：综合价格、健康分、延迟与信用评级后优先推荐" style={{ padding: "2px 8px", borderRadius: 4, background: "#fff8e1", color: "#f57c00", fontSize: 11 }}>⭐ 推荐</span>}
+          {channel.maintenance && <span style={{ padding: "2px 8px", borderRadius: 4, background: "#ffebee", color: "#c62828", fontSize: 11 }}>🔧 维护中</span>}
+        </div>
+        <div style={{ color: "#888", fontSize: 12, marginTop: 4 }}>价格组 {channel.pricing_group ?? "—"} · 状态 {getChannelStatusLabel(channel)}</div>
+      </div>
+      <div style={{ minWidth: 190, fontSize: 13, color: "#555", lineHeight: 1.7 }}>
+        <div>输入 <b style={{ color: "#333" }}>{fmtPrice(channel.input_price)}</b></div>
+        <div>输出 <b style={{ color: "#333" }}>{fmtPrice(channel.output_price)}</b></div>
+        <div>缓存读/写 <b style={{ color: "#333" }}>{fmtPrice(channel.cache_read_input_price)} / {fmtPrice(channel.cache_write_input_price)}</b></div>
+      </div>
+      <div style={{ minWidth: 100, textAlign: "right", fontSize: 12, color: "#888", lineHeight: 1.8 }}>
+        <div><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: healthColor(channel.health), marginRight: 4 }} />健康 {channel.health ?? "—"}</div>
+        <div>延迟 {channel.latency_ms != null ? `${channel.latency_ms}ms` : "—"}</div>
+      </div>
+    </div>
+  );
 }
 
 export default function VendorSelectorPage() {
+  const navigate = useNavigate();
   const [selectedModel, setSelectedModel] = useState("");
-  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null); // null = auto
-  const [compareExpanded, setCompareExpanded] = useState(false);
-  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
+  const [selectedChannelCode, setSelectedChannelCode] = useState<string | null>(null);
+  const [matrixOpen, setMatrixOpen] = useState(false);
 
-  /* 可用模型列表（后端缺失：/vendors/models 获取可选的模型列表） */
-  const modelOptions = Object.keys(MODEL_VENDORS).map((id) => ({
-    id,
-    label: id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-  }));
-
-  const vendors = MODEL_VENDORS[selectedModel] ?? [];
-  const sortedVendors = useMemo(() => sortVendors(vendors), [vendors]);
-
-  const selectedVendor = selectedModel ? (selectedVendorId ? vendors.find((v) => v.id === selectedVendorId) ?? null : null) : null;
-
-  /* 厂商列表页（后端缺失：/vendors/public 公共列表接口） */
-  const publicVendorsQ = useQuery({
-    queryKey: ["vendors-public"],
-    queryFn: async () => {
-      try {
-        const r = await api.get<{ data: { list: Vendor[] } }>("/vendors/public");
-        return r.data.data.list;
-      } catch {
-        return [];
-      }
-    },
-    staleTime: 60000,
+  const modelsQ = useQuery({
+    queryKey: ["me-models"],
+    queryFn: async () => unwrapList<MeModelRow>((await api.get<MeModelRow[]>("/me/models")).data),
   });
 
-  const handleModelChange = (modelId: string) => {
-    setSelectedModel(modelId);
-    setSelectedVendorId(null);
+  const modelOptions = useMemo(() => dedupeModelOptions(modelsQ.data), [modelsQ.data]);
+
+  const channelsQ = useQuery({
+    queryKey: ["model-channels", selectedModel],
+    enabled: !!selectedModel,
+    queryFn: async () => unwrapChannels((await api.get<ModelChannelsResponse>(`/models/${encodeURIComponent(selectedModel)}/channels`)).data).channels,
+    initialData: () => (selectedModel ? getModelChannels(modelsQ.data, selectedModel) : undefined),
+    retry: 1,
+  });
+
+  const channels = useMemo(() => sortChannels(channelsQ.data ?? []), [channelsQ.data]);
+  const selectableChannels = useMemo(() => availableChannels(channels), [channels]);
+  const selectedChannel = selectedChannelCode ? channels.find((channel) => channel.channel_code === selectedChannelCode) ?? null : null;
+  const preview = buildSelectionPreview(selectedModel, selectedChannelCode, selectedChannel);
+
+  const handleModelChange = (model: string) => {
+    setSelectedModel(model);
+    setSelectedChannelCode(null);
   };
 
-  const handleSelectAuto = () => {
-    setSelectedVendorId(null);
-  };
-
-  const handleSelectVendor = (id: string) => {
-    const v = vendors.find((x) => x.id === id);
-    if (v && !v.maintenance) {
-      setSelectedVendorId(id);
-    }
-  };
-
-  const showTooltip = (e: React.MouseEvent, text: string) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setTooltip({ text, x: rect.left, y: rect.bottom + 8 });
-  };
-
-  const hideTooltip = () => {
-    setTooltip(null);
+  const handleCall = () => {
+    if (!selectedModel) return;
+    const modelParam = selectedChannelCode ? `${selectedModel}@${selectedChannelCode}` : selectedModel;
+    navigate(`/playground?model=${encodeURIComponent(modelParam)}`);
   };
 
   return (
     <div>
-      {/* 标题 */}
       <h2 style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 8, fontSize: 20, fontWeight: 600 }}>
-        🔑 模型厂商选择
-        <HelpIcon text="选择调用模型时使用的厂商。不同厂商价格、稳定性、延迟不同，可自行判断性价比" level="page" />
+        🔑 渠道选择
+        <HelpIcon text="独立渠道选择页：先从 /me/models 获取模型，再按模型请求 /models/:name/channels 查看当前用户生效的渠道价目；默认自动路由，也可手动锁定具体渠道。" level="page" />
       </h2>
 
-      {/* ===== 1. 模型选择区 ===== */}
-      <div style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.06)", marginBottom: 20 }}>
+      <div style={card}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <label style={{ fontSize: 14, fontWeight: 500, color: "#333" }}>调用模型</label>
-          <HelpIcon text="选择要调用的 AI 模型，不同模型支持不同厂商" />
-          <select
-            value={selectedModel}
-            onChange={(e) => handleModelChange(e.target.value)}
-            style={{
-              height: 40,
-              minWidth: 280,
-              border: "1px solid #d9d9d9",
-              borderRadius: 8,
-              padding: "0 12px",
-              fontSize: 14,
-              background: "#fff",
-              cursor: "pointer",
-            }}
-          >
-            <option value="">— 请选择模型 —</option>
-            {modelOptions.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-          <span style={{ fontSize: 13, color: "#888", marginLeft: 8 }}>
-            {selectedModel ? `已加载 ${vendors.length} 个可用厂商` : "选择模型后自动加载可选厂商"}
-          </span>
+          <label style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>调用模型 <HelpIcon text="模型列表来自 /me/models，并按模型名去重；不使用平铺价格字段作为权威价。" level="button" /></label>
+          {modelsQ.isLoading ? <SkeletonGroup lines={1} /> : modelsQ.isError ? (
+            <span style={{ color: "#c62828", fontSize: 13 }}>模型加载失败：{extractError(modelsQ.error)}</span>
+          ) : (
+            <select value={selectedModel} onChange={(e) => handleModelChange(e.target.value)} style={{ height: 40, minWidth: 280, border: "1px solid #d9d9d9", borderRadius: 8, padding: "0 12px", fontSize: 14, background: "#fff" }}>
+              <option value="">— 请选择模型 —</option>
+              {modelOptions.map((model) => <option key={model.model} value={model.model}>{model.label}</option>)}
+            </select>
+          )}
+          {modelsQ.isError && <button type="button" style={{ ...btnBase, background: "#fff" }} onClick={() => modelsQ.refetch()}>重试 <HelpIcon text="重新请求 /me/models 获取模型列表。" level="button" /></button>}
+          <span style={{ fontSize: 13, color: "#888" }}>{selectedModel ? `当前模型：${selectedModel}` : "选择模型后加载渠道价目"}</span>
         </div>
       </div>
 
-      {/* ===== 2. 厂商选择器面板（原型：vendor-panel） ===== */}
       {selectedModel && (
-        <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,.06)", overflow: "hidden", marginBottom: 20 }}>
-          <div style={{ padding: "14px 20px", borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h3 style={{ fontSize: 15, fontWeight: 600, color: "#333", display: "flex", alignItems: "center", gap: 6 }}>
-              厂商选择
-              <HelpIcon text="同一模型可由不同厂商提供，价格和服务质量不同。选择自动则由系统智能路由" />
+        <div style={{ ...card, padding: 0, overflow: "hidden" }}>
+          <div style={{ padding: "14px 20px", borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#333", display: "flex", alignItems: "center", gap: 6 }}>
+              渠道选择
+              <HelpIcon text="同一模型可由多个渠道提供。自动路由不传渠道编码；手动选择后将形成 model@channelCode 的显式渠道调用值。" level="button" />
             </h3>
-            <span style={{ fontSize: 13, color: "#888" }}>{vendors.length} 个厂商可选</span>
+            <button type="button" style={{ ...btnBase, padding: "6px 12px", background: "#fff" }} onClick={() => setMatrixOpen(true)}>
+              查看渠道价目矩阵 <HelpIcon text="弹出当前模型的渠道价目矩阵，按渠道横向比较价格、健康、延迟与状态。" level="button" />
+            </button>
           </div>
 
-          {/* 自动选择选项 */}
-          <div
-            onClick={handleSelectAuto}
-            style={{
-              padding: "14px 20px",
-              borderBottom: "1px solid #f0f0f0",
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              cursor: "pointer",
-              background: selectedVendorId === null ? "#f8f9ff" : "transparent",
-              transition: "background .15s",
-            }}
-          >
-            <input
-              type="radio"
-              name="vendor"
-              checked={selectedVendorId === null}
-              onChange={() => {}}
-              style={{ width: 18, height: 18, accentColor: "#4f6ef7", cursor: "pointer" }}
-            />
-            <span style={{ fontSize: 14, fontWeight: 500, color: "#333" }}>自动选择</span>
-            <span style={{ fontSize: 12, color: "#888", marginLeft: 8 }}>
-              系统智能路由，自动选择最优厂商
-            </span>
-            <span style={{ marginLeft: "auto" }}>
-              <HelpIcon text="系统根据健康度、延迟、价格综合评分，自动选择当前最优厂商" />
-            </span>
+          <div onClick={() => setSelectedChannelCode(null)} style={{ padding: "14px 20px", borderBottom: "1px solid #f0f0f0", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", background: selectedChannelCode === null ? "#f8f9ff" : "transparent" }}>
+            <input type="radio" name="channel" checked={selectedChannelCode === null} onChange={() => {}} style={{ width: 18, height: 18, accentColor: "#4f6ef7" }} />
+            <span style={{ fontWeight: 700 }}>自动路由</span>
+            <span style={{ color: "#888", fontSize: 12 }}>默认选中，不指定渠道，由系统按健康、延迟、价格等策略智能选择。</span>
+            <span style={{ marginLeft: "auto" }}><HelpIcon text="自动路由对应调用时传原始模型名；预览显示 model@auto 仅用于说明，不作为真实请求 model 值发送。" level="button" /></span>
           </div>
 
-          {/* 厂商卡片列表 */}
-          {sortedVendors.map((v) => {
-            const isSelected = selectedVendorId === v.id;
-            return (
-              <div
-                key={v.id}
-                onClick={() => handleSelectVendor(v.id)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 16,
-                  padding: "16px 20px",
-                  borderBottom: "1px solid #f5f5f5",
-                  cursor: v.maintenance ? "not-allowed" : "pointer",
-                  background: isSelected ? "#eef1ff" : v.maintenance ? "#fafafa" : "transparent",
-                  opacity: v.maintenance ? 0.5 : 1,
-                  transition: "background .15s",
-                }}
-              >
-                <input
-                  type="radio"
-                  name="vendor"
-                  checked={isSelected}
-                  disabled={v.maintenance}
-                  onChange={() => {}}
-                  style={{ width: 18, height: 18, accentColor: "#4f6ef7", cursor: "pointer", flexShrink: 0 }}
-                />
-
-                {/* 厂商 Logo */}
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 10,
-                    background: v.logoColor,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 22,
-                    fontWeight: 700,
-                    color: "#fff",
-                    flexShrink: 0,
-                  }}
-                >
-                  {v.logoText}
-                </div>
-
-                {/* 厂商信息 */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: "#333" }}>{v.name}</span>
-                    <span
-                      style={{
-                        display: "inline-block",
-                        padding: "2px 8px",
-                        borderRadius: 4,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        background: v.creditClass === "aaa" ? "#e8f5e9" : v.creditClass === "aa" ? "#e3f2fd" : "#f5f5f5",
-                        color: v.creditClass === "aaa" ? "#2e7d32" : v.creditClass === "aa" ? "#1565c0" : "#888",
-                      }}
-                    >
-                      {v.credit}
-                    </span>
-                    {v.recommended && (
-                      <span
-                        onMouseEnter={(e) => v.recommendReason && showTooltip(e, v.recommendReason)}
-                        onMouseLeave={hideTooltip}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 4,
-                          padding: "2px 8px",
-                          borderRadius: 4,
-                          fontSize: 11,
-                          fontWeight: 500,
-                          background: "#fff8e1",
-                          color: "#f57c00",
-                          cursor: "default",
-                        }}
-                      >
-                        <span style={{ color: "#ffc107" }}>⭐</span> 推荐
-                      </span>
-                    )}
-                    {v.maintenance && (
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "2px 8px",
-                          borderRadius: 4,
-                          fontSize: 11,
-                          background: "#ffebee",
-                          color: "#c62828",
-                        }}
-                      >
-                        🔧 维护中
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{v.desc}</div>
-                </div>
-
-                {/* 价格 */}
-                <div style={{ textAlign: "right", flexShrink: 0, minWidth: 140 }}>
-                  <div style={{ fontSize: 13, color: "#555", lineHeight: 1.6 }}>
-                    输入 <span style={{ fontWeight: 600, color: "#333" }}>¥{v.inputPrice.toFixed(2)}</span> /1M
-                  </div>
-                  <div style={{ fontSize: 13, color: "#555", lineHeight: 1.6 }}>
-                    输出 <span style={{ fontWeight: 600, color: "#333" }}>¥{v.outputPrice.toFixed(2)}</span> /1M
-                  </div>
-                </div>
-
-                {/* 健康度和延迟 */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0, minWidth: 90 }}>
-                  <span
-                    onMouseEnter={(e) => showTooltip(e, `健康分：${v.health}/100，平均延迟：${v.latency}ms`)}
-                    onMouseLeave={hideTooltip}
-                    style={{
-                      display: "inline-block",
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      background: healthColor(v.health),
-                      cursor: "default",
-                    }}
-                  />
-                  <span style={{ fontSize: 12, color: "#888" }}>健康 {v.health}</span>
-                  <span style={{ fontSize: 12, color: "#888" }}>延迟 {v.latency}ms</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ===== 3. 调用预览（原型：call-preview） ===== */}
-      {selectedModel && vendors.length > 0 && (
-        <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,.06)", overflow: "hidden", marginBottom: 20 }}>
-          <div style={{ padding: "14px 20px", borderBottom: "1px solid #eee", display: "flex", alignItems: "center", gap: 6 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600, color: "#333", display: "flex", alignItems: "center", gap: 6 }}>
-              调用预览
-              <HelpIcon text="展示当前选择的实际调用参数和预估价格" />
-            </h3>
-          </div>
-          <div style={{ padding: "20px 24px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap", marginBottom: 16 }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <span style={{ fontSize: 12, color: "#888" }}>实际调用 model 值</span>
-                <span
-                  style={{
-                    fontFamily: "SF Mono, Fira Code, Consolas, monospace",
-                    background: "#f5f5f5",
-                    padding: "4px 10px",
-                    borderRadius: 6,
-                    fontSize: 13,
-                  }}
-                >
-                  {selectedModel}{selectedVendor ? `@${selectedVendor.id}` : "@auto"}
-                </span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <span style={{ fontSize: 12, color: "#888" }}>预估单价（输入）</span>
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#4f6ef7" }}>
-                  {selectedVendor
-                    ? `¥${selectedVendor.inputPrice.toFixed(2)} /1M tokens`
-                    : sortedVendors.length > 0
-                    ? `¥${sortedVendors[0]!.inputPrice.toFixed(2)} ~ ¥${sortedVendors[sortedVendors.length - 1]!.inputPrice.toFixed(2)} /1M tokens`
-                    : "—"}
-                </span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <span style={{ fontSize: 12, color: "#888" }}>预估单价（输出）</span>
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#4f6ef7" }}>
-                  {selectedVendor
-                    ? `¥${selectedVendor.outputPrice.toFixed(2)} /1M tokens`
-                    : sortedVendors.length > 0
-                    ? `¥${sortedVendors[0]!.outputPrice.toFixed(2)} ~ ¥${sortedVendors[sortedVendors.length - 1]!.outputPrice.toFixed(2)} /1M tokens`
-                    : "—"}
-                </span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <span style={{ fontSize: 12, color: "#888" }}>厂商</span>
-                <span style={{ fontSize: 14, color: "#333" }}>
-                  {selectedVendor ? selectedVendor.name : "系统智能路由"}
-                </span>
-              </div>
+          {channelsQ.isLoading ? (
+            <div style={{ padding: 20 }}><SkeletonGroup lines={5} /></div>
+          ) : channelsQ.isError ? (
+            <div style={{ padding: 20, color: "#c62828" }}>
+              渠道加载失败：{extractError(channelsQ.error)}
+              <button type="button" style={{ ...btnBase, marginLeft: 12 }} onClick={() => channelsQ.refetch()}>重试 <HelpIcon text="重新请求 /models/:name/channels 获取渠道价目。" level="button" /></button>
             </div>
-            <div style={{ display: "flex", gap: 12 }}>
-              <button
-                onClick={() => alert("模拟调用（原型演示）")}
-                style={{
-                  padding: "12px 32px",
-                  fontSize: 15,
-                  borderRadius: 8,
-                  border: "none",
-                  background: "#4f6ef7",
-                  color: "#fff",
-                  cursor: "pointer",
-                }}
-              >
-                ▶ 发起调用
-                <HelpIcon text="使用当前配置发起一次 API 调用" />
-              </button>
-              <button
-                onClick={() => alert("已保存默认配置")}
-                style={{
-                  padding: "12px 24px",
-                  fontSize: 14,
-                  borderRadius: 8,
-                  border: "1px solid #d9d9d9",
-                  background: "#fff",
-                  cursor: "pointer",
-                }}
-              >
-                ⭐ 保存为默认
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ===== 4. 厂商对比表（原型：可折叠） ===== */}
-      {selectedModel && vendors.length > 0 && (
-        <div style={{ marginBottom: 20 }}>
-          <div
-            onClick={() => setCompareExpanded(!compareExpanded)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              cursor: "pointer",
-              padding: "12px 0",
-              fontSize: 14,
-              color: "#4f6ef7",
-              userSelect: "none",
-            }}
-          >
-            <span style={{ transform: compareExpanded ? "rotate(90deg)" : "none", transition: "transform .2s", fontSize: 12 }}>
-              ▶
-            </span>
-            <span>厂商对比表</span>
-            <HelpIcon text="横向对比所有厂商的价格、信用、延迟和健康分" />
-          </div>
-          {compareExpanded && (
-            <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,.06)", overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: "left", padding: "10px 12px", background: "#fafafa", color: "#888", fontWeight: 500, borderBottom: "1px solid #eee" }}>厂商</th>
-                    <th style={{ textAlign: "center", padding: "10px 12px", background: "#fafafa", color: "#888", fontWeight: 500, borderBottom: "1px solid #eee" }}>
-                      输入价格<br /><span style={{ fontSize: 11 }}>(¥/1M tokens)</span>
-                    </th>
-                    <th style={{ textAlign: "center", padding: "10px 12px", background: "#fafafa", color: "#888", fontWeight: 500, borderBottom: "1px solid #eee" }}>
-                      输出价格<br /><span style={{ fontSize: 11 }}>(¥/1M tokens)</span>
-                    </th>
-                    <th style={{ textAlign: "center", padding: "10px 12px", background: "#fafafa", color: "#888", fontWeight: 500, borderBottom: "1px solid #eee" }}>信用评级</th>
-                    <th style={{ textAlign: "center", padding: "10px 12px", background: "#fafafa", color: "#888", fontWeight: 500, borderBottom: "1px solid #eee" }}>健康分</th>
-                    <th style={{ textAlign: "center", padding: "10px 12px", background: "#fafafa", color: "#888", fontWeight: 500, borderBottom: "1px solid #eee" }}>平均延迟</th>
-                    <th style={{ textAlign: "center", padding: "10px 12px", background: "#fafafa", color: "#888", fontWeight: 500, borderBottom: "1px solid #eee" }}>状态</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedVendors.map((v) => (
-                    <tr key={v.id} style={{ borderBottom: "1px solid #f5f5f5" }}>
-                      <td style={{ padding: "10px 12px" }}>
-                        <strong>{v.name}</strong>{v.recommended ? " ⭐" : ""}
-                      </td>
-                      <td style={{ padding: "10px 12px", textAlign: "center" }}>¥{v.inputPrice.toFixed(2)}</td>
-                      <td style={{ padding: "10px 12px", textAlign: "center" }}>¥{v.outputPrice.toFixed(2)}</td>
-                      <td style={{ padding: "10px 12px", textAlign: "center" }}>
-                        <span
-                          style={{
-                            display: "inline-block",
-                            padding: "2px 8px",
-                            borderRadius: 4,
-                            fontSize: 11,
-                            fontWeight: 600,
-                            background: v.creditClass === "aaa" ? "#e8f5e9" : v.creditClass === "aa" ? "#e3f2fd" : "#f5f5f5",
-                            color: v.creditClass === "aaa" ? "#2e7d32" : v.creditClass === "aa" ? "#1565c0" : "#888",
-                          }}
-                        >
-                          {v.credit}
-                        </span>
-                      </td>
-                      <td style={{ padding: "10px 12px", textAlign: "center" }}>
-                        <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: healthColor(v.health), marginRight: 4 }} />
-                        {v.health}
-                      </td>
-                      <td style={{ padding: "10px 12px", textAlign: "center" }}>{v.latency}ms</td>
-                      <td style={{ padding: "10px 12px", textAlign: "center" }}>
-                        {v.maintenance ? (
-                          <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 11, background: "#f5f5f5", color: "#888" }}>维护中</span>
-                        ) : (
-                          <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 11, background: "#e8f5e9", color: "#2e7d32" }}>可用</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          ) : channels.length === 0 ? (
+            <div style={{ padding: 20 }}><EmptyState title="模型无可用渠道" description="后端返回 channels[] 为空，无法展示渠道价目；请稍后重试或联系管理员配置。" /></div>
+          ) : (
+            <>
+              {selectableChannels.length === 0 && <div style={{ margin: 16, padding: 12, borderRadius: 8, background: "#fff8e1", color: "#8a5a00", fontSize: 13 }}>当前模型全部渠道维护中或下线，只能保留自动路由等待系统恢复。</div>}
+              {channels.map((channel) => <ChannelCard key={channel.channel_code} channel={channel} selected={selectedChannelCode === channel.channel_code} onSelect={() => setSelectedChannelCode(channel.channel_code)} />)}
+            </>
           )}
         </div>
       )}
 
-      {/* Tooltip 浮层 */}
-      {tooltip && (
-        <div
-          style={{
-            position: "fixed",
-            left: tooltip.x,
-            top: tooltip.y,
-            background: "#333",
-            color: "#fff",
-            padding: "8px 12px",
-            borderRadius: 6,
-            fontSize: 12,
-            zIndex: 9999,
-            pointerEvents: "none",
-            maxWidth: 280,
-            lineHeight: 1.5,
-          }}
-        >
-          {tooltip.text}
+      {selectedModel && !channelsQ.isError && channels.length > 0 && (
+        <div style={card}>
+          <h3 style={{ margin: "0 0 14px", fontSize: 15, display: "flex", alignItems: "center", gap: 6 }}>调用预览 <HelpIcon text="展示当前选择对应的 model 值和渠道级生效价；自动路由显示价格范围用于参考。" level="button" /></h3>
+          <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap", marginBottom: 16 }}>
+            <div><div style={{ color: "#888", fontSize: 12 }}>预览 model 值</div><code style={{ background: "#f5f5f5", padding: "4px 10px", borderRadius: 6 }}>{preview.value}</code></div>
+            <div><div style={{ color: "#888", fontSize: 12 }}>输入价格</div><strong style={{ color: "#4f6ef7" }}>{selectedChannel ? fmtPrice(selectedChannel.input_price) : priceRange(selectableChannels, "input_price")}</strong></div>
+            <div><div style={{ color: "#888", fontSize: 12 }}>输出价格</div><strong style={{ color: "#4f6ef7" }}>{selectedChannel ? fmtPrice(selectedChannel.output_price) : priceRange(selectableChannels, "output_price")}</strong></div>
+            <div><div style={{ color: "#888", fontSize: 12 }}>当前态</div><strong>{selectedChannel ? `手动渠道：${selectedChannel.channel_name}` : "自动路由"}</strong></div>
+          </div>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <button type="button" disabled={!selectedModel} onClick={handleCall} style={{ ...btnBase, background: "#4f6ef7", color: "#fff", borderColor: "#4f6ef7", opacity: selectedModel ? 1 : 0.5 }}>
+              ▶ 发起调用 <HelpIcon text="跳转到 /playground，并把当前模型或 model@channelCode 作为 model 参数带入调试页。" level="button" />
+            </button>
+            <button type="button" disabled style={{ ...btnBase, background: "#f5f5f5", color: "#888", cursor: "not-allowed" }}>
+              ⭐ 保存为默认 <HelpIcon text="保存默认渠道偏好属于 P1，本期仅展示为禁用操作，不会提交后端。" level="button" />
+            </button>
+          </div>
         </div>
       )}
+
+      <ChannelPriceMatrixModal
+        open={matrixOpen}
+        model={selectedModel}
+        selectedChannelCode={selectedChannelCode}
+        onClose={() => setMatrixOpen(false)}
+        onSelect={(channel) => { setSelectedChannelCode(channel.channel_code); setMatrixOpen(false); }}
+      />
     </div>
   );
 }

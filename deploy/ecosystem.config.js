@@ -21,5 +21,23 @@ module.exports = {
       merge_logs: true,
       time: true,
     },
+    {
+      name: '3cloud-portal',
+      cwd: '/root/3cloud/web-portal',
+      script: './node_modules/next/dist/bin/next',
+      args: 'start -p 3100',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3100,
+      },
+      max_memory_restart: '512M',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss',
+      error_file: '/var/log/3cloud/portal-error.log',
+      out_file: '/var/log/3cloud/portal-out.log',
+      merge_logs: true,
+      time: true,
+    },
   ],
 };

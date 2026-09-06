@@ -60,6 +60,17 @@ async function registerAdmin(prefix: string) {
   return { email, user, accessToken: (login.json() as { accessToken: string }).accessToken };
 }
 
+/**
+ * 为测试用户写入数据导出授权（enabled=true）。
+ *
+ * 数据导出授权管理（PRD）要求：用户端 /me/data-export/* 需先获后台授权才可用。
+ * 本测试聚焦既有导出流转（授权用户的全流程），故对每个用户预置授权记录，
+ * 保证 B5/H2 语义下"已授权用户提交/列表/详情/撤回/下载全流程正常"。
+ */
+async function grantUser(userId: number) {
+  await db.insert(schema.dataExportGrants).values({ userId, isEnabled: true }).onConflictDoNothing();
+}
+
 function auth(token: string) {
   return { authorization: `Bearer ${token}` };
 }
@@ -94,6 +105,7 @@ afterAll(async () => {
 describe('数据导出 export 全链路：提交 → approve → export → download', () => {
   it('全链路走通，文件生成且可下载，重复提交 pending 400', async () => {
     const { user, accessToken } = await registerUser('de-ok');
+    await grantUser(user.id); // 授权用户可自助导出
     const admin = await registerAdmin('de-admin-ok');
 
     // 提交
@@ -180,7 +192,8 @@ describe('数据导出 export 全链路：提交 → approve → export → down
   });
 
   it('dataScope 非法 → 400', async () => {
-    const { accessToken } = await registerUser('de-scope');
+    const { user, accessToken } = await registerUser('de-scope');
+    await grantUser(user.id);
     const res = await submitExport(accessToken, { dataScope: 'bogus' });
     expect(res.statusCode).toBe(400);
   });
@@ -188,7 +201,8 @@ describe('数据导出 export 全链路：提交 → approve → export → down
 
 describe('数据导出 export reject / cancel / 越权', () => {
   it('reject：pending → rejected；export 被拒', async () => {
-    const { accessToken } = await registerUser('de-reject');
+    const { user, accessToken } = await registerUser('de-reject');
+    await grantUser(user.id);
     const admin = await registerAdmin('de-admin-reject');
     const submit = await submitExport(accessToken, { dataScope: 'profile' });
     const req = (submit.json() as any).data;
@@ -209,7 +223,8 @@ describe('数据导出 export reject / cancel / 越权', () => {
   });
 
   it('cancel：仅 pending 可撤；已 approved 撤不了', async () => {
-    const { accessToken } = await registerUser('de-cancel');
+    const { user, accessToken } = await registerUser('de-cancel');
+    await grantUser(user.id);
     const admin = await registerAdmin('de-admin-cancel');
     const submit = await submitExport(accessToken, { dataScope: 'apikeys' });
     const req = (submit.json() as any).data;
@@ -231,6 +246,9 @@ describe('数据导出 export reject / cancel / 越权', () => {
   it('越权：他人申请详情 / 下载 → 403', async () => {
     const owner = await registerUser('de-owner');
     const other = await registerUser('de-other');
+    // owner 授权后可提交；other 也授权，使其 403 来自"越权访问他人"，而非授权缺失
+    await grantUser(owner.user.id);
+    await grantUser(other.user.id);
     const submit = await submitExport(owner.accessToken, { dataScope: 'all' });
     const req = (submit.json() as any).data;
 
@@ -253,7 +271,8 @@ describe('数据导出 export reject / cancel / 越权', () => {
 
 describe('数据导出 export 文件过期', () => {
   it('file_expires_at 已过 → download 410 FILE_EXPIRED', async () => {
-    const { accessToken } = await registerUser('de-expire');
+    const { user, accessToken } = await registerUser('de-expire');
+    await grantUser(user.id);
     const admin = await registerAdmin('de-admin-expire');
     const submit = await submitExport(accessToken, { dataScope: 'consumption' });
     const req = (submit.json() as any).data;

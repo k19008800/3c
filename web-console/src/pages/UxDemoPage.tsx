@@ -6,7 +6,6 @@ import {
   Table,
   Pagination,
   EmptyState,
-  Skeleton,
   SkeletonGroup,
   StatusBadge,
   FormField,
@@ -27,7 +26,6 @@ export default function UxDemoPage() {
   const [modalOpen, setModalOpen] = useState(false);
 
   // Table 示例
-  const [sortKey, setSortKey] = useState<string>("");
   const columns: ColumnDef[] = [
     { key: "name", title: "名称", sortable: true },
     { key: "status", title: "状态", render: (v) => <StatusBadge status={v === "启用" ? "success" : (v === "待审核" ? "warning" : "danger")}>{v as string}</StatusBadge> },

@@ -17,7 +17,9 @@ async function fetchSiteConfig(): Promise<SiteConfig> {
   try {
     const res = await fetch(`${API_BASE}/api/v1/public/site-config`, { cache: "no-store" });
     if (res.ok) return await res.json();
-  } catch {}
+  } catch {
+    // Public pages remain usable when the optional site-config service is unavailable.
+  }
   return {};
 }
 
@@ -53,7 +55,9 @@ export default async function AboutPage() {
     try {
       const parsed = JSON.parse(config.site_about_milestones);
       if (Array.isArray(parsed)) milestones = parsed;
-    } catch {}
+    } catch {
+      // Ignore malformed administrator-provided milestone JSON and use defaults.
+    }
   }
 
   return (

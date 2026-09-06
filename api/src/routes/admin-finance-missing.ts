@@ -972,8 +972,8 @@ export async function adminFinanceMissingRoutes(app: FastifyInstance) {
     });
   });
 
-  /** POST /api/v1/admin/reconciliation/diffs/:id/:op — 处理差异（resolve / ignore） */
-  app.post('/api/v1/admin/reconciliation/diffs/:id/:op', { preHandler: [adminAuth] }, async (request, reply) => {
+  /** POST /api/v1/admin/reconciliation/diffs/:id/:op — 处理差异（resolve / ignore）——补账/核销资金操作，需操作级 2FA（对齐 mismatches 端点） */
+  app.post('/api/v1/admin/reconciliation/diffs/:id/:op', { preHandler: [adminAuth, requireOperation2fa] }, async (request, reply) => {
     const { id, op } = request.params as { id: string; op: string };
     if (op !== 'resolve' && op !== 'ignore') throw new ValidationError('op 必须为 resolve 或 ignore');
     const diffId = parseInt(id, 10);

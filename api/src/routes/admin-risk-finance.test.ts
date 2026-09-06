@@ -405,7 +405,8 @@ describe('财务统计（结算 / 利润 / 对账）', () => {
 
   it('POST /admin/settlements/:id/settle → 200 且 vendor_settlements 持久化、列表转 settled', async () => {
     const res = await app.inject({
-      method: 'POST', url: `/api/v1/admin/settlements/${supplierId}/settle`, headers: auth(adminToken), payload: {},
+      method: 'POST', url: `/api/v1/admin/settlements/${supplierId}/settle`,
+      headers: op2faHeaders(adminToken, adminId, `risk-admin-${ts}@test.com`, 'admin'), payload: {},
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().data.status).toBe('settled');

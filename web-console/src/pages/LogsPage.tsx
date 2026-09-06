@@ -8,7 +8,6 @@ import {
   Modal,
   SkeletonGroup,
   EmptyState,
-  SearchBar,
 } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
 

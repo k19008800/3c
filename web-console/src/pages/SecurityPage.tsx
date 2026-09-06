@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
-import { HelpIcon, StatusBadge, useToast } from "@3cloud/shared-ui";
+import { HelpIcon, useToast } from "@3cloud/shared-ui";
 import OtpInput from "../components/OtpInput";
 
 /**
@@ -594,7 +594,7 @@ function ActiveSessionsPanel() {
   const logoutMut = useMutation({
     mutationFn: async (deviceId: number) =>
       (await api.post(`/me/devices/${deviceId}/logout`, {})).data,
-    onSuccess: (_d, deviceId) => {
+    onSuccess: (_d, _deviceId) => {
       toast.success("设备已强制下线");
       qc.invalidateQueries({ queryKey: ["me-devices"] });
     },
@@ -652,6 +652,24 @@ function ActiveSessionsPanel() {
 }
 
 /* ==================== 6. 最近登录记录 ==================== */
+/**
+ * 设备展示标签：后端 device_info 是 JSON 对象（{os,browser,user_agent}），不能直接作为 React 子节点渲染，
+ * 否则抛 React error#31（Objects are not valid as a React child）导致整页白屏。此处归一为可读字符串。
+ */
+function deviceInfoLabel(r: any): string {
+  const raw = r?.device_info;
+  if (raw && typeof raw === "object") {
+    const os = String(raw.os ?? "").trim();
+    const browser = String(raw.browser ?? "").trim();
+    if (os && browser) return `${os} / ${browser}`;
+    if (os) return os;
+    if (browser) return browser;
+    if (raw.user_agent) return String(raw.user_agent);
+  }
+  if (r?.browser) return `${r?.os ?? ""} / ${r.browser}`;
+  return "—";
+}
+
 function LoginHistoryPanel() {
   const histQ = useQuery({
     queryKey: ["me-login-history"],
@@ -686,7 +704,7 @@ function LoginHistoryPanel() {
                   <td style={{ padding: "10px 12px" }}>{r.login_at ? new Date(r.login_at).toLocaleString() : "—"}</td>
                   <td style={{ padding: "10px 12px" }}>{r.ip ?? "—"}</td>
                   <td style={{ padding: "10px 12px" }}>{r.city ?? "未知"}</td>
-                  <td style={{ padding: "10px 12px" }}>{r.device_info ?? (r.browser ? `${r.os ?? ""} / ${r.browser}` : "—")}</td>
+                  <td style={{ padding: "10px 12px" }}>{deviceInfoLabel(r)}</td>
                   <td style={{ padding: "10px 12px" }}>
                     {r.success === false || r.risk_level === "blocked" ? (
                       <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 10, fontSize: 11, background: "rgba(229,57,53,0.1)", color: "var(--color-danger-text)", border: "1px solid rgba(229,57,53,0.3)" }}>

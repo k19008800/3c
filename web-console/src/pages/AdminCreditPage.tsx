@@ -26,6 +26,11 @@ interface Model {
   baseRpm: number | null; baseTpm: number | null;
 }
 interface Customer { id: number; email: string; name: string; type: CustType; activeRuleCount?: number; }
+interface OpenedCust {
+  id: number; email: string; name: string; type: CustType;
+  activeRuleCount: number; updatedAt: string;
+  rules: Array<{ model: string; rpm: number | null; tpm: number | null; period: RulePeriod; start: string | null; end: string | null; reason: string }>;
+}
 interface Defaults { enterprise: { rpm: number; tpm: number }; personal: { rpm: number; tpm: number }; }
 type RulePeriod = "forever" | "range";
 type RuleStatus = "active" | "stopped";
@@ -137,6 +142,16 @@ export default function AdminCreditPage() {
   });
   const results: Customer[] = customersQ.data ?? [];
 
+  /* ── 数据：已开通限流例外的客户 ── */
+  const openedQ = useQuery({
+    queryKey: ["admin-credit-opened"],
+    queryFn: async () => {
+      const res = await api.get("/admin/credit/opened");
+      return res.data.data as OpenedCust[];
+    },
+  });
+  const opened = openedQ.data ?? [];
+
   /* ── 数据：当前客户例外规则 ── */
   const rulesQ = useQuery({
     queryKey: ["admin-credit-rules", currentCust?.id],
@@ -244,6 +259,7 @@ export default function AdminCreditPage() {
     onSuccess: () => {
       invalidateRules();
       qc.invalidateQueries({ queryKey: ["admin-credit-customers"] });
+      qc.invalidateQueries({ queryKey: ["admin-credit-opened"] });
       closeQuota();
       if (editRuleId) toast.success("额度已更新");
       else toast.success(`已为 ${selModels.size} 个模型开通例外`);
@@ -252,11 +268,12 @@ export default function AdminCreditPage() {
   });
 
   const toggleRuleMutation = useMutation({
-    mutationFn: async ({ id, target }: { id: number; target: RuleStatus }) => {
+    mutationFn: async ({ id }: { id: number; target: RuleStatus }) => {
       await api.post(`/admin/credit/rules/${id}/toggle`, {});
     },
     onSuccess: (_data, vars) => {
       invalidateRules();
+      qc.invalidateQueries({ queryKey: ["admin-credit-opened"] });
       toast.info(vars.target === "active" ? "已停用，恢复默认限流" : "已重新启用");
     },
     onError: (err) => toast.error(extractError(err)),
@@ -294,7 +311,8 @@ export default function AdminCreditPage() {
   const toggleModel = (name: string) => {
     setSelModels((prev) => {
       const next = new Set(prev);
-      next.has(name) ? next.delete(name) : next.add(name);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
       return next;
     });
   };
@@ -418,6 +436,44 @@ export default function AdminCreditPage() {
             )}
           </div>
         </div>
+      </Panel>
+
+      {/* 已开通限流例外的客户 */}
+      <Panel>
+        <div className="c3-opened-head">
+          <span className="c3-opened-title">✅ 已开通限流的客户 <HelpIcon text="已经为至少一个模型开通限流例外的客户。点击任意客户直接进入其额度配置；如需查看其他客户，请在上方搜索。" level="page" /></span>
+          <span className="c3-opened-count">{opened.length > 0 ? `共 ${opened.length} 个客户` : ""}</span>
+        </div>
+        {openedQ.isLoading ? (
+          <div className="c3-sr-empty" style={{ padding: 16 }}><span className="c3-sr-ico">⏳</span>加载中…</div>
+        ) : opened.length === 0 ? (
+          <div className="c3-opened-empty">
+            暂无已开通限流例外的客户。在上方搜索客户后，点击「设置额度」即可开通。
+          </div>
+        ) : (
+          <div className="c3-opened-grid">
+            {opened.map((o) => (
+              <div key={o.id} className="c3-opened-card" onClick={() => selectCust({ id: o.id, email: o.email, name: o.name, type: o.type, activeRuleCount: o.activeRuleCount })}>
+                <div className="c3-op-card-top">
+                  <span className="c3-op-email">{o.email}</span>
+                  <Tag type={o.type === "enterprise" ? "blue" : "green"}>{o.type === "enterprise" ? "企业" : "个人"}</Tag>
+                </div>
+                <div className="c3-op-card-sub">
+                  {o.name ? `${o.name} · ` : ""}已开 <b style={{ color: "var(--color-primary)" }}>{o.activeRuleCount}</b> 个模型
+                </div>
+                <div className="c3-op-rules">
+                  {o.rules.map((r) => (
+                    <span key={r.model} className="c3-op-model" title={`${r.model} RPM ${fmtRPM(r.rpm)} / TPM ${fmtTPM(r.tpm)}${r.period === "range" && r.start && r.end ? ` ${r.start} ~ ${r.end}` : ""}`}>
+                      {r.model}
+                      <i>{fmtRPM(r.rpm)}rpm{r.tpm != null ? ` / ${fmtTPM(r.tpm)}tpm` : ""}</i>
+                    </span>
+                  ))}
+                </div>
+                <div className="c3-op-card-foot">进入额度配置 →</div>
+              </div>
+            ))}
+          </div>
+        )}
       </Panel>
 
       {/* 搜索结果（仅搜索时显示） */}

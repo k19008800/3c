@@ -16,7 +16,7 @@ export default function AdminAffiliatePage() {
   const [tab, setTab] = useState<"config" | "records">("config");
   const [config, setConfig] = useState<AffiliateConfig>({ enabled: false, reward_type: "fixed", reward_value: 10, reward_cap: 0, cookie_days: 30 });
   const [records, setRecords] = useState<AffiliateRecord[]>([]);
-  const [page, setPage] = useState(1);
+  const [page] = useState(1);
 
   useEffect(() => {
     api.get("/admin/affiliate/config").then(r => setConfig(r.data?.data ?? config)).catch(() => {});

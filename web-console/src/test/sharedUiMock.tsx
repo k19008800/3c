@@ -199,3 +199,17 @@ export function Modal({ open, children }: {
   return <div role="dialog">{children}</div>;
 }
 
+/**
+ * ConfirmPopover - 直接把 children（触发元素）渲染出来，
+ * 不维护打开/确认状态（气泡二次确认逻辑不在组件级测试范围）。
+ */
+export function ConfirmPopover({ children }: {
+  title?: string;
+  description?: string;
+  onConfirm?: () => void;
+  onCancel?: () => void;
+  children?: React.ReactNode;
+}) {
+  return <div className="c3-confirm-popover">{children}</div>;
+}
+

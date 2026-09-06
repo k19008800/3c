@@ -63,7 +63,7 @@ export default function AdminDeletionPage() {
   });
 
   // 详情
-  const { data: detailQ, refetch: refetchDetail } = useQuery({
+  const { data: detailQ } = useQuery({
     queryKey: ["admin/deletion/requests", detailId],
     queryFn: () => api.get(`/admin/deletion/requests/${detailId}`).then((r) => r.data.data),
     enabled: detailId !== null,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "../lib/api";
-import { HelpIcon, StatusBadge, useToast } from "@3cloud/shared-ui";
+import { HelpIcon, useToast } from "@3cloud/shared-ui";
 
 interface RetryConfig { id: number; webhook_id: number; webhook_url: string; max_retries: number; retry_delay_seconds: number; backoff_multiplier: number; enabled: boolean; }
 

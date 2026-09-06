@@ -8,23 +8,6 @@ export const dynamic = "force-dynamic";
 const API_BASE = "http://127.0.0.1:3000";
 
 // ===== 类型 =====
-interface SiteConfig {
-  site_name?: string;
-  site_logo_url?: string;
-  site_favicon_url?: string;
-  site_icp?: string;
-  site_icp_link?: string;
-  site_police_icp?: string;
-  site_copyright?: string;
-  site_company_name?: string;
-  site_contact_email?: string;
-  site_contact_phone?: string;
-  site_wechat_qr_url?: string;
-  site_footer_html?: string;
-  site_about_content?: string;
-  site_about_milestones?: string;
-}
-
 interface Stats {
   models: number;
   vendors: number;
@@ -44,14 +27,6 @@ interface PriceItem {
 }
 
 // ===== 数据拉取 =====
-async function fetchSiteConfig(): Promise<SiteConfig> {
-  try {
-    const res = await fetch(`${API_BASE}/api/v1/public/site-config`, { cache: "no-store" });
-    if (res.ok) return await res.json();
-  } catch {}
-  return {};
-}
-
 /** 对外 API 接入地址（后台 系统设置 → API 服务 可配置 api_domain） */
 async function fetchApiConfig(): Promise<{
   apiDomain: string;
@@ -66,7 +41,9 @@ async function fetchApiConfig(): Promise<{
       const body = await res.json();
       if (body?.data) return body.data;
     }
-  } catch {}
+  } catch {
+    // Use the built-in API endpoints when the optional public configuration is unavailable.
+  }
   return {
     apiDomain: "api.unmisa.com",
     openaiBaseUrl: "https://api.unmisa.com/v1",
@@ -80,7 +57,9 @@ async function fetchStats(): Promise<Stats> {
   try {
     const res = await fetch(`${API_BASE}/api/v1/public/stats`, { cache: "no-store" });
     if (res.ok) return await res.json();
-  } catch {}
+  } catch {
+    // Render the page with zeroed statistics when the public stats endpoint is unavailable.
+  }
   return { models: 0, vendors: 0, users: 0, totalTokens: 0 };
 }
 
@@ -104,7 +83,9 @@ async function fetchPricing(): Promise<{ pricing: PriceItem[] }> {
         })),
       };
     }
-  } catch {}
+  } catch {
+    // Render the page without pricing cards when the public pricing endpoint is unavailable.
+  }
   return { pricing: [] };
 }
 
@@ -159,14 +140,12 @@ export default async function HomePage({
   const dict = await fetchDictionary(lang);
   const t = makeT(dict);
 
-  const [config, stats, pricing, apiConfig] = await Promise.all([
-    fetchSiteConfig(),
+  const [stats, pricing, apiConfig] = await Promise.all([
     fetchStats(),
     fetchPricing(),
     fetchApiConfig(),
   ]);
 
-  const siteName = config.site_name ?? "3Cloud";
   const featuredModels = pricing.pricing.slice(0, 8);
 
   // 按分类聚合去重取热门模型

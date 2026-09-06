@@ -20,10 +20,6 @@ import type { ColumnDef } from "@3cloud/shared-ui";
  */
 
 /* ===== 样式片段 ===== */
-const CARD: React.CSSProperties = {
-  background: "var(--color-panel)", borderRadius: "var(--radius-xl)",
-  padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,.06)",
-};
 const BTN_BASE: React.CSSProperties = {
   padding: "8px 14px", borderRadius: "var(--radius-lg)", border: "none",
   cursor: "pointer", fontWeight: 600, fontSize: 13,

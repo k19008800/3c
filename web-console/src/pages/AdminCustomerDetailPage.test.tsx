@@ -15,7 +15,7 @@ import userEvent from "@testing-library/user-event";
 import { screen, waitFor } from "@testing-library/react";
 import { useAuthStore, type User } from "../store/auth";
 import { renderWithProviders } from "../test/renderWithProviders";
-import { toastSpies, resetToastSpies } from "../test/sharedUiMock";
+import { resetToastSpies } from "../test/sharedUiMock";
 import AdminCustomerDetailPage from "./AdminCustomerDetailPage";
 
 vi.mock("@3cloud/shared-ui", async () => {

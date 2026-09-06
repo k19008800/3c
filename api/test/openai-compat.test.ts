@@ -82,10 +82,15 @@ vi.mock('../src/services/idempotency', () => ({
   resolveIdempotencyKey: vi.fn((_req: unknown, fallback: string) => fallback),
   acquireIdempotencyLock: vi.fn().mockResolvedValue({ status: 'degraded' }),
   releaseIdempotencyLock: vi.fn().mockResolvedValue(undefined),
-  replayIdempotentRequest: vi.fn().mockResolvedValue(false),
+  replayIdempotentRequest: vi.fn().mockResolvedValue('none' as never),
   cacheIdempotentResponse: vi.fn().mockResolvedValue(undefined),
   isIdempotencyUniqueViolation: vi.fn(() => false),
   buildIdempotencySummary: vi.fn((p: Record<string, unknown>) => ({ idempotent_replay: true, ...p })),
+  // 幂等指纹（idempotency step 计算指纹/作用域键需要）：确定性 mock，保持可复现 + user-scoped
+  canonicalizePath: (p: string) => String(p || '').replace(/\/+/g, '/').replace(/^\/+|\/+$/g, '').toLowerCase(),
+  canonicalizeBody: (b: unknown) => JSON.stringify(b) ?? 'null',
+  scopeIdempotencyKey: (k: string, uid: number) => `${k}:${uid}`,
+  buildRequestFingerprint: (i: { userId: number; body: unknown }) => `fp-${i.userId}-${JSON.stringify(i.body)}`,
 }));
 // 预扣（P0-1）：路由单测整体 mock（bypass 直通 + 无冻结），避免真实 Redis Lua/PG 镜像干扰
 vi.mock('../src/services/billing/pre-consume', () => ({

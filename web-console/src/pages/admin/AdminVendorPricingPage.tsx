@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../../lib/api";
-import { HelpIcon, StatusBadge, Modal, SkeletonGroup, useToast } from "@3cloud/shared-ui";
+import { HelpIcon, Modal, SkeletonGroup, useToast } from "@3cloud/shared-ui";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
@@ -21,13 +21,6 @@ export default function AdminVendorPricingPage() {
     mutationFn: async (body: any) =>
       (await api.put(`/admin/vendor-pricing/${body.id}`, body)).data,
     onSuccess: () => { toast.success("定价已更新"); setEditItem(null); qc.invalidateQueries({ queryKey: ["admin-vendor-pricing"] }); },
-    onError: (e: any) => toast.error(extractError(e)),
-  });
-
-  const batchMut = useMutation({
-    mutationFn: async (body: { ids: number[]; multiplier: number }) =>
-      (await api.post("/admin/vendor-pricing/batch-adjust", body)).data,
-    onSuccess: () => { toast.success("批量调价已提交"); qc.invalidateQueries({ queryKey: ["admin-vendor-pricing"] }); },
     onError: (e: any) => toast.error(extractError(e)),
   });
 

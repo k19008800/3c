@@ -16,8 +16,6 @@ import { ResponseViewer, controlStyle, primaryBtnStyle } from "./ResponseViewer"
 import type { PlaygroundTabProps, ProxyResult } from "./types";
 import type { MessageItem } from "./tabTypes";
 
-interface ChatMessage extends MessageItem {}
-
 const cardStyle: React.CSSProperties = {
   background: "#fff",
   borderRadius: 10,
@@ -32,7 +30,7 @@ export function ChatTab(props: PlaygroundTabProps) {
 
   const [selectedModel, setSelectedModel] = useState("deepseek-chat");
   const [customModel, setCustomModel] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([
+  const [messages, setMessages] = useState<MessageItem[]>([
     { role: "system", content: "You are a helpful assistant." },
     { role: "user", content: "请用一句话介绍什么是 AI" },
   ]);

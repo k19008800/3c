@@ -21,8 +21,6 @@ const STATUS_MAP: Record<string, "success" | "warning" | "danger" | "info" | "de
   archived: "info",
 };
 const FILTERS = [{ value: "", label: "全部" }, { value: "draft", label: "草稿" }, { value: "active", label: "进行中" }, { value: "ended", label: "已结束" }, { value: "archived", label: "已归档" }];
-const STATUS_LABEL: Record<string, string> = { draft: "草稿", active: "进行中", ended: "已结束", archived: "已归档" };
-const TYPE_LABEL: Record<string, string> = { recharge_gift: "充值赠送", new_user: "新用户礼", discount: "折扣活动" };
 
 export default function AdminCampaignsPage() {
   const qc = useQueryClient();

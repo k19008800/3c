@@ -16,7 +16,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { buildApp } from '../src/app';
 import type { FastifyInstance } from 'fastify';
 import { db, schema } from '../src/db';
-import { eq } from 'drizzle-orm';
+import { eq, inArray, sql, like, or, and } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { generateAccessToken } from '../src/services/auth/jwt';
 
@@ -40,6 +40,7 @@ describe('Agent Settlement + Invite（P1-2）', () => {
   let cust1Id = 0;
   let cust2Id = 0;
   let cust3Id = 0;
+  const consumptionIds: number[] = [];
 
   /** 当前 UTC 会计期（DB to_char 与 JS toISOString 同口径） */
   const utcMonth = new Date().toISOString().slice(0, 7);
@@ -91,6 +92,7 @@ describe('Agent Settlement + Invite（P1-2）', () => {
       model: 'gpt-4o',
       cost,
     }).returning({ id: schema.consumptionRecords.id });
+    consumptionIds.push(row!.id);
     return row!.id;
   }
 
@@ -102,7 +104,26 @@ describe('Agent Settlement + Invite（P1-2）', () => {
     expect(comm).not.toBeNull();
   }
 
+  async function cleanupStaleFixtures(): Promise<void> {
+    const staleUsers = await db.select({ id: schema.users.id }).from(schema.users)
+      .where(sql`${schema.users.email} LIKE 'agent-a-%@test.com' OR ${schema.users.email} LIKE 'agent-b-%@test.com' OR ${schema.users.email} LIKE 'agent-c-%@test.com' OR ${schema.users.email} LIKE 'cust-a1-%@test.com' OR ${schema.users.email} LIKE 'cust-a2-%@test.com' OR ${schema.users.email} LIKE 'cust-b3-%@test.com'`);
+    const staleUserIds = staleUsers.map((r) => r.id);
+    if (staleUserIds.length === 0) return;
+    const staleAgents = await db.select({ id: schema.agents.id }).from(schema.agents).where(inArray(schema.agents.userId, staleUserIds));
+    const staleAgentIds = staleAgents.map((r) => r.id);
+    if (staleAgentIds.length) {
+      await db.delete(schema.systemConfig).where(or(...staleAgentIds.map((id) => like(schema.systemConfig.key, `agent_settlement_confirm:${id}:%`))));
+      await db.delete(schema.agentInvitations).where(inArray(schema.agentInvitations.agentId, staleAgentIds));
+      await db.delete(schema.agentCommissions).where(inArray(schema.agentCommissions.agentId, staleAgentIds));
+      await db.delete(schema.agentCustomers).where(inArray(schema.agentCustomers.agentId, staleAgentIds));
+      await db.delete(schema.agents).where(inArray(schema.agents.id, staleAgentIds));
+    }
+    await db.delete(schema.consumptionRecords).where(and(like(schema.consumptionRecords.requestId, 'agent-settle-req-%'), inArray(schema.consumptionRecords.userId, staleUserIds)));
+    await db.delete(schema.users).where(inArray(schema.users.id, staleUserIds));
+  }
+
   beforeAll(async () => {
+    await cleanupStaleFixtures();
     app = await buildApp({ envOverrides: testEnv });
     await app.ready();
 
@@ -151,7 +172,23 @@ describe('Agent Settlement + Invite（P1-2）', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) await app.close();
+    const agentIds = [agentAId, agentBId, agentCId].filter((id) => id > 0);
+    const userIds = [agentAUserId, agentBUserId, agentCUserId, cust1Id, cust2Id, cust3Id].filter((id) => id > 0);
+    try {
+      if (agentIds.length) {
+        await db.delete(schema.systemConfig).where(sql`${schema.systemConfig.key} LIKE ${'agent_settlement_confirm:%'}`);
+        await db.delete(schema.agentInvitations).where(inArray(schema.agentInvitations.agentId, agentIds));
+        await db.delete(schema.agentCommissions).where(inArray(schema.agentCommissions.agentId, agentIds));
+        await db.delete(schema.agentCustomers).where(inArray(schema.agentCustomers.agentId, agentIds));
+        await db.delete(schema.agents).where(inArray(schema.agents.id, agentIds));
+      }
+      if (consumptionIds.length) await db.delete(schema.consumptionRecords).where(inArray(schema.consumptionRecords.id, consumptionIds));
+      if (userIds.length) await db.delete(schema.users).where(inArray(schema.users.id, userIds));
+    } catch (error) {
+      console.error('[agent-settlement.test] cleanup failed:', error);
+      throw error;
+    }
   });
 
   // ═════════════════════════════════════════════

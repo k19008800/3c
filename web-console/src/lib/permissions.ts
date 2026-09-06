@@ -24,6 +24,8 @@ export const ROLE_PERMS: Record<string, string[]> = {
     "finance.refund", "finance.topup", "finance.adjust", "finance.invoice",
     "finance.reconciliation", "supplier.view", "supplier.edit", "supplier.pricing",
     "sys.config", "sys.users", "sys.audit",
+    // 数据导出授权管理（PRD-数据导出授权管理 §9）：查看/编辑授权
+    "dataExportGrant.view", "dataExportGrant.edit",
   ],
   finance: ["finance.refund", "finance.topup", "finance.invoice", "finance.reconciliation", "customer.view"],
   agent: ["customer.view", "customer.credit"],

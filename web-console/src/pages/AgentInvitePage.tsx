@@ -67,7 +67,7 @@ export default function AgentInvitePage() {
   }
 
   async function copyLink() {
-    try { await navigator.clipboard.writeText(inviteLink); toast.success("已复制邀请链接"); } catch {}
+    try { await navigator.clipboard.writeText(inviteLink); toast.success("已复制邀请链接"); } catch { /* 剪贴板权限/浏览器不支持时静默 */ }
   }
 
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#888" }}>加载中…</div>;

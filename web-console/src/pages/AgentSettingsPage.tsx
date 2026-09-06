@@ -62,11 +62,6 @@ interface ReportInfo {
 }
 
 /* ============ 样式变量 ============ */
-const STAT_CARD: React.CSSProperties = {
-  background: "var(--color-panel)", borderRadius: "var(--radius-lg)",
-  padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,.06)",
-  cursor: "pointer", transition: "box-shadow .2s, transform .2s",
-};
 const CARD: React.CSSProperties = {
   background: "var(--color-panel)", padding: 20,
   borderRadius: "var(--radius-xl)", boxShadow: "0 1px 4px rgba(0,0,0,.06)",

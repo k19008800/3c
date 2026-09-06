@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
+import { useI18n } from "../lib/i18n-context";
 
 /* 密码强度评估 */
 function getStrength(pw: string): { score: number; label: string; cls: string } {
@@ -38,6 +39,7 @@ export default function RegisterPage() {
   const [inviteCode, setInviteCode] = useState(searchParams.get("invite_code") ?? "");
   const [successEmail, setSuccessEmail] = useState("");
   const { toast } = useToast();
+  const { t } = useI18n();
 
   const strength = getStrength(password);
   const pwMatch = confirmPwd ? password === confirmPwd : null;
@@ -59,11 +61,11 @@ export default function RegisterPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 8) {
-      toast.error("密码至少 8 位，含字母、数字和特殊字符");
+      toast.error(t("auth.emailRequired"));
       return;
     }
     if (password !== confirmPwd) {
-      toast.error("两次密码不一致");
+      toast.error(t("auth.passwordMismatch"));
       return;
     }
     registerMut.mutate();
@@ -85,13 +87,12 @@ export default function RegisterPage() {
         }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>📧</div>
           <div style={{ fontSize: 18, fontWeight: 600, color: "var(--color-text)", marginBottom: 8 }}>
-            注册成功！
+            {t("auth.registerSuccessTitle")}
           </div>
           <div style={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.8 }}>
-            已发送激活链接至<br />
+            {t("auth.activationSent")}<br />
             <strong style={{ color: "var(--color-text)" }}>{successEmail}</strong><br /><br />
-            请前往邮箱点击链接完成激活<br />
-            链接有效时间由后台配置
+            {t("auth.openEmailToActivate")}<br />
           </div>
           <br />
           <Link
@@ -102,7 +103,7 @@ export default function RegisterPage() {
               borderRadius: 8, fontSize: 16, textDecoration: "none",
             }}
           >
-            前往登录
+            {t("auth.goToLogin")}
           </Link>
         </div>
       </div>
@@ -133,15 +134,15 @@ export default function RegisterPage() {
           fontSize: 18, fontWeight: 600, color: "var(--color-text)", marginBottom: 24,
           display: "flex", alignItems: "center", gap: 6,
         }}>
-          注册账号
-          <HelpIcon text="注册账号后即可使用 API Token 服务" level="page" />
+          {t("auth.registerTitle")}
+          <HelpIcon text={t("auth.registerHelp")} level="page" />
         </div>
 
         <form onSubmit={handleSubmit}>
           {/* Email */}
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: "block", fontSize: 13, color: "var(--color-text)", marginBottom: 6 }}>
-              邮箱 <span style={{ color: "var(--color-danger-text)" }}>*</span>
+              {t("auth.email")} <span style={{ color: "var(--color-danger-text)" }}>*</span>
               <HelpIcon text="用于登录和接收通知的邮箱地址" level="button" />
             </label>
             <input
@@ -161,7 +162,7 @@ export default function RegisterPage() {
           {/* Password */}
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: "block", fontSize: 13, color: "var(--color-text)", marginBottom: 6 }}>
-              密码 <span style={{ color: "var(--color-danger-text)" }}>*</span>
+              {t("auth.password")} <span style={{ color: "var(--color-danger-text)" }}>*</span>
               <HelpIcon text="≥8位，字母+数字+特殊字符，推荐使用密码管理器生成" level="button" />
             </label>
             <input
@@ -200,7 +201,7 @@ export default function RegisterPage() {
           {/* Confirm Password */}
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: "block", fontSize: 13, color: "var(--color-text)", marginBottom: 6 }}>
-              确认密码 <span style={{ color: "var(--color-danger-text)" }}>*</span>
+              {t("auth.confirmPassword")} <span style={{ color: "var(--color-danger-text)" }}>*</span>
               <HelpIcon text="请再次输入密码以确认" level="button" />
             </label>
             <input
@@ -217,7 +218,7 @@ export default function RegisterPage() {
             />
             {pwMatch === false && (
               <div style={{ fontSize: 12, color: "var(--color-danger-text)", marginTop: 4 }}>
-                两次密码不一致
+                {t("auth.passwordMismatch")}
               </div>
             )}
           </div>
@@ -253,7 +254,7 @@ export default function RegisterPage() {
               fontFamily: "inherit",
             }}
           >
-            {registerMut.isPending ? "注册中..." : "注册"}
+            {registerMut.isPending ? t("auth.registering") : t("auth.register")}
           </button>
           {registerMut.isError && (
             <div style={{
@@ -267,7 +268,7 @@ export default function RegisterPage() {
         </form>
 
         <div style={{ textAlign: "center", marginTop: 20, fontSize: 13, color: "var(--color-text-secondary)" }}>
-          已有账号？<Link to="/login" style={{ color: "var(--color-primary)", textDecoration: "none" }}>立即登录</Link>
+          {t("auth.haveAccount")} <Link to="/login" style={{ color: "var(--color-primary)", textDecoration: "none" }}>{t("auth.loginNow")}</Link>
         </div>
       </div>
     </div>

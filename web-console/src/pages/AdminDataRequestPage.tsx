@@ -37,22 +37,22 @@ export default function AdminDataRequestPage() {
       const r = await api.get("/admin/data-requests", { params: { status: filter || undefined } });
       setRequests(r.data?.data?.list ?? []);
       setDemo(false);
-    } catch {}
+    } catch { /* 拉取失败：保持列表现状 */ }
   }
 
   async function approve(id: number) {
-    try { await api.post(`/admin/data-requests/${id}/approve`, { note }); } catch {}
+    try { await api.post(`/admin/data-requests/${id}/approve`, { note }); } catch { /* 网络/后端异常：不阻断本地状态更新 */ }
     toast.success("已批准");
     setReviewing(null); setNote(""); setRequests(requests.map(r => r.id === id ? { ...r, status: "approved", reviewer_name: "当前管理员" } : r));
   }
   async function reject(id: number) {
     if (!note.trim()) { toast.error("驳回必须填写备注"); return; }
-    try { await api.post(`/admin/data-requests/${id}/reject`, { note }); } catch {}
+    try { await api.post(`/admin/data-requests/${id}/reject`, { note }); } catch { /* 网络/后端异常：不阻断本地状态更新 */ }
     toast.success("已驳回");
     setReviewing(null); setNote(""); setRequests(requests.map(r => r.id === id ? { ...r, status: "rejected", reviewer_name: "当前管理员" } : r));
   }
   async function markExported(id: number) {
-    try { await api.post(`/admin/data-requests/${id}/export`, {}); } catch {}
+    try { await api.post(`/admin/data-requests/${id}/export`, {}); } catch { /* 网络/后端异常：不阻断本地状态更新 */ }
     toast.success("已标记导出");
     setRequests(requests.map(r => r.id === id ? { ...r, status: "exported" } : r));
   }
@@ -61,7 +61,7 @@ export default function AdminDataRequestPage() {
     try { await api.post("/admin/data-requests", {
       agency: formAgency, request_reason: formReason, data_type: formDataType,
       date_start: formDateStart, date_end: formDateEnd,
-    }); } catch {}
+    }); } catch { /* 网络/后端异常：不阻断本地状态更新 */ }
     toast.success("数据请求已提交");
     const next: DataRequest = {
       id: Date.now(), request_no: `DR-${Date.now()}`,

@@ -14,11 +14,13 @@ const email = (prefix: string) => `${prefix}-${Date.now()}@e2e.test`;
 async function registerAndToLogin(page: import("@playwright/test").Page, mail: string) {
   await page.goto("/register");
   await page.getByPlaceholder("your@email.com").fill(mail);
-  await page.getByPlaceholder("≥8位，字母+数字+特殊字符").fill(PASSWORD);
-  await page.getByPlaceholder("再次输入密码").fill(PASSWORD);
+  const pwdInputs = page.locator('input[type="password"]');
+  await pwdInputs.nth(0).fill(PASSWORD);
+  await pwdInputs.nth(1).fill(PASSWORD);
   await page.getByRole("button", { name: "注册", exact: true }).click();
   await expect(page.getByText("注册成功！")).toBeVisible();
-  await page.getByRole("link", { name: "前往登录" }).click();
+  // 注册成功页：激活提示 + 「去登录」链接（原「前往登录」文案已随激活流程收敛为「去登录」）
+  await page.getByRole("link", { name: /去登录|前往登录/ }).click();
   await expect(page).toHaveURL(/\/app\/login/);
 }
 
@@ -37,8 +39,10 @@ test.describe("3Cloud Console 核心链路", () => {
     await registerAndToLogin(page, mail);
     await loginToDash(page, { email: mail, password: PASSWORD });
 
-    await expect(page.getByText("账户余额")).toBeVisible();
-    await expect(page.getByText("¥10.00").first()).toBeVisible(); // 注册赠金
+    await expect(page.getByText("账户余额").first()).toBeVisible();
+    // 注册赠金 ¥10 出现在「余额」下拉菜单中（折叠状态），断言存在即可
+    const bal = page.locator(".c3-dropdown-menu__item", { hasText: "¥10" });
+    await expect(bal.first()).toHaveCount(1);
   });
 
   test("创建 API Key 并显示明文（3c_ 前缀）", async ({ page }) => {
@@ -46,18 +50,18 @@ test.describe("3Cloud Console 核心链路", () => {
     await registerAndToLogin(page, mail);
     await loginToDash(page, { email: mail, password: PASSWORD });
 
-    await page.getByRole("link", { name: "API Keys" }).first().click();
+    await page.getByRole("link", { name: /API Key/ }).first().click();
     await expect(page.getByRole("heading", { name: "API Key 管理" })).toBeVisible();
 
     const name = `e2e-key-${Date.now()}`;
-    await page.getByRole("button", { name: "+ 创建 Key" }).click();
+    await page.getByRole("button", { name: /创建 Key|\+ 创建/ }).click();
     await page.getByPlaceholder("例如：生产环境").fill(name);
     await page.getByRole("button", { name: "确认创建" }).click();
 
-    await expect(page.getByText("✅ API Key 创建成功")).toBeVisible();
+    await expect(page.getByText("API Key 创建成功").first()).toBeVisible();
     const secret = await page.locator("code").first().textContent();
     expect(secret).toMatch(/^3c_/);
-    await page.getByRole("button", { name: "返回列表" }).click();
+    await page.getByRole("button", { name: /返回|Back/ }).first().click();
     await expect(page.getByText(name)).toBeVisible();
   });
 
@@ -66,21 +70,22 @@ test.describe("3Cloud Console 核心链路", () => {
     await registerAndToLogin(page, mail);
     await loginToDash(page, { email: mail, password: PASSWORD });
 
-    await page.getByRole("link", { name: "API Keys" }).first().click();
+    await page.getByRole("link", { name: /API Key/ }).first().click();
     await expect(page.getByRole("heading", { name: "API Key 管理" })).toBeVisible();
 
     const name = `e2e-op-${Date.now()}`;
-    await page.getByRole("button", { name: "+ 创建 Key" }).click();
+    await page.getByRole("button", { name: /创建 Key|\+ 创建/ }).click();
     await page.getByPlaceholder("例如：生产环境").fill(name);
     await page.getByRole("button", { name: "确认创建" }).click();
-    await expect(page.getByText("✅ API Key 创建成功")).toBeVisible();
-    await page.getByRole("button", { name: "返回列表" }).click();
+    await expect(page.getByText("API Key 创建成功").first()).toBeVisible();
+    await page.getByRole("button", { name: /返回|Back/ }).first().click();
 
     const row = page.getByRole("row", { name: new RegExp(name) });
     await row.getByRole("button", { name: "禁用" }).click();
     await expect(row.getByText("已禁用")).toBeVisible();
     await row.getByRole("button", { name: "启用" }).click();
-    await expect(row.getByText("启用")).toBeVisible();
+    await expect(row.getByText("已启用")).toBeVisible();
+    await expect(row.getByRole("button", { name: "禁用" })).toBeVisible();
   });
 
   test("调用日志页：无记录时展示空态与筛选", async ({ page }) => {
@@ -88,7 +93,8 @@ test.describe("3Cloud Console 核心链路", () => {
     await registerAndToLogin(page, mail);
     await loginToDash(page, { email: mail, password: PASSWORD });
 
-    await page.getByRole("link", { name: "调用日志" }).click();
+    // i18n 开启后导航可能显示中文或英文，使用稳定路由语义匹配。
+    await page.getByRole("link", { name: /调用日志|Logs/ }).click();
     await expect(page.getByRole("heading", { name: "调用日志" })).toBeVisible();
     // 新用户无调用记录 → Table 走空态分支（不渲染表头），断言空态提示
     await expect(page.getByText(/暂无调用记录/)).toBeVisible();

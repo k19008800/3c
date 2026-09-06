@@ -37,16 +37,6 @@ interface RechargeRecord {
   created_at: string;
   can_retry: boolean;
 }
-interface Promotion {
-  id: number;
-  title: string;
-  description: string;
-  rule: string;
-  minAmount: number;
-  benefit: string;
-  remainingDays: number;
-}
-
 /* ============ 常量 ============ */
 const QUICK_AMOUNTS = [100, 500, 1000, 5000, 10000];
 const METHOD_LABEL: Record<string, string> = {
@@ -107,14 +97,6 @@ export default function RechargePage() {
     },
   });
 
-  const promoQ = useQuery({
-    queryKey: ["me-promotions"],
-    queryFn: async () => {
-      const r = await api.get<{ data: { list: Promotion[] } }>("/me/promotions");
-      return r.data.data.list;
-    },
-  });
-
   const rechargeMut = useMutation({
     mutationFn: async () => {
       const r = await api.post<{ data: RechargeResult }>("/me/recharge", {
@@ -161,8 +143,6 @@ export default function RechargePage() {
     toast.success("对公转账申请已提交，等待财务审核（预计 1-3 个工作日）");
     qc.invalidateQueries({ queryKey: ["me-recharge-orders"] });
   };
-
-  const topPromo = promoQ.data?.[0];
 
   const recordColumns: ColumnDef<RechargeRecord>[] = [
     {

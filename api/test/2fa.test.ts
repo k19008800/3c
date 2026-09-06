@@ -158,6 +158,7 @@ function seedUser2fa(overrides: Record<string, unknown> = {}) {
 
 let app: FastifyInstance;
 
+// 全量并发时首次动态 import 大路由模块 + 建 Fastify app 可能超过默认 10s hookTimeout（偶发超时非功能失败），提高至 60s。
 beforeAll(async () => {
   const { twoFactorRoutes } = await import('../src/routes/2fa');
   const { authRoutes } = await import('../src/routes/auth');
@@ -165,7 +166,7 @@ beforeAll(async () => {
   await app.register(twoFactorRoutes);
   await app.register(authRoutes);
   await app.ready();
-});
+}, 60000);
 
 afterAll(async () => {
   await app.close();

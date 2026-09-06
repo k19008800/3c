@@ -59,8 +59,8 @@ interface TopupFormState {
 }
 
 /* ============ 常量 ============ */
-/** 人工上账单笔上限（双签裁决 B3/Q9：50,000 → 1,000,000；>¥50,000 由多级审批承接） */
-const MANUAL_TOPUP_MAX_AMOUNT = 1000000;
+/** 人工上账单笔上限（accepted ADR-0001） */
+const MANUAL_TOPUP_MAX_AMOUNT = 50000;
 /** R6 限额（双签裁决 B5/B6：soft=50,000 / hard=100,000，24h 累计，操作人/被入账用户同值） */
 const DAILY_SOFT_LIMIT = 50000;
 const DAILY_HARD_LIMIT = 100000;
@@ -80,19 +80,19 @@ const EMPTY_FORM: TopupFormState = {
 };
 
 /* PRD §8 按钮级帮助对照表（P1 不可降级；文案随 R5 分级/限额/2FA 更新） */
-const HELP_CREATE = "为指定用户创建人工上账订单：对公到账需上传凭证并填写转账单号；提交后按金额进入对应审批环节（≤¥10,000 单审、>¥10,000 双人复核、>¥100,000 追加 super_admin 终审），审核通过前不改变用户余额；资金写操作需操作级 2FA + 二次确认";
+const HELP_CREATE = "为指定用户创建人工上账订单：对公到账需上传凭证并填写转账单号；提交后按金额进入对应审批环节（≤¥10,000 单审、>¥10,000 双人复核），审核通过前不改变用户余额；资金写操作需操作级 2FA + 二次确认";
 const HELP_USER_SEARCH = "按邮箱 / 手机号 / 用户ID 搜索并选中目标用户；选中后展示邮箱、名称、当前余额与账户状态，禁用/冻结用户需先解锁";
 const HELP_TYPE_BANK = "用于线下/对公转账已到账的入账：凭证与转账单号必填，防止重复入账";
 const HELP_TYPE_GRANT = "用于平台赠送 / 补偿 / 纠错 / 客服补单：凭证与转账单号选填，入账原因必填";
-const HELP_AMOUNT = "单笔入账金额，最低 ¥0.01、最高 ¥1,000,000；>¥10,000 进入多人审批，>¥100,000 需 super_admin 终审（大额入账将进入多级审批）；24h 累计入账超 ¥50,000 将触发升级审批，最多保留 2 位小数";
+const HELP_AMOUNT = "单笔入账金额，最低 ¥0.01、最高 ¥50,000；>¥10,000 进入多人审批；24h 累计入账超 ¥50,000 将触发升级审批，最多保留 2 位小数";
 const HELP_BALANCE_PREVIEW = "按当前所选用户余额 + 输入金额实时计算入账后的可用余额，供提交前核对";
 const HELP_EVIDENCE = "上传对公到账凭证/回单截图，仅支持 JPG/PNG/PDF，大小不超过 5MB";
 const HELP_TRANSFER_NO = "银行转账流水号；对公到账必填且全平台唯一，同一单号不可重复上账";
 const HELP_CONFIRM = "校验通过后提交（资金写操作），进入操作级 2FA 两步验证：① 输入 TOTP/备用码验证身份 → ② 核对操作摘要后确认执行";
-const HELP_APPROVE_L1 = "一级审批：单审档通过即入账；双人/终审档通过后进入下一环节（待双人复核/待终审），不会立即入账；审批人不能是创建人";
+const HELP_APPROVE_L1 = "一级审批：单审档通过即入账；双人档通过后进入二级复核，不会立即入账；审批人不能是创建人";
 const HELP_APPROVE_L2 = "二级复核：双人档在此环节通过后入账生效；审批人不能与一级审批人相同";
-const HELP_APPROVE_L2_T3 = "二级复核：通过后进入 super 终审环节，不会立即入账；审批人不能与一级审批人相同";
-const HELP_APPROVE_SUPER = "终审通过（super_admin）：终审档（>¥100,000）的最终确认，通过后入账生效；终审人不能是前两级审批人或创建人";
+const HELP_APPROVE_L2_T3 = "历史兼容提示：人工上账单笔上限为 ¥50,000，当前人工上账不会进入 super 终审；如需处理大额对公入账，请走用户充值订单路径";
+const HELP_APPROVE_SUPER = "保留的历史兼容提示：当前人工上账单笔上限为 ¥50,000，>¥100,000 请求不可创建；如需处理大额对公入账，请走用户充值订单路径";
 const HELP_REJECT = "驳回：拒绝该单据，必须填写驳回原因；单据变为已驳回，不改变用户余额（任意审批阶段均可驳回）";
 const HELP_RESET = "清空当前发起上账表单的全部填写内容，恢复默认状态";
 const HELP_STALLED = "等待可用审批人：当前阶段无持有对应权限且可审批的操作者（已排除创建人与已审人），单据滞留该环节；请联系管理员或 super_admin 兜底代审";
@@ -105,14 +105,15 @@ const PAGE_HELP = [
   "【核心操作】",
   "1. 搜索用户（邮箱 / 手机号 / 用户ID）→ 核对状态与当前余额",
   "2. 点击「发起上账」→ 选择入账类型（对公到账 / 平台赠送）→ 填写金额、原因、转账单号 → 二次确认 + 操作级 2FA → 提交",
-  "3. 待审核列表 → 按金额进入对应审批环节：≤¥10,000 单审；>¥10,000 双人复核；>¥100,000 追加 super_admin 终审",
+  "3. 待审核列表 → 按金额进入对应审批环节：≤¥10,000 单审；>¥10,000 双人复核",
   "4. 审核通过（最终环节）→ 入账 → 用户收到到账通知；驳回 → 填写原因",
+  "5. 单笔人工上账超过 ¥50,000 直接拒绝，不进入人工上账终审档；大额对公入账走用户充值订单路径",
   "",
   "【注意事项】",
   "- 发起/审核均为资金写操作，后端强制 2FA + 二次确认（身份验证结果 5 分钟内有效）",
   "- 审批人不能审批自己发起的单据（职责分离）；一级与二级审批不能为同一人；终审人不能是前两级审批人或创建人",
-  "- 操作人/被入账用户 24h 累计入账超过 ¥50,000 后，后续入账升级为双人审批；累计超过 ¥100,000 将被拒绝",
-  "- 单笔人工上账不超过 ¥1,000,000；大额入账将进入多级审批",
+  "- 单笔人工上账不超过 ¥50,000（accepted ADR-0001）；审批阈值与单笔上限分别校验",
+  "- 超过单笔上限的人工上账直接拒绝，不进入终审档；大额对公入账走用户充值订单路径",
   "- 对公到账需填写转账单号；同一转账单号不可重复入账（凭证上传功能后续版本开放）",
   "- 错误入账通过红字冲销纠正，禁止直接修改/删除",
   "- 所有入账写资金流水与审计日志，用户收到站内信（必发）",
@@ -243,7 +244,7 @@ function validateForm(form: TopupFormState): Record<string, string> {
   } else if (amount <= 0) {
     errs.amount = "入账金额必须大于 0";
   } else if (amount > MANUAL_TOPUP_MAX_AMOUNT) {
-    errs.amount = `单笔上账金额不得超过 ¥${MANUAL_TOPUP_MAX_AMOUNT.toLocaleString()}；大额入账将进入多级审批（>¥10,000 双人审批、>¥100,000 追加 super_admin 终审）`;
+    errs.amount = `单笔上账金额不得超过 ¥${MANUAL_TOPUP_MAX_AMOUNT.toLocaleString()}；超过单笔上限将直接拒绝，请改走用户充值订单路径`;
   }
 
   const note = form.note.trim();
@@ -260,20 +261,17 @@ function validateForm(form: TopupFormState): Record<string, string> {
   return errs;
 }
 
-/** 审核弹窗的阶段提示（R5：按当前阶段说明通过后的去向） */
 function reviewStageHint(phase: string | undefined, level: number | undefined, action: "approve" | "reject"): string {
   if (action === "reject") {
     return "请填写驳回原因；驳回后单据变为已驳回，不改变用户余额（任意审批阶段均可驳回）。";
   }
   switch (phase) {
     case "level2_pending":
-      return level === 3
-        ? "二审通过后单据进入 super 终审环节，不会立即入账（审批人不能与一审人相同）。"
-        : "二级复核通过后入账生效（双人档）。审批人不能与一级审批人相同。";
+      return "二级复核通过后入账生效（双人档）。审批人不能与一级审批人相同。";
     case "super_pending":
-      return "super_admin 终审通过后入账生效。终审人不能是前两级审批人或创建人。";
+      return "历史兼容阶段：当前人工上账单笔上限为 ¥50,000，不应产生 super 终审单据；如遇此状态请联系管理员核查。";
     default:
-      if (level === 3) return "一级审批通过后单据进入待二审，不会立即入账。";
+      if (level === 3) return "历史兼容阶段：当前人工上账单笔上限为 ¥50,000，不应产生三级审批单据；如遇此状态请联系管理员核查。";
       if (level === 2) return "一级审批通过后单据进入待二级复核，不会立即入账。";
       return "确认后金额将立即入账到客户账户（单审档）。";
   }
@@ -730,7 +728,7 @@ export default function AdminManualRechargePage() {
           step="0.01"
           value={form.amount}
           onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-          placeholder="单笔最高 ¥1,000,000；>¥10,000 进入多人审批，>¥100,000 需 super_admin 终审"
+          placeholder="单笔最高 ¥50,000；>¥10,000 进入多人审批"
           style={inp}
         />
         {/* R5/R6：实时审批路径提示 */}

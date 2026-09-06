@@ -9,6 +9,7 @@ const isCI = process.env.CI === "true";
  */
 export default defineConfig({
   testDir: "./tests",
+  globalSetup: require.resolve("./global-setup.cjs"),
   timeout: isCI ? 60000 : 30000,
   retries: isCI ? 1 : 0,
   use: {

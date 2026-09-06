@@ -19,6 +19,7 @@ import { buildApp } from '../src/app';
 import type { FastifyInstance } from 'fastify';
 import { db, schema } from '../src/db';
 import { eq, and, sql, inArray } from 'drizzle-orm';
+import { enableTest2fa, op2faHeaders } from '../src/routes/test-helpers.js';
 
 const testEnv = {
   LOG_LEVEL: 'error',
@@ -33,6 +34,7 @@ const EMPTY_PERIOD = '2098-01'; // 完全无数据期
 describe('Vendor Settlement API (P1-3)', () => {
   let app: FastifyInstance;
   let adminToken: string;
+  let adminId = 0;
   let customerToken: string;
 
   const ts = Date.now();
@@ -63,6 +65,10 @@ describe('Vendor Settlement API (P1-3)', () => {
       payload: { email: adminEmail, password: 'Admin12345' },
     });
     adminToken = JSON.parse(loginRes.payload).accessToken;
+    // 结算确认挂操作级 2FA（#26）：操作人启用 2FA，confirm/404 用例带一次性令牌
+    const adminRows = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, adminEmail));
+    adminId = adminRows[0]!.id;
+    await enableTest2fa(adminId);
 
     const custRes = await app.inject({
       method: 'POST', url: '/api/v1/auth/register',
@@ -126,6 +132,7 @@ describe('Vendor Settlement API (P1-3)', () => {
 
   afterAll(async () => {
     // 清理（items 随 settlement 级联删除）
+    await db.delete(schema.user2fa).where(eq(schema.user2fa.userId, adminId));
     await db.delete(schema.vendorSettlements).where(eq(schema.vendorSettlements.period, PERIOD));
     await db.delete(schema.consumptionRecords).where(sql`request_id like ${`${prefix}-%`}`);
     await db.delete(schema.supplierModels).where(inArray(schema.supplierModels.supplierId, [supA, supB, supC]));
@@ -413,15 +420,15 @@ describe('Vendor Settlement API (P1-3)', () => {
   it('confirm：draft → confirmed，且幂等（二次 confirm 仍 200）', async () => {
     const res = await app.inject({
       method: 'POST', url: `/api/v1/admin/vendor-settlements/${settlementC}/confirm`,
-      headers: auth(adminToken),
+      headers: op2faHeaders(adminToken, adminId, adminEmail, 'admin'),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().data.status).toBe('confirmed');
 
-    // 幂等
+    // 幂等（操作级 2FA 为一次性令牌：每次调用 op2faHeaders 生成新令牌）
     const res2 = await app.inject({
       method: 'POST', url: `/api/v1/admin/vendor-settlements/${settlementC}/confirm`,
-      headers: auth(adminToken),
+      headers: op2faHeaders(adminToken, adminId, adminEmail, 'admin'),
     });
     expect(res2.statusCode).toBe(200);
     expect(res2.json().data.status).toBe('confirmed');
@@ -439,7 +446,7 @@ describe('Vendor Settlement API (P1-3)', () => {
   it('confirm：不存在的 id → 404', async () => {
     const res = await app.inject({
       method: 'POST', url: '/api/v1/admin/vendor-settlements/999999999/confirm',
-      headers: auth(adminToken),
+      headers: op2faHeaders(adminToken, adminId, adminEmail, 'admin'),
     });
     expect(res.statusCode).toBe(404);
   });

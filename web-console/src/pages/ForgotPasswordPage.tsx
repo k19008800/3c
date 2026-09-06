@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import { api, extractError } from "../lib/api";
+import { extractError } from "../lib/api";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
 
 /** 步骤状态 */

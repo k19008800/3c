@@ -17,10 +17,16 @@ import { ButtonHelp } from "./Help";
 const LANG_LABELS: Record<PortalLang, string> = {
   "zh-CN": "简体中文",
   en: "English",
+  "ja-JP": "日本語",
+  "ko-KR": "한국어",
+  vi: "Tiếng Việt",
+  th: "ไทย",
+  id: "Bahasa Indonesia",
+  fil: "Filipino",
 };
 
 export function LanguageSwitcher({ current }: { current: PortalLang }) {
-  const [lang, setLang] = useState<PortalLang>(current);
+  const [lang] = useState<PortalLang>(current);
 
   const switchLang = (next: PortalLang) => {
     if (next === lang) return;

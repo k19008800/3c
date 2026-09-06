@@ -24,7 +24,9 @@ async function fetchSiteConfig(): Promise<SiteConfig> {
   try {
     const res = await fetch(`${API_BASE}/api/v1/public/site-config`, { cache: "no-store" });
     if (res.ok) return await res.json();
-  } catch {}
+  } catch {
+    // Keep the portal renderable when the optional site-config service is unavailable.
+  }
   return {};
 }
 

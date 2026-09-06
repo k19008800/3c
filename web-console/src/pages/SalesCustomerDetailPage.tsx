@@ -228,7 +228,7 @@ export default function SalesCustomerDetailPage() {
         <div style={{ display: "flex", flexWrap: "wrap", gap: "16px 32px" }}>
           <InfoItem label="客户邮箱" value={customer.email} />
           <InfoItem label="绑定时间" value={customer.created_at?.slice(0, 10) || customer.user_created_at?.slice(0, 10) || "-"} />
-          <InfoItem label="状态" value={getCustomerStatus(customer.status)} node />
+          <InfoItem label="状态" value={getCustomerStatus(customer.status)} _node />
           <InfoItem label="实名" value={customer.real_name_status || "未认证"} />
         </div>
       </div>
@@ -369,7 +369,7 @@ export default function SalesCustomerDetailPage() {
 }
 
 /* ===== 子组件 ===== */
-function InfoItem({ label, value, node }: { label: string; value: React.ReactNode; node?: boolean }) {
+function InfoItem({ label, value }: { label: string; value: React.ReactNode; _node?: boolean }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
       <span style={{ color: "var(--color-text-secondary)", minWidth: 80 }}>{label}</span>

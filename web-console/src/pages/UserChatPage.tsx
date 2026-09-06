@@ -50,14 +50,6 @@ export default function UserChatPage() {
     queryFn: async () =>
       (await api.get<{ data: { list: HistItem[] } }>("/me/chat/history")).data.data,
   });
-  const sessMsgsQ = useQuery({
-    queryKey: ["me-chat-msgs", historyId],
-    queryFn: async () =>
-      (await api.get<{ data: { messages: ChatMsg[] } }>(`/me/chat/sessions/${historyId}/messages`))
-        .data.data,
-    enabled: !!historyId,
-  });
-
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);

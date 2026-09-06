@@ -1,7 +1,8 @@
 # 3cloud 部署演练 Runbook（P3-3）
 
-> **日期**：2026-08-18
-> **前置**：部署闸门通过（本地全量验收 P0–P3 全绿：typecheck 0 错 / 单测 808 / verify 17 / E2E 10 / build / 记账一致），调度-agent 创建 `.deploy-gate-approved` 标记。
+> **日期**：2026-08-30
+> **状态**：review；实际部署未执行。
+> **前置**：必须先完成并确认 `docs/07-quality-and-acceptance/release-baseline.md`，由发布负责人确认后才可创建 `.deploy-gate-approved`。历史 1159/1132/808 不作为正式基线。
 > **目标**：生产服 117.78.2.66（华为云 Ubuntu 22.04，2C/1.7G/40G）从空白（2026-08-16 已清空）到 3cloud 可访问。
 > **执行方式**：逐步执行，每步有验证点；任何一步失败即停止排查，不跳过。
 > **关联**：`deploy/deployment-checklist.md`（检查清单）、`deploy/deploy.sh`（自动化脚本）、`docs/ops-guide.md`。
@@ -11,19 +12,14 @@
 ## 阶段 0：前置确认（本地）
 
 ```bash
-# 1. 本地回归 Gate 最后跑一遍（确认无漂移）
-cd /mnt/c/Users/ZH/.openclaw/workspace/3cloud   # 或实际工作目录
-pnpm -r typecheck && pnpm test && pnpm verify
+# 1. 在发布候选提交上执行并登记全部门禁
+# 命令、范围、结果和环境必须写入 docs/07-quality-and-acceptance/release-baseline.md
+pnpm -r lint && pnpm -r typecheck && pnpm test && pnpm verify
 cd e2e && pnpm test && cd ..
+pnpm -r build
 
-# 2. 创建部署闸门标记（本地仓库内，随代码上生产）
-# 注意：标记只在本仓库存在，生产 clone 后可见；内容为验收摘要
-cat > .deploy-gate-approved <<'EOF'
-approved: 2026-08-18
-by: dispatch-agent
-gates: typecheck-0err / vitest-808 / verify-17 / e2e-10 / build-ok / accounting-consistent
-EOF
-git add .deploy-gate-approved && git commit -m "chore(deploy): 部署闸门批准标记（P0-P3 本地验收全绿）" && git push origin main
+# 2. 只有 release-baseline 获发布负责人确认后，才允许创建部署标记
+# 当前阶段不得创建 .deploy-gate-approved，不得执行 git add/commit/push。
 ```
 
 ## 阶段 1：生产服基础就绪（SSH 117.78.2.66）
@@ -48,32 +44,34 @@ node -v                                    # 应 ≥ 20.11（import.meta.dirname
 corepack enable && corepack prepare pnpm@9.0.5 --activate
 ```
 
-## 阶段 2：代码部署（SSH）
+## 阶段 2：生产配置与 preflight（SSH；必须先于代码部署）
 
 ```bash
 # 2.1 拉代码（首次 clone，之后 deploy.sh pull）
 git clone git@github.com-3cloud:k19008800/3c.git /root/3cloud
 cd /root/3cloud && git checkout main
 
-# 2.2 部署闸门检查（deploy.sh 会自动校验）
-test -f .deploy-gate-approved && echo "✅ gate ok" || echo "❌ 无闸门标记"
+# 2.2 生成并核验生产配置（必须在 deploy.sh 前完成）
+node deploy/gen-prod-config.cjs > api/.env.tmp
+# ⚠️ 人工检查 DATABASE_URL / REDIS_URL / SMTP 等占位符并写入 api/.env
+vi api/.env
+chmod 600 api/.env
+# 验证 DATABASE_URL/REDIS_URL、数据库连通性、Redis PING 和生产配置权限
 
-# 2.3 一键部署（安装→构建→迁移→PM2）
-bash deploy/deploy.sh main
+# 2.3 部署闸门检查（当前阶段不得创建标记）
+test -f .deploy-gate-approved && echo "✅ gate ok" || echo "❌ 无闸门标记"
 ```
 
-## 阶段 3：生产配置（SSH）
+> 注意：`deploy/deploy.sh` 在安装和构建前要求 `api/.env` 存在。必须完成上述生产配置、权限和数据库/Redis 连通性检查后，才可进入阶段 3。
+
+## 阶段 3：代码部署（SSH；仅在 release-baseline approved 且 preflight 通过后）
 
 ```bash
-cd /root/3cloud
+# 3.1 一键部署（仅在环境/备份/release-baseline 均通过后）
+bash deploy/deploy.sh main
 
-# 3.1 生成生产密钥（JWT/加密），复制到 api/.env
-node deploy/gen-prod-config.cjs > api/.env.tmp
-# ⚠️ 人工检查 DATABASE_URL / REDIS_URL / SMTP 等占位符后重命名
-vi api/.env    # 从 .env.tmp 编辑：填 REDIS 密码、SMTP、api_domain 等
-chmod 600 api/.env
-
-# 3.2 PM2 启动
+# 3.2 PM2 启动（deploy.sh 已执行时无需重复启动）
+mkdir -p /var/log/3cloud
 pm2 start deploy/ecosystem.config.js --env production
 pm2 save && pm2 startup   # 自启
 
@@ -86,8 +84,7 @@ curl -s localhost:3000/docs -o /dev/null -w "%{http_code}"   # 200
 
 ```bash
 # 4.1 Portal 生产模式（:3100）
-# Next.js standalone 或 next start；PM2 内可加 portal 条目（或 systemd）
-# 本仓库 ecosystem 已含 api；portal 如需 PM2：pm2 start 'cd /root/3cloud/web-portal && pnpm start'
+# deploy/ecosystem.config.js 已包含 3cloud-portal，直接由 PM2 托管。
 # （生产内存 1.7G：api + portal 两个 node 进程需控制，必要时 api 用 --max-old-space-size=768）
 
 # 4.2 验证 portal 本地
@@ -149,11 +146,11 @@ tail -50 /www/wwwlogs/api.unmisa.com.error.log
 | 场景 | 动作 |
 |------|------|
 | 构建失败 | 保留旧 dist + PM2 旧进程，`pm2 reload` 不执行；排查后重试 |
-| 迁移失败 | PG 迁移前已 pg_dump；`psql -f` 恢复，或重建库 |
+| 迁移失败 | 立即停止且不启动 PM2；custom dump 使用 `pg_restore`。无经验证的逆向脚本时仅允许备份恢复，并执行结构/数据校验 |
 | 健康检查失败 | `pm2 logs` 定位；必要时 `git checkout <上一提交>` + 重新部署 |
 | 内存不足（1.7G） | api `--max-old-space-size=768`；portal 与 api 不同时高峰；必要时关宝塔面板 |
 
 ---
 
-> **状态**：演练文档就绪（P3-3 交付物），未实际执行部署（受部署闸门约束）。
+> **状态**：演练文档为 review 草案，未实际执行部署（受部署闸门约束）。正式测试基线引用 `docs/07-quality-and-acceptance/release-baseline.md`。
 > 关联：`deploy/deployment-checklist.md`、`deploy/deploy.sh`、`deploy/gen-prod-config.cjs`、`docs/ops-guide.md`

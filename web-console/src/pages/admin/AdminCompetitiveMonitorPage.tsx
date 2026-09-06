@@ -2,11 +2,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { HelpIcon, SkeletonGroup } from "@3cloud/shared-ui";
-import { useNavigate } from "react-router-dom";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
-const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
-
 /* ───────── 演示数据（对齐原型 admin-competitive-monitor.html 分布） ───────── */
 
 interface CompRow { id: number; model_name: string; our_price: number; comp_a_price: number; comp_b_price: number; comp_c_price: number; competitor_lowest: number | null; updated_at: string; }

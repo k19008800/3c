@@ -108,7 +108,7 @@ export default function TopupRecordsPage() {
       const csvRows = rows.map((r) =>
         [
           r.order_id,
-          (r.amount / 100).toFixed(2),
+          (r.amount).toFixed(2),
           METHOD_LABEL[r.payment_method] ?? r.payment_method,
           STATUS_LABEL[r.status]?.label ?? r.status,
           r.create_time,
@@ -347,7 +347,7 @@ export default function TopupRecordsPage() {
                   return (
                     <tr key={r.id} style={{ borderBottom: "1px solid #f5f5f5" }}>
                       <td style={{ padding: "14px 16px", color: "#333" }}>{r.order_id}</td>
-                      <td style={{ padding: "14px 16px", color: "#333" }}>¥{((r.amount ?? 0) / 100).toFixed(2)}</td>
+                      <td style={{ padding: "14px 16px", color: "#333" }}>¥{(r.amount ?? 0).toFixed(2)}</td>
                       <td style={{ padding: "14px 16px", color: "#333" }}>{methodLabel}</td>
                       <td style={{ padding: "14px 16px" }}>
                         <StatusBadge status={st.status}>{st.label}</StatusBadge>
@@ -487,7 +487,7 @@ function DetailContent({ record: r, onClose }: { record: TopupRecord; onClose: (
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <span style={{ fontSize: 12, color: "#888" }}>充值金额</span>
-          <span style={{ fontSize: 18, fontWeight: 600, color: "#6a8aff" }}>¥{((r.amount ?? 0) / 100).toFixed(2)}</span>
+          <span style={{ fontSize: 18, fontWeight: 600, color: "#6a8aff" }}>¥{(r.amount ?? 0).toFixed(2)}</span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <span style={{ fontSize: 12, color: "#888" }}>支付方式</span>

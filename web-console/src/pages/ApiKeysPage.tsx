@@ -11,6 +11,8 @@ import {
   CopyButton,
 } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
+import { useI18n } from "../lib/i18n-context";
+import { fmtDate } from "../lib/fmt";
 
 /* ============ 类型 ============ */
 interface ApiKey {
@@ -27,10 +29,11 @@ interface ApiKey {
 }
 
 /* ============ 常量 ============ */
-const PERM_MODE_LABEL: Record<string, string> = {
-  vendor: "绑定供应商",
-  group: "绑定分组",
-  unlimited: "无限制",
+// 权限模式文案 → i18n key（scope: console；解析时用 t() 渲染）
+const PERM_MODE_KEY: Record<string, string> = {
+  vendor: "apikey.mode.vendor",
+  group: "apikey.mode.group",
+  unlimited: "apikey.mode.unlimited",
 };
 
 const MOCK_GROUPS = ["基础模型组（8 个模型）", "高级模型组（5 个模型）", "图像模型组（3 个模型）"];
@@ -46,6 +49,7 @@ const btnBase: React.CSSProperties = {
 
 export default function ApiKeysPage() {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("新 Key");
   const [newMode, setNewMode] = useState<"vendor" | "group" | "unlimited">("group");
@@ -86,7 +90,7 @@ export default function ApiKeysPage() {
         try { localStorage.setItem("3cloud_last_raw_key", d.key); } catch { /* ignore */ }
       }
       setCreatedSecret(d.key);
-      toast.success("API Key 创建成功");
+      toast.success(t("apikey.created.success"));
       queryClient.invalidateQueries({ queryKey: ["api-keys"] });
     },
     onError: (e) => toast.error(extractError(e)),
@@ -95,7 +99,7 @@ export default function ApiKeysPage() {
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => await api.delete(`/me/api-keys/${id}`),
     onSuccess: () => {
-      toast.success("API Key 已删除");
+      toast.success(t("apikey.deleted.success"));
       queryClient.invalidateQueries({ queryKey: ["api-keys"] });
     },
     onError: (e) => toast.error(extractError(e)),
@@ -111,7 +115,7 @@ export default function ApiKeysPage() {
   });
 
   const handleCopy = (key: string) => {
-    navigator.clipboard.writeText(key).then(() => toast.success("已复制到剪贴板"));
+    navigator.clipboard.writeText(key).then(() => toast.success(t("apikey.copied")));
   };
 
   const keys = data?.list ?? [];
@@ -122,7 +126,7 @@ export default function ApiKeysPage() {
   const columns: ColumnDef<ApiKey>[] = [
     {
       key: "name",
-      title: "名称",
+      title: t("apikey.col.name"),
       dataIndex: "name",
     },
     {
@@ -136,44 +140,44 @@ export default function ApiKeysPage() {
     },
     {
       key: "mode",
-      title: "权限模式",
+      title: t("apikey.col.mode"),
       dataIndex: "mode",
       render: (v) => {
         const mode = (v as string) ?? "unlimited";
-        return <span style={{ fontSize: 12, color: "#666" }}>{PERM_MODE_LABEL[mode] ?? "无限制"}</span>;
+        return <span style={{ fontSize: 12, color: "#666" }}>{t(PERM_MODE_KEY[mode] ?? "apikey.mode.unlimited")}</span>;
       },
     },
     {
       key: "lastUsedAt",
-      title: "最后调用",
+      title: t("apikey.col.lastUsed"),
       dataIndex: "lastUsedAt",
       render: (v) => (
         <span style={{ fontSize: 12, color: "#888" }}>
-          {v ? new Date(v as string).toLocaleString() : "—"}
+          {v ? fmtDate(v as string) : "—"}
         </span>
       ),
     },
     {
       key: "todayCalls",
-      title: "今日调用",
+      title: t("apikey.col.todayCalls"),
       dataIndex: "todayCalls",
       render: (v) => <span style={{ fontSize: 13 }}>{(v as number)?.toLocaleString() ?? "—"}</span>,
     },
     {
       key: "status",
-      title: "状态",
+      title: t("common.status"),
       dataIndex: "status",
       render: (v) => {
         const s = v as string;
-        if (s === "active") return <StatusBadge status="success">启用</StatusBadge>;
-        if (s === "disabled") return <StatusBadge status="danger">已禁用</StatusBadge>;
-        if (s === "expiring") return <StatusBadge status="warning">即将过期</StatusBadge>;
+        if (s === "active") return <StatusBadge status="success">{t("common.enabled")}</StatusBadge>;
+        if (s === "disabled") return <StatusBadge status="danger">{t("common.disabled")}</StatusBadge>;
+        if (s === "expiring") return <StatusBadge status="warning">{t("apikey.status.expiring")}</StatusBadge>;
         return <StatusBadge status="default">{s}</StatusBadge>;
       },
     },
     {
       key: "action",
-      title: "操作",
+      title: t("common.actions"),
       render: (_, record) => (
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
           <button
@@ -183,18 +187,18 @@ export default function ApiKeysPage() {
               handleCopy(`sk-${record.keyPrefix}...`);
             }}
           >
-            复制
+            {t("common.copy")}
           </button>
           <button
             style={btnBase}
             onClick={(e) => {
               e.stopPropagation();
-              if (confirm("确定要删除该 API Key 吗？")) {
+              if (confirm(t("apikey.delete.confirm"))) {
                 deleteMutation.mutate(record.id);
               }
             }}
           >
-            删除
+            {t("common.delete")}
           </button>
           {record.status === "disabled" ? (
             <button
@@ -204,7 +208,7 @@ export default function ApiKeysPage() {
                 toggleMutation.mutate({ id: record.id, status: "active" });
               }}
             >
-              启用
+              {t("common.enable")}
             </button>
           ) : record.status === "active" ? (
             <button
@@ -214,7 +218,7 @@ export default function ApiKeysPage() {
                 toggleMutation.mutate({ id: record.id, status: "disabled" });
               }}
             >
-              禁用
+              {t("common.disable")}
             </button>
           ) : null}
         </div>
@@ -232,8 +236,8 @@ export default function ApiKeysPage() {
       {/* 标题行 */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <h2 style={{ margin: 0, display: "flex", alignItems: "center", gap: 8, fontSize: 20, fontWeight: 600 }}>
-          🔑 API Key 管理
-          <HelpIcon text="管理 API 调用密钥。支持 3 种权限模式和 IP 白名单" level="page" />
+          🔑 {t("apikey.title")}
+          <HelpIcon text={t("apikey.help.title")} level="page" />
         </h2>
       </div>
 
@@ -241,8 +245,8 @@ export default function ApiKeysPage() {
       {apiConfig && (
         <div style={{ background: "#1e293b", borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontFamily: "monospace", fontSize: 12, color: "#e2e8f0", lineHeight: 1.9 }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", color: "#94a3b8", fontFamily: "system-ui, sans-serif", marginBottom: 4 }}>
-            <span>🔌 接入地址</span>
-            <span style={{ fontSize: 11 }}>（后台 系统设置 → API 服务 可配置）</span>
+            <span>🔌 {t("apikey.endpoint.title")}</span>
+            <span style={{ fontSize: 11 }}>{t("apikey.endpoint.configHint")}</span>
           </div>
           <div>
             <span style={{ color: "#94a3b8" }}>OpenAI base_url&nbsp;&nbsp;: </span>
@@ -255,7 +259,7 @@ export default function ApiKeysPage() {
             <CopyButton text={apiConfig.anthropicBaseUrl} />
           </div>
           <div style={{ color: "#64748b" }}>
-            聊天端点：{apiConfig.openaiChatUrl} ｜ {apiConfig.anthropicMessagesUrl}
+            {t("apikey.endpoint.chat")}: {apiConfig.openaiChatUrl} ｜ {apiConfig.anthropicMessagesUrl}
           </div>
         </div>
       )}
@@ -265,7 +269,7 @@ export default function ApiKeysPage() {
         <div style={{ display: "flex", gap: 8 }}>
           <button
             onClick={() => {
-              setNewName("新 Key");
+              setNewName(t("apikey.new.defaultName"));
               setNewMode("group");
               setNewGroup(MOCK_GROUPS[0]);
               setNewExpiry("");
@@ -283,14 +287,14 @@ export default function ApiKeysPage() {
               cursor: "pointer",
             }}
           >
-            + 创建 Key
-            <HelpIcon text="创建新的 API 调用密钥，可指定权限模式和过期时间" />
+            + {t("apikey.create.button")}
+            <HelpIcon text={t("apikey.help.create")} />
           </button>
         </div>
         <div>
           <input
             type="text"
-            placeholder="搜索 Key 名称…"
+            placeholder={t("apikey.search.placeholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
@@ -308,16 +312,16 @@ export default function ApiKeysPage() {
       {/* 创建成功提示 */}
       {createdSecret && (
         <div style={{ background: "#e8f5e9", border: "1px solid #c8e6c9", borderRadius: 8, padding: 16, marginBottom: 16 }}>
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>✅ API Key 创建成功 — 仅展示一次，请立即复制</div>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>✅ {t("apikey.created.oneTime")}</div>
           <code style={{ background: "#fff", padding: "8px 12px", borderRadius: 6, display: "block", wordBreak: "break-all", fontFamily: "monospace", fontSize: 14 }}>
             {createdSecret}
           </code>
           <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
             <button onClick={() => handleCopy(createdSecret)} style={{ ...btnBase, color: "#22c55e", borderColor: "#22c55e" }}>
-              复制 Key
+              {t("apikey.copy.key")}
             </button>
             <button onClick={() => setCreatedSecret(null)} style={btnBase}>
-              返回列表
+              {t("common.back")}
             </button>
           </div>
         </div>
@@ -331,23 +335,23 @@ export default function ApiKeysPage() {
           columns={columns}
           dataSource={filtered}
           loading={isLoading}
-          emptyText="暂无 API Key，点击上方「创建 Key」开始"
+          emptyText={t("apikey.empty")}
         />
       )}
 
       {/* ===== 创建 Key 弹窗（原型：modal with form fields） ===== */}
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="创建 API Key">
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title={t("apikey.create.title")}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {/* Key 名称 */}
           <div>
             <label style={{ display: "block", fontSize: 13, color: "#333", marginBottom: 6 }}>
-              名称 <span style={{ color: "#e53935" }}>*</span>
+              {t("common.name")} <span style={{ color: "#e53935" }}>*</span>
             </label>
             <input
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="例如：生产环境"
+              placeholder={t("apikey.form.name.placeholder")}
               style={{
                 width: "100%",
                 padding: "10px 12px",
@@ -362,8 +366,8 @@ export default function ApiKeysPage() {
           {/* 权限模式 */}
           <div>
             <label style={{ display: "block", fontSize: 13, color: "#333", marginBottom: 6 }}>
-              权限模式 <span style={{ color: "#e53935" }}>*</span>
-              <HelpIcon text="A: 绑定供应商+模型 / B: 绑定模型分组 / C: 无限制" />
+              {t("apikey.form.mode")} <span style={{ color: "#e53935" }}>*</span>
+              <HelpIcon text={t("apikey.help.mode")} />
             </label>
             <select
               value={newMode}
@@ -378,16 +382,16 @@ export default function ApiKeysPage() {
                 boxSizing: "border-box",
               }}
             >
-              <option value="vendor">A - 绑定供应商+模型</option>
-              <option value="group">B - 绑定模型分组</option>
-              <option value="unlimited">C - 无限制</option>
+              <option value="vendor">{t("apikey.mode.vendor")}</option>
+              <option value="group">{t("apikey.mode.group")}</option>
+              <option value="unlimited">{t("apikey.mode.unlimited")}</option>
             </select>
           </div>
 
           {/* 选择分组（仅 group 模式显示） */}
           {newMode === "group" && (
             <div>
-              <label style={{ display: "block", fontSize: 13, color: "#333", marginBottom: 6 }}>选择分组</label>
+              <label style={{ display: "block", fontSize: 13, color: "#333", marginBottom: 6 }}>{t("apikey.form.group")}</label>
               <select
                 value={newGroup}
                 onChange={(e) => setNewGroup(e.target.value)}
@@ -413,7 +417,7 @@ export default function ApiKeysPage() {
           {/* 过期时间 */}
           <div>
             <label style={{ display: "block", fontSize: 13, color: "#333", marginBottom: 6 }}>
-              过期时间 <span style={{ color: "#888", fontWeight: 400 }}>（可选）</span>
+              {t("apikey.form.expiry")} <span style={{ color: "#888", fontWeight: 400 }}>{t("common.optional")}</span>
             </label>
             <input
               type="date"
@@ -433,7 +437,7 @@ export default function ApiKeysPage() {
           {/* IP 白名单 */}
           <div>
             <label style={{ display: "block", fontSize: 13, color: "#333", marginBottom: 6 }}>
-              IP 白名单 <span style={{ color: "#888", fontWeight: 400 }}>（可选，一行一个）</span>
+              IP 白名单 <span style={{ color: "#888", fontWeight: 400 }}>{t("apikey.form.ipHint")}</span>
             </label>
             <textarea
               value={newIpWhitelist}
@@ -458,7 +462,7 @@ export default function ApiKeysPage() {
               onClick={() => setShowCreate(false)}
               style={{ ...btnBase, padding: "10px 24px", fontSize: 14 }}
             >
-              取消
+              {t("common.cancel")}
             </button>
             <button
               onClick={handleCreateSubmit}
@@ -473,7 +477,7 @@ export default function ApiKeysPage() {
                 fontSize: 14,
               }}
             >
-              {createMutation.isPending ? "创建中..." : "确认创建"}
+              {createMutation.isPending ? t("apikey.form.creating") : t("apikey.form.confirm")}
             </button>
           </div>
         </div>

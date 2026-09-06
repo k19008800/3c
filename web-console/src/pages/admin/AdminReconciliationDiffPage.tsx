@@ -1,10 +1,21 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../../lib/api";
-import { HelpIcon, StatusBadge, Modal, SkeletonGroup, useToast } from "@3cloud/shared-ui";
+import { withOperation2fa, isOperation2faCanceled, operation2faErrorText, operation2faHeaders } from "../../lib/operation-2fa";
+import type { OperationSummaryItem } from "../../components/Operation2faModal";
+import { HelpIcon, StatusBadge, SkeletonGroup, useToast } from "@3cloud/shared-ui";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
+
+/** 对账差异处理第二步摘要（补账/核销资金操作，R7 强制 2FA） */
+function buildDiffSummary(op: string, vendor: string, amount: number): OperationSummaryItem[] {
+  return [
+    { label: "操作类型", value: op === "resolve" ? "对账差异 · 确认处理" : "对账差异 · 忽略" },
+    { label: "供应商", value: vendor },
+    { label: "差异金额", value: `¥${amount.toFixed(2)}`, highlight: true },
+  ];
+}
 
 /* ───────── 对账差异行（对齐后端 GET /admin/reconciliation/diffs 契约） ───────── */
 
@@ -22,10 +33,12 @@ export default function AdminReconciliationDiffPage() {
   });
 
   const resolveMut = useMutation({
-    mutationFn: async ({ id, op, reason }: { id: number; op: string; reason?: string }) =>
-      (await api.post(`/admin/reconciliation/diffs/${id}/${op}`, { reason })).data,
+    mutationFn: async ({ id, op, reason, vendor, amount }: { id: number; op: string; reason?: string; vendor: string; amount: number }) =>
+      withOperation2fa(async (ctx) => {
+        return (await api.post(`/admin/reconciliation/diffs/${id}/${op}`, { reason }, { headers: operation2faHeaders(ctx) })).data;
+      }, buildDiffSummary(op, vendor, amount)),
     onSuccess: () => { toast.success("已处理"); qc.invalidateQueries({ queryKey: ["admin-reconciliation-diffs"] }); },
-    onError: (e: any) => toast.error(extractError(e)),
+    onError: (e: any) => { if (!isOperation2faCanceled(e)) toast.error(extractError(e) ?? operation2faErrorText(e)); },
   });
 
   return (
@@ -81,9 +94,9 @@ export default function AdminReconciliationDiffPage() {
                     {d.status === "unresolved" && (
                       <>
                         <button style={{ ...btnBase, background: "#22c55e", color: "#fff", fontSize: 12 }}
-                          onClick={() => resolveMut.mutate({ id: d.id, op: "resolve" })}>确认</button>
+                          onClick={() => resolveMut.mutate({ id: d.id, op: "resolve", vendor: d.vendor_name, amount: d.amount_diff })}>确认</button>
                         <button style={{ ...btnBase, background: "#f0f0f0", fontSize: 12 }}
-                          onClick={() => resolveMut.mutate({ id: d.id, op: "ignore" })}>忽略</button>
+                          onClick={() => resolveMut.mutate({ id: d.id, op: "ignore", vendor: d.vendor_name, amount: d.amount_diff })}>忽略</button>
                       </>
                     )}
                     {d.status !== "unresolved" && <span style={{ fontSize: 11, color: "#888" }}>—</span>}

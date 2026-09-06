@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { useRef, useEffect, useState } from "react";
+import { useState } from "react";
 import { api } from "../lib/api";
 import { useNavigate } from "react-router-dom";
-import { HelpIcon, StatusBadge, SkeletonGroup } from "@3cloud/shared-ui";
+import { HelpIcon, SkeletonGroup } from "@3cloud/shared-ui";
+import { useI18n } from "../lib/i18n-context";
+import { fmtNumber, fmtMoney } from "../lib/fmt";
 
 /* ============ 类型 ============ */
 interface Stats {
@@ -15,18 +17,6 @@ interface Stats {
   todayTokenUsage: number;
   todayCost: number;
   estimatedDays: number;
-}
-
-interface TrendPoint {
-  time: string;
-  tokensUp: number;
-  tokensDown: number;
-}
-
-interface TrendSeriesItem {
-  model: string;
-  color: string;
-  data: TrendPoint[];
 }
 
 interface DistItem {
@@ -47,13 +37,12 @@ interface RecentCall {
 
 /* ============ 简单趋势图（纯 SVG，不依赖 Chart.js） ============ */
 function TrendChart({
-  data,
   models,
 }: {
   data: { labels: string[]; datasets: { label: string; data: number[]; color: string; dashed: boolean; hidden: boolean }[] };
   models: { name: string; color: string; visible: boolean }[];
 }) {
-  const svgRef = useRef<SVGSVGElement>(null);
+  const { t } = useI18n();
   const [activeModels, setActiveModels] = useState<Set<number>>(
     new Set(models.map((_, i) => i))
   );
@@ -61,7 +50,8 @@ function TrendChart({
   const toggleModel = (idx: number) => {
     setActiveModels((prev) => {
       const next = new Set(prev);
-      next.has(idx) ? next.delete(idx) : next.add(idx);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
       return next;
     });
   };
@@ -100,7 +90,7 @@ function TrendChart({
       </div>
       {/* 后端缺失：趋势图数据接口 /me/stats/trend */}
       <div style={{ textAlign: "center", padding: 20, color: "#888", fontSize: 13 }}>
-        📈 趋势图需对接后端 /me/stats/trend 接口（后端缺失）
+        📈 {t("dashboard.trend.missingBackend")}（/me/stats/trend）
       </div>
     </div>
   );
@@ -109,6 +99,7 @@ function TrendChart({
 /* ============ 组件 ============ */
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   /* 使用真实 API 获取统计数据 */
   const { data, isLoading } = useQuery<Stats>({
@@ -117,12 +108,12 @@ export default function DashboardPage() {
     refetchInterval: 15000,
   });
 
-  /* 子卡片数据 */
+  /* 子卡片数据（label 走 i18n，仅显示层格式化；环比数据后端缺失保留占位文案） */
   const subs = [
-    { label: "今日调用次数", value: data?.todayCallCount?.toLocaleString() ?? "...", sub: `成功率 ${(data?.todayCalls ?? 0) > 0 ? "96.7%" : "—"}` },
-    { label: "Token 消耗", value: data?.todayTokenUsage ? `${(data.todayTokenUsage / 10000).toFixed(1)}万` : "...", sub: "↑ 输入 · ↓ 输出" },
-    { label: "消费金额", value: data?.todayCost != null ? `¥${data.todayCost.toFixed(2)}` : "...", sub: "环比 +12.3%" /* 后端缺失：环比数据 */ },
-    { label: "当前余额", value: data?.balance != null ? `¥${data.balance.toFixed(2)}` : "...", sub: data?.estimatedDays != null ? `预计可用 ${data.estimatedDays} 天` : "—" },
+    { label: t("dashboard.subs.todayCalls"), value: data?.todayCallCount != null ? fmtNumber(data.todayCallCount) : "...", sub: t("dashboard.subs.successRate", { rate: (data?.todayCalls ?? 0) > 0 ? "96.7%" : "—" }) },
+    { label: t("dashboard.subs.tokenUsage"), value: data?.todayTokenUsage ? `${(data.todayTokenUsage / 10000).toFixed(1)}万` : "...", sub: "↑ 输入 · ↓ 输出" },
+    { label: t("dashboard.subs.todayCost"), value: data?.todayCost != null ? fmtMoney(data.todayCost) : "...", sub: "环比 +12.3%" /* 后端缺失：环比数据 */ },
+    { label: t("dashboard.subs.balance"), value: data?.balance != null ? fmtMoney(data.balance) : "...", sub: data?.estimatedDays != null ? t("dashboard.subs.estimatedDays", { days: String(data.estimatedDays) }) : "—" },
   ];
 
   /* 模型分布 mock（后端缺失 /me/stats/model-distribution） */
@@ -154,8 +145,8 @@ export default function DashboardPage() {
     return (
       <div style={{ padding: "4px 0" }}>
         <h2 style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 8, fontSize: 20, fontWeight: 600 }}>
-          📊 控制台
-          <HelpIcon text="总览您的账户状态" level="page" />
+          📊 {t("dashboard.title")}
+          <HelpIcon text={t("dashboard.help.overview")} level="page" />
         </h2>
         <SkeletonGroup lines={5} />
       </div>
@@ -166,8 +157,8 @@ export default function DashboardPage() {
     <div style={{ padding: "4px 0" }}>
       {/* 页面标题 */}
       <h2 style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8, fontSize: 20, fontWeight: 600, color: "#333" }}>
-        📊 控制台
-        <HelpIcon text="总览您的账户状态：余额、消费、调用量和活跃 Key。" level="page" />
+        📊 {t("dashboard.title")}
+        <HelpIcon text={t("dashboard.help.overviewDetail")} level="page" />
       </h2>
 
       {/* ===== 4 张概览卡片（原型：cards grid 4列） ===== */}
@@ -177,9 +168,9 @@ export default function DashboardPage() {
           onClick={() => navigate("/recharge")}
           style={{ background: "#fff", borderRadius: 8, padding: "16px 20px", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,.06)", transition: "background .2s" }}
         >
-          <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>账户余额</div>
-          <div style={{ fontSize: 22, fontWeight: 600, color: "#333" }}>¥{(data?.balance ?? 0).toFixed(2)}</div>
-          <div style={{ fontSize: 11, color: "#6a8aff", marginTop: 6 }}>立即充值 →</div>
+          <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>{t("dashboard.balance")}</div>
+          <div style={{ fontSize: 22, fontWeight: 600, color: "#333" }}>{fmtMoney(data?.balance ?? 0)}</div>
+          <div style={{ fontSize: 11, color: "#6a8aff", marginTop: 6 }}>{t("dashboard.rechargeNow")} →</div>
         </div>
 
         {/* 本月消费 */}
@@ -187,15 +178,15 @@ export default function DashboardPage() {
           onClick={() => navigate("/logs")}
           style={{ background: "#fff", borderRadius: 8, padding: "16px 20px", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,.06)", transition: "background .2s" }}
         >
-          <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>本月消费</div>
-          <div style={{ fontSize: 22, fontWeight: 600, color: "#333" }}>¥{(data?.monthlyCost ?? 0).toFixed(2)}</div>
-          <div style={{ fontSize: 11, color: "#6a8aff", marginTop: 6 }}>查看明细 →</div>
+          <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>{t("dashboard.monthlyCost")}</div>
+          <div style={{ fontSize: 22, fontWeight: 600, color: "#333" }}>{fmtMoney(data?.monthlyCost ?? 0)}</div>
+          <div style={{ fontSize: 11, color: "#6a8aff", marginTop: 6 }}>{t("dashboard.viewDetail")} →</div>
         </div>
 
         {/* 今日调用 */}
         <div style={{ background: "#fff", borderRadius: 8, padding: "16px 20px", cursor: "default", boxShadow: "0 1px 4px rgba(0,0,0,.06)" }}>
-          <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>今日调用</div>
-          <div style={{ fontSize: 22, fontWeight: 600, color: "#333" }}>{(data?.todayCalls ?? 0).toLocaleString()}</div>
+          <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>{t("dashboard.todayCalls")}</div>
+          <div style={{ fontSize: 22, fontWeight: 600, color: "#333" }}>{fmtNumber(data?.todayCalls ?? 0)}</div>
         </div>
 
         {/* 活跃 API Key */}
@@ -203,31 +194,31 @@ export default function DashboardPage() {
           onClick={() => navigate("/api-keys")}
           style={{ background: "#fff", borderRadius: 8, padding: "16px 20px", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,.06)", transition: "background .2s" }}
         >
-          <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>活跃 API Key</div>
+          <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>{t("dashboard.activeKeys")}</div>
           <div style={{ fontSize: 22, fontWeight: 600, color: "#333" }}>{data?.activeKeys ?? "—"} / {data?.totalKeys ?? "—"}</div>
-          <div style={{ fontSize: 11, color: "#6a8aff", marginTop: 6 }}>管理 →</div>
+          <div style={{ fontSize: 11, color: "#6a8aff", marginTop: 6 }}>{t("dashboard.manageKeys")} →</div>
         </div>
       </div>
 
       {/* ===== 模型 Token 消耗曲线面板 ===== */}
       <div style={{ background: "#fff", borderRadius: 8, marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.06)", overflow: "hidden" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid #eee" }}>
-          <h3 style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>📈 模型 Token 消耗曲线</h3>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>📈 {t("dashboard.trend.title")}</h3>
           <div style={{ display: "flex", gap: 4, background: "#f5f5f5", borderRadius: 6, padding: 2 }}>
-            {["今天", "昨天", "本周", "上月"].map((t) => (
+            {["dashboard.trend.today", "dashboard.trend.yesterday", "dashboard.trend.week", "dashboard.trend.lastMonth"].map((tKey) => (
               <button
-                key={t}
+                key={tKey}
                 style={{
                   padding: "4px 12px",
                   fontSize: 12,
                   border: "none",
-                  background: t === "今天" ? "#4f6ef7" : "transparent",
+                  background: tKey === "dashboard.trend.today" ? "#4f6ef7" : "transparent",
                   borderRadius: 4,
                   cursor: "pointer",
-                  color: t === "今天" ? "#fff" : "#888",
+                  color: tKey === "dashboard.trend.today" ? "#fff" : "#888",
                 }}
               >
-                {t}
+                {t(tKey)}
               </button>
             ))}
           </div>
@@ -257,7 +248,7 @@ export default function DashboardPage() {
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #eee" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: "#64748b", marginBottom: 6 }}>
               <span>00:00</span>
-              <span style={{ color: "#6a8aff", fontWeight: 600 }}>选中：00:00 — 23:59（24小时）</span>
+              <span style={{ color: "#6a8aff", fontWeight: 600 }}>{t("dashboard.trend.selected", { range: "00:00 — 23:59（24小时）" })}</span>
               <span>23:59</span>
             </div>
             <div style={{ position: "relative", height: 28, background: "#f5f5f5", borderRadius: 6, cursor: "grab" }}>
@@ -275,8 +266,8 @@ export default function DashboardPage() {
         {/* 模型调用分布 */}
         <div style={{ background: "#fff", borderRadius: 8, boxShadow: "0 1px 4px rgba(0,0,0,.06)", overflow: "hidden" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid #eee" }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>📊 模型调用分布</h3>
-            <span style={{ fontSize: 11, color: "#888" }}>近 1 小时</span>
+            <h3 style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>📊 {t("dashboard.distribution.title")}</h3>
+            <span style={{ fontSize: 11, color: "#888" }}>{t("dashboard.distribution.recentHour")}</span>
           </div>
           <div style={{ padding: "16px 20px" }}>
             {/* 后端缺失：/me/stats/model-distribution 接口，当前使用原型静态数据展示 */}
@@ -291,7 +282,7 @@ export default function DashboardPage() {
                     <div style={{ height: "100%", width: `${d.percentage}%`, background: d.color, borderRadius: 3 }} />
                   </div>
                   <div style={{ width: 200, textAlign: "right", color: "#888", flexShrink: 0 }}>
-                    {d.calls} 次 · {d.tokens} Token
+                    {t("dashboard.distribution.callsTokens", { calls: d.calls, tokens: d.tokens })}
                   </div>
                 </div>
               ))}
@@ -302,9 +293,9 @@ export default function DashboardPage() {
         {/* 最近消费 */}
         <div style={{ background: "#fff", borderRadius: 8, boxShadow: "0 1px 4px rgba(0,0,0,.06)", overflow: "hidden" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid #eee" }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>🕐 最近消费</h3>
+            <h3 style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>🕐 {t("dashboard.recent.title")}</h3>
             <span style={{ fontSize: 11, color: "#888", cursor: "pointer" }} onClick={() => navigate("/logs")}>
-              查看全部 →
+              {t("dashboard.recent.viewAll")} →
             </span>
           </div>
           <div style={{ padding: 0 }}>
@@ -312,11 +303,11 @@ export default function DashboardPage() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #eee", color: "#888", fontWeight: 400 }}>时间</th>
-                  <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #eee", color: "#888", fontWeight: 400 }}>模型</th>
-                  <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #eee", color: "#888", fontWeight: 400 }}>Token</th>
-                  <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #eee", color: "#888", fontWeight: 400 }}>费用</th>
-                  <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #eee", color: "#888", fontWeight: 400 }}>状态</th>
+                  <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #eee", color: "#888", fontWeight: 400 }}>{t("common.time")}</th>
+                  <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #eee", color: "#888", fontWeight: 400 }}>{t("common.model")}</th>
+                  <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #eee", color: "#888", fontWeight: 400 }}>{t("common.token")}</th>
+                  <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #eee", color: "#888", fontWeight: 400 }}>{t("common.cost")}</th>
+                  <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #eee", color: "#888", fontWeight: 400 }}>{t("common.status")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -328,7 +319,7 @@ export default function DashboardPage() {
                     <td style={{ padding: "8px 12px", borderBottom: "1px solid #f5f5f5", color: "#333" }}>{call.cost}</td>
                     <td style={{ padding: "8px 12px", borderBottom: "1px solid #f5f5f5" }}>
                       <span style={{ color: call.success ? "#22c55e" : "#e53935" }}>
-                        {call.success ? "✓ 成功" : "✗ 失败(401)"}
+                        {call.success ? `✓ ${t("common.success")}` : `✗ ${t("common.failed")}(401)`}
                       </span>
                     </td>
                   </tr>
@@ -342,10 +333,10 @@ export default function DashboardPage() {
       {/* ===== 快捷入口（原型：4 列按钮） ===== */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 16 }}>
         {[
-          { icon: "💰", label: "立即充值", to: "/recharge" },
-          { icon: "🔑", label: "创建 API Key", to: "/api-keys" },
-          { icon: "📈", label: "消费明细", to: "/logs" },
-          { icon: "🎫", label: "提交工单", to: "/tickets" },
+          { icon: "💰", label: t("dashboard.quick.recharge"), to: "/recharge" },
+          { icon: "🔑", label: t("dashboard.quick.createKey"), to: "/api-keys" },
+          { icon: "📈", label: t("dashboard.quick.logs"), to: "/logs" },
+          { icon: "🎫", label: t("dashboard.quick.ticket"), to: "/tickets" },
         ].map((item) => (
           <div
             key={item.label}

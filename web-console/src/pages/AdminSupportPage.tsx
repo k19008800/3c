@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
-import { HelpIcon, StatusBadge, Modal, useToast, CopyButton, Pagination } from "@3cloud/shared-ui";
+import { HelpIcon, StatusBadge, useToast, CopyButton, Pagination } from "@3cloud/shared-ui";
 
 /**
  * 智能客服辅助 + 客服效能 对齐 SPEC-§28/§27

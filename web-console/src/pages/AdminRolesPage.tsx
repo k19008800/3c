@@ -18,7 +18,6 @@ export default function AdminRolesPage() {
   const [newLabel, setNewLabel] = useState("");
   const [newBits, setNewBits] = useState<number[]>([]);
   const [showNew, setShowNew] = useState(false);
-  const [help, setHelp] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {

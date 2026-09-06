@@ -39,7 +39,9 @@ async function fetchPricing(): Promise<{ list: PriceItem[] }> {
         })),
       };
     }
-  } catch {}
+  } catch {
+    // Render the page without pricing cards when the public pricing endpoint is unavailable.
+  }
   return { list: [] };
 }
 

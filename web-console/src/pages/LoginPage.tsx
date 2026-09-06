@@ -4,6 +4,7 @@ import { api, extractError } from "../lib/api";
 import { useAuthStore, type User } from "../store/auth";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
 import OtpInput from "../components/OtpInput";
+import { useI18n } from "../lib/i18n-context";
 
 /**
  * 登录页 — 支持 2FA 两步验证 + GitHub 第三方快捷登录
@@ -68,6 +69,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const setSession = useAuthStore((s) => s.setSession);
   const { toast } = useToast();
+  const { t } = useI18n();
 
   /** 第一步：账号密码登录（2FA 用户返回临时令牌，进入第二步） */
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,12 +86,12 @@ export default function LoginPage() {
         setTwoFactorCode(Array(6).fill(""));
         setBackupCode("");
         setUseBackupCode(false);
-        toast.info("该账号已开启两步验证，请输入验证码完成登录");
+        toast.info(t("auth.2faEnabledToast"));
       } else if (data.accessToken) {
         setSession(data.accessToken, data.user ?? null);
         navigate("/");
       } else {
-        throw new Error("登录响应异常，请稍后重试");
+        throw new Error(t("auth.invalidResponse"));
       }
     } catch (err: any) {
       const msg = extractError(err);
@@ -189,11 +191,11 @@ export default function LoginPage() {
           alignItems: "center",
           gap: 6,
         }}>
-          {twoFactorStep ? "两步验证" : "登录"}
+          {twoFactorStep ? t("auth.pageTitle2fa") : t("auth.pageTitle")}
           <HelpIcon
             text={twoFactorStep
-              ? "该账号已开启两步验证，请输入验证器验证码或备用恢复码完成登录（临时令牌 5 分钟有效）"
-              : "登录您的账号以管理 API Key 和查看消费记录"}
+              ? t("auth.2faHint")
+              : t("auth.loginHelp")}
             level="page"
           />
         </div>
@@ -285,7 +287,7 @@ export default function LoginPage() {
                   cursor: canVerify2fa && !verifying ? "pointer" : "not-allowed",
                 }}
               >
-                {verifying ? "验证中..." : "验证并登录"}
+                {verifying ? t("auth.verifying") : t("auth.verifyAndLogin")}
               </button>
               <HelpIcon text="提交验证码后完成登录；验证码错误 5 次或临时令牌过期需重新输入密码" />
             </div>
@@ -295,7 +297,7 @@ export default function LoginPage() {
                 onClick={handleBackToLogin}
                 style={{ background: "none", border: "none", color: "var(--color-primary)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
               >
-                返回重新输入密码
+                {t("auth.backToLogin")}
               </button>
               <HelpIcon text="返回账号密码登录步骤，临时令牌将失效" />
             </div>
@@ -307,7 +309,7 @@ export default function LoginPage() {
               {/* Email */}
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: "block", fontSize: 13, color: "var(--color-text)", marginBottom: 6 }}>
-                  邮箱 <span style={{ color: "var(--color-danger-text)" }}>*</span>
+                  {t("auth.email")} <span style={{ color: "var(--color-danger-text)" }}>*</span>
                   <HelpIcon text="请输入您注册时使用的邮箱地址" level="button" />
                 </label>
                 <input
@@ -323,7 +325,7 @@ export default function LoginPage() {
               {/* Password */}
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: "block", fontSize: 13, color: "var(--color-text)", marginBottom: 6 }}>
-                  密码 <span style={{ color: "var(--color-danger-text)" }}>*</span>
+                  {t("auth.password")} <span style={{ color: "var(--color-danger-text)" }}>*</span>
                   <HelpIcon text="请输入您的登录密码" level="button" />
                 </label>
                 <input
@@ -344,7 +346,7 @@ export default function LoginPage() {
                     marginTop: 4,
                   }}
                 >
-                  忘记密码？
+                  {t("auth.forgotPassword")}
                 </Link>
               </div>
 
@@ -352,7 +354,7 @@ export default function LoginPage() {
               {showCaptcha && (
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ display: "block", fontSize: 13, color: "var(--color-text)", marginBottom: 6 }}>
-                    验证码
+                    {t("auth.captcha")}
                     <HelpIcon text="验证码用于防止暴力破解，输入图片中的字符" level="button" />
                   </label>
                   <input
@@ -376,13 +378,13 @@ export default function LoginPage() {
                   cursor: loading ? "not-allowed" : "pointer",
                 }}
               >
-                {loading ? "登录中..." : "登录"}
+                {loading ? t("auth.loggingIn") : t("auth.loginButton")}
               </button>
             </form>
 
             {/* Register link */}
             <div style={{ textAlign: "center", marginTop: 20, fontSize: 13, color: "var(--color-text-secondary)" }}>
-              还没有账号？<Link to="/register" style={{ color: "var(--color-primary)", textDecoration: "none" }}>立即注册</Link>
+              {t("auth.noAccount")} <Link to="/register" style={{ color: "var(--color-primary)", textDecoration: "none" }}>{t("auth.registerNow")}</Link>
             </div>
 
             {/* Social Login Divider */}
@@ -391,7 +393,7 @@ export default function LoginPage() {
               color: "#bbb", fontSize: 13,
             }}>
               <span style={{ flex: 1, height: 1, background: "var(--color-divider)", marginRight: 16 }} />
-              或使用
+              {t("auth.orUse")}
               <span style={{ flex: 1, height: 1, background: "var(--color-divider)", marginLeft: 16 }} />
             </div>
 
