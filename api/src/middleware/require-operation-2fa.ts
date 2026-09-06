@@ -11,7 +11,7 @@
  *   - 缺 `X-Operation-Confirm: confirmed`（二次确认，E30 AND）→ 403 `OPERATION_CONFIRM_REQUIRED`
  *   - 通过 → 注入 request.opToken
  *   - **错误码全部避开 401**（前端 axios 401 全局拦截器会清 token 跳登录）
- *   - Redis 不可用 → 跳过失效检查（fail-open，与 lib/redis 降级语义一致）
+ *   - confirmed 最终请求必须依赖 Redis 原子消费；Redis 不可用/异常 → 403 OPERATION_2FA_UNAVAILABLE
  *
  * 挂载方式：`preHandler: [requirePerm(permKey), requireOperation2fa]`
  * （顺序固定：先权限点后 2FA；2FA 不校验权限，只校验身份）。
@@ -26,6 +26,7 @@ import { AppError } from '../lib/errors';
 import { verifyOperationToken } from '../services/auth/jwt';
 import { getOperation2faConfig, getCreditLimits } from '../lib/finance-rules';
 import { getRedis } from '../lib/redis';
+import { assertOperationSummary } from '../lib/operation-summary';
 
 /**
  * 资金写操作操作级 2FA 守卫（Fastify preHandler）。
@@ -82,9 +83,26 @@ export async function requireOperation2fa(request: any, _reply: any): Promise<vo
     throw new AppError('操作级 2FA 令牌与当前操作者不匹配', 403, 'OPERATION_2FA_INVALID');
   }
 
-  // 5. E27 失效联动：payload.seq <= op2fa:revoked:{userId} → 已失效（Redis 不可用 fail-open）
+  // 5. operation summary 必须同时由令牌和当前请求证明
+  const rawSummary = request.headers?.['x-operation-summary'];
+  let summaryHash: string;
+  try {
+    if (typeof rawSummary !== 'string' || !rawSummary.trim()) throw new Error('missing summary');
+    summaryHash = assertOperationSummary(JSON.parse(rawSummary));
+  } catch {
+    throw new AppError('操作摘要缺失或无效', 403, 'OPERATION_2FA_INVALID');
+  }
+  if (!result.payload.summaryHash || result.payload.summaryHash !== summaryHash) {
+    throw new AppError('操作级 2FA 令牌与操作摘要不匹配', 403, 'OPERATION_2FA_INVALID');
+  }
+
+  // 6. E27 失效联动：Redis 是安全依赖；confirmed 请求不得 fail-open
   const r = getRedis();
-  if (r) {
+  if (!r) {
+    if (String(request.headers?.['x-operation-confirm'] ?? '').trim() === 'confirmed') {
+      throw new AppError('操作级 2FA 服务暂时不可用，请稍后重试', 403, 'OPERATION_2FA_UNAVAILABLE');
+    }
+  } else {
     try {
       const revoked = await r.get(`op2fa:revoked:${ctx.userId}`);
       if (revoked && Number(revoked) >= result.payload.seq) {
@@ -92,16 +110,32 @@ export async function requireOperation2fa(request: any, _reply: any): Promise<vo
       }
     } catch (err) {
       if (err instanceof AppError) throw err;
-      /* Redis 异常 → 跳过失效检查（fail-open） */
+      if (String(request.headers?.['x-operation-confirm'] ?? '').trim() === 'confirmed') {
+        throw new AppError('操作级 2FA 服务暂时不可用，请稍后重试', 403, 'OPERATION_2FA_UNAVAILABLE');
+      }
     }
   }
 
-  // 6. 二次确认标记（E30 AND：2FA 是身份凭证，确认标记是意图确认）
+  // 7. 二次确认标记（E30 AND：2FA 是身份凭证，确认标记是意图确认）
   const confirmHeader = request.headers?.['x-operation-confirm'];
   if (String(confirmHeader ?? '').trim() !== 'confirmed') {
     throw new AppError('资金操作需二次确认（X-Operation-Confirm: confirmed 缺失）', 403, 'OPERATION_CONFIRM_REQUIRED');
   }
 
-  // 7. 注入操作令牌 payload（业务 handler / 审计可读）
+  // 8. confirmed 最终请求才消费令牌；SET NX 原子保证并发双提交仅一个成功
+  if (String(confirmHeader ?? '').trim() === 'confirmed') {
+    const redis = getRedis();
+    if (!redis) throw new AppError('操作级 2FA 服务暂时不可用，请稍后重试', 403, 'OPERATION_2FA_UNAVAILABLE');
+    try {
+      const key = `op2fa:consumed:${result.payload.jti ?? token}`;
+      const consumed = await redis.set(key, '1', 'EX', 300, 'NX');
+      if (consumed !== 'OK') throw new AppError('操作级 2FA 令牌已使用，请重新验证', 403, 'OPERATION_2FA_REPLAYED');
+    } catch (err) {
+      if (err instanceof AppError) throw err;
+      throw new AppError('操作级 2FA 服务暂时不可用，请稍后重试', 403, 'OPERATION_2FA_UNAVAILABLE');
+    }
+  }
+
+  // 9. 注入操作令牌 payload（业务 handler / 审计可读）
   request.opToken = result.payload;
 }

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 充值订单审核路由集成测试 — audit 走 creditBalance 收口 + 通知 + finance 放行（真实 PG）
  *
  * 覆盖 ARCH §8 用例 12：
@@ -34,8 +34,8 @@ let customerId = 0;    // 被充值用户（无余额行，兜底用例）
 
 let adminToken = '';
 let financeToken = '';
-let adminOp: Record<string, string> = {};
-let financeOp: Record<string, string> = {};
+let adminOp: () => Record<string, string> = () => ({});
+let financeOp: () => Record<string, string> = () => ({});
 
 let app: FastifyInstance;
 
@@ -91,8 +91,8 @@ beforeAll(async () => {
   // R7：资金写操作者启用 2FA + 操作令牌
   await enableTest2fa(adminId);
   await enableTest2fa(financeUserId);
-  adminOp = op2faHeaders(adminToken, adminId, `rc-admin-${ts}@test.com`, 'admin');
-  financeOp = op2faHeaders(financeToken, financeUserId, `rc-fin-${ts}@test.com`, 'finance');
+  adminOp = () => op2faHeaders(adminToken, adminId, `rc-admin-${ts}@test.com`, 'admin');
+  financeOp = () => op2faHeaders(financeToken, financeUserId, `rc-fin-${ts}@test.com`, 'finance');
 
   app = buildTestApp();
   await app.ready();
@@ -119,7 +119,7 @@ describe('R2 充值审核收口（audit）', () => {
   it('用例12 无余额行用户 audit → 自动建行 + 余额正确 + 流水 + notifications 有 recharge_success', async () => {
     const order = await insertRechargeOrder(customerId, '66.00', `RC-${ts}-audit1`);
     const res = await app.inject({
-      method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: adminOp, payload: {},
+      method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: adminOp(), payload: {},
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().data.status).toBe('paid');
@@ -148,7 +148,7 @@ describe('R2 充值审核收口（audit）', () => {
   it('用例12 finance 角色可 audit（裁决 A4：audit 挂 finance.topup）→ 200', async () => {
     const order = await insertRechargeOrder(customerId, '33.00', `RC-${ts}-audit2`);
     const res = await app.inject({
-      method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: financeOp, payload: {},
+      method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: financeOp(), payload: {},
     });
     expect(res.statusCode).toBe(200);
     expect(toNum(res.json().data.balanceAfter)).toBeCloseTo(99, 4);
@@ -157,7 +157,7 @@ describe('R2 充值审核收口（audit）', () => {
   it('用例12 finance 角色可 reject → 200，且写审计（D-04 补齐）', async () => {
     const order = await insertRechargeOrder(customerId, '11.00', `RC-${ts}-reject1`);
     const res = await app.inject({
-      method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/reject`, headers: financeOp, payload: { note: 'reject by finance (audit)' },
+      method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/reject`, headers: financeOp(), payload: { note: 'reject by finance (audit)' },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().data.status).toBe('failed');

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 管理端风控三页 + 财务统计（结算/利润/对账/退款）路由集成测试
  *
  * 覆盖 gap-fix-spec-2026-08-18.md §3 §4 §5 的新端点（真实 PG 冒烟，与 test/*.test.ts 同风格）：
@@ -46,7 +46,7 @@ let freezeUserId = 0;
 let adminToken = '';
 let customerToken = '';
 /** R7 资金写端点：操作级 2FA 请求头（退款审核 review） */
-let adminOp: Record<string, string> = {};
+let adminOp: () => Record<string, string> = () => ({});
 let ruleId = 0;
 let eventId = 0;
 let pendingEventId = 0;
@@ -113,7 +113,7 @@ beforeAll(async () => {
   customerToken = generateAccessToken({ userId: customerId, email: `risk-cust-${ts}@test.com`, role: 'customer' });
   // R7：退款审核为资金写端点（requireOperation2fa），操作员需启用 2FA 并携带操作令牌
   await enableTest2fa(adminId);
-  adminOp = op2faHeaders(adminToken, adminId, `risk-admin-${ts}@test.com`, 'admin');
+  adminOp = () => op2faHeaders(adminToken, adminId, `risk-admin-${ts}@test.com`, 'admin');
 
   // ── 风控：规则 + 3 个事件（resolve 用 / 保持 pending 用 / freeze 用）──
   const [rule] = await db.insert(schema.riskRules).values({
@@ -492,13 +492,16 @@ describe('退款审核', () => {
     expect(typeof item.created_at).toBe('string');
   });
 
-  it('退款审核 approve → 200 且状态更新 + 余额增加 + refund 流水', async () => {
+  it('退款审核 approve → 200，仅更新为 approved，余额与 refund 流水不变；execute 才入账', async () => {
     const before = await db.select({ availableBalance: schema.customerBalances.availableBalance })
       .from(schema.customerBalances).where(eq(schema.customerBalances.userId, customerId)).limit(1);
     const beforeBalance = toNum(before[0]?.availableBalance);
+    const beforeRefunds = await db.select({ id: schema.balanceTransactions.id })
+      .from(schema.balanceTransactions)
+      .where(and(eq(schema.balanceTransactions.userId, customerId), eq(schema.balanceTransactions.type, 'refund')));
 
     const res = await app.inject({
-      method: 'POST', url: `/api/v1/admin/refunds/${refundId}/review`, headers: adminOp,
+      method: 'POST', url: `/api/v1/admin/refunds/${refundId}/review`, headers: adminOp(),
       payload: { action: 'approve', note: '审核通过' },
     });
     expect(res.statusCode).toBe(200);
@@ -514,25 +517,25 @@ describe('退款审核', () => {
     expect(row!.reviewedBy).toBe(adminId);
     expect(row!.reviewNote).toBe('审核通过');
     expect(row!.reviewedAt).not.toBeNull();
+    expect(toNum((await db.select({ availableBalance: schema.customerBalances.availableBalance }).from(schema.customerBalances).where(eq(schema.customerBalances.userId, customerId)).limit(1))[0]?.availableBalance)).toBe(beforeBalance);
+    expect((await db.select({ id: schema.balanceTransactions.id }).from(schema.balanceTransactions).where(and(eq(schema.balanceTransactions.userId, customerId), eq(schema.balanceTransactions.type, 'refund')))).length).toBe(beforeRefunds.length);
 
-    // 余额增加 ¥10
-    const after = await db.select({ availableBalance: schema.customerBalances.availableBalance })
-      .from(schema.customerBalances).where(eq(schema.customerBalances.userId, customerId)).limit(1);
-    expect(toNum(after[0]?.availableBalance)).toBeCloseTo(beforeBalance + 10, 2);
-
-    // balance_transactions 写 refund 流水（addBalance 内部落账）
+    const execute = await app.inject({ method: 'POST', url: `/api/v1/admin/refunds/${refundId}/execute`, headers: adminOp(), payload: {} });
+    expect(execute.statusCode).toBe(200);
+    expect(execute.json().data.status).toBe('completed');
+    expect(toNum(execute.json().data.balance_after)).toBeCloseTo(beforeBalance + 10, 2);
     const [tx] = await db.select({ type: schema.balanceTransactions.type, referenceId: schema.balanceTransactions.referenceId })
-      .from(schema.balanceTransactions)
-      .where(and(eq(schema.balanceTransactions.userId, customerId), eq(schema.balanceTransactions.type, 'refund')))
+      .from(schema.balanceTransactions).where(and(eq(schema.balanceTransactions.userId, customerId), eq(schema.balanceTransactions.type, 'refund')))
       .orderBy(desc(schema.balanceTransactions.createdAt)).limit(1);
-    expect(tx).toBeDefined();
-    expect(tx!.type).toBe('refund');
-    expect(tx!.referenceId).toBe(String(refundId));
+    expect(tx?.type).toBe('refund');
+    expect(tx?.referenceId).toBe(String(refundId));
+    const repeat = await app.inject({ method: 'POST', url: `/api/v1/admin/refunds/${refundId}/execute`, headers: adminOp(), payload: {} });
+    expect(repeat.statusCode).toBe(409);
   });
 
   it('重复审核已处理退款 → 409', async () => {
     const res = await app.inject({
-      method: 'POST', url: `/api/v1/admin/refunds/${refundId}/review`, headers: adminOp,
+      method: 'POST', url: `/api/v1/admin/refunds/${refundId}/review`, headers: adminOp(),
       payload: { action: 'reject', note: '重复驳回' },
     });
     expect(res.statusCode).toBe(409);

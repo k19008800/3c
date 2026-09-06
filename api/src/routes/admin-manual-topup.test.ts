@@ -61,12 +61,32 @@ async function readCounter(scope: 'operator' | 'user', uid: number): Promise<num
 }
 
 /**
+ * ⚠️ 并行隔离 helper：确保 finance_rules.single_review_max=10000（默认阈值），
+ * 保留 large_amount 其他字段与 review_exempt 等（不删行，避免破坏并行文件配置）。
+ * 无配置行 → 默认即 10000，无需处理。
+ */
+async function ensureDefaultSingleReviewMax(): Promise<void> {
+  const [row] = await db.select({ value: schema.systemConfig.value }).from(schema.systemConfig)
+    .where(eq(schema.systemConfig.key, 'finance_rules')).limit(1);
+  if (!row) return;
+  const v = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
+  const cur = Number(v?.large_amount?.single_review_max);
+  if (Number.isFinite(cur) && cur !== 10000) {
+    v.large_amount = { ...(v.large_amount ?? {}), single_review_max: 10000 };
+    await db.update(schema.systemConfig).set({ value: v }).where(eq(schema.systemConfig.key, 'finance_rules'));
+  }
+}
+
+/**
  * tier3（>¥100,000 单笔）用例的限额配置支架：默认 hard_limit=¥100,000 会在创建预检
  * 拒绝单笔 >10 万（ARCH §3.4 projected > hard → 429），tier3 状态机需将 hard_limit
  * 临时调高（与 manual_topup.max_amount 1,000,000 对齐；运营可配置）后验证审批链，
  * 结束后恢复默认（删除配置行 + 清缓存）。
  */
 async function withRaisedHardLimit(fn: () => Promise<void>): Promise<void> {
+  const [backupRow] = await db.select({ value: schema.systemConfig.value }).from(schema.systemConfig)
+    .where(eq(schema.systemConfig.key, 'finance_rules')).limit(1);
+  const backupRaw = backupRow ? (typeof backupRow.value === 'string' ? backupRow.value : JSON.stringify(backupRow.value)) : null;
   const cfg = {
     manual_topup: { max_amount: 1000000 },
     limits: { soft_limit: 50000, hard_limit: 1000000, count_recharge_audit: false, window_hours: 24, timezone: 'Asia/Shanghai' },
@@ -77,7 +97,11 @@ async function withRaisedHardLimit(fn: () => Promise<void>): Promise<void> {
   try {
     await fn();
   } finally {
-    await db.delete(schema.systemConfig).where(eq(schema.systemConfig.key, 'finance_rules'));
+    if (backupRaw) {
+      await db.update(schema.systemConfig).set({ value: JSON.parse(backupRaw) }).where(eq(schema.systemConfig.key, 'finance_rules'));
+    } else {
+      await db.delete(schema.systemConfig).where(eq(schema.systemConfig.key, 'finance_rules'));
+    }
     resetFinanceRulesCache();
   }
 }
@@ -109,12 +133,12 @@ let salesToken = '';
 let customerToken = '';
 let limitOpToken = '';
 // R7：操作级 2FA 请求头（操作员已启用 2FA + 签发操作令牌）
-let adminOpHeaders: Record<string, string> = {};
-let admin2OpHeaders: Record<string, string> = {};
-let superAdminOpHeaders: Record<string, string> = {};
-let financeOpHeaders: Record<string, string> = {};
-let limitOpHeaders: Record<string, string> = {};
-let rejectOpHeaders: Record<string, string> = {};
+let adminOpHeaders: () => Record<string, string> = () => ({});
+let admin2OpHeaders: () => Record<string, string> = () => ({});
+let superAdminOpHeaders: () => Record<string, string> = () => ({});
+let financeOpHeaders: () => Record<string, string> = () => ({});
+let limitOpHeaders: () => Record<string, string> = () => ({});
+let rejectOpHeaders: () => Record<string, string> = () => ({});
 
 let app: FastifyInstance;
 
@@ -258,12 +282,12 @@ beforeAll(async () => {
   await enableTest2fa(financeUserId);
   await enableTest2fa(limitOpUserId);
   await enableTest2fa(rejectOpUserId);
-  adminOpHeaders = op2faHeaders(adminToken, adminId, `mt-admin-${ts}@test.com`, 'admin');
-  admin2OpHeaders = op2faHeaders(admin2Token, admin2Id, `mt-admin2-${ts}@test.com`, 'admin');
-  superAdminOpHeaders = op2faHeaders(superAdminToken, superAdminId, `mt-super-${ts}@test.com`, 'super_admin');
-  financeOpHeaders = op2faHeaders(financeToken, financeUserId, `mt-fin-${ts}@test.com`, 'finance');
-  limitOpHeaders = op2faHeaders(limitOpToken, limitOpUserId, `mt-limop-${ts}@test.com`, 'admin');
-  rejectOpHeaders = op2faHeaders(generateAccessToken({ userId: rejectOpUserId, email: `mt-rejop-${ts}@test.com`, role: 'admin' }), rejectOpUserId, `mt-rejop-${ts}@test.com`, 'admin');
+  adminOpHeaders = () => op2faHeaders(adminToken, adminId, `mt-admin-${ts}@test.com`, 'admin');
+  admin2OpHeaders = () => op2faHeaders(admin2Token, admin2Id, `mt-admin2-${ts}@test.com`, 'admin');
+  superAdminOpHeaders = () => op2faHeaders(superAdminToken, superAdminId, `mt-super-${ts}@test.com`, 'super_admin');
+  financeOpHeaders = () => op2faHeaders(financeToken, financeUserId, `mt-fin-${ts}@test.com`, 'finance');
+  limitOpHeaders = () => op2faHeaders(limitOpToken, limitOpUserId, `mt-limop-${ts}@test.com`, 'admin');
+  rejectOpHeaders = () => op2faHeaders(generateAccessToken({ userId: rejectOpUserId, email: `mt-rejop-${ts}@test.com`, role: 'admin' }), rejectOpUserId, `mt-rejop-${ts}@test.com`, 'admin');
 
   app = buildTestApp();
   await app.ready();
@@ -293,7 +317,7 @@ afterAll(async () => {
 describe('R1 创建上账', () => {
   it('用例1 创建成功 → 201；落库 method=manual/pending、order_no 以 MT 开头、metadata.transfer_no 正确；审计 manual_topup.create', async () => {
     const res = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: financeOpHeaders,
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: financeOpHeaders(),
       payload: {
         user_id: activeUserId,
         amount: 1000.00,
@@ -353,29 +377,29 @@ describe('R1 创建参数校验', () => {
   const base = { user_id: 0, amount: 100, note: '原因' };
   it('用例2 amount=0 → 400', async () => {
     const res = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: adminOpHeaders,
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: adminOpHeaders(),
       payload: { ...base, user_id: activeUserId, amount: 0 },
     });
     expect(res.statusCode).toBe(400);
   });
   it('用例2 amount 负数 → 400', async () => {
     const res = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: adminOpHeaders,
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: adminOpHeaders(),
       payload: { ...base, user_id: activeUserId, amount: -5 },
     });
     expect(res.statusCode).toBe(400);
   });
-  it('用例2 amount > 上限(1000000，R5 放开) → 400', async () => {
+  it('用例2 amount > accepted ADR-0001 上限(50000) → 400', async () => {
     const res = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: adminOpHeaders,
-      payload: { ...base, user_id: activeUserId, amount: 1000001 },
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: adminOpHeaders(),
+      payload: { ...base, user_id: activeUserId, amount: 50001 },
     });
     expect(res.statusCode).toBe(400);
   });
-  it('用例2 R5 上限放开：amount=50001 → 201 + approval_level=2（双人审批承接大额，B3/Q9）', async () => {
+  it('用例2 amount=50000（上限边界）→ 201 + approval_level=2', async () => {
     const res = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: adminOpHeaders,
-      payload: { ...base, user_id: activeUserId, amount: 50001 },
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: adminOpHeaders(),
+      payload: { ...base, user_id: activeUserId, amount: 50000 },
     });
     expect(res.statusCode).toBe(201);
     expect(res.json().data.approval_level).toBe(2);
@@ -383,28 +407,28 @@ describe('R1 创建参数校验', () => {
   });
   it('用例2 缺 note → 400', async () => {
     const res = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: adminOpHeaders,
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: adminOpHeaders(),
       payload: { user_id: activeUserId, amount: 100 },
     });
     expect(res.statusCode).toBe(400);
   });
   it('用例2 传入 evidence_url → 400（本期不接受凭证上传，R9 开放）', async () => {
     const res = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: adminOpHeaders,
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: adminOpHeaders(),
       payload: { ...base, user_id: activeUserId, evidence_url: 'https://example.com/proof.jpg' },
     });
     expect(res.statusCode).toBe(400);
   });
   it('用例2 用户不存在 → 404', async () => {
     const res = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: adminOpHeaders,
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: adminOpHeaders(),
       payload: { ...base, user_id: 99999999 },
     });
     expect(res.statusCode).toBe(404);
   });
   it('用例2 frozen 用户 → 400（A7 裁决：仅 active 可入账）', async () => {
     const res = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: adminOpHeaders,
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: adminOpHeaders(),
       payload: { ...base, user_id: frozenUserId },
     });
     expect(res.statusCode).toBe(400);
@@ -418,14 +442,14 @@ describe('R1 创建幂等（Idempotency-Key）', () => {
 
   it('用例3 首请求 201；同 key 重放 L1 缓存命中 → 200 + X-Idempotent-Replay:true（或 409）；仍仅 1 行', async () => {
     const first = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: { ...adminOpHeaders, 'idempotency-key': idemKey },
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: { ...adminOpHeaders(), 'idempotency-key': idemKey },
       payload: { user_id: activeUserId, amount: 123.45, note: '幂等测试' },
     });
     expect(first.statusCode).toBe(201);
     const firstId = first.json().data.id;
 
     const replay = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: { ...adminOpHeaders, 'idempotency-key': idemKey },
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: { ...adminOpHeaders(), 'idempotency-key': idemKey },
       payload: { user_id: activeUserId, amount: 123.45, note: '幂等测试' },
     });
     // L1 缓存命中 → 回放 200 + 回放头；缓存未命中（Redis 降级）→ 409
@@ -449,7 +473,7 @@ describe('R1 创建幂等（Idempotency-Key）', () => {
     }
 
     const res = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: { ...adminOpHeaders, 'idempotency-key': idemKey },
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: { ...adminOpHeaders(), 'idempotency-key': idemKey },
       payload: { user_id: activeUserId, amount: 123.45, note: '幂等测试' },
     });
     expect(res.statusCode).toBe(409);
@@ -467,7 +491,7 @@ describe('R2/R4 审核通过', () => {
   it('用例4 审核通过-无余额行兜底 → 200；customer_balances 自动建行且余额=amount；流水 1 条 type=recharge', async () => {
     const order = await insertManualOrder(activeUserId, '88.00');
     const res = await app.inject({
-      method: 'POST', url: `/api/v1/admin/manual-topup/${order.id}/review`, headers: adminOpHeaders,
+      method: 'POST', url: `/api/v1/admin/manual-topup/${order.id}/review`, headers: adminOpHeaders(),
       payload: { action: 'approve', note: '审核通过' },
     });
     expect(res.statusCode).toBe(200);
@@ -493,7 +517,7 @@ describe('R2/R4 审核通过', () => {
   it('用例5 审核通过-正常路径 → 余额+amount、流水快照正确；重复 approve → 409', async () => {
     const order = await insertManualOrder(balancedUserId, '50.00');
     const res = await app.inject({
-      method: 'POST', url: `/api/v1/admin/manual-topup/${order.id}/review`, headers: adminOpHeaders,
+      method: 'POST', url: `/api/v1/admin/manual-topup/${order.id}/review`, headers: adminOpHeaders(),
       payload: { action: 'approve' },
     });
     expect(res.statusCode).toBe(200);
@@ -510,7 +534,7 @@ describe('R2/R4 审核通过', () => {
 
     // 重复审核 → 409 ORDER_ALREADY_PROCESSED
     const dup = await app.inject({
-      method: 'POST', url: `/api/v1/admin/manual-topup/${order.id}/review`, headers: adminOpHeaders,
+      method: 'POST', url: `/api/v1/admin/manual-topup/${order.id}/review`, headers: adminOpHeaders(),
       payload: { action: 'approve' },
     });
     expect(dup.statusCode).toBe(409);
@@ -519,7 +543,7 @@ describe('R2/R4 审核通过', () => {
   it('用例6 审核通过-通知触发 → notifications 落库 type=recharge_success；审计含 notification 状态（无模板 → no_template）', async () => {
     const order = await insertManualOrder(notifUserId, '66.00');
     const res = await app.inject({
-      method: 'POST', url: `/api/v1/admin/manual-topup/${order.id}/review`, headers: adminOpHeaders,
+      method: 'POST', url: `/api/v1/admin/manual-topup/${order.id}/review`, headers: adminOpHeaders(),
       payload: { action: 'approve', note: '通知测试' },
     });
     expect(res.statusCode).toBe(200);
@@ -556,7 +580,7 @@ describe('R2/R4 审核通过', () => {
 
     const order = await insertManualOrder(notifUserId, '77.00');
     const res = await app.inject({
-      method: 'POST', url: `/api/v1/admin/manual-topup/${order.id}/review`, headers: adminOpHeaders,
+      method: 'POST', url: `/api/v1/admin/manual-topup/${order.id}/review`, headers: adminOpHeaders(),
       payload: { action: 'approve' },
     });
     expect(res.statusCode).toBe(200);
@@ -577,14 +601,14 @@ describe('R1 修复回归（P1-1 单号唯一 / P2-1 驳回原因必填）', () 
   it('P1-1 同 transfer_no 跨不同 Idempotency-Key 重复创建 → 409 TRANSFER_NO_DUPLICATE；不同单号可创建 201', async () => {
     const dupNo = `BANK-${ts}-uniq-dup`;
     const first = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: { ...adminOpHeaders, 'idempotency-key': `idem-tn-${ts}-1` },
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: { ...adminOpHeaders(), 'idempotency-key': `idem-tn-${ts}-1` },
       payload: { user_id: activeUserId, amount: 10, note: '单号唯一测试', transfer_no: dupNo },
     });
     expect(first.statusCode).toBe(201);
 
     // 同单号 + 不同幂等键 → 409（防重复入账第一道闸）
     const dup = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: { ...adminOpHeaders, 'idempotency-key': `idem-tn-${ts}-2` },
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: { ...adminOpHeaders(), 'idempotency-key': `idem-tn-${ts}-2` },
       payload: { user_id: activeUserId, amount: 20, note: '重复单号', transfer_no: dupNo },
     });
     expect(dup.statusCode).toBe(409);
@@ -592,7 +616,7 @@ describe('R1 修复回归（P1-1 单号唯一 / P2-1 驳回原因必填）', () 
 
     // 不同单号 → 201
     const other = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: { ...adminOpHeaders, 'idempotency-key': `idem-tn-${ts}-3` },
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: { ...adminOpHeaders(), 'idempotency-key': `idem-tn-${ts}-3` },
       payload: { user_id: activeUserId, amount: 30, note: '不同单号', transfer_no: `BANK-${ts}-uniq-ok` },
     });
     expect(other.statusCode).toBe(201);
@@ -607,13 +631,13 @@ describe('R1 修复回归（P1-1 单号唯一 / P2-1 驳回原因必填）', () 
     const order = await insertManualOrder(activeUserId, '9.00');
 
     const noReason = await app.inject({
-      method: 'POST', url: `/api/v1/admin/manual-topup/${order.id}/review`, headers: adminOpHeaders,
+      method: 'POST', url: `/api/v1/admin/manual-topup/${order.id}/review`, headers: adminOpHeaders(),
       payload: { action: 'reject' },
     });
     expect(noReason.statusCode).toBe(400);
 
     const rejected = await app.inject({
-      method: 'POST', url: `/api/v1/admin/manual-topup/${order.id}/review`, headers: adminOpHeaders,
+      method: 'POST', url: `/api/v1/admin/manual-topup/${order.id}/review`, headers: adminOpHeaders(),
       payload: { action: 'reject', note: '凭证金额与流水不符' },
     });
     expect(rejected.statusCode).toBe(200);
@@ -674,14 +698,14 @@ describe('D1 用户搜索端点 /admin/manual-topup/users', () => {
 describe('R3 权限点鉴权', () => {
   it('用例7 finance 角色可创建（201）与审核（200）', async () => {
     const create = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: financeOpHeaders,
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: financeOpHeaders(),
       payload: { user_id: activeUserId, amount: 10, note: 'finance 创建' },
     });
     expect(create.statusCode).toBe(201);
 
     const order = await insertManualOrder(activeUserId, '10.00');
     const review = await app.inject({
-      method: 'POST', url: `/api/v1/admin/manual-topup/${order.id}/review`, headers: financeOpHeaders,
+      method: 'POST', url: `/api/v1/admin/manual-topup/${order.id}/review`, headers: financeOpHeaders(),
       payload: { action: 'approve' },
     });
     expect(review.statusCode).toBe(200);
@@ -709,9 +733,17 @@ describe('R3 权限点鉴权', () => {
 /* ═══════════ R5 分级审批（ARCH §6.1 用例 3/4/5/8） ═══════════ */
 
 describe('R5 人工上账分级审批', () => {
+  beforeAll(async () => {
+    // ⚠️ 并行隔离：finance_rules 为跨测试进程共享表。分级断言依赖默认 single_review_max=10000；
+    // 只修正该字段（保留 review_exempt 等其他字段），避免删行破坏并行文件（如 admin-adjust
+    // 白名单免审用例）正在使用的配置。无配置行 → 默认即 10000，无需处理。
+    await ensureDefaultSingleReviewMax();
+    resetFinanceRulesCache();
+  });
+
   it('用例3 单审档（≤1万）：创建 approval_level=1 → 他人审核 → paid + 入账 + 通知', async () => {
     const create = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: financeOpHeaders,
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: financeOpHeaders(),
       payload: { user_id: stage2UserId, amount: 9999, note: '单审档' },
     });
     expect(create.statusCode).toBe(201);
@@ -720,7 +752,7 @@ describe('R5 人工上账分级审批', () => {
     const id = create.json().data.id;
 
     const review = await app.inject({
-      method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: adminOpHeaders,
+      method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: adminOpHeaders(),
       payload: { action: 'approve' },
     });
     expect(review.statusCode).toBe(200);
@@ -735,13 +767,13 @@ describe('R5 人工上账分级审批', () => {
 
   it('用例3 创建人自审 → 400 VALIDATION_ERROR（职责分离，B3）', async () => {
     const create = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: financeOpHeaders,
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: financeOpHeaders(),
       payload: { user_id: stage3UserId, amount: 100, note: '自审拦截' },
     });
     expect(create.statusCode).toBe(201);
     const id = create.json().data.id;
     const selfReview = await app.inject({
-      method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: financeOpHeaders,
+      method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: financeOpHeaders(),
       payload: { action: 'approve' },
     });
     expect(selfReview.statusCode).toBe(400);
@@ -751,7 +783,7 @@ describe('R5 人工上账分级审批', () => {
   it('用例8 B4 降级代审：super_admin 自建自审 → 400（无原因）；带 escalation_reason → 通过 + 审计 degraded:true', async () => {
     // super_admin 创建人工上账（500，tier1；rejectUserId 用户计数干净）
     const create = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: superAdminOpHeaders,
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: superAdminOpHeaders(),
       payload: { user_id: rejectUserId, amount: 500, note: 'B4 降级代审测试' },
     });
     expect(create.statusCode).toBe(201);
@@ -759,7 +791,7 @@ describe('R5 人工上账分级审批', () => {
 
     // 自审无原因 → 400
     const noReason = await app.inject({
-      method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: superAdminOpHeaders,
+      method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: superAdminOpHeaders(),
       payload: { action: 'approve' },
     });
     expect(noReason.statusCode).toBe(400);
@@ -767,7 +799,7 @@ describe('R5 人工上账分级审批', () => {
 
     // 自审带 escalation_reason → 200 + paid（B4 降级代审路径）
     const withReason = await app.inject({
-      method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: superAdminOpHeaders,
+      method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: superAdminOpHeaders(),
       payload: { action: 'approve', escalation_reason: '审批人不足，super_admin 代审' },
     });
     expect(withReason.statusCode).toBe(200);
@@ -784,8 +816,13 @@ describe('R5 人工上账分级审批', () => {
   });
 
   it('用例4 双人档（>1万 ≤10万）：一审 → 仍 pending + phase=level2_pending + 列表审批字段；二审 → paid', async () => {
+    // ⚠️ 并行兜底：本用例断言依赖默认 single_review_max=10000（20000 > 10000 → level2）。
+    // 只修正该字段（保留 review_exempt 等其他字段），避免删行破坏并行文件正在使用的配置。
+    await ensureDefaultSingleReviewMax();
+    resetFinanceRulesCache();
+
     const create = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: financeOpHeaders,
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: financeOpHeaders(),
       payload: { user_id: stage2UserId, amount: 20000, note: '双人档' },
     });
     expect(create.statusCode).toBe(201);
@@ -796,7 +833,7 @@ describe('R5 人工上账分级审批', () => {
 
     // 一审（≠ 创建人 finance）
     const r1 = await app.inject({
-      method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: adminOpHeaders,
+      method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: adminOpHeaders(),
       payload: { action: 'approve' },
     });
     expect(r1.statusCode).toBe(200);
@@ -816,7 +853,7 @@ describe('R5 人工上账分级审批', () => {
 
     // 二审（≠ 一审 admin）→ paid
     const r2 = await app.inject({
-      method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: admin2OpHeaders,
+      method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: admin2OpHeaders(),
       payload: { action: 'approve' },
     });
     expect(r2.statusCode).toBe(200);
@@ -828,12 +865,12 @@ describe('R5 人工上账分级审批', () => {
   it('用例4/8 二审=一审 → 400；一审=创建人 → 400（职责分离矩阵）', async () => {
     // 一审=创建人
     const c1 = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: financeOpHeaders,
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: financeOpHeaders(),
       payload: { user_id: stage3UserId, amount: 15000, note: '一审自审' },
     });
     const id1 = c1.json().data.id;
     const selfReview = await app.inject({
-      method: 'POST', url: `/api/v1/admin/manual-topup/${id1}/review`, headers: financeOpHeaders,
+      method: 'POST', url: `/api/v1/admin/manual-topup/${id1}/review`, headers: financeOpHeaders(),
       payload: { action: 'approve' },
     });
     expect(selfReview.statusCode).toBe(400);
@@ -841,12 +878,12 @@ describe('R5 人工上账分级审批', () => {
 
     // 一审通过后同一人二审 → 400
     const r1 = await app.inject({
-      method: 'POST', url: `/api/v1/admin/manual-topup/${id1}/review`, headers: adminOpHeaders,
+      method: 'POST', url: `/api/v1/admin/manual-topup/${id1}/review`, headers: adminOpHeaders(),
       payload: { action: 'approve' },
     });
     expect(r1.statusCode).toBe(200);
     const r2same = await app.inject({
-      method: 'POST', url: `/api/v1/admin/manual-topup/${id1}/review`, headers: adminOpHeaders,
+      method: 'POST', url: `/api/v1/admin/manual-topup/${id1}/review`, headers: adminOpHeaders(),
       payload: { action: 'approve' },
     });
     expect(r2same.statusCode).toBe(400);
@@ -854,14 +891,17 @@ describe('R5 人工上账分级审批', () => {
   });
 
   it('用例4 并发双一审 → 409 且仅一次推进（阶段守卫 0 行回滚）', async () => {
+    // 用单审档（≤¥10,000）确保"两次请求都是对同一审批阶段的重复审批"：
+    // 并发时守卫只放行一次（一 200 一 409）；若用双人档（>1万），串行执行时第二个
+    // 请求会变成"合法二审"（也 200），断言对执行时序敏感（负载高时偶发 200+200）。
     const c = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: financeOpHeaders,
-      payload: { user_id: stage2UserId, amount: 12000, note: '并发一审' },
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: financeOpHeaders(),
+      payload: { user_id: stage2UserId, amount: 9999, note: '并发一审' },
     });
     const id = c.json().data.id;
     const [ra, rb] = await Promise.all([
-      app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: adminOpHeaders, payload: { action: 'approve' } }),
-      app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: admin2OpHeaders, payload: { action: 'approve' } }),
+      app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: adminOpHeaders(), payload: { action: 'approve' } }),
+      app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: admin2OpHeaders(), payload: { action: 'approve' } }),
     ]);
     const codes = [ra.statusCode, rb.statusCode].sort();
     expect(codes[0]).toBe(200);
@@ -872,7 +912,7 @@ describe('R5 人工上账分级审批', () => {
     // 单笔 >¥100,000 超过默认 hard_limit（创建预检 429）：临时调高 hard_limit 验证 tier3 审批链
     await withRaisedHardLimit(async () => {
       const c = await app.inject({
-        method: 'POST', url: '/api/v1/admin/manual-topup', headers: financeOpHeaders,
+        method: 'POST', url: '/api/v1/admin/manual-topup', headers: financeOpHeaders(),
         payload: { user_id: stage3UserId, amount: 200000, note: '三人档' },
       });
       expect(c.statusCode).toBe(201);
@@ -881,23 +921,23 @@ describe('R5 人工上账分级审批', () => {
       const id = c.json().data.id;
       const before = await balanceOf(stage3UserId);
 
-      const r1 = await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: adminOpHeaders, payload: { action: 'approve' } });
+      const r1 = await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: adminOpHeaders(), payload: { action: 'approve' } });
       expect(r1.statusCode).toBe(200);
       expect(r1.json().data.approval_phase).toBe('level2_pending');
 
-      const r2 = await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: admin2OpHeaders, payload: { action: 'approve' } });
+      const r2 = await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: admin2OpHeaders(), payload: { action: 'approve' } });
       expect(r2.statusCode).toBe(200);
       expect(r2.json().data.approval_phase).toBe('super_pending');
       expect(r2.json().message).toBe('二级审批通过，等待终审');
 
       // 非 super_admin 终审 → 403 FORBIDDEN（finance / admin 均拒）
-      const f1 = await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: financeOpHeaders, payload: { action: 'approve' } });
+      const f1 = await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: financeOpHeaders(), payload: { action: 'approve' } });
       expect(f1.statusCode).toBe(403);
-      const f2 = await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: adminOpHeaders, payload: { action: 'approve' } });
+      const f2 = await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: adminOpHeaders(), payload: { action: 'approve' } });
       expect(f2.statusCode).toBe(403);
 
       // super 终审 → paid
-      const r3 = await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: superAdminOpHeaders, payload: { action: 'approve' } });
+      const r3 = await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: superAdminOpHeaders(), payload: { action: 'approve' } });
       expect(r3.statusCode).toBe(200);
       expect(r3.json().data.status).toBe('approved');
       expect(toNum(r3.json().data.balance_after)).toBeCloseTo(before + 200000, 2);
@@ -907,18 +947,18 @@ describe('R5 人工上账分级审批', () => {
   it('用例5/8 终审=一审（前序审批人）→ 400 VALIDATION_ERROR', async () => {
     await withRaisedHardLimit(async () => {
       const c = await app.inject({
-        method: 'POST', url: '/api/v1/admin/manual-topup', headers: financeOpHeaders,
+        method: 'POST', url: '/api/v1/admin/manual-topup', headers: financeOpHeaders(),
         payload: { user_id: stage3UserId, amount: 150000, note: '终审复用一审' },
       });
       const id = c.json().data.id;
       // super 一审
-      const r1 = await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: superAdminOpHeaders, payload: { action: 'approve' } });
+      const r1 = await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: superAdminOpHeaders(), payload: { action: 'approve' } });
       expect(r1.statusCode).toBe(200);
       // admin 二审
-      const r2 = await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: adminOpHeaders, payload: { action: 'approve' } });
+      const r2 = await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: adminOpHeaders(), payload: { action: 'approve' } });
       expect(r2.statusCode).toBe(200);
       // super 终审（=一审）→ 400
-      const r3 = await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: superAdminOpHeaders, payload: { action: 'approve' } });
+      const r3 = await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: superAdminOpHeaders(), payload: { action: 'approve' } });
       expect(r3.statusCode).toBe(400);
       expect(r3.json().message).toContain('前两级审批人');
     });
@@ -927,14 +967,14 @@ describe('R5 人工上账分级审批', () => {
   it('用例3 任意阶段 reject → failed（驳回原因落 metadata.review_note）', async () => {
     // 创建人用 admin（其操作人计数未被大额用例污染；finance 在 tier3 用例已累计）
     const c = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: adminOpHeaders,
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: adminOpHeaders(),
       payload: { user_id: rejectUserId, amount: 20000, note: '驳回测试' },
     });
     expect(c.statusCode).toBe(201);
     const id = c.json().data.id;
-    await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: admin2OpHeaders, payload: { action: 'approve' } });
+    await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: admin2OpHeaders(), payload: { action: 'approve' } });
     const reject = await app.inject({
-      method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: financeOpHeaders,
+      method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: financeOpHeaders(),
       payload: { action: 'reject', note: '资金核实不通过' },
     });
     expect(reject.statusCode).toBe(200);
@@ -953,7 +993,7 @@ describe('R6 拆分规避与限额（终裁：创建时预占 + 不回退）', (
   /** 创建订单（终裁：创建时预占，无需审批即计入累计） */
   async function createOnly(amount: number) {
     const create = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: limitOpHeaders,
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: limitOpHeaders(),
       payload: { user_id: limitTargetUserId, amount, note: '限额拆分' },
     });
     return create;
@@ -993,14 +1033,14 @@ describe('R6 拆分规避与限额（终裁：创建时预占 + 不回退）', (
   it('用例15 驳回不回退：创建预占 → 驳回 → 累计不变（B19，无 DECRBY）', async () => {
     const before = await readCounter('operator', rejectOpUserId);
     const c = await app.inject({
-      method: 'POST', url: '/api/v1/admin/manual-topup', headers: rejectOpHeaders,
+      method: 'POST', url: '/api/v1/admin/manual-topup', headers: rejectOpHeaders(),
       payload: { user_id: rejectTargetUserId, amount: 1000, note: '驳回不回退' },
     });
     expect(c.statusCode).toBe(201);
     const afterCreate = await readCounter('operator', rejectOpUserId);
     expect(afterCreate).toBe(before + 1000_00);   // 创建时预占
     const id = c.json().data.id;
-    await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: adminOpHeaders, payload: { action: 'reject', note: '驳回' } });
+    await app.inject({ method: 'POST', url: `/api/v1/admin/manual-topup/${id}/review`, headers: adminOpHeaders(), payload: { action: 'reject', note: '驳回' } });
     const afterReject = await readCounter('operator', rejectOpUserId);
     expect(afterReject).toBe(afterCreate);        // 驳回不回退累计
   });

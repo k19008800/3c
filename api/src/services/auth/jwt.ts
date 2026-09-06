@@ -43,7 +43,7 @@ export interface TwoFactorTempPayload {
  * 操作级 2FA 令牌 payload（R7，ARCH v1.1 §4.3）：purpose 恒为 'operation'。
  *
  * 与登录 2FA 临时令牌（purpose='2fa'）通过 purpose 字段隔离，交叉使用即无效；
- * 5 分钟窗口内同一操作者多次资金写操作可复用（双签 B11/Q4：不单次消费）。
+ * 令牌绑定操作者、完整 operation summary，并在最终 confirmed 请求时一次性消费。
  * `seq` = 签发序号（Redis `op2fa:issued_seq:{userId}` 递增；E27 失效联动：2FA 禁用后
  * 旧令牌 seq ≤ revoked 版本 → 中间件 403 OPERATION_2FA_EXPIRED）。
  */
@@ -53,6 +53,9 @@ export interface OperationTokenPayload {
   email: string;
   role: string;
   seq: number;
+  jti?: string;
+  /** SHA-256 of the canonical operation summary bound at verification time. */
+  summaryHash?: string;
 }
 
 /**
@@ -138,7 +141,7 @@ export function generateOperationToken(
   expiresInSeconds: number = 300,
 ): string {
   return jwt.sign(
-    { ...payload, purpose: 'operation' },
+    { ...payload, jti: payload.jti ?? crypto.randomUUID(), purpose: 'operation' },
     secret || process.env.JWT_SECRET || DEFAULT_SECRET,
     { expiresIn: `${expiresInSeconds}s` },
   );

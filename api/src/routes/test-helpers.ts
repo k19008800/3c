@@ -13,6 +13,19 @@ import { inArray } from 'drizzle-orm';
 import { generateOperationToken } from '../services/auth/jwt';
 import { generateSecret } from '../services/auth/totp';
 import { getRedis } from '../lib/redis';
+import { assertOperationSummary } from '../lib/operation-summary';
+
+/**
+ * R7 测试共用操作摘要（ADR-0008：令牌须绑定 operation summary）。
+ * op2faHeaders 以同一摘要签发令牌（summaryHash）并附 X-Operation-Summary 头，
+ * 与中间件 `assertOperationSummary(JSON.parse(raw)) === payload.summaryHash` 校验对齐。
+ */
+export const TEST_OP_SUMMARY: Array<{ k: string; v: string }> = [{ k: 'test', v: 'operation-2fa' }];
+
+/** 测试摘要的 SHA-256（与 TEST_OP_SUMMARY 绑定） */
+export function testOpSummaryHash(): string {
+  return assertOperationSummary(TEST_OP_SUMMARY);
+}
 
 /**
  * 为测试操作员启用 2FA（user_2fa 行 totp_enabled=true；幂等 upsert）。
@@ -35,13 +48,14 @@ export async function enableTest2fa(userId: number): Promise<void> {
  * @param userId - 操作员用户 ID（与 token payload 一致）
  * @param email - 操作员邮箱
  * @param role - 操作员角色（admin / finance / super_admin）
- * @returns { authorization, 'x-operation-token', 'x-operation-confirm' }
+ * @returns { authorization, 'x-operation-token', 'x-operation-confirm', 'x-operation-summary' }
  */
 export function op2faHeaders(token: string, userId: number, email: string, role: string): Record<string, string> {
   return {
     authorization: `Bearer ${token}`,
-    'x-operation-token': generateOperationToken({ userId, email, role, seq: 1 }),
+    'x-operation-token': generateOperationToken({ userId, email, role, seq: 1, summaryHash: testOpSummaryHash() }),
     'x-operation-confirm': 'confirmed',
+    'x-operation-summary': JSON.stringify(TEST_OP_SUMMARY),
   };
 }
 

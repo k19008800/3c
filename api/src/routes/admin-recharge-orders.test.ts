@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 充值订单审核路由集成测试 — R5 分级审批（audit 多阶段）+ R7 2FA（真实 PG + Redis）
  *
  * 覆盖 ARCH §6.1 用例 6 / §6.3 用例 21 / 双签 B10/Q8：
@@ -16,7 +16,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { db, schema } from '../db';
-import { and, eq, inArray, desc, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { generateAccessToken } from '../services/auth/jwt';
 import { rechargeRoutes } from './recharge';
 import { enableTest2fa, op2faHeaders, clearCreditCounters } from './test-helpers';
@@ -39,10 +39,8 @@ let manualCreatorId = 0; // 人工上账单的创建人（metadata.created_by）
 
 let adminToken = '';
 let admin2Token = '';
-let financeToken = '';
-let adminOp: Record<string, string> = {};
-let admin2Op: Record<string, string> = {};
-let financeOp: Record<string, string> = {};
+let adminOp: () => Record<string, string> = () => ({});
+let admin2Op: () => Record<string, string> = () => ({});
 
 let app: FastifyInstance;
 
@@ -111,15 +109,13 @@ beforeAll(async () => {
 
   adminToken = generateAccessToken({ userId: adminId, email: `rco-admin-${ts}@test.com`, role: 'admin' });
   admin2Token = generateAccessToken({ userId: admin2Id, email: `rco-admin2-${ts}@test.com`, role: 'admin' });
-  financeToken = generateAccessToken({ userId: financeUserId, email: `rco-fin-${ts}@test.com`, role: 'finance' });
 
   await enableTest2fa(adminId);
   await enableTest2fa(admin2Id);
   await enableTest2fa(financeUserId);
   await enableTest2fa(manualCreatorId);
-  adminOp = op2faHeaders(adminToken, adminId, `rco-admin-${ts}@test.com`, 'admin');
-  admin2Op = op2faHeaders(admin2Token, admin2Id, `rco-admin2-${ts}@test.com`, 'admin');
-  financeOp = op2faHeaders(financeToken, financeUserId, `rco-fin-${ts}@test.com`, 'finance');
+  adminOp = () => op2faHeaders(adminToken, adminId, `rco-admin-${ts}@test.com`, 'admin');
+  admin2Op = () => op2faHeaders(admin2Token, admin2Id, `rco-admin2-${ts}@test.com`, 'admin');
 
   app = buildTestApp();
   await app.ready();
@@ -146,7 +142,7 @@ describe('R5 充值订单 audit 分级（用例6）', () => {
   it('用户自助单 >1万：一审 → 仍 pending + phase=level2_pending；二审 → paid + 入账；created_by 缺失不自审拦截', async () => {
     const order = await insertOrder(customerId, '20000.00', `RCO-${ts}-t2`);
     // 一审（admin）
-    const r1 = await app.inject({ method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: adminOp, payload: {} });
+    const r1 = await app.inject({ method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: adminOp(), payload: {} });
     expect(r1.statusCode).toBe(200);
     expect(r1.json().data.status).toBe('pending');
     expect(r1.json().data.approval_level).toBe(2);
@@ -164,7 +160,7 @@ describe('R5 充值订单 audit 分级（用例6）', () => {
     expect(item.approval_phase).toBe('level2_pending');
 
     // 二审（≠ 一审 admin）→ paid
-    const r2 = await app.inject({ method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: admin2Op, payload: {} });
+    const r2 = await app.inject({ method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: admin2Op(), payload: {} });
     expect(r2.statusCode).toBe(200);
     expect(r2.json().data.status).toBe('paid');
     expect(toNum(r2.json().data.balanceAfter)).toBeCloseTo(20000, 2);
@@ -175,9 +171,9 @@ describe('R5 充值订单 audit 分级（用例6）', () => {
 
   it('同一人一审后二审 → 400（一审 ≠ 二审，职责分离）', async () => {
     const order = await insertOrder(customerId, '12000.00', `RCO-${ts}-same`);
-    const r1 = await app.inject({ method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: adminOp, payload: {} });
+    const r1 = await app.inject({ method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: adminOp(), payload: {} });
     expect(r1.statusCode).toBe(200);
-    const r2 = await app.inject({ method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: adminOp, payload: {} });
+    const r2 = await app.inject({ method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: adminOp(), payload: {} });
     expect(r2.statusCode).toBe(400);
     expect(r2.json().message).toContain('一级审批人');
   });
@@ -189,22 +185,22 @@ describe('R5 充值订单 audit 分级（用例6）', () => {
     });
     // 创建人自审 → 400
     const mcToken = generateAccessToken({ userId: manualCreatorId, email: `rco-mc-${ts}@test.com`, role: 'admin' });
-    const mcOp = op2faHeaders(mcToken, manualCreatorId, `rco-mc-${ts}@test.com`, 'admin');
-    const self = await app.inject({ method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: mcOp, payload: {} });
+    const mcOp = () => op2faHeaders(mcToken, manualCreatorId, `rco-mc-${ts}@test.com`, 'admin');
+    const self = await app.inject({ method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: mcOp(), payload: {} });
     expect(self.statusCode).toBe(400);
     expect(self.json().message).toContain('创建人');
 
     // 他人审核 → 200（manual 单 tier1 单审）
-    const other = await app.inject({ method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: adminOp, payload: {} });
+    const other = await app.inject({ method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: adminOp(), payload: {} });
     expect(other.statusCode).toBe(200);
     expect(other.json().data.status).toBe('paid');
   });
 
   it('reject 任意阶段 → failed（二审前驳回）', async () => {
     const order = await insertOrder(customerId, '13000.00', `RCO-${ts}-rej`);
-    const r1 = await app.inject({ method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: adminOp, payload: {} });
+    const r1 = await app.inject({ method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: adminOp(), payload: {} });
     expect(r1.statusCode).toBe(200);
-    const reject = await app.inject({ method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/reject`, headers: admin2Op, payload: { note: 'reject (R5)' } });
+    const reject = await app.inject({ method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/reject`, headers: admin2Op(), payload: { note: 'reject (R5)' } });
     expect(reject.statusCode).toBe(200);
     expect(reject.json().data.status).toBe('failed');
     const [row] = await db.select({ status: schema.rechargeOrders.status }).from(schema.rechargeOrders)
@@ -217,12 +213,33 @@ describe('R5 充值订单 audit 分级（用例6）', () => {
     const order = await insertOrder(customerId, '9000.00', `RCO-${ts}-nocount`);
     const before = await db.select({ count: sql<number>`count(*)::int` }).from(schema.creditLimitEvents)
       .where(and(eq(schema.creditLimitEvents.scope, 'user'), eq(schema.creditLimitEvents.userId, customerId)));
-    const res = await app.inject({ method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: adminOp, payload: {} });
+    const res = await app.inject({ method: 'POST', url: `/api/v1/admin/recharge-orders/${order.id}/audit`, headers: adminOp(), payload: {} });
     expect(res.statusCode).toBe(200);
     expect(res.json().data.status).toBe('paid');
     const after = await db.select({ count: sql<number>`count(*)::int` }).from(schema.creditLimitEvents)
       .where(and(eq(schema.creditLimitEvents.scope, 'user'), eq(schema.creditLimitEvents.userId, customerId)));
     expect(toNum(after[0]?.count)).toBe(toNum(before[0]?.count));   // 无新增事件行
+  });
+});
+
+describe('用户自助充值创建幂等（T-02）', () => {
+  it('同一 Idempotency-Key 重放首次结果且只创建一单；参数变化返回 409', async () => {
+    const customerToken = generateAccessToken({ userId: customerId, email: `rco-cust-${ts}@test.com`, role: 'customer' });
+    const key = `rco-idem-${ts}`;
+    const headers = { ...auth(customerToken), 'idempotency-key': key };
+    const first = await app.inject({ method: 'POST', url: '/api/v1/me/recharge', headers, payload: { amount: 321.45, payment_method: 'bank_transfer' } });
+    expect(first.statusCode).toBe(201);
+    const replay = await app.inject({ method: 'POST', url: '/api/v1/me/recharge', headers, payload: { amount: 321.45, payment_method: 'bank_transfer' } });
+    expect([200, 201]).toContain(replay.statusCode);
+    expect(replay.headers['x-idempotent-replay']).toBe('true');
+    expect(replay.json().data.order_id).toBe(first.json().data.order_id);
+    const rows = await db.select({ id: schema.rechargeOrders.id }).from(schema.rechargeOrders)
+      .where(and(eq(schema.rechargeOrders.userId, customerId), eq(schema.rechargeOrders.idempotencyKey, key)));
+    expect(rows).toHaveLength(1);
+
+    const changed = await app.inject({ method: 'POST', url: '/api/v1/me/recharge', headers, payload: { amount: 321.46, payment_method: 'bank_transfer' } });
+    expect(changed.statusCode).toBe(409);
+    expect(changed.json().message).toContain('不同充值请求');
   });
 });
 

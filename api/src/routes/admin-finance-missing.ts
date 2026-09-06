@@ -36,7 +36,7 @@ import crypto from 'crypto';
 import { db, schema } from '../db';
 import { eq, and, desc, asc, sql, inArray } from 'drizzle-orm';
 import { verifyToken } from '../services/auth/jwt';
-import { UnauthorizedError, ForbiddenError, ValidationError, NotFoundError, AppError, IdempotencyConflictError } from '../lib/errors';
+import { UnauthorizedError, ForbiddenError, ValidationError, NotFoundError, AppError, IdempotencyConflictError, IdempotencyUnavailableError } from '../lib/errors';
 import { requirePerm } from '../middleware/require-perm';
 import { requireOperation2fa } from '../middleware/require-operation-2fa';
 import { creditBalance } from '../services/billing/balance';
@@ -69,6 +69,7 @@ import {
   releaseIdempotencyLock,
   cacheIdempotentResponse,
   getCachedIdempotentResponse,
+  IDEMPOTENCY_TTL_SECONDS,
 } from '../services/idempotency';
 // campaign_coupon_codes 从表定义直接导入（与 recharge.ts 一致）
 import { campaignCouponCodes } from '../db/schema/coupons';
@@ -369,7 +370,7 @@ export async function adminFinanceMissingRoutes(app: FastifyInstance) {
    * 契约见 ARCH §3.2 / §2.5.1：method='manual' / status='pending'；metadata 写
    * { source:'admin-manual-topup', created_by, transfer_no?, evidence_remark? } +
    * R5 { approval, approval_level, approval_phase }；仅 active 用户可入账（裁决 A7）；
-   * 单笔上限 finance_rules 可配置（A1/R5 放开 1,000,000）；evidence_url 本期不接受（R9）；
+   * 单笔上限由 finance_rules 配置，默认值遵循 accepted 裁决（人工上账 ¥50,000）；evidence_url 本期不接受（R9）；
    * 幂等按 §3.4（L1 Redis 锁 + L2 唯一列）；R6 创建预检（soft 升级/hard 429）；R7 操作级 2FA。
    */
   app.post('/api/v1/admin/manual-topup', { preHandler: [requirePerm('finance.topup'), requireOperation2fa] }, async (request, reply) => {
@@ -429,7 +430,11 @@ export async function adminFinanceMissingRoutes(app: FastifyInstance) {
     // 注意：不复用 replayIdempotentRequest（其 L2 DB 兜底绑定 consumption_records，
     // 财务写操作无对应语义，ARCH §3.4 不可复用清单）；仅按裁决回放 L1 缓存。
     const idemKey = resolveIdempotencyKey(request, crypto.randomUUID());
-    const lock = await acquireIdempotencyLock(idemKey);
+    // 资金写路径严格模式（failClosed）：Redis 幂等锁不可用必须 503，不得静默降级绕过
+    const lock = await acquireIdempotencyLock(idemKey, IDEMPOTENCY_TTL_SECONDS, { failClosed: true });
+    if (lock.status === 'unavailable') {
+      throw new IdempotencyUnavailableError({ requestId: idemKey });
+    }
     if (lock.status === 'duplicate') {
       const cached = await getCachedIdempotentResponse(idemKey);
       if (cached && cached.body !== undefined) {
@@ -1209,7 +1214,6 @@ export async function adminFinanceMissingRoutes(app: FastifyInstance) {
       accountId = ins.id;
     }
 
-    const operatorId = (request as any).userContext?.userId ?? null;
     await writeAudit(request, 'tax_banking.bank_account.upsert', 'agent_bank_accounts', String(accountId), { agentId });
     return reply.send({ data: { id: accountId, agent_id: agentId }, message: '银行账户已保存' });
   });

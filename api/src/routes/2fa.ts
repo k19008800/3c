@@ -38,6 +38,7 @@ import {
 import { AppError, UnauthorizedError, ValidationError } from '../lib/errors';
 import { getRedis } from '../lib/redis';
 import { getOperation2faConfig, type Operation2faConfig } from '../lib/finance-rules';
+import { assertOperationSummary } from '../lib/operation-summary';
 
 /** setup 暂存态 TTL：10 分钟，超时需要重新 setup */
 const PENDING_SETUP_TTL_MS = 10 * 60 * 1000;
@@ -429,6 +430,13 @@ export async function twoFactorRoutes(app: FastifyInstance) {
     const body = (request.body ?? {}) as { token?: string; backup_code?: string };
     const token = String(body.token ?? '').trim();
     const backupCode = String(body.backup_code ?? '').trim();
+    const operationSummary = (body as Record<string, unknown>).operation_summary;
+    let summaryHash: string;
+    try {
+      summaryHash = assertOperationSummary(operationSummary);
+    } catch {
+      throw new ValidationError('operation_summary is required and cannot be empty');
+    }
 
     if (!token && !backupCode) {
       throw new ValidationError('token 与 backup_code 至少提供一个');
@@ -488,15 +496,15 @@ export async function twoFactorRoutes(app: FastifyInstance) {
     await clearOp2faFail(userId);
     const issuedSeqKey = `op2fa:issued_seq:${userId}`;
     const r = getRedis();
-    let seq = 1;
-    if (r) {
-      try {
-        seq = Number(await r.incr(issuedSeqKey)) || 1;
-      } catch {
-        /* Redis 不可用 → seq 回退 1（fail-open，失效联动降级） */
-      }
+    if (!r) throw new AppError('操作级 2FA 服务暂时不可用，请稍后重试', 403, 'OPERATION_2FA_UNAVAILABLE');
+    let seq: number;
+    try {
+      seq = Number(await r.incr(issuedSeqKey));
+      if (!Number.isSafeInteger(seq) || seq < 1) throw new Error('invalid sequence');
+    } catch {
+      throw new AppError('操作级 2FA 服务暂时不可用，请稍后重试', 403, 'OPERATION_2FA_UNAVAILABLE');
     }
-    const opToken = generateOperationToken({ userId, email, role, seq }, undefined, cfg.tokenTtlSeconds);
+    const opToken = generateOperationToken({ userId, email, role, seq, summaryHash }, undefined, cfg.tokenTtlSeconds);
 
     // P2-4 审计：操作令牌签发留痕（method：totp / backup_code；seq：令牌序号）
     await db.insert(schema.auditLogs).values({
