@@ -4,6 +4,8 @@
  * 覆盖 R7（ARCH v1.1 §4.4）：所有资金写端点必须由 requireOperation2fa 强制操作级 2FA。
  * 本次收口挂载的端点：
  *   - POST /admin/vendor-settlements/:id/confirm          结算单确认
+ *   - POST /admin/vendor-settlements/:id/paid             结算单标记打款（#26 收口）
+ *   - POST /admin/vendor-settlements/:id/dispute          结算单标记争议（#26 收口）
  *   - POST /admin/finance/close/execute                   月结锁账
  *   - POST /admin/finance/close/:period/unlock            超管临时解锁
  *   - POST /admin/settlements/:id/settle                  供应商标记已结算
@@ -35,6 +37,8 @@ let adminId = 0;
 let superId = 0;
 let supplierId = 0;
 let settlementId = 0;
+let paidSettlementId = 0;
+let disputeSettlementId = 0;
 const adminToken = () => generateAccessToken({ userId: adminId, email: ADMIN_EMAIL, role: 'admin' });
 const superToken = () => generateAccessToken({ userId: superId, email: SUPER_EMAIL, role: 'super_admin' });
 
@@ -80,6 +84,24 @@ beforeAll(async () => {
     .where(and(eq(schema.vendorSettlements.supplierId, supplierId), eq(schema.vendorSettlements.period, '2099-01')));
   settlementId = stRows[0]!.id;
 
+  // 结算单（paid 端点，confirmed）
+  await db.insert(schema.vendorSettlements).values({
+    supplierId, period: '2099-02', totalAmount: '0', itemCount: 0,
+    status: 'confirmed', createdBy: adminId,
+  }).onConflictDoNothing().returning();
+  const paidRows = await db.select().from(schema.vendorSettlements)
+    .where(and(eq(schema.vendorSettlements.supplierId, supplierId), eq(schema.vendorSettlements.period, '2099-02')));
+  paidSettlementId = paidRows[0]!.id;
+
+  // 结算单（dispute 端点，generated）
+  await db.insert(schema.vendorSettlements).values({
+    supplierId, period: '2099-03', totalAmount: '0', itemCount: 0,
+    status: 'generated', createdBy: adminId,
+  }).onConflictDoNothing().returning();
+  const disputeRows = await db.select().from(schema.vendorSettlements)
+    .where(and(eq(schema.vendorSettlements.supplierId, supplierId), eq(schema.vendorSettlements.period, '2099-03')));
+  disputeSettlementId = disputeRows[0]!.id;
+
   // 对账差异（diffs 端点，T-04 补账/核销语义）：注入一条 unresolved 差异
   await db.insert(schema.systemConfig).values({
     key: 'reconciliation_diffs',
@@ -122,6 +144,58 @@ describe('结算/对账资金写操作 · 操作级 2FA（#26）', () => {
     const ok = await app.inject({ method: 'POST', url: `/api/v1/admin/vendor-settlements/${settlementId}/confirm`, headers: opHeaders });
     expect(ok.statusCode).toBe(200);
     const replay = await app.inject({ method: 'POST', url: `/api/v1/admin/vendor-settlements/${settlementId}/confirm`, headers: opHeaders });
+    expect(replay.statusCode).toBe(403);
+    expect(replay.json().code).toBe('OPERATION_2FA_REPLAYED');
+  });
+
+  it('POST /vendor-settlements/:id/paid — 缺令牌 403 REQUIRED；带令牌 200；同令牌重放 403 REPLAYED', async () => {
+    const noToken = await app.inject({
+      method: 'POST',
+      url: `/api/v1/admin/vendor-settlements/${paidSettlementId}/paid`,
+      headers: { authorization: `Bearer ${adminToken()}` },
+      payload: { payment_reference: 'TF20990201' },
+    });
+    expect(noToken.statusCode).toBe(403);
+    expect(noToken.json().code).toBe('OPERATION_2FA_REQUIRED');
+
+    const opHeaders = op2faHeaders(adminToken(), adminId, ADMIN_EMAIL, 'admin');
+    const ok = await app.inject({
+      method: 'POST', url: `/api/v1/admin/vendor-settlements/${paidSettlementId}/paid`,
+      headers: opHeaders, payload: { payment_reference: 'TF20990201' },
+    });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json().data?.status).toBe('paid');
+    expect(ok.json().data?.payment_reference).toBe('TF20990201');
+    const replay = await app.inject({
+      method: 'POST', url: `/api/v1/admin/vendor-settlements/${paidSettlementId}/paid`,
+      headers: opHeaders, payload: { payment_reference: 'TF20990201' },
+    });
+    expect(replay.statusCode).toBe(403);
+    expect(replay.json().code).toBe('OPERATION_2FA_REPLAYED');
+  });
+
+  it('POST /vendor-settlements/:id/dispute — 缺令牌 403 REQUIRED；带令牌 200；同令牌重放 403 REPLAYED', async () => {
+    const noToken = await app.inject({
+      method: 'POST',
+      url: `/api/v1/admin/vendor-settlements/${disputeSettlementId}/dispute`,
+      headers: { authorization: `Bearer ${adminToken()}` },
+      payload: { reason: '金额有误' },
+    });
+    expect(noToken.statusCode).toBe(403);
+    expect(noToken.json().code).toBe('OPERATION_2FA_REQUIRED');
+
+    const opHeaders = op2faHeaders(adminToken(), adminId, ADMIN_EMAIL, 'admin');
+    const ok = await app.inject({
+      method: 'POST', url: `/api/v1/admin/vendor-settlements/${disputeSettlementId}/dispute`,
+      headers: opHeaders, payload: { reason: '金额有误' },
+    });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json().data?.status).toBe('disputed');
+    expect(ok.json().data?.dispute_reason).toBe('金额有误');
+    const replay = await app.inject({
+      method: 'POST', url: `/api/v1/admin/vendor-settlements/${disputeSettlementId}/dispute`,
+      headers: opHeaders, payload: { reason: '金额有误' },
+    });
     expect(replay.statusCode).toBe(403);
     expect(replay.json().code).toBe('OPERATION_2FA_REPLAYED');
   });

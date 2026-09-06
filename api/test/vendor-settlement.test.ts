@@ -215,7 +215,7 @@ describe('Vendor Settlement API (P1-3)', () => {
 
     expect(a.supplier_name).toBe(`VS SupA ${prefix}`);
     expect(a.period).toBe(PERIOD);
-    expect(a.status).toBe('draft');
+    expect(a.status).toBe('generated'); // #26 收口：统一命名 draft → generated
     expect(Number(a.total_amount)).toBeCloseTo(8.0, 4);
     expect(a.item_count).toBe(4); // 4 条消费记录
     expect(Number(b.total_amount)).toBeCloseTo(15.0, 4);

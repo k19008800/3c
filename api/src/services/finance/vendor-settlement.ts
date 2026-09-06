@@ -6,7 +6,8 @@
  *   supplier 解析：优先 consumption_records.supplier_id，缺失时回退 JOIN supplier_models
  *   得到的 supplier_models.supplier_id（LEFT JOIN supplier_model_id）
  * - 结算单幂等：同 (supplier_id, period) 已存在 → 直接复用既有记录（不重建、不覆盖）
- * - 状态流转：draft → confirmed（confirm 幂等）
+ * - 状态流转：generated → confirmed → paid；generated → disputed → confirmed（解决争议）
+ *   （历史数据 draft 与 generated 等价，均可确认/标记争议）
  *
  * @module services/finance/vendor-settlement
  * @see docs/iteration-plan-v2.md P1-3
@@ -28,6 +29,10 @@ export interface SettlementListItem {
   total_amount: number;
   item_count: number;
   status: string;
+  paid_at: string | null;
+  payment_reference: string | null;
+  dispute_reason: string | null;
+  disputed_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -187,7 +192,7 @@ export async function generateSettlements(
           period,
           totalAmount: String(row.totalAmount),
           itemCount: row.itemCount,
-          status: 'draft',
+          status: 'generated',
           createdBy: operatorId,
         } satisfies NewVendorSettlement).returning();
         if (!s) throw new Error('vendor settlement insert returned no row');
@@ -266,6 +271,10 @@ export async function listSettlements(params: {
         totalAmount: schema.vendorSettlements.totalAmount,
         itemCount: schema.vendorSettlements.itemCount,
         status: schema.vendorSettlements.status,
+        paidAt: schema.vendorSettlements.paidAt,
+        paymentReference: schema.vendorSettlements.paymentReference,
+        disputeReason: schema.vendorSettlements.disputeReason,
+        disputedAt: schema.vendorSettlements.disputedAt,
         createdAt: schema.vendorSettlements.createdAt,
         updatedAt: schema.vendorSettlements.updatedAt,
       })
@@ -286,6 +295,10 @@ export async function listSettlements(params: {
     total_amount: toNum(r.totalAmount),
     item_count: r.itemCount,
     status: r.status,
+    paid_at: r.paidAt?.toISOString() ?? null,
+    payment_reference: r.paymentReference,
+    dispute_reason: r.disputeReason,
+    disputed_at: r.disputedAt?.toISOString() ?? null,
     created_at: r.createdAt.toISOString(),
     updated_at: r.updatedAt.toISOString(),
   }));
@@ -328,6 +341,10 @@ export async function getSettlementDetail(id: number): Promise<SettlementDetail 
     total_amount: toNum(settlement.totalAmount),
     item_count: settlement.itemCount,
     status: settlement.status,
+    paid_at: settlement.paidAt?.toISOString() ?? null,
+    payment_reference: settlement.paymentReference,
+    dispute_reason: settlement.disputeReason,
+    disputed_at: settlement.disputedAt?.toISOString() ?? null,
     created_at: settlement.createdAt.toISOString(),
     updated_at: settlement.updatedAt.toISOString(),
     items: items.map((it) => ({
@@ -415,7 +432,8 @@ export async function matchSupplierBill(params: {
 }
 
 /**
- * 确认结算单：draft → confirmed（幂等：已 confirmed 直接返回）
+ * 确认结算单：generated/draft → confirmed；disputed → confirmed（解决争议，清空争议字段）
+ * 幂等：已 confirmed/paid 直接返回；其余状态不可确认（409）。
  *
  * @returns null 表示不存在；返回确认后的结算单行
  */
@@ -427,18 +445,97 @@ export async function confirmSettlement(id: number) {
     .limit(1);
   if (!settlement) return null;
 
-  if (settlement.status === 'confirmed') return settlement;
-  if (settlement.status !== 'draft') {
+  if (settlement.status === 'confirmed' || settlement.status === 'paid') return settlement;
+  if (settlement.status === 'disputed') {
+    const [resolved] = await db
+      .update(schema.vendorSettlements)
+      .set({ status: 'confirmed', disputeReason: null, disputedAt: null, updatedAt: new Date() })
+      .where(and(eq(schema.vendorSettlements.id, id), eq(schema.vendorSettlements.status, 'disputed')))
+      .returning();
+    if (resolved) return resolved;
+    const [current] = await db.select().from(schema.vendorSettlements).where(eq(schema.vendorSettlements.id, id)).limit(1);
+    if (current?.status === 'confirmed' || current?.status === 'paid') return current;
+    throw new AppError(`结算单状态不可确认：${current?.status ?? 'missing'}`, 409, 'SETTLEMENT_STATUS_MISMATCH');
+  }
+  if (settlement.status !== 'draft' && settlement.status !== 'generated') {
     throw new AppError(`结算单状态不可确认：${settlement.status}`, 409, 'SETTLEMENT_STATUS_MISMATCH');
   }
   const [updated] = await db
     .update(schema.vendorSettlements)
     .set({ status: 'confirmed', updatedAt: new Date() })
-    .where(and(eq(schema.vendorSettlements.id, id), eq(schema.vendorSettlements.status, 'draft')))
+    .where(and(eq(schema.vendorSettlements.id, id), inArray(schema.vendorSettlements.status, ['draft', 'generated'])))
     .returning();
-  // Concurrent confirmer lost the draft guard: re-read for idempotent confirmed result.
+  // Concurrent confirmer lost the state guard: re-read for idempotent confirmed result.
   if (updated) return updated;
   const [current] = await db.select().from(schema.vendorSettlements).where(eq(schema.vendorSettlements.id, id)).limit(1);
-  if (current?.status === 'confirmed') return current;
+  if (current?.status === 'confirmed' || current?.status === 'paid') return current;
   throw new AppError(`结算单状态不可确认：${current?.status ?? 'missing'}`, 409, 'SETTLEMENT_STATUS_MISMATCH');
+}
+
+/**
+ * 标记打款：confirmed → paid（幂等：已 paid 直接返回）
+ * 写入 paid_at 与打款凭证 payment_reference。
+ *
+ * @returns null 表示不存在；返回更新后的结算单行
+ */
+export async function markSettlementPaid(id: number, paymentReference?: string) {
+  const [settlement] = await db
+    .select()
+    .from(schema.vendorSettlements)
+    .where(eq(schema.vendorSettlements.id, id))
+    .limit(1);
+  if (!settlement) return null;
+
+  if (settlement.status === 'paid') return settlement;
+  if (settlement.status !== 'confirmed') {
+    throw new AppError(`仅已确认结算单可标记打款：${settlement.status}`, 409, 'SETTLEMENT_STATUS_MISMATCH');
+  }
+  const [updated] = await db
+    .update(schema.vendorSettlements)
+    .set({
+      status: 'paid',
+      paidAt: new Date(),
+      paymentReference: paymentReference?.trim() || null,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(schema.vendorSettlements.id, id), eq(schema.vendorSettlements.status, 'confirmed')))
+    .returning();
+  if (updated) return updated;
+  const [current] = await db.select().from(schema.vendorSettlements).where(eq(schema.vendorSettlements.id, id)).limit(1);
+  if (current?.status === 'paid') return current;
+  throw new AppError(`仅已确认结算单可标记打款：${current?.status ?? 'missing'}`, 409, 'SETTLEMENT_STATUS_MISMATCH');
+}
+
+/**
+ * 标记争议：generated/draft → disputed（幂等：已 disputed 直接返回）
+ * 写入争议原因 dispute_reason 与争议时间 disputed_at。
+ *
+ * @returns null 表示不存在；返回更新后的结算单行
+ */
+export async function markSettlementDispute(id: number, reason?: string) {
+  const [settlement] = await db
+    .select()
+    .from(schema.vendorSettlements)
+    .where(eq(schema.vendorSettlements.id, id))
+    .limit(1);
+  if (!settlement) return null;
+
+  if (settlement.status === 'disputed') return settlement;
+  if (settlement.status !== 'draft' && settlement.status !== 'generated') {
+    throw new AppError(`仅待确认结算单可标记争议：${settlement.status}`, 409, 'SETTLEMENT_STATUS_MISMATCH');
+  }
+  const [updated] = await db
+    .update(schema.vendorSettlements)
+    .set({
+      status: 'disputed',
+      disputeReason: reason?.trim() || null,
+      disputedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(and(eq(schema.vendorSettlements.id, id), inArray(schema.vendorSettlements.status, ['draft', 'generated'])))
+    .returning();
+  if (updated) return updated;
+  const [current] = await db.select().from(schema.vendorSettlements).where(eq(schema.vendorSettlements.id, id)).limit(1);
+  if (current?.status === 'disputed') return current;
+  throw new AppError(`仅待确认结算单可标记争议：${current?.status ?? 'missing'}`, 409, 'SETTLEMENT_STATUS_MISMATCH');
 }

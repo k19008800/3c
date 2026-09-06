@@ -5,7 +5,7 @@
  * - vendor_settlements：结算单主表（唯一约束 (supplier_id, period) 保证幂等）
  * - vendor_settlement_items：结算单明细（按模型聚合：调用次数 / 成本）
  *
- * 状态流转：draft → confirmed（确认后不再重新生成）
+ * 状态流转：draft/generated → confirmed → paid；draft/generated → disputed → confirmed（解决争议）
  *
  * @module db/schema/vendor-settlements
  * @see docs/iteration-plan-v2.md P1-3
@@ -19,6 +19,7 @@ import {
   integer,
   numeric,
   timestamp,
+  text,
   uniqueIndex,
   index,
 } from 'drizzle-orm/pg-core';
@@ -38,8 +39,16 @@ export const vendorSettlements = pgTable(
     totalAmount: numeric('total_amount', { precision: 18, scale: 4 }).notNull().default('0'),
     /** 明细条数（聚合到的模型数） */
     itemCount: integer('item_count').notNull().default(0),
-    /** draft | confirmed */
+    /** draft | generated | confirmed | disputed | paid */
     status: varchar('status', { length: 20 }).notNull().default('draft'),
+    /** 打款时间（confirmed → paid 时写入） */
+    paidAt: timestamp('paid_at'),
+    /** 打款流水号/凭证（前端 TF 前缀流水号） */
+    paymentReference: varchar('payment_reference', { length: 200 }),
+    /** 争议原因（标记争议时写入，解决争议后清空） */
+    disputeReason: text('dispute_reason'),
+    /** 争议时间（标记争议时写入，解决争议后清空） */
+    disputedAt: timestamp('disputed_at'),
     /** 生成人（管理员 user id） */
     createdBy: integer('created_by'),
     createdAt: timestamp('created_at').defaultNow().notNull(),

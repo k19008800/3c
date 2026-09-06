@@ -23,7 +23,7 @@ const MIGRATIONS = [
   '0028_recharge_orders_transfer_no_unique.sql', '0029_credit_limit_events.sql',
   '0030_adjustment_pending_super.sql', '0031_cache_pricing_explicit.sql',
   '0032_user_language_i18n.sql', '0033_refund_hardening.sql', '0034_reconciliation.sql',
-  '0035_login_history.sql', '0036_data_export_grants.sql',
+  '0035_login_history.sql', '0036_data_export_grants.sql', '0037_vendor_settlements_payment.sql',
 ];
 
 function safeError(error) {

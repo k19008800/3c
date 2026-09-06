@@ -43,7 +43,7 @@ export default function AdminVendorSettlementsPage() {
 
   const listQ = useQuery({
     queryKey: ["admin-vendor-settlements", status],
-    queryFn: async () => (await api.get<{ data: { list: Settlement[] } }>(`/admin/vendor-settlements?status=${status}&page_size=50`)).data.data,
+    queryFn: async () => (await api.get<{ data: { items: Settlement[] } }>(`/admin/vendor-settlements?status=${status}&page_size=50`)).data.data,
   });
 
   const genMut = useMutation({
@@ -85,14 +85,14 @@ export default function AdminVendorSettlementsPage() {
       </div>
 
       <div style={card}>
-        {listQ.isLoading ? <SkeletonGroup lines={5} /> : (listQ.data?.list?.length ?? 0) === 0 ? <EmptyState title="暂无结算单" /> : (
+        {listQ.isLoading ? <SkeletonGroup lines={5} /> : (listQ.data?.items?.length ?? 0) === 0 ? <EmptyState title="暂无结算单" /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
             <thead><tr style={{ color: "var(--color-text-secondary)", textAlign: "left" }}>
               <th style={{ padding: "8px" }}>供应商</th><th style={{ padding: "8px" }}>周期</th><th style={{ padding: "8px" }}>调用</th>
               <th style={{ padding: "8px" }}>用户消费</th><th style={{ padding: "8px" }}>应结算</th><th style={{ padding: "8px" }}>状态</th><th style={{ padding: "8px" }}>操作</th>
             </tr></thead>
             <tbody>
-              {listQ.data?.list.map(s => (
+              {listQ.data?.items.map(s => (
                 <tr key={s.id} style={{ borderTop: "1px solid var(--color-border)" }}>
                   <td style={{ padding: "8px", fontWeight: 600 }}>{s.vendor_name}</td>
                   <td style={{ padding: "8px" }}>{s.period}</td>

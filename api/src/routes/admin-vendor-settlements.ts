@@ -6,7 +6,9 @@
  *   GET  /api/v1/admin/vendor-settlements            — 结算单列表（period / supplier_id 过滤 + 分页）
  *   GET  /api/v1/admin/vendor-settlements/:id        — 结算单详情（含明细）
  *   GET  /api/v1/admin/vendor-settlements/:id/download — 结算单下载（CSV）
- *   POST /api/v1/admin/vendor-settlements/:id/confirm  — 确认结算单（draft → confirmed，幂等）
+ *   POST /api/v1/admin/vendor-settlements/:id/confirm  — 确认结算单（generated/draft → confirmed；disputed → confirmed 解决争议，幂等）
+ *   POST /api/v1/admin/vendor-settlements/:id/paid     — 标记打款（confirmed → paid，写入 paid_at / payment_reference）
+ *   POST /api/v1/admin/vendor-settlements/:id/dispute  — 标记争议（generated/draft → disputed，写入 dispute_reason）
  *   GET  /api/v1/admin/supplier-bill-match           — 供应商账单匹配差异（只读计算）
  *
  * 全部走 adminAuth（role ∈ {admin, super_admin}）。
@@ -26,6 +28,8 @@ import {
   getSettlementCsv,
   matchSupplierBill,
   confirmSettlement,
+  markSettlementPaid,
+  markSettlementDispute,
 } from '../services/finance/vendor-settlement.js';
 
 /* ───────── auth helpers ───────── */
@@ -116,7 +120,7 @@ export async function adminVendorSettlementsRoutes(app: FastifyInstance) {
     return reply.send(`\uFEFF${result.csv}`);
   });
 
-  /** POST /api/v1/admin/vendor-settlements/:id/confirm — 确认结算单（draft → confirmed，幂等）；资金写操作级 2FA（R7） */
+  /** POST /api/v1/admin/vendor-settlements/:id/confirm — 确认结算单（generated/draft → confirmed；disputed → confirmed 解决争议）；资金写操作级 2FA（R7） */
   app.post('/api/v1/admin/vendor-settlements/:id/confirm', { preHandler: [adminAuth, requireOperation2fa] }, async (request, reply) => {
     const id = parseId((request.params as { id: string }).id, 'settlement id');
     const record = await confirmSettlement(id);
@@ -124,6 +128,30 @@ export async function adminVendorSettlementsRoutes(app: FastifyInstance) {
     return reply.send({
       data: { id: record.id, status: record.status },
       message: record.status === 'confirmed' ? '结算单已确认' : '结算单已是确认状态',
+    });
+  });
+
+  /** POST /api/v1/admin/vendor-settlements/:id/paid — 标记打款（confirmed → paid）；资金写操作级 2FA（R7，#26 收口） */
+  app.post('/api/v1/admin/vendor-settlements/:id/paid', { preHandler: [adminAuth, requireOperation2fa] }, async (request, reply) => {
+    const id = parseId((request.params as { id: string }).id, 'settlement id');
+    const body = (request.body ?? {}) as { payment_reference?: string };
+    const record = await markSettlementPaid(id, body.payment_reference);
+    if (!record) throw new NotFoundError('vendor settlement', id);
+    return reply.send({
+      data: { id: record.id, status: record.status, paid_at: record.paidAt?.toISOString() ?? null, payment_reference: record.paymentReference },
+      message: record.status === 'paid' ? '已标记打款' : '结算单已标记打款',
+    });
+  });
+
+  /** POST /api/v1/admin/vendor-settlements/:id/dispute — 标记争议（generated/draft → disputed）；资金写操作级 2FA（R7，#26 收口） */
+  app.post('/api/v1/admin/vendor-settlements/:id/dispute', { preHandler: [adminAuth, requireOperation2fa] }, async (request, reply) => {
+    const id = parseId((request.params as { id: string }).id, 'settlement id');
+    const body = (request.body ?? {}) as { reason?: string };
+    const record = await markSettlementDispute(id, body.reason);
+    if (!record) throw new NotFoundError('vendor settlement', id);
+    return reply.send({
+      data: { id: record.id, status: record.status, dispute_reason: record.disputeReason },
+      message: record.status === 'disputed' ? '已标记争议' : '结算单已标记争议',
     });
   });
 
