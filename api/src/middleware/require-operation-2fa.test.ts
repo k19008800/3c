@@ -256,6 +256,24 @@ describe('ISSUE #25 三缺口专项（ADR-0008：summary 绑定 / 一次性消�
     expect(res.json().code).toBe('OPERATION_2FA_INVALID');
   });
 
+  it('summary 绑定⑤：中文摘要经 encodeURIComponent 头传输 → 中间件解码后绑定一致 → 200', async () => {
+    const CN_SUMMARY = [
+      { label: '操作类型', value: '充值订单 · 一审通过' },
+      { label: '订单号', value: 'RC202609061218046668' },
+      { label: '金额', value: '¥500.00', highlight: true },
+    ];
+    const cnHash = assertOperationSummary(CN_SUMMARY);
+    const token = generateOperationToken({ userId: enabledUserId, email: `op2fa-en-${ts}@test.com`, role: 'admin', seq: 1, summaryHash: cnHash });
+    // 浏览器 XHR 会剥离 HTTP 头中的非 ASCII 字符，故前端统一 encodeURIComponent 传输
+    const encodedHeader = encodeURIComponent(JSON.stringify(CN_SUMMARY));
+    const res = await app.inject({
+      method: 'POST', url: '/api/v1/admin/test-money',
+      headers: { ...auth(enabledToken), 'x-operation-token': token, 'x-operation-confirm': 'confirmed', 'x-operation-summary': encodedHeader },
+      payload: {},
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
   it('一次性消费①：同 token 首次 confirmed → 200，二次 → 403 OPERATION_2FA_REPLAYED', async () => {
     const token = generateOperationToken({ userId: enabledUserId, email: `op2fa-en-${ts}@test.com`, role: 'admin', seq: 1, summaryHash: SUMMARY_HASH });
     const headers = { ...auth(enabledToken), 'x-operation-token': token, 'x-operation-confirm': 'confirmed', ...opSummaryHeaders() };

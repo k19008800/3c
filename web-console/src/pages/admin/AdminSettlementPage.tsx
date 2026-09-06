@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../../lib/api";
-import { HelpIcon, StatusBadge, Modal, SkeletonGroup, useToast } from "@3cloud/shared-ui";
+import { withOperation2fa, operation2faHeaders } from "../../lib/operation-2fa";
+import type { OperationSummaryItem } from "../../components/Operation2faModal";
+import { HelpIcon, StatusBadge, SkeletonGroup, useToast } from "@3cloud/shared-ui";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
@@ -18,7 +20,16 @@ export default function AdminSettlementPage() {
   });
 
   const settleMut = useMutation({
-    mutationFn: async (id: number) => (await api.post(`/admin/settlements/${id}/settle`, {})).data,
+    mutationFn: async (id: number) => {
+      const summary: OperationSummaryItem[] = [
+        { label: "操作类型", value: "供应商结算 · 标记已结算" },
+        { label: "供应商 ID", value: String(id) },
+        { label: "结算周期", value: period },
+      ];
+      return withOperation2fa(async (ctx) => {
+        return (await api.post(`/admin/settlements/${id}/settle`, {}, { headers: operation2faHeaders(ctx) })).data;
+      }, summary);
+    },
     onSuccess: () => { toast.success("结算完成"); qc.invalidateQueries({ queryKey: ["admin-settlements"] }); },
     onError: (e: any) => toast.error(extractError(e)),
   });

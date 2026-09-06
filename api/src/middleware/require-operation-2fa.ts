@@ -84,7 +84,21 @@ export async function requireOperation2fa(request: any, _reply: any): Promise<vo
   }
 
   // 5. operation summary 必须同时由令牌和当前请求证明
-  const rawSummary = request.headers?.['x-operation-summary'];
+  // 前端以 encodeURIComponent 传输中文摘要（HTTP 头仅允许 ASCII 字节；Chromium XHR 会剥离
+  // 非 ASCII 字符导致摘要丢失）。优先 decodeURIComponent；对未编码的旧客户端/测试（ASCII）
+  // 原样兼容；中文旧客户端（UTF-8 字节 → Node latin1 解码）再按 latin1→utf8 还原。
+  let rawSummary = request.headers?.['x-operation-summary'];
+  if (typeof rawSummary === 'string' && rawSummary.length > 0) {
+    try {
+      rawSummary = decodeURIComponent(rawSummary);
+    } catch {
+      try {
+        rawSummary = Buffer.from(rawSummary, 'latin1').toString('utf8');
+      } catch {
+        /* 保留原值，交由下方解析兜底 */
+      }
+    }
+  }
   let summaryHash: string;
   try {
     if (typeof rawSummary !== 'string' || !rawSummary.trim()) throw new Error('missing summary');

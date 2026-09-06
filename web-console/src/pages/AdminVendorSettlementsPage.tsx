@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
+import { withOperation2fa, operation2faHeaders } from "../lib/operation-2fa";
+import type { OperationSummaryItem } from "../components/Operation2faModal";
 import { HelpIcon, StatusBadge, Modal, EmptyState, SkeletonGroup, useToast } from "@3cloud/shared-ui";
 
 interface ModelItem {
@@ -50,7 +52,16 @@ export default function AdminVendorSettlementsPage() {
     onError: (e) => { toast.error(extractError(e)); setShowGen(false); qc.invalidateQueries({ queryKey: ["admin-vendor-settlements"] }); },
   });
   const opMut = useMutation({
-    mutationFn: async ({ id, op, body }: { id: number; op: string; body?: any }) => (await api.post(`/admin/vendor-settlements/${id}/${op}`, body ?? {})).data,
+    mutationFn: async ({ id, op, body }: { id: number; op: string; body?: any }) => {
+      const opLabel = op === "confirm" ? "结算单 · 确认" : op === "paid" ? "结算单 · 标记打款" : op === "dispute" ? "结算单 · 标记争议" : `结算单 · ${op}`;
+      const summary: OperationSummaryItem[] = [
+        { label: "操作类型", value: opLabel },
+        { label: "结算单 ID", value: String(id) },
+      ];
+      return withOperation2fa(async (ctx) => {
+        return (await api.post(`/admin/vendor-settlements/${id}/${op}`, body ?? {}, { headers: operation2faHeaders(ctx) })).data;
+      }, summary);
+    },
     onSuccess: (d: { data?: { message?: string } }) => { toast.success(d?.data?.message ?? "操作成功"); setDispute(null); qc.invalidateQueries({ queryKey: ["admin-vendor-settlements"] }); },
     onError: (e) => toast.error(extractError(e)),
   });

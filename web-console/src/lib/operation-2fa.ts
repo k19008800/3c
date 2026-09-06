@@ -56,8 +56,9 @@ export const OPERATION_CONFIRM_VALUE = "confirmed";
  * @param ctx - withOperation2fa 传入的操作上下文
  * @param extra - 额外头（如 Idempotency-Key）
  */
-export function operation2faHeaders(ctx: { token: string | null; confirmed: boolean }, extra?: Record<string, string>): Record<string, string> {
+export function operation2faHeaders(ctx: { token: string | null; confirmed: boolean; summary?: OperationSummaryItem[] }, extra?: Record<string, string>): Record<string, string> {
   const h: Record<string, string> = { ...(extra ?? {}) };
+  if (ctx.summary && ctx.summary.length > 0) h["X-Operation-Summary"] = encodeURIComponent(JSON.stringify(ctx.summary));
   if (ctx.token) h["X-Operation-Token"] = ctx.token;
   if (ctx.confirmed) h[OPERATION_CONFIRM_HEADER] = OPERATION_CONFIRM_VALUE;
   return h;
@@ -93,7 +94,7 @@ export function clearOperationTokenCache(): void {
  * @returns 操作令牌与有效期（秒）
  * @throws 403 OPERATION_2FA_NOT_ENABLED / 400 INVALID_OPERATION_2FA / 429 OPERATION_2FA_LOCKED / 401（登录态失效）
  */
-export async function requestOperation2fa(payload: { token?: string; backup_code?: string }): Promise<{ op_token: string; expires_in: number }> {
+export async function requestOperation2fa(payload: { token?: string; backup_code?: string; operation_summary?: OperationSummaryItem[] }): Promise<{ op_token: string; expires_in: number }> {
   const res = await api.post<{ data: { op_token: string; expires_in: number }; message?: string }>(
     "/auth/2fa/operation-verify",
     payload,
@@ -138,8 +139,9 @@ function lockSecondsFromError(err: any): number | undefined {
 
 /** 弹两步弹窗并缓存新令牌（verifyOnce）；skipVerify=缓存令牌有效时跳过第一步验证 */
 async function verifyOnce(summary: OperationSummaryItem[] | undefined, skipVerify: boolean, cachedToken: string | null): Promise<string> {
+  if (!summary || summary.length === 0) throw new Error("操作摘要不能为空");
   clearOperationTokenCache();
-  const verifyFn: Operation2faVerifyFn = (payload) => requestOperation2fa(payload);
+  const verifyFn: Operation2faVerifyFn = (payload) => requestOperation2fa({ ...payload, operation_summary: summary });
   const token = await openOperation2faModal({
     mode: "verify",
     onVerify: verifyFn,
@@ -176,12 +178,13 @@ async function verifyOnce(summary: OperationSummaryItem[] | undefined, skipVerif
  * @returns 原请求成功响应；用户取消验证时 reject(Operation2faCanceledError)
  */
 export async function withOperation2fa<T>(
-  action: (ctx: { token: string | null; confirmed: boolean }) => Promise<T>,
+  action: (ctx: { token: string | null; confirmed: boolean; summary?: OperationSummaryItem[] }) => Promise<T>,
   summary?: OperationSummaryItem[],
 ): Promise<T> {
   // 第一次尝试：只带缓存令牌、不带确认标记（探测，永不直接放行）
   try {
-    return await action({ token: getCachedOperationToken(), confirmed: false });
+    if (!summary || summary.length === 0) throw new Error("操作摘要不能为空");
+    return await action({ token: getCachedOperationToken(), confirmed: false, summary });
   } catch (err: any) {
     const code = getOperation2faErrorCode(err);
     if (!code || !OP_2FA_ERROR_CODES.has(code)) throw err;
@@ -202,13 +205,13 @@ export async function withOperation2fa<T>(
     const cached = getCachedOperationToken();
     const token = await verifyOnce(summary, !!cached, cached);
     try {
-      return await action({ token, confirmed: true });
+      return await action({ token, confirmed: true, summary });
     } catch (err2: any) {
       const code2 = getOperation2faErrorCode(err2);
       // 过期/失效重试（ARCH v1.1 §4.7）：清缓存、重开弹窗一次，保留操作上下文
       if (code2 === "OPERATION_2FA_EXPIRED" || code2 === "OPERATION_2FA_INVALID" || code2 === "OPERATION_2FA_REQUIRED") {
         const token2 = await verifyOnce(summary, false, null);
-        return await action({ token: token2, confirmed: true });
+        return await action({ token: token2, confirmed: true, summary });
       }
       throw err2;
     }

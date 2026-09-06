@@ -17,6 +17,7 @@
 
 import type { FastifyInstance } from 'fastify';
 import { verifyToken } from '../services/auth/jwt.js';
+import { requireOperation2fa } from '../middleware/require-operation-2fa.js';
 import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError } from '../lib/errors.js';
 import {
   generateSettlements,
@@ -115,8 +116,8 @@ export async function adminVendorSettlementsRoutes(app: FastifyInstance) {
     return reply.send(`\uFEFF${result.csv}`);
   });
 
-  /** POST /api/v1/admin/vendor-settlements/:id/confirm — 确认结算单（draft → confirmed，幂等） */
-  app.post('/api/v1/admin/vendor-settlements/:id/confirm', { preHandler: [adminAuth] }, async (request, reply) => {
+  /** POST /api/v1/admin/vendor-settlements/:id/confirm — 确认结算单（draft → confirmed，幂等）；资金写操作级 2FA（R7） */
+  app.post('/api/v1/admin/vendor-settlements/:id/confirm', { preHandler: [adminAuth, requireOperation2fa] }, async (request, reply) => {
     const id = parseId((request.params as { id: string }).id, 'settlement id');
     const record = await confirmSettlement(id);
     if (!record) throw new NotFoundError('vendor settlement', id);

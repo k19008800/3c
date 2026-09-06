@@ -317,7 +317,7 @@ export function adminFinanceStatsRoutes(app: FastifyInstance) {
    * period=当前月 YYYY-MM，total_amount=本期成本聚合）；已存在则置 confirmed（幂等）。
    * 简化说明：week/quarter 视图结算同样落到当前月（表唯一约束 (supplier_id, period)）。
    */
-  app.post('/api/v1/admin/settlements/:id/settle', { preHandler: [adminAuth] }, async (request, reply) => {
+  app.post('/api/v1/admin/settlements/:id/settle', { preHandler: [adminAuth, requireOperation2fa] }, async (request, reply) => {
     const supplierId = Number((request.params as any)?.id);
     if (!Number.isInteger(supplierId) || supplierId <= 0) throw new ValidationError('供应商 ID 非法');
 

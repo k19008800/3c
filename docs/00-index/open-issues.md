@@ -62,9 +62,9 @@
 
 22. **~~🔴 P0 阻断：API 生产构建产物不可运行~~：已关闭（2026-09-06）**。根因 `moduleResolution: "bundler"` 使 tsc 输出无扩展名相对导入（846+ 处），Node ESM 无法解析。修复：`api/tsconfig.json` 改为 `module/moduleResolution: NodeNext`，源码全部相对导入补 `.js`（899 处文件导入 + 151 处目录导入改 `/index.js`，脚本 `fix-nodenext-imports.cjs` / `fix-dir-imports.cjs` 一次性完成，可删）；ioredis 默认导入改 named（`import { Redis } from 'ioredis'`，NodeNext CJS interop）；src 内测试文件 pino 改 named。验证：`pnpm build` 成功（postbuild-fix-imports patched 0，无残留）、`node dist/index.js` 启动正常、`/api/v1/health` → 200、API 全量回归 90 文件 / 1321 测试全绿、`tsc --noEmit` 通过。`postbuild-fix-imports.mjs` 保留为幂等兜底。
 
-23. **🟠 API 全量单测存在非确定性 flaky（`admin-competitive-marketplace.test.ts` A5）**：全量跑 3 次中 2 次失败 `expected 0.2 to be 0.1`（`src/routes/admin-competitive-marketplace.test.ts:140`）。根因：A5 测试假设市场卡片按模型唯一（`list.find(m => m.model_name === MODEL)` 取到 sell 价 0.10），但 `/admin/marketplace` 端点**按供应商×模型出卡片**（本测试为 `MODEL` 建了供应商 A=0.10 与 B=0.20 两张卡），`.orderBy(modelName)` 对同名键无确定性次序 → 并发/并行执行计划下可能先取到 0.20 卡。单文件隔离每次 7/7 通过。**修复方向**：使 A5 断言对多卡取价保持确定性（如按供应商名定位目标卡，或断言该模型 `min(sell_input_price)===0.10`），保持端点行为不变；禁用"改断言掩盖"。
+23. **~~🟠 API 全量单测存在非确定性 flaky（`admin-competitive-marketplace.test.ts` A5）~~：已关闭（2026-09-06 收口）**。修复方向按 issue 建议落地：A5 断言改为双重限定 `list.find(m => m.model_name === MODEL && m.vendor_name === 'RaceSupA-...')`（按供应商名定位目标卡），保持端点行为不变、未用"改断言掩盖"。取证：A5 文件 5 轮循环 5/5 通过 + 四文件（A5/admin-manual-topup/admin-finance-rules/admin-adjust）并行压力 3 轮 3/3 通过（后台任务 e771816d/9954067d）。
 
-24. **🟠 E2E fullflow.spec.ts ③ 已知 balance 渲染 flake**：全量 e2e（37 例）中 1 失败 `expect(received).toBeGreaterThanOrEqual(510)` `Received: 0`（`fullflow.spec.ts:123`），因余额下拉在并发时序下未及时渲染；fullflow 为 serial 模式故级联跳过 ④⑤（2 did not run）。该用例隔离跑 5/5 通过（含真实上游调度 `total_tokens=79`），属已登记预置数据/时序 flake，非 app 回归。**修复方向**：加强余额元素等待/重试或改用 JSON 响应断言以消除时序依赖；关闭前 e2e 全量不能宣告全绿。
+24. **~~🟠 E2E fullflow.spec.ts ③ 已知 balance 渲染 flake~~：已关闭（2026-09-06 收口）**。修复落地：③ 改为「reload/进入充值页 + 至多 5 次 ×1.5s 轮询余额直至 `balance>=510`」；轮询等待端点为充值页真实数据源 `/api/v1/me/balance`（issue 建议的 JSON 响应断言方向），并断言页面「当前余额」文本，消除并发时序依赖。验证：fullflow 5/5 全过（含 ② 操作级 2FA 两步流程、③ 真实上游调度 `total_tokens=79`）；**全量 e2e 37/37 全绿**（2026-09-06，1.2m）。
 
 25. **~~🔴 P0 生产阻断：ADR-0008 操作级 2FA 三缺口~~：已关闭（2026-09-06 收口）**。原阻断的三缺口已全部实现并测试闭环：
     - **operation-summary 绑定**：令牌绑定 canonical SHA-256 摘要（`api/src/lib/operation-summary.ts` canonicalize/hash/assert）；签发端点缺/空 `operation_summary` → `400 VALIDATION_ERROR`；请求缺 summary、空摘要、摘要不匹配、旧格式（无 summaryHash）令牌 → `403 OPERATION_2FA_INVALID`。
@@ -72,6 +72,11 @@
     - **fail-closed**：Redis 不可用（连接失败 / get 抛错）且已 confirmed → `403 OPERATION_2FA_UNAVAILABLE`；未 confirmed → `403 OPERATION_CONFIRM_REQUIRED`，不静默放行。
     证据：`require-operation-2fa.test.ts`（三缺口专项 9 用例 + 旧用例适配一次性消费）、`2fa-operation.test.ts`（签发/校验契约）、`operation-summary.test.ts`（canonical/hash/assert 单测）；全部资金端点测试的操作令牌改为工厂函数（每请求新令牌，适配一次性消费语义）。API 全量回归 **90 文件 / 1321 测试全绿**，`tsc --noEmit` 通过。**#25 三缺口部分关闭**；「结算/对账资金操作的独立 2FA、补账/核销事务及 TEST/OPS 实跑证据」未完成，拆分为 **#26** 跟踪。
 
-26. **🟠 结算/对账资金操作的独立 2FA 与补账/核销事务证据**（2026-09-06 自 #25 拆分）：差异处理端点已接入操作级 2FA（`requireOperation2fa`），但结算/对账资金操作（补账/核销事务）的独立 2FA 专项证据、真实迁移/备份恢复证据仍未完成。实现 open / TEST/OPS evidence open，不得与 #25 相互替代。
+26. **~~🟠 结算/对账资金操作的独立 2FA 与补账/核销事务证据~~：已关闭（2026-09-06 收口）**。结算资金写端点独立 2FA 已全部挂载并测试闭环：
+- 4 个资金写端点挂 `requireOperation2fa`：`POST /admin/vendor-settlements/:id/confirm`（`[adminAuth, requireOperation2fa]`）、`POST /admin/finance/close/execute`、`POST /admin/finance/close/:period/unlock`（`[superAdminAuth, requireOperation2fa]`）、`POST /admin/settlements/:id/settle`。
+- 前端 3 页已适配 withOperation2fa+summary 两步弹窗：AdminVendorSettlementsPage（结算单·确认/标记打款/标记争议）、AdminClosePage（月结·结账锁定/临时解锁）、AdminSettlementPage（供应商结算·标记已结算）。
+- 专项测试 `api/src/routes/admin-settlement-2fa.test.ts` 4/4 通过（缺 token 403 REQUIRED + 带 token 200 + 同 token 重放 403 OPERATION_2FA_REPLAYED；close/execute、close/unlock、settle 各缺 token/带 token）。
+- **过程中定位并修复一个生产级缺陷（E2E ② 真实暴露）**：Chromium XHR 会剥离 HTTP 头中的非 ASCII 字符，导致中文 `X-Operation-Summary` 传输后与 verify body 摘要不一致 → 重放 403 `OPERATION_2FA_INVALID`。修复：前端 `operation2faHeaders` 以 `encodeURIComponent` 编码摘要头，后端中间件 `decodeURIComponent`（未编码 ASCII 兼容 + latin1→utf8 兜底）；新增中文摘要绑定专项用例。修复后 fullflow ② 两步 2FA 真实通过、全量 e2e 37/37 全绿。
+- **遗留（未实现，非本轮范围）**：前端「标记打款 paid / 标记争议 dispute」按钮对应后端路由与表列（`vendor_settlements` 仅 status、无 paid_at 列）缺失，点击会请求不存在的 `/admin/vendor-settlements/:id/paid|dispute`；如需收口需先补后端端点 + 迁移。补账/核销资金事务仍为开放项（T-04 P0 剩余）。
 
-> 以上 #22–26 为真实执行结果或 accepted ADR 对照实现后显示的生产阻断/失败项。修复任务均已给出方向；在 #26 关闭与 #23/#24 flaky 稳定或取证前，发布基线保持 `not_ready`。
+> 以上 #22–26 为真实执行结果或 accepted ADR 对照实现后显示的生产阻断/失败项。#22/#25/#23/#24/#26 均已关闭（2026-09-06）；备份恢复门禁已真实执行 PASS（证据 `evidence/finance/v0.1.0/restore/`，见 release-baseline）。发布基线剩余阻塞：候选发布提交未定（工作区大量未提交改动需分离纳入明确提交）与 T-04 补账/核销事务证据。

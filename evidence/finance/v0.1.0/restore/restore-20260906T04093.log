@@ -1,0 +1,7 @@
+﻿[2026-09-06T04:09:40+08:00] backup-restore-drill PASS (release v0.1.0)
+- pg_dump --format=custom -> threecloud_v3-20260906T04093.dump (8757017 B)
+- SHA-256 sidecar 一致；assertIsolatedRestoreTarget 通过
+- 隔离库 threecloud_restore_drill 恢复成功（pg_restore --exit-on-error）
+- 结构校验: 103 public tables; users=15854, customer_balances=13403, balance_transactions=27424, 可用余额合计 1691471.81143040
+- 源/恢复行数一致（users=15854, txns=27424）；演练库已删除，生产库未受影响
+- 前置失败轮次 04091(认证失败)/04092(参数缺省致 FAIL) 已在驱动脚本迭代中解决

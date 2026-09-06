@@ -9,6 +9,7 @@ import type { FastifyInstance } from 'fastify';
 import { db, schema } from '../db/index.js';
 import { eq, and, gte, lte, sql, desc, inArray } from 'drizzle-orm';
 import { verifyToken } from '../services/auth/jwt.js';
+import { requireOperation2fa } from '../middleware/require-operation-2fa.js';
 import {
   UnauthorizedError,
   ForbiddenError,
@@ -377,8 +378,8 @@ export async function financeDashboardRoutes(app: FastifyInstance) {
     });
   });
 
-  /** POST /api/v1/admin/finance/close/execute — 执行月结：按资金流水统计收入/支出/毛利并锁账 */
-  app.post('/api/v1/admin/finance/close/execute', { preHandler: [adminAuth] }, async (request, reply) => {
+  /** POST /api/v1/admin/finance/close/execute — 执行月结：按资金流水统计收入/支出/毛利并锁账；资金写操作级 2FA（R7） */
+  app.post('/api/v1/admin/finance/close/execute', { preHandler: [adminAuth, requireOperation2fa] }, async (request, reply) => {
     const { period: p } = (request.body ?? {}) as { period?: string };
     const period = p ?? new Date().toISOString().slice(0, 7);
     const operatorId = (request as any).userContext?.userId ?? 0;
@@ -445,8 +446,8 @@ export async function financeDashboardRoutes(app: FastifyInstance) {
     });
   });
 
-  /** POST /api/v1/admin/finance/close/:period/unlock — 超管临时解锁（1 小时后自动重锁） */
-  app.post('/api/v1/admin/finance/close/:period/unlock', { preHandler: [superAdminAuth] }, async (request, reply) => {
+  /** POST /api/v1/admin/finance/close/:period/unlock — 超管临时解锁（1 小时后自动重锁）；敏感资金写，操作级 2FA（R7） */
+  app.post('/api/v1/admin/finance/close/:period/unlock', { preHandler: [superAdminAuth, requireOperation2fa] }, async (request, reply) => {
     const period = (request.params as { period: string }).period;
     const { reason } = (request.body ?? {}) as { reason?: string };
     if (!reason) return reply.code(400).send({ code: 400, error: 'BAD_PARAMS', message: '解锁理由必填' });

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
+import { withOperation2fa, operation2faHeaders } from "../lib/operation-2fa";
+import type { OperationSummaryItem } from "../components/Operation2faModal";
 import { PageHeader, Panel, Tag, Table, Modal, SkeletonGroup, EmptyState, useToast } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
 
@@ -55,7 +57,15 @@ export default function AdminClosePage() {
   });
 
   const closeMut = useMutation({
-    mutationFn: async (period: string) => (await api.post("/admin/finance/close/execute", { period })).data,
+    mutationFn: async (period: string) => {
+      const summary: OperationSummaryItem[] = [
+        { label: "操作类型", value: "月结 · 结账锁定" },
+        { label: "会计期间", value: period },
+      ];
+      return withOperation2fa(async (ctx) => {
+        return (await api.post("/admin/finance/close/execute", { period }, { headers: operation2faHeaders(ctx) })).data;
+      }, summary);
+    },
     onSuccess: (d: any) => {
       toast.success(d?.data?.message ?? "结账完成");
       setConfirmOpen(false);
@@ -69,7 +79,16 @@ export default function AdminClosePage() {
   });
 
   const unlockMut = useMutation({
-    mutationFn: async () => (await api.post(`/admin/finance/close/${unlock?.period}/unlock`, { reason: unlock?.reason })).data,
+    mutationFn: async () => {
+      const summary: OperationSummaryItem[] = [
+        { label: "操作类型", value: "月结 · 临时解锁" },
+        { label: "会计期间", value: unlock?.period ?? "" },
+        { label: "解锁理由", value: unlock?.reason ?? "" },
+      ];
+      return withOperation2fa(async (ctx) => {
+        return (await api.post(`/admin/finance/close/${unlock?.period}/unlock`, { reason: unlock?.reason }, { headers: operation2faHeaders(ctx) })).data;
+      }, summary);
+    },
     onSuccess: (d: any) => {
       toast.success(d?.data?.message ?? "已解锁");
       setUnlock(null);
