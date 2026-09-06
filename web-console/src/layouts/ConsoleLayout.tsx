@@ -178,7 +178,6 @@ const PORTAL_NAV: NavItem[] = [
   { to: "/security", label: "nav.security", icon: "🛡️" },
   { to: "/data-export", label: "nav.dataExport", icon: "📦", permKey: "portal.dataExport" },
   { to: "/user-groups", label: "nav.userGroups", icon: "👥" },
-  { to: "/vendor-selector", label: "nav.vendorSelector", icon: "🏭" },
   { to: "/account-deletion", label: "nav.accountDeletion", icon: "🗑️" },
 ];
 

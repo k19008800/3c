@@ -13,7 +13,6 @@
 import { useState } from "react";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
 import { sendDebugRequest } from "./request";
-import { ModelInput } from "./ModelInput";
 import { ResponseViewer, controlStyle, primaryBtnStyle } from "./ResponseViewer";
 import type { PlaygroundTabProps, ProxyResult } from "./types";
 import type { MessageItem } from "./tabTypes";
@@ -35,10 +34,9 @@ const fieldLabelStyle: React.CSSProperties = {
 };
 
 export function MessagesTab(props: PlaygroundTabProps) {
-  const { fullKey, models } = props;
+  const { fullKey, model } = props;
   const { toast } = useToast();
 
-  const [model, setModel] = useState("");
   const [system, setSystem] = useState("You are a helpful assistant.");
   const [messages, setMessages] = useState<MessageItem[]>([
     { role: "user", content: "请用一句话介绍什么是 3cloud" },
@@ -65,8 +63,9 @@ export function MessagesTab(props: PlaygroundTabProps) {
       toast.error("请先粘贴完整 API Key");
       return;
     }
-    if (!model.trim()) {
-      toast.error("请填写模型名（如 deepseek-chat / claude-sonnet-4-20250514）");
+    const modelCode = model.trim();
+    if (!modelCode) {
+      toast.error("请先在上方选择模型编码。");
       return;
     }
     const nonEmpty = messages.filter((m) => m.content.trim());
@@ -76,7 +75,7 @@ export function MessagesTab(props: PlaygroundTabProps) {
     }
 
     const body: Record<string, unknown> = {
-      model: model.trim(),
+      model: modelCode,
       messages: nonEmpty.map((m) => ({ role: m.role, content: m.content })),
       max_tokens: maxTokens > 0 ? maxTokens : 64,
     };
@@ -120,14 +119,16 @@ export function MessagesTab(props: PlaygroundTabProps) {
             <HelpIcon text="Anthropic Messages API 兼容端点：请求/响应为 Claude 格式，网关内部转换为 OpenAI 格式转发上游再映射回 Claude 格式。" level="button" />
           </div>
 
-          <div style={{ display: "flex", gap: 16, marginBottom: 12, flexWrap: "wrap" }}>
-            <ModelInput
-              value={model}
-              onChange={setModel}
-              models={models}
-              help="Anthropic 格式请求的模型名，网关按名路由到可用供应商（如 deepseek-chat / claude 系列）。"
-              placeholder="例如 deepseek-chat"
-            />
+          <div style={{ display: "flex", gap: 16, marginBottom: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label style={fieldLabelStyle}>
+                模型编码
+                <HelpIcon text="Anthropic 格式请求的 model = 上方所选模型编码，按编码精确路由到对应供应商。" level="button" />
+              </label>
+              <code style={{ display: "inline-block", padding: "8px 12px", borderRadius: 6, border: "1px dashed var(--color-border)", fontSize: 13, color: model ? "var(--color-text)" : "var(--color-text-secondary)" }}>
+                {model.trim() || "（请先在上方选择模型编码）"}
+              </code>
+            </div>
             <div style={{ flex: 1, minWidth: 140 }}>
               <label style={fieldLabelStyle}>
                 max_tokens
@@ -211,7 +212,7 @@ export function MessagesTab(props: PlaygroundTabProps) {
           >
             {sending ? "请求中..." : "🚀 发送 Messages 请求"}
           </button>
-          <HelpIcon text="调用 /v1/messages（Anthropic 格式）：Claude→OpenAI 转换 → 鉴权 → 余额预检 → 渠道选择 → 上游转发 → 响应映射回 Claude 格式 → 计费。" level="button" />
+          <HelpIcon text="调用 /v1/messages（Anthropic 格式）：Claude→OpenAI 转换 → 鉴权 → 余额预检 → 按模型编码路由 → 上游转发 → 响应映射回 Claude 格式 → 计费。" level="button" />
         </div>
       </div>
 

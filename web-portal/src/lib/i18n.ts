@@ -139,6 +139,9 @@ export const EN_DEFAULTS: Record<string, string> = {
   "pricing.table.category": "Category",
   "pricing.table.input": "Input / 1K tokens",
   "pricing.table.output": "Output / 1K tokens",
+  "pricing.table.code": "Model Code",
+  "pricing.table.cacheRead": "Cache Read / 1K",
+  "pricing.table.cacheWrite": "Cache Write / 1K",
   "pricing.table.context": "Context length",
   "pricing.faq.title": "Billing Notes",
   "pricing.faq.q1": "What does list price mean?",
@@ -168,7 +171,7 @@ export const EN_DEFAULTS: Record<string, string> = {
   // help（[?] 帮助文案）
   "help.langSwitcher": "Switch the portal language; untranslated text falls back to English.",
   "help.home": "Portal home: platform capabilities, popular models, pricing and FAQ. Role: all visitors.",
-  "help.pricing": "Pricing page: all model prices plus a live price calculator. Role: all visitors.",
+  "help.pricing": "Pricing page: all model prices by model code plus a live price calculator. Each (model × vendor) is one code row. Role: all visitors.",
   "help.blog": "Blog list: published platform posts (updates / tech / announcements). Role: all visitors.",
   "help.blogPost": "Blog post: article content. Role: all visitors.",
 };

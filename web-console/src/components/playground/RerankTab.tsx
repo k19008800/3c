@@ -5,7 +5,7 @@
  * 请求体 { model, query, documents, top_n?, return_documents? }，
  * documents 元素支持 string 或 { text } 对象（本页用 string 形式）。
  *
- * 链路：API Key 鉴权 → 校验 → 输入 token 估算 → 余额预检 → 渠道选择 →
+ * 链路：API Key 鉴权 → 校验 → 输入 token 估算 → 余额预检 → 按模型编码路由 →
  * 上游转发（无流式）→ 计费；无可用供应商时 mock 回退（同样计费）。
  *
  * @see api/src/routes/rerank.ts（后端契约）
@@ -16,7 +16,6 @@
 import { useState } from "react";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
 import { sendDebugRequest } from "./request";
-import { ModelInput } from "./ModelInput";
 import { ResponseViewer, controlStyle, primaryBtnStyle } from "./ResponseViewer";
 import type { PlaygroundTabProps, ProxyResult } from "./types";
 
@@ -50,10 +49,9 @@ interface RerankResultItem {
 }
 
 export function RerankTab(props: PlaygroundTabProps) {
-  const { fullKey, models } = props;
+  const { fullKey, model } = props;
   const { toast } = useToast();
 
-  const [model, setModel] = useState("");
   const [query, setQuery] = useState("Which city is the capital of France?");
   const [documents, setDocuments] = useState<string[]>(DEFAULT_DOCUMENTS);
   const [topN, setTopN] = useState(3);
@@ -79,8 +77,9 @@ export function RerankTab(props: PlaygroundTabProps) {
       toast.error("请先粘贴完整 API Key");
       return;
     }
-    if (!model.trim()) {
-      toast.error("请填写模型名（如 rerank-multilingual-v3 / rerank-english-v3.0）");
+    const modelCode = model.trim();
+    if (!modelCode) {
+      toast.error("请先在上方选择模型编码。");
       return;
     }
     const nonEmpty = documents.filter((d) => d.trim());
@@ -96,7 +95,7 @@ export function RerankTab(props: PlaygroundTabProps) {
         path: "/api/v1/v1/rerank",
         apiKey: fullKey,
         body: {
-          model: model.trim(),
+          model: modelCode,
           query,
           documents: nonEmpty,
           top_n: topN > 0 ? topN : undefined,
@@ -168,14 +167,16 @@ export function RerankTab(props: PlaygroundTabProps) {
             <HelpIcon text="Rerank 重排序：给 query 与 documents 的相关性打分排序，用于 RAG 检索后精排。Cohere / Jina 兼容格式。" level="button" />
           </div>
 
-          <div style={{ display: "flex", gap: 16, marginBottom: 12, flexWrap: "wrap" }}>
-            <ModelInput
-              value={model}
-              onChange={setModel}
-              models={models}
-              help="Rerank 专用模型，如 rerank-multilingual-v3（多语言）/ rerank-english-v3.0。可在 /me/models 联想，也可直接输入。"
-              placeholder="例如 rerank-multilingual-v3"
-            />
+          <div style={{ display: "flex", gap: 16, marginBottom: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label style={fieldLabelStyle}>
+                模型编码
+                <HelpIcon text="Rerank 专用模型编码，由上方模型选择区选择，按编码精确路由到对应供应商。" level="button" />
+              </label>
+              <code style={{ display: "inline-block", padding: "8px 12px", borderRadius: 6, border: "1px dashed var(--color-border)", fontSize: 13, color: model ? "var(--color-text)" : "var(--color-text-secondary)" }}>
+                {model.trim() || "（请先在上方选择模型编码）"}
+              </code>
+            </div>
             <div style={{ flex: 1, minWidth: 160 }}>
               <label style={fieldLabelStyle}>
                 top_n
@@ -254,7 +255,7 @@ export function RerankTab(props: PlaygroundTabProps) {
           >
             {sending ? "重排序中..." : "🚀 发送 Rerank 请求"}
           </button>
-          <HelpIcon text="调用 /v1/rerank：鉴权 → 校验 → token 估算 → 余额预检 → 渠道选择 → 上游转发 → 计费。无可用供应商时返回 mock 占位结果（同样计费）。" level="button" />
+          <HelpIcon text="调用 /v1/rerank：鉴权 → 校验 → token 估算 → 余额预检 → 按模型编码路由 → 上游转发 → 计费。" level="button" />
         </div>
       </div>
 

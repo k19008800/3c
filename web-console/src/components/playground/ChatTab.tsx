@@ -1,9 +1,11 @@
 /**
  * Playground — Chat 调试 Tab（POST /v1/chat/completions）
  *
- * 从原 PlaygroundPage 抽取，行为保持一致：
+ * 模型编码化改造：模型编码由 PlaygroundPage 统一选择（props.model = model_code），
+ * 本 Tab 不再维护模型选择；请求体 model 直接透传所选编码，不做名称→编码映射。
+ *
+ * 行为：
  * - 多消息编辑器（system/user/assistant，可增删）
- * - 模型下拉（/me/models + 自定义模型名）
  * - 非流式请求（stream:false），展示 choices[0].message.content + usage
  *
  * @module components/playground
@@ -25,11 +27,9 @@ const cardStyle: React.CSSProperties = {
 };
 
 export function ChatTab(props: PlaygroundTabProps) {
-  const { keys, selectedKeyId, fullKey, models } = props;
+  const { keys, selectedKeyId, fullKey, model } = props;
   const { toast } = useToast();
 
-  const [selectedModel, setSelectedModel] = useState("deepseek-chat");
-  const [customModel, setCustomModel] = useState("");
   const [messages, setMessages] = useState<MessageItem[]>([
     { role: "system", content: "You are a helpful assistant." },
     { role: "user", content: "请用一句话介绍什么是 AI" },
@@ -57,7 +57,11 @@ export function ChatTab(props: PlaygroundTabProps) {
       toast.error("请先粘贴完整 API Key——列表只展示前缀，需在「API Key 管理」创建时复制完整 Key（已自动预填最近创建的一条）。");
       return;
     }
-    const model = customModel || selectedModel;
+    const modelCode = model.trim();
+    if (!modelCode) {
+      toast.error("请先在上方选择模型编码。");
+      return;
+    }
     setSending(true);
     setResult(null);
     try {
@@ -65,7 +69,7 @@ export function ChatTab(props: PlaygroundTabProps) {
         path: "/api/v1/v1/chat/completions",
         apiKey: fullKey,
         body: {
-          model,
+          model: modelCode,
           messages: messages.filter((m) => m.content.trim()),
           stream: false,
         },
@@ -92,45 +96,8 @@ export function ChatTab(props: PlaygroundTabProps) {
       <div style={{ flex: 1, minWidth: 320 }}>
         <div style={cardStyle}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>模型</h3>
-            <HelpIcon text="选择要调用的模型，或输入自定义模型名（网关按名路由到可用供应商）。" level="button" />
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <select
-              value={customModel ? "__custom__" : selectedModel}
-              onChange={(e) => {
-                if (e.target.value === "__custom__") return;
-                setSelectedModel(e.target.value);
-                setCustomModel("");
-              }}
-              style={{ ...controlStyle, flex: 1, cursor: "pointer" }}
-            >
-              <optgroup label="常用模型">
-                <option value="deepseek-chat">DeepSeek Chat</option>
-                <option value="qwen-plus">Qwen Plus</option>
-                <option value="gpt-4o-mini">GPT-4o Mini</option>
-                {models?.slice(0, 20).map((m) => (
-                  <option key={m.id} value={m.name}>
-                    {m.name} · {m.provider}
-                    {m.context ? ` · 上下文 ${(m.context / 1000).toLocaleString()}K` : ""}
-                  </option>
-                ))}
-              </optgroup>
-              <option value="__custom__">自定义模型名...</option>
-            </select>
-            <input
-              value={customModel}
-              onChange={(e) => setCustomModel(e.target.value)}
-              placeholder="自定义模型名"
-              style={{ ...controlStyle, width: 150 }}
-            />
-          </div>
-        </div>
-
-        <div style={cardStyle}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
             <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>消息</h3>
-            <HelpIcon text="编辑对话消息序列，点击「发送请求」调用 /v1/chat/completions（非流式）。" level="button" />
+            <HelpIcon text="编辑对话消息序列，点击「发送请求」调用 /v1/chat/completions（非流式）。请求体 model 为上方所选模型编码。" level="button" />
           </div>
           {messages.map((msg, i) => (
             <div key={i} style={{ marginBottom: 12, padding: 12, background: "var(--color-bg)", borderRadius: 8 }}>
@@ -183,7 +150,7 @@ export function ChatTab(props: PlaygroundTabProps) {
           >
             {sending ? "发送中..." : "🚀 发送请求"}
           </button>
-          <HelpIcon text="发送 chat/completions 非流式请求：鉴权 → 余额预检 → 路由 → 转发 → 计费。无可用供应商时返回 mock 占位响应（同样计费）。" level="button" />
+          <HelpIcon text="发送 chat/completions 非流式请求：鉴权 → 余额预检 → 按模型编码精确路由到供应商 → 转发 → 计费。" level="button" />
         </div>
       </div>
 

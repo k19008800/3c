@@ -18,6 +18,8 @@ interface ModelPrice {
   output_price: number;
   cost_input_price?: string;
   cost_output_price?: string;
+  // 编码口径：公开接口待后端补充（缺失为 null，不拼造）
+  model_code?: string | null;
 }
 
 export interface CalculatorLabels {
@@ -52,7 +54,9 @@ export default function PriceCalculator({
   const [inputTokens, setInputTokens] = useState(1000);
   const [outputTokens, setOutputTokens] = useState(500);
 
-  const model = models.find((m) => m.name === selected);
+  // 同一模型多供应商时 m.name 可能重复，用 模型名__供应商 作为选择键（仅 UI 状态，非拼造编码）
+  const keyOf = (m: ModelPrice) => `${m.name}__${m.vendor}`;
+  const model = models.find((m) => keyOf(m) === selected);
   const inputPrice = model ? (model.input_price ?? Number(model.cost_input_price ?? 0)) : 0;
   const outputPrice = model ? (model.output_price ?? Number(model.cost_output_price ?? 0)) : 0;
   const cost = (inputTokens / 1000) * inputPrice + (outputTokens / 1000) * outputPrice;
@@ -88,8 +92,8 @@ export default function PriceCalculator({
           <select value={selected} onChange={(e) => setSelected(e.target.value)} style={{ width: "100%", padding: 10, borderRadius: 6, border: "1px solid #cbd5e1" }}>
             <option value="">{L.selectPlaceholder}</option>
             {models.map((m) => (
-              <option key={m.name} value={m.name}>
-                {m.display_name ?? m.name}（{m.vendor}）
+              <option key={keyOf(m)} value={keyOf(m)}>
+                {(m.display_name ?? m.name)}（{m.vendor}）{m.model_code ? ` [${m.model_code}]` : ""}
               </option>
             ))}
           </select>

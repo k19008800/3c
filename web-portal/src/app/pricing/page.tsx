@@ -1,4 +1,6 @@
 // 定价页 — 使用公开标价 API（成本 × 加价率 = 对外标价）
+// T6：价目表按「模型编码」行展示（含 input/output/缓存价）；同一逻辑模型多供应商 = 多行。
+// 数据源沿用 /public/pricing；该接口当前未下发 model_code，缺失时留空不拼造（契约登记见交付报告）。
 // P2-3：核心文案 i18n（cookie/?lang 切换，en 回退），generateMetadata + [?] 页面帮助
 import type { Metadata } from "next";
 import PriceCalculator from "./PriceCalculator";
@@ -17,6 +19,10 @@ interface PriceItem {
   vendor: string;
   input_price: number;
   output_price: number;
+  // 编码口径：公开接口待后端补充（缺失时为 null，不拼造）
+  model_code: string | null;
+  cache_read_input_price: number | null;
+  cache_write_input_price: number | null;
 }
 
 async function fetchPricing(): Promise<{ list: PriceItem[] }> {
@@ -24,8 +30,9 @@ async function fetchPricing(): Promise<{ list: PriceItem[] }> {
     const res = await fetch(`${API_BASE}/api/v1/public/pricing`, { cache: "no-store" });
     if (res.ok) {
       const data = await res.json();
-      // 后端返回 { pricing: [{ modelName, supplierName, inputPrice(str), outputPrice(str), ... }] }
-      // 映射到页面使用的字段名（与首页 page.tsx 的 fetchPricing 同源）
+      // 后端返回 { pricing: [{ modelName, supplierName, inputPrice(str), outputPrice(str),
+      //   cacheReadInputPrice, cacheWriteInputPrice, ... }] }
+      // 映射到页面使用的字段名；model_code 待后端在公开接口补充（缺失为 null，不拼造）
       return {
         list: (data.pricing ?? []).map((m: any) => ({
           name: m.modelName ?? "",
@@ -36,6 +43,11 @@ async function fetchPricing(): Promise<{ list: PriceItem[] }> {
           vendor: m.supplierName ?? "",
           input_price: parseFloat(m.inputPrice) || 0,
           output_price: parseFloat(m.outputPrice) || 0,
+          model_code: m.modelCode ?? m.model_code ?? null,
+          cache_read_input_price:
+            m.cacheReadInputPrice != null ? Number(m.cacheReadInputPrice) : null,
+          cache_write_input_price:
+            m.cacheWriteInputPrice != null ? Number(m.cacheWriteInputPrice) : null,
         })),
       };
     }
@@ -45,7 +57,8 @@ async function fetchPricing(): Promise<{ list: PriceItem[] }> {
   return { list: [] };
 }
 
-function formatPrice(p: number): string {
+function formatPrice(p: number | null): string {
+  if (p == null) return "—";
   if (p === 0) return "免费";
   if (p < 0.01) return `¥${p.toFixed(4)}`;
   if (p < 1) return `¥${p.toFixed(3)}`;
@@ -119,6 +132,9 @@ export default async function PricingPage({
       <p style={{ color: "#64748b", marginBottom: 8, fontSize: 15 }}>
         {t("pricing.subtitle")}
       </p>
+      <p style={{ color: "#94a3b8", marginBottom: 24, fontSize: 13 }}>
+        每一行 = 一条模型编码（一个模型 × 一个供应商）；同一模型多供应商时并排为多行。模型编码默认按「厂商+模型」规则生成。
+      </p>
 
       <PriceCalculator models={models} labels={calculatorLabels} />
 
@@ -137,35 +153,39 @@ export default async function PricingPage({
       </div>
 
       <div style={{ overflow: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", fontSize: 14, minWidth: 700 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", fontSize: 14, minWidth: 760 }}>
           <thead>
             <tr style={{ background: "#f8fafc", textAlign: "left", borderBottom: "2px solid #e2e8f0" }}>
+              <th style={{ padding: "12px 16px" }}>{t("pricing.table.code")}</th>
               <th style={{ padding: "12px 16px" }}>{t("pricing.table.model")}</th>
-              <th style={{ padding: "12px 16px" }}>{t("pricing.table.vendor")}</th>
-              <th style={{ padding: "12px 16px" }}>{t("pricing.table.category")}</th>
               <th style={{ padding: "12px 16px" }}>{t("pricing.table.input")}</th>
               <th style={{ padding: "12px 16px" }}>{t("pricing.table.output")}</th>
+              <th style={{ padding: "12px 16px" }}>{t("pricing.table.cacheRead")}</th>
+              <th style={{ padding: "12px 16px" }}>{t("pricing.table.cacheWrite")}</th>
               <th style={{ padding: "12px 16px" }}>{t("pricing.table.context")}</th>
             </tr>
           </thead>
           <tbody>
             {models.map((m) => (
-              <tr key={`${m.name}-${m.vendor}`} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                <td style={{ padding: "10px 16px" }}>
-                  <strong>{m.display_name || m.name}</strong>
-                  <div style={{ fontSize: 12, color: "#94a3b8", fontFamily: "monospace" }}>{m.name}</div>
+              <tr key={`${m.name}-${m.vendor}-${m.model_code ?? ""}`} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                <td style={{ padding: "10px 16px", fontFamily: "monospace", fontSize: 13, color: "#2563eb" }}>
+                  {m.model_code ?? <span style={{ color: "#cbd5e1" }}>—</span>}
                 </td>
-                <td style={{ padding: "10px 16px", color: "#475569" }}>{m.vendor}</td>
                 <td style={{ padding: "10px 16px" }}>
-                  <span style={{ fontSize: 12, background: "#eff6ff", color: "#2563eb", borderRadius: 4, padding: "2px 8px" }}>
-                    {CATEGORY_LABELS[m.category] ?? m.category}
-                  </span>
+                  <strong>{m.display_name || m.name}（{m.vendor}）</strong>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>{m.name}</div>
                 </td>
                 <td style={{ padding: "10px 16px", fontWeight: 600, color: m.input_price === 0 ? "#16a34a" : "#2563eb" }}>
                   {formatPrice(m.input_price)}
                 </td>
                 <td style={{ padding: "10px 16px", fontWeight: 600, color: m.output_price === 0 ? "#16a34a" : "#2563eb" }}>
                   {formatPrice(m.output_price)}
+                </td>
+                <td style={{ padding: "10px 16px", color: m.cache_read_input_price == null ? "#94a3b8" : "#475569" }}>
+                  {formatPrice(m.cache_read_input_price)}
+                </td>
+                <td style={{ padding: "10px 16px", color: m.cache_write_input_price == null ? "#94a3b8" : "#475569" }}>
+                  {formatPrice(m.cache_write_input_price)}
                 </td>
                 <td style={{ padding: "10px 16px", color: "#94a3b8" }}>
                   {m.context_length > 0 ? m.context_length.toLocaleString() : "—"}

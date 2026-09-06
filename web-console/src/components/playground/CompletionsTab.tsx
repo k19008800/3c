@@ -2,7 +2,7 @@
  * Playground — Completions 调试 Tab（POST /v1/completions，OpenAI 兼容）
  *
  * 文本补全端点（老 SDK）：{ model, prompt, max_tokens?, temperature? }。
- * 链路：鉴权 → token 估算 → 余额预检 → 渠道选择 → 上游转发 → 计费。
+ * 链路：鉴权 → token 估算 → 余额预检 → 按模型编码路由 → 上游转发 → 计费。
  *
  * @see api/src/routes/openai-compat.ts（后端契约）
  * @see newapi-gap-analysis.md Batch 1 任务 1.4
@@ -12,7 +12,6 @@
 import { useState } from "react";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
 import { sendDebugRequest } from "./request";
-import { ModelInput } from "./ModelInput";
 import { ResponseViewer, controlStyle, primaryBtnStyle } from "./ResponseViewer";
 import type { PlaygroundTabProps, ProxyResult } from "./types";
 
@@ -33,10 +32,9 @@ const fieldLabelStyle: React.CSSProperties = {
 };
 
 export function CompletionsTab(props: PlaygroundTabProps) {
-  const { fullKey, models } = props;
+  const { fullKey, model } = props;
   const { toast } = useToast();
 
-  const [model, setModel] = useState("deepseek-chat");
   const [prompt, setPrompt] = useState("请写一句 3cloud 的欢迎语");
   const [maxTokens, setMaxTokens] = useState(64);
   const [temperature, setTemperature] = useState(0.7);
@@ -48,8 +46,9 @@ export function CompletionsTab(props: PlaygroundTabProps) {
       toast.error("请先粘贴完整 API Key");
       return;
     }
-    if (!model.trim() || !prompt.trim()) {
-      toast.error("model 与 prompt 为必填");
+    const modelCode = model.trim();
+    if (!modelCode || !prompt.trim()) {
+      toast.error("模型编码与 prompt 为必填");
       return;
     }
 
@@ -60,7 +59,7 @@ export function CompletionsTab(props: PlaygroundTabProps) {
         path: "/api/v1/v1/completions",
         apiKey: fullKey,
         body: {
-          model: model.trim(),
+          model: modelCode,
           prompt,
           max_tokens: maxTokens > 0 ? maxTokens : undefined,
           temperature: temperature >= 0 ? temperature : undefined,
@@ -91,14 +90,16 @@ export function CompletionsTab(props: PlaygroundTabProps) {
             <HelpIcon text="文本补全端点（老 SDK 格式，prompt 字段）：适合测试上游对 completions 协议的支持。OpenAI 兼容格式。" level="button" />
           </div>
 
-          <div style={{ display: "flex", gap: 16, marginBottom: 12, flexWrap: "wrap" }}>
-            <ModelInput
-              value={model}
-              onChange={setModel}
-              models={models}
-              help="要调用的补全模型名，网关按名路由到可用供应商。"
-              placeholder="例如 deepseek-chat"
-            />
+          <div style={{ display: "flex", gap: 16, marginBottom: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label style={fieldLabelStyle}>
+                模型编码
+                <HelpIcon text="请求体 model = 上方所选模型编码，按编码精确路由到对应供应商。" level="button" />
+              </label>
+              <code style={{ display: "inline-block", padding: "8px 12px", borderRadius: 6, border: "1px dashed var(--color-border)", fontSize: 13, color: model ? "var(--color-text)" : "var(--color-text-secondary)" }}>
+                {model.trim() || "（请先在上方选择模型编码）"}
+              </code>
+            </div>
             <div style={{ flex: 1, minWidth: 140 }}>
               <label style={fieldLabelStyle}>
                 max_tokens
@@ -150,7 +151,7 @@ export function CompletionsTab(props: PlaygroundTabProps) {
           >
             {sending ? "补全中..." : "🚀 发送 Completions 请求"}
           </button>
-          <HelpIcon text="调用 /v1/completions：鉴权 → token 估算 → 余额预检 → 渠道选择 → 上游转发 → 计费。无可用供应商时返回 mock 占位补全（同样计费）。" level="button" />
+          <HelpIcon text="调用 /v1/completions：鉴权 → token 估算 → 余额预检 → 按模型编码路由 → 上游转发 → 计费。" level="button" />
         </div>
       </div>
 

@@ -212,4 +212,7 @@ export function ConfirmPopover({ children }: {
 }) {
   return <div className="c3-confirm-popover">{children}</div>;
 }
-
+/** CopyButton - 占位复制按钮（真实剪贴板交互不在组件级测试范围） */
+export function CopyButton({ text, children }: { text?: string; children?: React.ReactNode }) {
+  return <button type="button">{children ?? text ?? "复制"}</button>;
+}

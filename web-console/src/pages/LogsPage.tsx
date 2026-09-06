@@ -1,268 +1,246 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "../lib/api";
-import {
-  HelpIcon,
-  Table,
-  StatusBadge,
-  Modal,
-  SkeletonGroup,
-  EmptyState,
-} from "@3cloud/shared-ui";
-import type { ColumnDef } from "@3cloud/shared-ui";
+/**
+ * 用户端 — 调用日志
+ *
+ * 模型编码化改造（M-S-08 / T3）：
+ * - 原「模型名」与「供应商」两个独立筛选维度合并为「按模型编码」：输入/选择 model_code，
+ *   数据源来自 /me/models 编码列表（可搜索），请求参数 model=<model_code>（后端 ILIKE 过滤）；
+ * - 列表按模型编码（upstream_model，新链路即编码）呈现；移除独立「供应商」列；
+ * - 旧数据无编码时展示占位「—」，不报错。
+ *
+ * 后端契约（GET /api/v1/me/logs）：返回 { list }，无 total/分页；行字段
+ * { id, provider, upstream_model, request_tokens, response_tokens, total_tokens,
+ *   cost(number), status, error_code, latency_ms, created_at }。
+ *
+ * @module pages
+ */
 
+import { Fragment, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { HelpIcon, EmptyState } from "@3cloud/shared-ui";
+import { api } from "../lib/api";
+import type { ModelRow } from "../components/playground/types";
+
+/** 调用日志行（对齐后端 /me/logs 响应） */
 interface CallLog {
   id: number;
-  provider: string | null;
-  upstream_model: string | null;
+  /** @deprecated 模型编码化后不再作为独立维度展示；保留字段仅为兼容历史响应 */
+  provider?: string | null;
+  /** 调用模型编码（新链路由 consumption_records.model 锚定；旧数据可能为空） */
+  upstream_model?: string | null;
   request_tokens: number;
   response_tokens: number;
   total_tokens: number;
-  cost: string | number;
-  status: string;
-  error_code: string | null;
-  latency_ms: number | null;
+  cost: number;
+  status: "success" | "failed" | string;
+  error_code?: string | null;
+  latency_ms?: number | null;
   created_at: string;
 }
 
+const MODEL_DATALIST_ID = "logs-model-code-datalist";
+
+/** 行内时间格式化：YYYY-MM-DD HH:mm */
+function fmtTime(iso: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 export default function LogsPage() {
-  const [model, setModel] = useState("");
-  const [status, setStatus] = useState("");
-  const [provider, setProvider] = useState("");
-  const [detail, setDetail] = useState<CallLog | null>(null);
+  // 按模型编码筛选值（model_code），同时支持自由输入编码
+  const [modelCode, setModelCode] = useState("");
+  // 当前筛选（点击搜索后更新，避免边输入边请求）
+  const [applied, setApplied] = useState("");
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  // 当前筛选（点击搜索后更新）
-  const [filters, setFilters] = useState<{ model?: string; status?: string; provider?: string }>({});
+  // 模型编码列表（/me/models），供筛选下拉搜索
+  const { data: modelRows } = useQuery<ModelRow[]>({
+    queryKey: ["me-models"],
+    queryFn: async () => (await api.get<ModelRow[]>("/me/models")).data,
+  });
+  const codeOptions = useMemo(
+    () => (modelRows ?? []).filter((m) => m && m.model_code),
+    [modelRows],
+  );
 
-  const { data, isLoading } = useQuery<{ list: CallLog[] }>({
-    queryKey: ["me-logs", filters],
+  const { data, isLoading, isError, refetch } = useQuery<{ list: CallLog[] }>({
+    queryKey: ["me-logs", applied],
     queryFn: async () => {
       const params = new URLSearchParams();
-      params.set("limit", "100");
-      if (filters.model) params.set("model", filters.model);
-      if (filters.status) params.set("status", filters.status);
-      if (filters.provider) params.set("provider", filters.provider);
+      params.set("limit", "200");
+      if (applied) params.set("model", applied);
       return (await api.get(`/me/logs?${params.toString()}`)).data;
     },
-    refetchInterval: 15000,
   });
 
-  const search = () =>
-    setFilters({
-      model: model.trim() || undefined,
-      status: status || undefined,
-      provider: provider.trim() || undefined,
-    });
+  const list = data?.list ?? [];
 
-  const columns: ColumnDef<CallLog>[] = [
-    {
-      key: "created_at",
-      title: "时间",
-      dataIndex: "created_at",
-      render: (v) => (
-        <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
-          {new Date(v as string).toLocaleString()}
-        </span>
-      ),
-    },
-    { key: "provider", title: "供应商", dataIndex: "provider", render: (v) => (v as string) ?? "-" },
-    {
-      key: "upstream_model",
-      title: "模型",
-      dataIndex: "upstream_model",
-      render: (v) => (
-        <span style={{ fontFamily: "monospace", fontSize: 13 }}>{(v as string) ?? "-"}</span>
-      ),
-    },
-    { key: "total_tokens", title: "Tokens", dataIndex: "total_tokens" },
-    {
-      key: "cost",
-      title: "费用",
-      dataIndex: "cost",
-      render: (v) => `¥${Number(v ?? 0).toFixed(4)}`,
-    },
-    {
-      key: "latency_ms",
-      title: "延迟",
-      dataIndex: "latency_ms",
-      render: (v) => (v != null ? `${v}ms` : "-"),
-    },
-    {
-      key: "status",
-      title: "状态",
-      dataIndex: "status",
-      render: (v, record) => (
-        <StatusBadge
-          status={(v as string) === "success" ? "success" : "danger"}
-        >
-          {v as string}
-          {record.error_code ? ` (${record.error_code})` : ""}
-        </StatusBadge>
-      ),
-    },
-    {
-      key: "action",
-      title: "操作",
-      render: (_, record) => (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setDetail(record);
-          }}
-          style={{
-            padding: "4px 10px",
-            border: "1px solid var(--color-border)",
-            borderRadius: 6,
-            background: "var(--color-bg)",
-            color: "var(--color-text)",
-            cursor: "pointer",
-            fontSize: 13,
-          }}
-        >
-          详情
-        </button>
-      ),
-    },
-  ];
+  const handleSearch = () => {
+    setApplied(modelCode.trim());
+    setExpandedId(null);
+  };
+
+  const handleClear = () => {
+    setModelCode("");
+    setApplied("");
+  };
+
+  const handleExport = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (applied) params.set("model", applied);
+      const resp = await api.get(`/me/logs/export?${params.toString()}`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(resp.data as Blob);
+      const a = window.document.createElement("a");
+      a.href = url;
+      a.download = `call-logs-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert("导出失败");
+    }
+  };
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>
-          调用日志
-          <HelpIcon text="查看您的 API 调用日志，可按模型、状态和供应商筛选，支持查看单条调用的详细信息和 Token 用量。" level="page" />
-        </h2>
-        <span style={{ color: "var(--color-text-secondary)", fontSize: 14, marginLeft: 12 }}>
-          共 {data?.list.length ?? 0} 条
-        </span>
-      </div>
+      <h2 style={{ marginBottom: 4 }}>
+        📜 调用日志
+        <HelpIcon
+          text="查看您的全部 API 调用记录。按「模型编码」筛选——输入或选择 model_code（如 va-deepseek-v4-flash）即可精确过滤；编码即供应商，不再单独提供供应商维度。旧日志无编码时展示占位。"
+          level="page"
+        />
+      </h2>
+      <p style={{ color: "var(--color-text-secondary)", marginBottom: 20, fontSize: 14 }}>
+        追踪每一次 API 调用详情与计费
+      </p>
 
-      {/* 筛选 */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
-        <input
-          value={model}
-          onChange={(e) => setModel(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && search()}
-          placeholder="模型名"
-          style={{
-            padding: "8px 12px",
-            borderRadius: 8,
-            border: "1px solid var(--color-border)",
-            width: 150,
-            fontSize: 13,
-          }}
-        />
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          style={{
-            padding: "8px 12px",
-            borderRadius: 8,
-            border: "1px solid var(--color-border)",
-            width: 150,
-            fontSize: 13,
-          }}
-        >
-          <option value="">全部状态</option>
-          <option value="success">成功</option>
-          <option value="failed">失败</option>
-        </select>
-        <input
-          value={provider}
-          onChange={(e) => setProvider(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && search()}
-          placeholder="供应商"
-          style={{
-            padding: "8px 12px",
-            borderRadius: 8,
-            border: "1px solid var(--color-border)",
-            width: 150,
-            fontSize: 13,
-          }}
-        />
+      <div
+        style={{
+          display: "flex",
+          gap: 12,
+          alignItems: "flex-end",
+          marginBottom: 16,
+          padding: 16,
+          background: "#fff",
+          borderRadius: 10,
+          boxShadow: "0 1px 3px rgba(0,0,0,.05)",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 260 }}>
+          <label style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text)", display: "block", marginBottom: 4 }}>
+            按模型编码筛选
+            <HelpIcon text="输入或从下拉中选择 model_code 过滤日志；支持模糊搜索。编码即供应商，无需再选供应商。" level="button" />
+          </label>
+          <input
+            list={MODEL_DATALIST_ID}
+            value={modelCode}
+            onChange={(e) => setModelCode(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
+            placeholder="输入模型编码（如 va-deepseek-v4-flash）"
+            style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13, boxSizing: "border-box", fontFamily: "monospace" }}
+          />
+          <datalist id={MODEL_DATALIST_ID}>
+            {codeOptions.map((m) => (
+              <option key={m.model_code} value={m.model_code}>
+                {m.display_name}
+              </option>
+            ))}
+          </datalist>
+        </div>
         <button
-          onClick={search}
-          style={{
-            padding: "8px 14px",
-            borderRadius: 8,
-            border: "none",
-            cursor: "pointer",
-            fontWeight: 600,
-            fontSize: 13,
-            background: "var(--color-bg)",
-            color: "var(--color-text)",
-          }}
+          onClick={handleSearch}
+          style={{ padding: "8px 16px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13 }}
         >
           搜索
         </button>
-        {(filters.model || filters.status || filters.provider) && (
+        {applied && (
           <button
-            onClick={() => {
-              setModel("");
-              setStatus("");
-              setProvider("");
-              setFilters({});
-            }}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 8,
-              border: "none",
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 13,
-              background: "var(--color-danger-bg)",
-              color: "var(--color-danger-text)",
-            }}
+            onClick={handleClear}
+            style={{ padding: "8px 14px", background: "#fff", border: "1px solid var(--color-border)", borderRadius: 6, cursor: "pointer", fontSize: 13 }}
           >
-            清除筛选
+            清除
           </button>
         )}
+        <button
+          onClick={handleExport}
+          style={{ padding: "8px 14px", background: "#fff", border: "1px solid var(--color-border)", borderRadius: 6, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}
+        >
+          导出
+          <HelpIcon text="按当前「按模型编码」筛选条件导出日志文件。" level="button" />
+        </button>
       </div>
 
-      {isLoading && !data ? (
-        <SkeletonGroup lines={8} />
-      ) : data?.list.length === 0 ? (
-        <EmptyState icon="📊" title="暂无调用记录" description="当前没有调用日志" />
+      {isLoading ? (
+        <div style={{ padding: 40, textAlign: "center", color: "var(--color-text-secondary)" }}>加载中...</div>
+      ) : isError ? (
+        <div style={{ padding: 40, textAlign: "center" }}>
+          <div style={{ color: "var(--color-danger-text)", marginBottom: 12 }}>加载失败</div>
+          <button onClick={() => refetch()} style={{ padding: "8px 16px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>重试</button>
+        </div>
+      ) : list.length === 0 ? (
+        <EmptyState title="暂无调用记录" />
       ) : (
-        <Table
-          columns={columns}
-          dataSource={data?.list ?? []}
-          loading={isLoading}
-          emptyText="暂无调用记录"
-          onRowClick={(record) => setDetail(record as CallLog)}
-        />
+        <div style={{ background: "#fff", borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,.05)", overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: "var(--color-bg)" }}>
+                <th style={th}>时间</th>
+                <th style={th}>模型编码</th>
+                <th style={th}>Tokens（入/出）</th>
+                <th style={th}>延迟</th>
+                <th style={th}>费用</th>
+                <th style={th}>状态</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((log) => {
+                const open = expandedId === log.id;
+                return (
+                  <Fragment key={log.id}>
+                    <tr onClick={() => setExpandedId(open ? null : log.id)} style={{ cursor: "pointer" }}>
+                      <td style={td}>{fmtTime(log.created_at)}</td>
+                      <td style={td}>
+                        <code style={{ fontSize: 12 }}>{log.upstream_model || "—"}</code>
+                      </td>
+                      <td style={td}>{log.request_tokens} / {log.response_tokens}</td>
+                      <td style={td}>{log.latency_ms != null ? `${log.latency_ms}ms` : "—"}</td>
+                      <td style={td}>¥{(log.cost / 10000).toFixed(6)}</td>
+                      <td style={td}>
+                        <span style={{
+                          padding: "2px 8px",
+                          borderRadius: 6,
+                          fontSize: 12,
+                          background: log.status === "success" ? "#e6f7ea" : "#ffece6",
+                          color: log.status === "success" ? "#16a34a" : "#dc2626",
+                        }}>
+                          {log.status === "success" ? "成功" : log.status}
+                        </span>
+                      </td>
+                    </tr>
+                    {open && (
+                      <tr>
+                        <td colSpan={6} style={{ padding: 0, background: "var(--color-bg)" }}>
+                          <div style={{ padding: 14, fontSize: 12 }}>
+                            <div>模型编码：<code>{log.upstream_model || "—"}</code></div>
+                            <div>总 Token：{log.total_tokens}</div>
+                            {log.error_code ? <div style={{ color: "#dc2626" }}>错误：{log.error_code}</div> : null}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
-
-      {/* 详情抽屉（用 Modal 替代） */}
-      <Modal open={!!detail} onClose={() => setDetail(null)} title={`调用详情 #${detail?.id}`} width={480}>
-        {detail && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 14 }}>
-            {[
-              ["时间", new Date(detail.created_at).toLocaleString()],
-              ["供应商", detail.provider ?? "-"],
-              ["模型", detail.upstream_model ?? "-"],
-              ["请求 Tokens", String(detail.request_tokens)],
-              ["响应 Tokens", String(detail.response_tokens)],
-              ["总 Tokens", String(detail.total_tokens)],
-              ["费用", `¥${Number(detail.cost ?? 0).toFixed(4)}`],
-              ["状态", detail.status + (detail.error_code ? ` (${detail.error_code})` : "")],
-              ["延迟", detail.latency_ms != null ? `${detail.latency_ms}ms` : "-"],
-            ].map(([k, v]) => (
-              <div
-                key={k}
-                style={{
-                  display: "flex",
-                  borderBottom: "1px solid var(--color-border)",
-                  paddingBottom: 8,
-                }}
-              >
-                <span style={{ width: 110, color: "var(--color-text-secondary)" }}>{k}</span>
-                <span style={{ fontWeight: 500, color: "var(--color-text)" }}>{v}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }
+
+const th: React.CSSProperties = { padding: "12px 16px", textAlign: "left", fontWeight: 600, borderBottom: "1px solid var(--color-border)" };
+const td: React.CSSProperties = { padding: "12px 16px", borderBottom: "1px solid #f0f0f0" };

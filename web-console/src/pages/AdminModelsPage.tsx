@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { HelpIcon, StatusBadge, Modal, EmptyState, SkeletonGroup, useToast } from "@3cloud/shared-ui";
+import ModelCodeMaintenanceSection from "./ModelCodeMaintenanceSection";
+import ModelCodeRuleConfig from "./ModelCodeRuleConfig";
 
 interface M {
   id: number;
@@ -57,7 +59,7 @@ export default function AdminModelsPage() {
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <h2 style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
         模型管理
-        <HelpIcon text="管理平台模型库。创建、编辑、上架/下架模型，配置显示名和分类。每个模型可接入多个供应商。" level="page" />
+        <HelpIcon text="管理平台模型库。创建、编辑、上架/下架模型，配置显示名和分类。每个模型可接入多个供应商。模型编码由平台按「厂商+模型」规则生成（默认 {supplier_code}-{model_name}），一个（模型×供应商）= 一条全局唯一编码，规则可在下方「编码规则配置」中自定义，仅对未生成编码的映射生效。" level="page" />
       </h2>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 20, alignItems: "center", flexWrap: "wrap" }}>
@@ -123,6 +125,10 @@ export default function AdminModelsPage() {
           <EditForm model={editForm} onSave={(body) => editMut.mutate({ id: editForm.id, body })} onCancel={() => setEditForm(null)} />
         )}
       </Modal>
+
+      {/* T5：模型编码维护 + 编码规则配置（按任务书 §3 契约联调） */}
+      <ModelCodeMaintenanceSection />
+      <ModelCodeRuleConfig />
     </div>
   );
 }

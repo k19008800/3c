@@ -9,22 +9,21 @@ import { ResponsesTab } from "../components/playground/ResponsesTab";
 import { EmbeddingsTab } from "../components/playground/EmbeddingsTab";
 import { CompletionsTab } from "../components/playground/CompletionsTab";
 import { MessagesTab } from "../components/playground/MessagesTab";
+import { ModelCodeSelector } from "../components/playground/ModelCodeSelector";
 import type { ApiKeyRow, ModelRow, PlaygroundTabProps } from "../components/playground/types";
 
 /**
  * §22.3 用户端 Playground - API 在线调试（多端点）
  *
- * Batch 4 前端剩余补齐：在原 chat/completions 单端点调试基础上，
- * 扩展为多 Tab 调试器：
- * - Chat        → POST /v1/chat/completions（原有行为保留）
- * - Rerank      → POST /v1/rerank（Cohere 兼容重排序，Batch 4 任务 4.1）
- * - Responses   → POST /v1/responses（OpenAI Responses API，Batch 4 任务 4.4，含流式事件查看）
- * - Embeddings  → POST /v1/embeddings（Batch 1 任务 1.3）
- * - Completions → POST /v1/completions（Batch 1 任务 1.4）
- * - Messages    → POST /v1/messages（Anthropic Messages 兼容，Batch 3 任务 3.1）
+ * 模型编码化改造（M-S-02/06/08）：
+ * - 模型选择统一提升到本页：ModelCodeSelector 选择模型编码（值=model_code），
+ *   各 Tab 请求体 `model` 一律取该编码，不做名称→编码映射；
+ * - 默认编码偏好（设为默认/清除默认）与价格明细对比清单集中在模型选择区。
  *
- * 全部端点经 /api/v1/v1/* 内部别名访问（后端双注册，见 docs/api-contract.md §4）。
- * 对应 SPEC-§22-用户端体验增强.md §22.3。
+ * 多 Tab：Chat / Rerank / Responses / Embeddings / Completions / Messages，
+ * 全部经 /api/v1/v1/* 内部别名访问（后端双注册）。
+ *
+ * @see docs/SPEC-模型编码化改造与去除用户供应商选择.md §5.3
  */
 
 type TabKey = "chat" | "rerank" | "responses" | "embeddings" | "completions" | "messages";
@@ -41,6 +40,8 @@ const TABS: Array<{ key: TabKey; label: string; icon: string; help: string }> = 
 export default function PlaygroundPage() {
   const [tab, setTab] = useState<TabKey>("chat");
   const [selectedKeyId, setSelectedKeyId] = useState<number | null>(null);
+  // 当前所选模型编码（请求体 model 权威值），提升到本页供全部 Tab 共享
+  const [model, setModel] = useState("");
   // 完整 API Key（仅本地存储）：列表接口只返回 keyPrefix，真实调用需要完整 Key。
   // 创建 Key 时后端仅展示一次，已由 ApiKeysPage 写入 localStorage 预填。
   const [fullKey, setFullKey] = useState<string>(() => {
@@ -66,6 +67,8 @@ export default function PlaygroundPage() {
     onSelectedKeyId: setSelectedKeyId,
     onFullKey: setFullKey,
     models,
+    model,
+    onModelChange: setModel,
   };
 
   return (
@@ -73,7 +76,7 @@ export default function PlaygroundPage() {
       <h2 style={{ marginBottom: 4 }}>
         🧪 API Playground
         <HelpIcon
-          text="在线调试网关全部兼容端点：Chat / Rerank / Responses / Embeddings / Completions / Messages。选择 API Key 并粘贴完整 Key，编辑参数后发送请求，查看响应 JSON、流式事件与计费 usage。调试请求会真实计费；无可用供应商时返回 mock 占位响应（同样计费）。"
+          text="在线调试网关全部兼容端点：Chat / Rerank / Responses / Embeddings / Completions / Messages。模型按「模型编码」选择——同一模型来自不同供应商时显示多个编码条目，选择条目即选择供应商；编码规则后台可配置，默认「厂商+模型」。请求体 model 即所选编码，精确路由到对应供应商。调试请求会真实计费。"
           level="page"
         />
       </h2>
@@ -89,6 +92,9 @@ export default function PlaygroundPage() {
         fullKey={fullKey}
         onFullKey={setFullKey}
       />
+
+      {/* 模型编码选择区（全 Tab 共享）：编码下拉 + 设为默认/清除默认 + 价格明细 */}
+      <ModelCodeSelector models={models} value={model} onChange={setModel} />
 
       {/* Tab 切换 */}
       <div

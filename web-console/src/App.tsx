@@ -86,7 +86,6 @@ import TopupRecordsPage from "./pages/TopupRecordsPage";
 import MjSunoTasksPage from "./pages/MjSunoTasksPage";
 import UserGroupsPage from "./pages/UserGroupsPage";
 import UxDemoPage from "./pages/UxDemoPage";
-import VendorSelectorPage from "./pages/VendorSelectorPage";
 import UserWebhooksPage from "./pages/UserWebhooksPage";
 import AdminDeletionPage from "./pages/AdminDeletionPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
@@ -340,8 +339,6 @@ export default function App() {
         <Route path="help" element={<HelpCenterPage />} />
         <Route path="account-deletion" element={<DeletionPage />} />
         <Route path="user-groups" element={<UserGroupsPage />} />
-        <Route path="me/channels" element={<VendorSelectorPage />} />
-        <Route path="vendor-selector" element={<VendorSelectorPage />} />
         <Route path="sales/customers" element={<SalesCustomersPage />} />
         <Route path="sales/customers/:userId" element={<SalesCustomerDetailPage />} />
         <Route path="sales/reminders" element={<SalesRemindersPage />} />

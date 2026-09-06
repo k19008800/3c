@@ -19,7 +19,6 @@
 import { useState } from "react";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
 import { sendDebugRequest } from "./request";
-import { ModelInput } from "./ModelInput";
 import { ResponseViewer, controlStyle, primaryBtnStyle } from "./ResponseViewer";
 import type { PlaygroundTabProps, ProxyResult, StreamEvent } from "./types";
 
@@ -68,10 +67,9 @@ function responsesJsonText(json: unknown): string | null {
 }
 
 export function ResponsesTab(props: PlaygroundTabProps) {
-  const { fullKey, models } = props;
+  const { fullKey, model } = props;
   const { toast } = useToast();
 
-  const [model, setModel] = useState("deepseek-chat");
   const [inputMode, setInputMode] = useState<"string" | "items">("string");
   const [inputText, setInputText] = useState("你好，请用一句话介绍什么是 3cloud。");
   const [instructions, setInstructions] = useState("");
@@ -85,8 +83,9 @@ export function ResponsesTab(props: PlaygroundTabProps) {
       toast.error("请先粘贴完整 API Key");
       return;
     }
-    if (!model.trim()) {
-      toast.error("请填写模型名");
+    const modelCode = model.trim();
+    if (!modelCode) {
+      toast.error("请先在上方选择模型编码。");
       return;
     }
 
@@ -110,7 +109,7 @@ export function ResponsesTab(props: PlaygroundTabProps) {
       }
     }
 
-    const body: Record<string, unknown> = { model: model.trim(), input, stream };
+    const body: Record<string, unknown> = { model: modelCode, input, stream };
     if (instructions.trim()) body.instructions = instructions;
     if (maxOutputTokens) {
       const n = parseInt(maxOutputTokens);
@@ -143,14 +142,16 @@ export function ResponsesTab(props: PlaygroundTabProps) {
             <HelpIcon text="Responses API 是 OpenAI 新一代接口（GPT-5 / Codex SDK 默认）。网关将 Responses 请求转换为 Chat Completions 转发上游，再把响应映射回 Responses 格式。" level="button" />
           </div>
 
-          <div style={{ display: "flex", gap: 16, marginBottom: 12, flexWrap: "wrap" }}>
-            <ModelInput
-              value={model}
-              onChange={setModel}
-              models={models}
-              help="Responses 请求的模型名，网关按名路由到可用供应商。"
-              placeholder="例如 deepseek-chat / gpt-5"
-            />
+          <div style={{ display: "flex", gap: 16, marginBottom: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label style={fieldLabelStyle}>
+                模型编码
+                <HelpIcon text="Responses 请求的 model = 上方所选模型编码，按编码精确路由到对应供应商。" level="button" />
+              </label>
+              <code style={{ display: "inline-block", padding: "8px 12px", borderRadius: 6, border: "1px dashed var(--color-border)", fontSize: 13, color: model ? "var(--color-text)" : "var(--color-text-secondary)" }}>
+                {model.trim() || "（请先在上方选择模型编码）"}
+              </code>
+            </div>
             <div style={{ flex: 1, minWidth: 160 }}>
               <label style={fieldLabelStyle}>
                 max_output_tokens
@@ -230,7 +231,7 @@ export function ResponsesTab(props: PlaygroundTabProps) {
           >
             {sending ? "请求中..." : "🚀 发送 Responses 请求"}
           </button>
-          <HelpIcon text="调用 /v1/responses：Responses→Chat 转换 → 鉴权 → 余额预检 → 渠道选择 → 上游转发（OpenAI 格式）→ 响应映射回 Responses 格式 → 计费。" level="button" />
+          <HelpIcon text="调用 /v1/responses：Responses→Chat 转换 → 鉴权 → 余额预检 → 按模型编码路由 → 上游转发（OpenAI 格式）→ 响应映射回 Responses 格式 → 计费。" level="button" />
         </div>
       </div>
 

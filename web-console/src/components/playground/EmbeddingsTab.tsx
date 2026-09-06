@@ -2,7 +2,7 @@
  * Playground — Embeddings 调试 Tab（POST /v1/embeddings，OpenAI 兼容）
  *
  * 向量化端点：{ model, input }，input 支持单条字符串或字符串数组。
- * 链路：鉴权 → token 估算 → 余额预检 → 渠道选择 → 上游转发（无流式）→ 计费。
+ * 链路：鉴权 → token 估算 → 余额预检 → 按模型编码路由 → 上游转发（无流式）→ 计费。
  *
  * @see api/src/routes/openai-compat.ts（后端契约）
  * @see newapi-gap-analysis.md Batch 1 任务 1.3
@@ -12,7 +12,6 @@
 import { useState } from "react";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
 import { sendDebugRequest } from "./request";
-import { ModelInput } from "./ModelInput";
 import { ResponseViewer, controlStyle, primaryBtnStyle } from "./ResponseViewer";
 import type { PlaygroundTabProps, ProxyResult } from "./types";
 
@@ -33,10 +32,9 @@ const fieldLabelStyle: React.CSSProperties = {
 };
 
 export function EmbeddingsTab(props: PlaygroundTabProps) {
-  const { fullKey, models } = props;
+  const { fullKey, model } = props;
   const { toast } = useToast();
 
-  const [model, setModel] = useState("");
   const [multi, setMulti] = useState(false);
   const [inputText, setInputText] = useState("3cloud 是一个 AI 聚合网关");
   const [result, setResult] = useState<ProxyResult | null>(null);
@@ -47,8 +45,9 @@ export function EmbeddingsTab(props: PlaygroundTabProps) {
       toast.error("请先粘贴完整 API Key");
       return;
     }
-    if (!model.trim()) {
-      toast.error("请填写模型名（如 text-embedding-3-small / bge-m3）");
+    const modelCode = model.trim();
+    if (!modelCode) {
+      toast.error("请先在上方选择模型编码。");
       return;
     }
     // 多条模式：按行切分为字符串数组；单条模式：整段文本作为单条
@@ -65,7 +64,7 @@ export function EmbeddingsTab(props: PlaygroundTabProps) {
       const res = await sendDebugRequest({
         path: "/api/v1/v1/embeddings",
         apiKey: fullKey,
-        body: { model: model.trim(), input },
+        body: { model: modelCode, input },
       });
       setResult(res);
       if (res.ok) toast.success("向量化完成");
@@ -110,14 +109,16 @@ export function EmbeddingsTab(props: PlaygroundTabProps) {
             <HelpIcon text="向量化端点：把文本转换为 embedding 向量，供 RAG 检索 / 语义相似度使用。OpenAI 兼容格式。" level="button" />
           </div>
 
-          <div style={{ display: "flex", gap: 16, marginBottom: 12, flexWrap: "wrap" }}>
-            <ModelInput
-              value={model}
-              onChange={setModel}
-              models={models}
-              help="Embedding 专用模型，如 text-embedding-3-small / bge-m3。"
-              placeholder="例如 text-embedding-3-small"
-            />
+          <div style={{ display: "flex", gap: 16, marginBottom: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label style={fieldLabelStyle}>
+                模型编码
+                <HelpIcon text="Embedding 专用模型编码，由上方模型选择区选择，按编码精确路由到对应供应商。" level="button" />
+              </label>
+              <code style={{ display: "inline-block", padding: "8px 12px", borderRadius: 6, border: "1px dashed var(--color-border)", fontSize: 13, color: model ? "var(--color-text)" : "var(--color-text-secondary)" }}>
+                {model.trim() || "（请先在上方选择模型编码）"}
+              </code>
+            </div>
             <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 8, minWidth: 180 }}>
               <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
                 <input type="checkbox" checked={multi} onChange={(e) => setMulti(e.target.checked)} />
@@ -148,7 +149,7 @@ export function EmbeddingsTab(props: PlaygroundTabProps) {
           >
             {sending ? "向量化中..." : "🚀 发送 Embeddings 请求"}
           </button>
-          <HelpIcon text="调用 /v1/embeddings：鉴权 → token 估算 → 余额预检 → 渠道选择 → 上游转发 → 计费。无可用供应商时返回 mock 占位向量（同样计费）。" level="button" />
+          <HelpIcon text="调用 /v1/embeddings：鉴权 → token 估算 → 余额预检 → 按模型编码路由 → 上游转发 → 计费。" level="button" />
         </div>
       </div>
 
