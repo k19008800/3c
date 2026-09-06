@@ -143,7 +143,7 @@ test.describe("3cloud 三角色全流程（浏览器）", () => {
     const chat = await request.post("/v1/chat/completions", {
       headers: { Authorization: `Bearer ${rawKey}` },
       data: {
-        // 本地真实验收渠道：天翼云 Coding，使用其平台模型映射名。
+        // 本地真实验收渠道：wanwu（万物有道 http://47.110.226.233:8072），使用其路由映射模型名。
         model: "DeepSeek-V4-Flash-0731",
         messages: [{ role: "user", content: "请用一句话介绍 3cloud" }],
         stream: false,
@@ -152,6 +152,8 @@ test.describe("3cloud 三角色全流程（浏览器）", () => {
     const chatBody = await chat.json();
     expect(chat.status()).toBe(200);
     expect(chatBody?.usage?.total_tokens).toBeGreaterThan(0);
+    // 防回退假阳性（#27 遗留建议）：断言真实上游调度，mock 回退即判失败。
+    expect(chatBody?.mock).not.toBe(true);
     console.log(`[③] 真实调度成功 total_tokens=${chatBody?.usage?.total_tokens}`);
 
     // 消费核对：调用日志出现该次调度

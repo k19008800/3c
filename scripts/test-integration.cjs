@@ -91,7 +91,8 @@ async function main() {
   // 8. 调 chat（真实渠道优先；仅当明确无可用渠道时才允许 mock）→ 记账 + 扣费
   if (rawKey) {
     const chat = await req('POST', '/v1/chat/completions', {
-      // 天翼云 Coding 是本地当前可用的真实测试渠道；模型名必须使用其路由映射名。
+      // wanwu（万物有道 http://47.110.226.233:8072）是本地当前可用的真实测试渠道；
+      // 模型名必须使用其路由映射名（supplier_models 2317 的 platform_model=DeepSeek-V4-Flash-0731）。
       model: 'DeepSeek-V4-Flash-0731',
       messages: [{ role: 'user', content: '你好，介绍一下 3cloud' }],
       stream: false,

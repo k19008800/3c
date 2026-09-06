@@ -1,9 +1,9 @@
 # 3cloud 真实发布基线 — 全量重跑报告（2026-09-06）
 
 - 文档 ID：BASELINE-EVIDENCE-2026-09-06
-- 状态：证据留档（结论 **`ready`**，见 §7 判定；R2 修复后全绿）
+- 状态：证据留档（结论 **`ready`**，见 §7 判定；R2 修复后全绿，R3 测试增强复验全绿）
 - 证据目录：`ops/baseline-2026-09-06/`
-- 候选提交：`8d3cad7017d3d1bf70f58a5aea89ec470fb2ecb3`（chore(release): 候选发布提交 - 需求文档收口与证据留痕（单一提交），工作区 0 未提交）
+- 候选提交：`8d3cad7017d3d1bf70f58a5aea89ec470fb2ecb3`（chore(release): 候选发布提交 - 需求文档收口与证据留痕（单一提交），工作区 0 未提交）+ 测试增强提交（verify 注释修正 + E2E ③ mock 断言，见提交链）
 - 关联：`docs/07-quality-and-acceptance/release-baseline.md`、`docs/00-index/open-issues.md` #27（已关闭）
 
 ## 1. 执行环境
@@ -31,8 +31,8 @@
 | 4 | `pnpm --filter @3cloud/api test` | **91 文件 / 1327 测试** | 0 | ✅ 通过（98.94s） |
 | 5 | `pnpm --filter web-console test` | **7 文件 / 46 测试** | 0 | ✅ 通过（32.70s） |
 | 6 | `pnpm build` | **4 端** | 0 | ✅ 通过（shared/api/web-console/web-portal；api/dist 1088 文件 6.34MB，portal .next 114.78MB） |
-| 7 | `cd e2e && pnpm test`（全量 37 例） | **37** | 0 | ✅ 通过（1.2m；fullflow ①–⑤ 含对公打款/审核到账/调度消费核对/财务/代理） |
-| 8 | `node scripts/test-integration.cjs`（verify） | **17** | **0** | ✅ **R1 16/17**（chat mock 回退，§4 根因）→ **R2 修复后 17/17**（chat 真实上游：11 tokens·1 out，计费 ¥0.000052 正确） |
+| 7 | `cd e2e && pnpm test`（全量 37 例） | **37** | 0 | ✅ R1 37/37；R4（测试增强后，服务重启）**37/37**（1.3m，含 fullflow ③ 真实上游 + `mock !== true` 新断言）。R2/R3 曾现偶发 flake（fullflow① / console API Key / user-features 仪表盘），隔离均通过、服务重启后全绿——判定为 dev server 长时运行的环境不稳定，非代码回归 |
+| 8 | `node scripts/test-integration.cjs`（verify） | **17** | **0** | ✅ **R1 16/17**（chat mock 回退，§4 根因）→ **R2 修复后 17/17**（chat 真实上游：11 tokens·1 out，计费 ¥0.000052 正确）→ **R3 注释修正后 17/17** |
 
 ## 4. verify 唯一失败项根因与修复（chat 真实上游）
 
@@ -64,8 +64,8 @@
 
 ## 7. 整体结论
 
-**`ready`（R2 修复后）**：代码门禁全绿（install/typecheck/lint/API 1327/web-console 46/build 4 端/E2E 37）；verify **R1 16/17 → R2 17/17**（chat 真实上游 wanwu 可用、计费精确）。修复为本地渠道数据（补 `vendor_pricing` id=4128 定价 ¥0.004/¥0.012 + 修正 supplier_model 2317 `platform_model`），已留痕 §4 并登记 open-issues #27（关闭）。剩余建议项（非阻断）：verify 脚本第 8 项注释（可用渠道=wanwu）、E2E ③ 补 `mock !== true` 断言、前端 paid/dispute 按钮后端缺口（#26 遗留）、#17 独立全新库迁移演练。
+**`ready`（R2 修复后 + R3 测试增强复验）**：代码门禁全绿（install/typecheck/lint/API 1327/web-console 46/build 4 端/E2E 37）；verify **R1 16/17 → R2 17/17 → R3 17/17**（chat 真实上游 wanwu 可用、计费精确）。修复为本地渠道数据（补 `vendor_pricing` id=4128 定价 ¥0.004/¥0.012 + 修正 supplier_model 2317 `platform_model`），已留痕 §4 并登记 open-issues #27（关闭）。**测试增强（#27 遗留建议一并处理）**：`scripts/test-integration.cjs` 第 8 项注释修正为 wanwu；`e2e/tests/fullflow.spec.ts` ③ 补 `mock !== true` 断言——全量 E2E R4 37/37 全绿（含真实上游 fullflow ③）。剩余非阻断项：#17 独立全新库迁移演练、前端 paid/dispute 按钮后端缺口（#26 遗留）。
 
 ## 8. 日志文件清单
 
-`00-git-baseline.txt`、`01-pnpm-install.log`、`01-lockfile-digest.txt`、`02-pnpm-typecheck.log`、`03-pnpm-lint.log`、`04-api-test.log`、`05-webconsole-test.log`、`06-pnpm-build.log`、`06b-build-artifacts.txt`、`08-api-server.log`、`09-portal-server.log`、`10-e2e-test.log`、`11-verify.log`（R1 16/17）、`11-verify-r2.log`（R2 17/17）、`REPORT.md`
+`00-git-baseline.txt`、`01-pnpm-install.log`、`01-lockfile-digest.txt`、`02-pnpm-typecheck.log`、`03-pnpm-lint.log`、`04-api-test.log`、`05-webconsole-test.log`、`06-pnpm-build.log`、`06b-build-artifacts.txt`、`08-api-server.log`、`09-portal-server.log`、`10-e2e-test.log`（R1 37/37）、`10-e2e-test-r4.log`（R4 37/37）、`11-verify.log`（R1 16/17）、`11-verify-r2.log`（R2 17/17）、`REPORT.md`
