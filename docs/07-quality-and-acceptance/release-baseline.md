@@ -6,7 +6,7 @@
 - 上游 ADR：ADR-0029、ADR-0026、ADR-0028
 
 ## 当前状态
-已在本机真实执行首轮基线（2026-09-04，见下方「实跑基线记录」）；历史资料中的 1159/1132/808 仍不构成正式基线。2026-09-06 收口：API 生产构建产物已可运行（#22）、2 项 flaky 已关闭（#23/#24）、结算资金操作独立 2FA 已闭环（#26）、备份恢复演练已真实 PASS（见下）。2026-09-06 二次收口：候选发布提交 `a7958ad`（应用源码）已确定并复验；T-04 补账/核销事务证据已闭环。**2026-09-06 三次收口（全量重跑）**：在 `feat/impersonation` 上形成新的单一候选提交 **`8d3cad7`**（文档/证据/工具收口批次，工作区 0 未提交），并以该 SHA 全量重跑基线（见实跑记录第 13–16 行）：代码门禁全绿（typecheck/lint/API 1327/web-console 46/build 4 端/E2E 37），**verify 16/17**——唯一失败为 chat 真实上游（根因：本地 `vendor_pricing` 缺 wanwu 渠道定价记录导致 mock 回退，wanwu 上游实测可达、key 有效；补 pricing 后即可真实调度，见 open-issues #27）。整体判定 **`not_ready`（按门禁严格口径：verify 未全绿，失败项不得隐式扣除）**；代码层面无回归，转 ready 仅需产品/发布裁决定价后补 `vendor_pricing` 记录并重跑 verify（修复路径见 open-issues #27）。
+已在本机真实执行首轮基线（2026-09-04，见下方「实跑基线记录」）；历史资料中的 1159/1132/808 仍不构成正式基线。2026-09-06 收口：API 生产构建产物已可运行（#22）、2 项 flaky 已关闭（#23/#24）、结算资金操作独立 2FA 已闭环（#26）、备份恢复演练已真实 PASS（见下）。2026-09-06 二次收口：候选发布提交 `a7958ad`（应用源码）已确定并复验；T-04 补账/核销事务证据已闭环。**2026-09-06 三次收口（全量重跑）**：在 `feat/impersonation` 上形成新的单一候选提交 **`8d3cad7`**（文档/证据/工具收口批次，工作区 0 未提交），并以该 SHA 全量重跑基线（见实跑记录第 13–17 行）：代码门禁全绿（typecheck/lint/API 1327/web-console 46/build 4 端/E2E 37）；verify **R1 16/17 → R2 17/17**——R1 唯一失败 chat 真实上游，经修复本地渠道数据（补 `vendor_pricing` id=4128 定价 ¥0.004/¥0.012 per 1K + 修正 supplier_model 2317 `platform_model`，wanwu 上游实测可达且计费精确 ¥0.000052）后全绿，见 open-issues #27（已关闭）。整体判定 **`ready`（候选提交 `8d3cad7` 全量基线全绿）**；剩余均为非阻断建议项（verify 脚本注释、E2E ③ mock 断言、#17 独立全新库迁移演练、前端 paid/dispute 按钮后端缺口 #26 遗留）。
 
 ## 基线必填字段
 
@@ -17,16 +17,16 @@
 | 依赖锁文件摘要 | `pnpm-lock.yaml` SHA-256 `F94CC2196875316C4563C338A0622CBCC85CC2D13BCF940A93D0B94A9FF00535` |
 | 执行命令 | `pnpm install --frozen-lockfile` / `pnpm -r typecheck` / `pnpm -r lint` / `pnpm --filter @3cloud/api test` / `pnpm --filter web-console test` / `pnpm build` / `cd e2e && pnpm test` / `node scripts/test-integration.cjs` |
 | 测试范围 | lint/typecheck/build/unit/API/migration/security/E2E/verify |
-| 通过数 | typecheck 3 包 + lint 4 包 + API 1327 + web-console 46 + build 4 端 + E2E 37 + verify 16 |
-| 失败数 | verify 1（chat 真实上游 mock 回退，根因=本地 `vendor_pricing` 缺 wanwu 定价记录，见 open-issues #27） |
+| 通过数 | typecheck 3 包 + lint 4 包 + API 1327 + web-console 46 + build 4 端 + E2E 37 + verify 17 |
+| 失败数 | 0（R1 verify chat 项已修复：补 vendor_pricing id=4128 + 修正 platform_model，R2 17/17） |
 | 跳过数 | 0 |
-| 执行时间 | install 5s / typecheck ~40s / lint ~15s / API 98.94s / web-console 32.70s / build ~3min / E2E 1.2m / verify ~40s |
+| 执行时间 | install 5s / typecheck ~40s / lint ~15s / API 98.94s / web-console 32.70s / build ~3min / E2E 1.2m / verify R1 ~40s + R2 ~40s |
 | Node/pnpm/Vitest 版本 | Node `v22.23.2` / pnpm `11.22.0` / vitest `3.2.7` |
 | PostgreSQL/Redis 环境 | PostgreSQL 17.10 @ `threecloud_v3`（5432，Running）；Redis 7-alpine @ 6379（docker，Up） |
 | 发布负责人确认 | TBD（待 BOSS） |
 | 最近成功备份与恢复演练检查 | ✅ **PASS（2026-09-06 真实执行，release v0.1.0）**：pg_dump custom 归档（8757017 B，SHA-256 一致）→ 隔离库 `threecloud_restore_drill` → pg_restore --exit-on-error → 103 public 表、行数一致（users=15854、balance_transactions=27424）、演练库已删；证据 `evidence/finance/v0.1.0/restore/`（详见 `docs/08-operations-and-deployment/backup-and-restore.md` 与 `TEST-BILLING-003`） |
 | 五大资金主题追溯 | `TEST-BILLING-003-traceability.md`：已建立映射；退款/红冲、部分补偿/状态机和真实迁移/恢复证据仍待补 |
-| 整体结果 | `not_ready`（2026-09-06 全量重跑：代码门禁全绿 + verify 16/17，唯一失败=chat 真实上游，根因=本地 `vendor_pricing` 缺 wanwu 定价记录；修复路径见 open-issues #27） |
+| 整体结果 | `ready`（2026-09-06 全量重跑：候选提交 `8d3cad7`，代码门禁全绿 + verify 17/17；R1 chat 失败已修复——补 vendor_pricing id=4128 ¥0.004/¥0.012 + 修正 supplier_model 2317 platform_model，见 open-issues #27 关闭） |
 
 > 历史测试数字不得代替真实结果；真实结果见下方「实跑基线记录（2026-09-04）」。
 
@@ -71,7 +71,8 @@
 | 13（2026-09-06 全量重跑） | `pnpm install --frozen-lockfile` + `pnpm -r typecheck` + `pnpm -r lint` | ~60s | 3+4 包 | 0 | ✅ 全过（候选提交 `8d3cad7`，工作区 0 未提交） |
 | 14（2026-09-06 全量重跑） | `pnpm --filter @3cloud/api test` + `pnpm --filter web-console test` | ~2.2min | 1327 + 46 | 0 | ✅ API 91 文件 1327/1327；web-console 7 文件 46/46 |
 | 15（2026-09-06 全量重跑） | `pnpm build` + `cd e2e && pnpm test` | ~4min | 4 端 + 37 | 0 | ✅ 构建 4 端全过（api/dist 6.34MB）；E2E 37/37（1.2m） |
-| 16（2026-09-06 全量重跑） | `node scripts/test-integration.cjs`（verify） | ~40s | 16 | 1 | ❌ Chat completions (real upstream) mock 回退 → 见 open-issues #27（根因=本地 `vendor_pricing` 缺 wanwu 定价记录；wanwu 上游实测 200、key 有效） |
+| 16（2026-09-06 全量重跑） | `node scripts/test-integration.cjs`（verify R1） | ~40s | 16 | 1 | ❌ Chat completions (real upstream) mock 回退 → open-issues #27（根因①=本地 `vendor_pricing` 缺 wanwu 定价记录；根因②=supplier_model 2317 `platform_model` 与 wanwu 实际模型名不符） |
+| 17（2026-09-06 全量重跑 R2） | 修复后重跑 `node scripts/test-integration.cjs`（verify R2） | ~40s | 17 | 0 | ✅ **17/17 全绿**：chat 真实上游 wanwu（11 tokens·1 out，计费 ¥0.000052 与余额扣减精确吻合）；修复=补 vendor_pricing id=4128（default 档 ¥0.004/¥0.012 per 1K）+ UPDATE supplier_models SET platform_model='DeepSeek-V4-Flash-0731' WHERE id=2317 |
 
 ### 环境健康（E2E 栈）
 
@@ -85,4 +86,4 @@
 
 ### 整体结果
 
-`not_ready`（2026-09-06 全量重跑，严格门禁口径）：代码门禁**全绿**（typecheck/lint/API 1327/web-console 46/build 4 端/E2E 37）；**verify 16/17**——唯一失败项 chat 真实上游（根因=本地 `vendor_pricing` 缺 wanwu 渠道定价记录 → 路由 null → mock 回退；wanwu 上游 `47.110.226.233:8072` 实测 200、`supplier_keys.id=192` 有效）。**转 ready 路径**：产品/发布裁决 `DeepSeek-V4-Flash-0731`（wanwu）定价 → 补 `vendor_pricing`（supplier_model_id=2317，status=active）→ 重跑 verify 即全绿；同步修正 verify 脚本注释（可用渠道=wanwu）与 E2E ③ `mock !== true` 断言（消除假阳性），见 open-issues #27。非阻断登记项：#17 独立全新库迁移演练、前端 paid/dispute 按钮后端缺口（#26 遗留）。
+`ready`（2026-09-06 全量重跑，R2 修复后）：代码门禁**全绿**（typecheck/lint/API 1327/web-console 46/build 4 端/E2E 37）；verify **17/17**（R1 16/17 → R2 修复后全绿，chat 走真实 wanwu 上游，计费 ¥0.000052 精确）。修复动作为本地渠道数据：补 `vendor_pricing`（id=4128，supplier_model 2317，default 档 ¥0.004/¥0.012 per 1K，覆盖 wanwu 成本 ¥0.002/¥0.008 约 1.5×）+ 修正 `supplier_models` 2317 `platform_model`（`deepseek-v4-flash` → `DeepSeek-V4-Flash-0731`，wanwu 渠道实测仅认此名），详见 `ops/baseline-2026-09-06/REPORT.md` §4 与 open-issues #27（已关闭）。非阻断建议项：#17 独立全新库迁移演练、前端 paid/dispute 按钮后端缺口（#26 遗留）、verify 脚本第 8 项注释（可用渠道=wanwu）、E2E ③ 补 `mock !== true` 断言。
