@@ -22,7 +22,7 @@ async function probeDb(): Promise<boolean> {
   }
 }
 
-/** 轻量 Redis 探针：TCP 连接 + PING 判定可达性（不引入 redis 客户端依赖） */
+/** 轻量 Redis 探针：TCP 连接 + 可选 AUTH + PING 判定可达性（不引入 redis 客户端依赖） */
 function probeRedis(): Promise<boolean> {
   return new Promise((resolve) => {
     let url: URL;
@@ -34,20 +34,30 @@ function probeRedis(): Promise<boolean> {
     }
     const host = url.hostname || '127.0.0.1';
     const port = Number(url.port || 6379);
+    // REDIS_URL 形如 redis://:password@host:port → 密码存在时先 AUTH 再 PING
+    const password = url.password ? decodeURIComponent(url.password) : '';
 
     const socket = net.createConnection({ host, port });
     const finish = (ok: boolean) => {
       socket.destroy();
       resolve(ok);
     };
-    const timer = setTimeout(() => finish(false), 800);
-    socket.setTimeout(800, () => {
+    const timer = setTimeout(() => finish(false), 2000);
+    socket.setTimeout(2000, () => {
       clearTimeout(timer);
       finish(false);
     });
-    socket.on('connect', () => socket.write('PING\r\n'));
+    socket.on('connect', () => {
+      socket.write(password ? `AUTH ${password}\r\n` : 'PING\r\n');
+    });
     socket.on('data', (buf) => {
-      if (buf.toString().startsWith('+PONG')) {
+      const text = buf.toString();
+      // 有密码：AUTH 成功后补发 PING；无密码：直接等 PONG
+      if (password && text.startsWith('+OK')) {
+        socket.write('PING\r\n');
+        return;
+      }
+      if (text.startsWith('+PONG')) {
         clearTimeout(timer);
         finish(true);
       }
