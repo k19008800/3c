@@ -41,8 +41,8 @@
 
 ## 五、进程管理
 
-- [ ] PM2 安装；`deploy/ecosystem.config.js` 就位（API + Portal 单实例，内存 1.7G 防 OOM）
-- [ ] `pm2 start deploy/ecosystem.config.js`；`pm2 save` + `pm2 startup`
+- [ ] PM2 安装；`deploy/ecosystem.config.cjs` 就位（API + Portal 单实例，内存 1.7G 防 OOM）
+- [ ] `pm2 start deploy/ecosystem.config.cjs`；`pm2 save` + `pm2 startup`
 - [ ] 健康检查：`curl localhost:3000/health` → `{"status":"ok","db":"up","redis":"up"}`
 
 ## 六、部署后验证（上线冒烟）

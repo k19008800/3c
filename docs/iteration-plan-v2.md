@@ -340,7 +340,7 @@ pnpm build                             # 三端构建通过
   - 测试：`gateway-log.test.ts` 11 用例 + `model-health-aggregator.test.ts` 3 用例
 - **P3-3 部署准备** ✅（不实际部署，受闸门约束）
   - `deploy/deploy.sh`（pnpm monorepo 版，含部署闸门标记检查）
-  - `deploy/ecosystem.config.js`（api 单实例 fork，调度器内嵌防 OOM）
+  - `deploy/ecosystem.config.cjs`（api 单实例 fork，调度器内嵌防 OOM）
   - `deploy/gen-prod-config.cjs`（生产密钥生成器：JWT/加密密钥）
   - `deploy/deployment-checklist.md`（上线检查清单）
   - `docs/ops-guide.md` 部署章节更新为 pnpm 版

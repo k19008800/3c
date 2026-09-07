@@ -75,7 +75,7 @@ flowchart TD
 > - 前置：`.deploy-gate-approved` 标记（部署闸门，本地全量验收通过后由调度-agent 创建）
 > - 构建：`pnpm build`（shared → api → web-console → web-portal）
 > - 迁移：`node run-migrations-0017-0022.cjs`（分区 DDL 等手工 SQL 直跑，勿用 db:push）
-> - 进程：`deploy/ecosystem.config.js`（api 单实例 fork，内嵌全部调度器，防 1.7G 内存 OOM）
+> - 进程：`deploy/ecosystem.config.cjs`（api 单实例 fork，内嵌全部调度器，防 1.7G 内存 OOM）
 
 ```bash
 #!/bin/bash
@@ -83,9 +83,9 @@ flowchart TD
 # 使用方法: ./deploy.sh [branch=main]
 ```
 
-### 2.3 PM2 配置（ecosystem.config.js）— pnpm monorepo 版
+### 2.3 PM2 配置（ecosystem.config.cjs）— pnpm monorepo 版
 
-> 完整配置见 `deploy/ecosystem.config.js`。核心：api 单实例 fork 模式（调度器内嵌，无需独立 worker 进程），`max_memory_restart: '1G'` 防 OOM。
+> 完整配置见 `deploy/ecosystem.config.cjs`。核心：api 单实例 fork 模式（调度器内嵌，无需独立 worker 进程），`max_memory_restart: '1G'` 防 OOM。
 
 ```javascript
 module.exports = {
@@ -207,7 +207,7 @@ archive_command = 'cp %p /var/lib/postgresql/17/archive/%f'
 
 | 操作 | 命令 |
 |------|------|
-| 启动服务 | `pm2 start ecosystem.config.js` |
+| 启动服务 | `pm2 start ecosystem.config.cjs` |
 | 停止服务 | `pm2 stop 3cloud-api` |
 | 重启服务 | `pm2 reload 3cloud-api` |
 | 查看状态 | `pm2 status` |
@@ -287,7 +287,7 @@ tar -czf "$BACKUP_DIR/nginx-$DATE.tar.gz" /etc/nginx/
 cp /root/3cloud/api/.env "$BACKUP_DIR/env-$DATE"
 
 # 备份 PM2 配置
-cp /root/3cloud/ecosystem.config.js "$BACKUP_DIR/ecosystem-$DATE.js"
+cp /root/3cloud/ecosystem.config.cjs "$BACKUP_DIR/ecosystem-$DATE.js"
 
 # 保留最近 30 天
 find "$BACKUP_DIR" -name "*.tar.gz" -mtime +30 -delete

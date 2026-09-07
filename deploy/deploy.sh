@@ -59,7 +59,7 @@ echo "$LOG_PREFIX 应用 hand-written migrations 0017-0032..."
 # 5. PM2 部署 API + Portal
 cd "$PROJECT_DIR"
 mkdir -p /var/log/3cloud
-pm2 reload deploy/ecosystem.config.js --update-env || pm2 start deploy/ecosystem.config.js --env production
+pm2 reload deploy/ecosystem.config.cjs --update-env || pm2 start deploy/ecosystem.config.cjs --env production
 
 # 6. 同步前端产物到 Nginx 目录
 # web-console dist 已由 prepare-app 合入 web-portal/public/app/，web-portal build 后整体部署

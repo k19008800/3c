@@ -72,7 +72,7 @@ bash deploy/deploy.sh main
 
 # 3.2 PM2 启动（deploy.sh 已执行时无需重复启动）
 mkdir -p /var/log/3cloud
-pm2 start deploy/ecosystem.config.js --env production
+pm2 start deploy/ecosystem.config.cjs --env production
 pm2 save && pm2 startup   # 自启
 
 # 3.3 验证后端
@@ -84,7 +84,7 @@ curl -s localhost:3000/docs -o /dev/null -w "%{http_code}"   # 200
 
 ```bash
 # 4.1 Portal 生产模式（:3100）
-# deploy/ecosystem.config.js 已包含 3cloud-portal，直接由 PM2 托管。
+# deploy/ecosystem.config.cjs 已包含 3cloud-portal，直接由 PM2 托管。
 # （生产内存 1.7G：api + portal 两个 node 进程需控制，必要时 api 用 --max-old-space-size=768）
 
 # 4.2 验证 portal 本地
