@@ -32,12 +32,12 @@ async function fetchSiteConfig(): Promise<SiteConfig> {
 
 export const metadata: Metadata = {
   title: {
-    default: "3Cloud — 一站式 AI API 聚合平台",
-    template: "%s — 3Cloud",
+    default: "浩寅云 — 一站式 AI API 聚合平台",
+    template: "%s — 浩寅云",
   },
   description: "统一接入 DeepSeek、Qwen、GLM、GPT、Claude 等主流模型，智能路由、统一计费、精细运营，一套 API 搞定全部模型",
   openGraph: {
-    title: "3Cloud — 一站式 AI API 聚合平台",
+    title: "浩寅云 — 一站式 AI API 聚合平台",
     description: "统一计费、智能路由、精细运营",
     type: "website",
   },
@@ -50,7 +50,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const dict = await fetchDictionary(lang);
   const t = makeT(dict);
 
-  const siteName = config.site_name ?? "3Cloud";
+  const siteName = config.site_name ?? "浩寅云";
   const year = new Date().getFullYear();
   const copyright = config.site_copyright ?? `© ${year} ${siteName} · AI Token 聚合平台`;
 
@@ -93,7 +93,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <a href="/app/login" style={{ background: "#2563eb", color: "#fff", padding: "8px 20px", borderRadius: 6, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>
                 {t("nav.login")}
               </a>
-              <ButtonHelp text="登录 3Cloud 控制台；未注册用户可先注册。" />
+              <ButtonHelp text="登录 浩寅云 控制台；未注册用户可先注册。" />
             </span>
           </nav>
         </header>

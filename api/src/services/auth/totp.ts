@@ -218,7 +218,7 @@ export async function verifyBackupCode(hash: string, code: string): Promise<bool
  *
  * @param secret - base32 secret
  * @param email - 账户邮箱（作为 label 的一部分）
- * @returns 形如 otpauth://totp/3cloud:user@example.com?secret=...&issuer=3cloud
+ * @returns 形如 otpauth://totp/浩寅云:user@example.com?secret=...&issuer=浩寅云
  *
  * @example
  * ```ts
@@ -227,5 +227,5 @@ export async function verifyBackupCode(hash: string, code: string): Promise<bool
  */
 export function otpauthURL(secret: string, email: string): string {
   // label 格式 issuer:account（冒号保留字面量，只对 account 做 URL 编码）
-  return `otpauth://totp/3cloud:${encodeURIComponent(email)}?secret=${secret}&issuer=3cloud`;
+  return `otpauth://totp/浩寅云:${encodeURIComponent(email)}?secret=${secret}&issuer=浩寅云`;
 }

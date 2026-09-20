@@ -129,7 +129,7 @@ export default function ForgotPasswordPage() {
       <div style={wrapStyle}>
         <div style={containerStyle}>
           <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <h1 style={{ fontSize: 24, color: "var(--color-text)", margin: 0 }}>🚀 3cloud</h1>
+            <h1 style={{ fontSize: 24, color: "var(--color-text)", margin: 0 }}>🚀 浩寅云</h1>
           </div>
           <div style={{
             fontSize: 18, fontWeight: 600, color: "var(--color-text)", marginBottom: 24,
@@ -200,7 +200,7 @@ export default function ForgotPasswordPage() {
     <div style={wrapStyle}>
       <div style={containerStyle}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <h1 style={{ fontSize: 24, color: "var(--color-text)", margin: 0 }}>🚀 3cloud</h1>
+          <h1 style={{ fontSize: 24, color: "var(--color-text)", margin: 0 }}>🚀 浩寅云</h1>
         </div>
         <div style={{
           fontSize: 18, fontWeight: 600, color: "var(--color-text)", marginBottom: 24,

@@ -277,7 +277,7 @@ export default function ConsoleLayout() {
     <div style={{ display: "flex", minHeight: "100vh", fontFamily: "var(--font-family)" }}>
       <aside style={{ position: "fixed", left: 0, top: 0, bottom: 0, width: 220, background: "#13151e", padding: "20px 0", zIndex: 100, display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "0 20px 24px", borderBottom: "1px solid rgba(255,255,255,.06)", fontSize: 18, fontWeight: 600, color: "#e0e0e0", display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 22 }}>⚡</span>3Cloud Admin
+          <span style={{ fontSize: 22 }}>⚡</span>浩寅云 Admin
         </div>
         <nav style={{ flex: 1, overflowY: "auto", marginTop: 4 }}>
           {/* ── Admin ── */}

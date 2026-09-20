@@ -133,7 +133,7 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   // Swagger
   await app.register(swagger, {
     openapi: {
-      info: { title: '3cloud API', version: '0.1.0', description: 'AI Token Aggregation Platform' },
+      info: { title: '浩寅云 API', version: '0.1.0', description: 'AI Token Aggregation Platform' },
       servers: [{ url: `http://localhost:${env.PORT}` }],
     },
   });
@@ -286,7 +286,7 @@ export async function startApp(opts?: { envOverrides?: Record<string, string> })
   const host = env.HOST;
 
   await app.listen({ port, host });
-  app.log.info(`🚀 3cloud API running at http://${host}:${port}`);
+  app.log.info(`🚀 浩寅云 API running at http://${host}:${port}`);
   app.log.info(`📖 Swagger docs at http://${host}:${port}/docs`);
 
   // 启动时确保 default 分组存在（幂等；DB 暂不可用只告警，不阻断启动）

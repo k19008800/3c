@@ -58,7 +58,7 @@ export default function AdminCompetitiveMonitorPage() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>模型</th>
-              <th style={{ padding: "10px 12px", textAlign: "left" }}>3Cloud 价格</th>
+              <th style={{ padding: "10px 12px", textAlign: "left" }}>浩寅云 价格</th>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>竞品A价格</th>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>竞品B价格</th>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>竞品C价格</th>

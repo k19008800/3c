@@ -64,7 +64,7 @@ export const EN_DEFAULTS: Record<string, string> = {
   "home.stats.users": "Users",
   "home.stats.tokens": "Total Tokens",
   // home.features
-  "home.features.title": "Why 3Cloud",
+  "home.features.title": "Why 浩寅云",
   "home.features.subtitle": "One integration for every AI scenario",
   "home.features.unified.title": "Unified Access",
   "home.features.unified.desc": "One API key for 200+ models across vendors, OpenAI-compatible, zero-code migration",
@@ -105,8 +105,8 @@ export const EN_DEFAULTS: Record<string, string> = {
   "home.pricing.viewAll": "View full pricing",
   // home.faq
   "home.faq.title": "FAQ",
-  "home.faq.q1": "What is 3Cloud?",
-  "home.faq.a1": "3Cloud is an AI API aggregation platform that unifies access to models from multiple vendors through one API key.",
+  "home.faq.q1": "What is 浩寅云?",
+  "home.faq.a1": "浩寅云 is an AI API aggregation platform that unifies access to models from multiple vendors through one API key.",
   "home.faq.q2": "How does billing work?",
   "home.faq.a2": "Billed per token with separate input/output rates. Pay only for what you use, no monthly fee.",
   "home.faq.q3": "Which models are supported?",
@@ -114,7 +114,7 @@ export const EN_DEFAULTS: Record<string, string> = {
   "home.faq.q4": "How do I get started?",
   "home.faq.a4": "Sign up → verify → create an API key → call via OpenAI-compatible APIs. New users get ¥5 trial credit.",
   "home.faq.q5": "Is the OpenAI SDK supported?",
-  "home.faq.a5": "Fully compatible. Point the SDK base_url to the platform endpoint with a 3Cloud API key.",
+  "home.faq.a5": "Fully compatible. Point the SDK base_url to the platform endpoint with a 浩寅云 API key.",
   "home.faq.q6": "What if a vendor fails?",
   "home.faq.a6": "The routing engine monitors vendor health and fails over automatically to keep service available.",
   "home.faq.q7": "Do enterprise users get discounts?",

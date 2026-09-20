@@ -10,7 +10,7 @@ interface OnboardingStatus {
 
 const steps = [
   {
-    title: "🎉 欢迎使用 3Cloud",
+    title: "🎉 欢迎使用 浩寅云",
     subtitle: "统一 API 接入数十家 AI 供应商模型",
     desc: [
       "统一 API — 一个 Key 调用数十家 AI 供应商模型，无需分别对接",
@@ -20,8 +20,8 @@ const steps = [
   },
   {
     title: "🔑 创建您的第一个 API Key",
-    subtitle: "API Key 是您使用 3Cloud 服务的凭证",
-    desc: ["首先，让我们创建一个 API Key，这是您使用 3Cloud 服务的凭证 🗝️"],
+    subtitle: "API Key 是您使用 浩寅云 服务的凭证",
+    desc: ["首先，让我们创建一个 API Key，这是您使用 浩寅云 服务的凭证 🗝️"],
   },
   {
     title: "🔍 了解模型与定价",

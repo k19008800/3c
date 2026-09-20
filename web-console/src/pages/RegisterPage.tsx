@@ -123,7 +123,7 @@ export default function RegisterPage() {
       }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <h1 style={{ fontSize: 24, color: "var(--color-text)", margin: 0 }}>🚀 3cloud</h1>
+          <h1 style={{ fontSize: 24, color: "var(--color-text)", margin: 0 }}>🚀 浩寅云</h1>
           <p style={{ fontSize: 14, color: "var(--color-text-secondary)", marginTop: 4, marginBottom: 0 }}>
             AI Token 聚合分发平台
           </p>

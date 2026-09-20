@@ -67,7 +67,7 @@ export default function StatusPage() {
           <div style={{ fontWeight: 700 }}>
             {apiOk ? "全部系统正常运行" : status.api.status === "unknown" ? "无法连接 API 网关" : "部分系统异常"}
           </div>
-          <div style={{ fontSize: 13, color: "#64748b" }}>3Cloud API 网关</div>
+          <div style={{ fontSize: 13, color: "#64748b" }}>浩寅云 API 网关</div>
         </div>
       </div>
 
