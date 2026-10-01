@@ -137,7 +137,7 @@ function buildMockAnthropic(
   inputTokens: number,
 ): { content: string; usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } } {
   const prompt = lastUserText(req);
-  const content = `[3cloud 模拟响应] 已收到请求（模型 ${req.model}）。当前环境未配置可用的供应商 Key，返回占位响应以演示完整计费链路。\n> ${prompt}\n\n配置真实供应商后即可返回模型真实输出。`;
+  const content = `[浩寅云 模拟响应] 已收到请求（模型 ${req.model}）。当前环境未配置可用的供应商 Key，返回占位响应以演示完整计费链路。\n> ${prompt}\n\n配置真实供应商后即可返回模型真实输出。`;
   const outputTokens = countTokens(content, req.model);
   return {
     content,

@@ -248,7 +248,16 @@ async function main() {
     const [exists] = await db
       .select({ id: schema.siteContents.id }).from(schema.siteContents)
       .where(eq(schema.siteContents.slug, c.slug)).limit(1);
-    if (exists) continue;
+    if (exists) {
+      // 博客演示文：品牌文案需随源同步（幂等刷新标题/正文，修正 2026-08 旧品牌种子残留）；
+      // legal/page/faq 保留运营在管理端已编辑版本，不覆盖。
+      if (c.type === 'blog') {
+        await db.update(schema.siteContents)
+          .set({ title: c.title, content: c.content })
+          .where(eq(schema.siteContents.slug, c.slug));
+      }
+      continue;
+    }
     await db.insert(schema.siteContents).values(c);
     contentsCreated++;
   }
@@ -365,6 +374,8 @@ async function main() {
     ['pricing.title', 'zh-CN', '模型标价'], ['pricing.title', 'en', 'Model Pricing'],
     ['pricing.subtitle', 'zh-CN', '透明计费 · 按量付费 · 无隐藏费用 · 实时拉取标价'],
     ['pricing.subtitle', 'en', 'Transparent · Pay-as-you-go · No hidden fees · Live prices'],
+    ['pricing.note', 'zh-CN', '每一行 = 一条模型编码（一个模型 × 一个供应商）；同一模型多供应商时并排为多行。模型编码默认按「厂商+模型」规则生成。'],
+    ['pricing.note', 'en', 'Each row is one model code (one model × one vendor); when a single model is offered by multiple vendors, it appears as separate rows. Model codes follow the default "vendor + model" naming rule.'],
     ['pricing.calculator', 'zh-CN', '价格计算器'], ['pricing.calculator', 'en', 'Price Calculator'],
     ['pricing.allModels', 'zh-CN', '全部模型标价'], ['pricing.allModels', 'en', 'All Model Prices'],
     ['pricing.allLabel', 'zh-CN', '全部'], ['pricing.allLabel', 'en', 'All'],

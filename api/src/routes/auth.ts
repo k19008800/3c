@@ -341,11 +341,11 @@ export async function authRoutes(app: FastifyInstance) {
       try {
         await sendMail({
           to: email,
-          subject: '【3Cloud】重置密码',
+          subject: '【浩寅云】重置密码',
           templateName: 'forgot-password',
           html: `
             <p>您好，</p>
-            <p>您正在重置 3Cloud 账号（${email}）的登录密码。</p>
+            <p>您正在重置 浩寅云 账号（${email}）的登录密码。</p>
             <p>重置令牌（10 分钟内有效）：</p>
             <p><code>${token}</code></p>
             ${resetUrl ? `<p>或点击链接重置：<a href="${resetUrl}">${resetUrl}</a></p>` : ''}
@@ -430,11 +430,11 @@ export async function authRoutes(app: FastifyInstance) {
     try {
       await sendMail({
         to: email,
-        subject: `【3Cloud】邮箱验证码 ${code}`,
+        subject: `【浩寅云】邮箱验证码 ${code}`,
         templateName: `email-code-${purpose}`,
         html: `
           <p>您好，</p>
-          <p>您的 3Cloud 邮箱验证码（5 分钟内有效）：</p>
+          <p>您的 浩寅云 邮箱验证码（5 分钟内有效）：</p>
           <p style="font-size:24px;font-weight:bold;letter-spacing:4px;">${code}</p>
           <p>用途：${purpose}。如非本人操作，请忽略本邮件。</p>
         `,

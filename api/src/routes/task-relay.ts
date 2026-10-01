@@ -447,7 +447,7 @@ export async function taskRelayRoutes(app: FastifyInstance) {
                 payload: {
                   code: 1,
                   result: `mock-task-${c.requestId}`,
-                  description: `[3cloud 模拟响应] 模型 ${billModel} 无可用供应商，返回占位任务 id。`,
+                  description: `[浩寅云 模拟响应] 模型 ${billModel} 无可用供应商，返回占位任务 id。`,
                   properties: {},
                   mock: true,
                 },

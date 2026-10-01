@@ -209,7 +209,7 @@ export async function publicRoutes(app: FastifyInstance) {
         status: infraStatus,
         updatedAt: new Date().toISOString(),
         services: [
-          { name: 'API 网关', status: 'operational', description: '3Cloud API 网关运行正常' },
+          { name: 'API 网关', status: 'operational', description: '浩寅云 API 网关运行正常' },
           { name: '数据库', status: dbOk ? 'operational' : 'major_outage', description: dbOk ? 'PostgreSQL 连接正常' : 'PostgreSQL 连接异常' },
           { name: 'Redis', status: redisOk ? 'operational' : 'major_outage', description: redisOk ? 'Redis 缓存正常' : 'Redis 缓存异常' },
           { name: '模型网关', status: 'operational', description: '模型网关运行正常' },

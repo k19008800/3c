@@ -292,7 +292,7 @@ function buildUpstreamBody(req: RelayFirstMessage, platformModel: string): Recor
 function buildMockCompletion(model: string, messages: RelayFirstMessage['messages'], inputTokens: number) {
   const lastUser = [...messages].reverse().find((m) => m.role === 'user');
   const prompt = typeof lastUser?.content === 'string' ? lastUser.content.slice(0, 120) : '（无用户消息）';
-  const content = `[3cloud 模拟响应] 已收到请求（模型 ${model}）。当前环境未配置可用的供应商 Key，返回占位响应以演示完整计费链路。\n> ${prompt}\n\n配置真实供应商后即可返回模型真实输出。`;
+  const content = `[浩寅云 模拟响应] 已收到请求（模型 ${model}）。当前环境未配置可用的供应商 Key，返回占位响应以演示完整计费链路。\n> ${prompt}\n\n配置真实供应商后即可返回模型真实输出。`;
   const outputTokens = countTokens(content, model);
   return {
     content,
