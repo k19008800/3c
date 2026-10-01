@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { api } from "../lib/api";
 import { HelpIcon } from "@3cloud/shared-ui";
+import "./console-misc.css";
 
 interface CommissionRecord { id: number; customer_name: string; amount: number; rate: number; commission: number; status: string; settled_at: string | null; created_at: string; }
 
@@ -21,61 +22,68 @@ export default function AgentCommissionPage() {
 
   return (
     <div>
-      <div style={{ background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#fff", padding: "20px 24px", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ fontSize: 24 }}>💰</span>
-        <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>佣金记录
-          <HelpIcon text="查看您名下客户消费产生的佣金记录。佣金结算后自动转入可提现余额。" level="page" />
-        </span>
+      <div className="cm-pagehead">
+        <div className="cm-pagehead__titles">
+          <div className="cm-pagehead__title">佣金记录
+            <HelpIcon text="查看您名下客户消费产生的佣金记录。佣金结算后自动转入可提现余额。" level="page" />
+          </div>
+          <div className="cm-pagehead__sub">名下客户消费产生的佣金明细，结算后自动转入可提现余额。</div>
+        </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+      <div className="cm-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
         {[
-          { label: "累计佣金", value: fmt(stats.total), color: "#4f6ef7" },
-          { label: "待结算", value: fmt(stats.pending), color: "#f59e0b" },
-          { label: "已结算", value: fmt(stats.settled), color: "#22c55e" },
-          { label: "本月佣金", value: fmt(stats.this_month), color: "#8b5cf6" },
+          { label: "累计佣金", value: fmt(stats.total) },
+          { label: "待结算", value: fmt(stats.pending) },
+          { label: "已结算", value: fmt(stats.settled) },
+          { label: "本月佣金", value: fmt(stats.this_month) },
         ].map((s, i) => (
-          <div key={i} style={{ background: "var(--color-panel)", borderRadius: 8, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,.06)" }}>
-            <div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>{s.label}</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.value}</div>
+          <div key={i} style={{ background: "var(--color-panel)", border: "1px solid var(--color-divider)", borderRadius: "var(--radius-md)", padding: "16px 20px", boxShadow: "var(--shadow-card)" }}>
+            <div className="cm-kpi-label" style={{ marginBottom: 4 }}>{s.label}</div>
+            <div className="cm-kpi-value" style={{ fontSize: 20 }}>{s.value}</div>
           </div>
         ))}
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         {["", "pending", "settled"].map(s => (
-          <button key={s} onClick={() => { setFilter(s); setPage(1); }} style={{ padding: "6px 16px", borderRadius: 6, border: filter === s ? "2px solid #4f6ef7" : "1px solid var(--color-border)", background: filter === s ? "#eef2ff" : "var(--color-panel)", color: filter === s ? "#4f6ef7" : "#666", cursor: "pointer", fontSize: 12 }}>
+          <button key={s} onClick={() => { setFilter(s); setPage(1); }} style={{
+            padding: "6px 16px", borderRadius: "var(--radius-sm)",
+            border: filter === s ? "1px solid var(--color-primary)" : "1px solid var(--color-border)",
+            background: filter === s ? "var(--color-primary-light)" : "var(--color-panel)",
+            color: filter === s ? "var(--color-primary)" : "var(--color-text-secondary)",
+            cursor: "pointer", fontSize: 12, fontWeight: filter === s ? 600 : 400,
+          }}>
             {s === "" ? "全部" : s === "pending" ? "待结算" : "已结算"}
           </button>
         ))}
       </div>
 
-      <div style={{ background: "var(--color-panel)", borderRadius: 10, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-          <thead><tr style={{ background: "#fafafa" }}>
-            <th style={{ padding: "10px 14px", textAlign: "left" }}>客户</th>
-            <th style={{ padding: "10px 14px", textAlign: "right" }}>消费金额</th>
-            <th style={{ padding: "10px 14px", textAlign: "center" }}>佣金比例</th>
-            <th style={{ padding: "10px 14px", textAlign: "right" }}>佣金</th>
-            <th style={{ padding: "10px 14px", textAlign: "center" }}>状态</th>
-            <th style={{ padding: "10px 14px", textAlign: "left" }}>时间</th>
+      <div style={{ background: "var(--color-panel)", border: "1px solid var(--color-divider)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-card)" }}>
+        <table className="cm-table">
+          <thead><tr>
+            <th>客户</th><th className="num">消费金额</th><th>佣金比例</th><th className="num">佣金</th><th style={{textAlign:"center"}}>状态</th><th>时间</th>
           </tr></thead>
           <tbody>
             {records.map(r => (
-              <tr key={r.id} style={{ borderBottom: "1px solid #f5f5f5" }}>
-                <td style={{ padding: "8px 14px" }}>{r.customer_name}</td>
-                <td style={{ padding: "8px 14px", textAlign: "right", fontFamily: "monospace" }}>{fmt(r.amount)}</td>
-                <td style={{ padding: "8px 14px", textAlign: "center" }}>{r.rate}%</td>
-                <td style={{ padding: "8px 14px", textAlign: "right", fontWeight: 600, color: "#22c55e" }}>{fmt(r.commission)}</td>
-                <td style={{ padding: "8px 14px", textAlign: "center" }}>
-                  <span style={{ padding: "2px 10px", borderRadius: 10, fontSize: 11, background: r.status === "settled" ? "#f0fdf4" : "#fff7e6", color: r.status === "settled" ? "#22c55e" : "#f59e0b" }}>
+              <tr key={r.id}>
+                <td>{r.customer_name}</td>
+                <td className="num" style={{ fontFamily: "var(--font-family-mono)" }}>{fmt(r.amount)}</td>
+                <td style={{ textAlign: "center" }}>{r.rate}%</td>
+                <td className="num" style={{ fontWeight: 600, color: "var(--color-success-text)" }}>{fmt(r.commission)}</td>
+                <td style={{ textAlign: "center" }}>
+                  <span style={{
+                    padding: "2px 10px", borderRadius: "var(--radius-pill)", fontSize: 11,
+                    background: r.status === "settled" ? "var(--color-success-bg)" : "var(--color-warning-bg)",
+                    color: r.status === "settled" ? "var(--color-success-text)" : "var(--color-warning-text)",
+                  }}>
                     {r.status === "settled" ? "已结算" : "待结算"}
                   </span>
                 </td>
-                <td style={{ padding: "8px 14px", fontSize: 12, color: "#888" }}>{new Date(r.settled_at ?? r.created_at).toLocaleDateString()}</td>
+                <td style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{new Date(r.settled_at ?? r.created_at).toLocaleDateString()}</td>
               </tr>
             ))}
-            {records.length === 0 && <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#888" }}>暂无佣金记录</td></tr>}
+            {records.length === 0 && <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "var(--color-text-muted)" }}>暂无佣金记录</td></tr>}
           </tbody>
         </table>
       </div>

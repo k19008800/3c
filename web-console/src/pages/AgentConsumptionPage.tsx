@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { api } from "../lib/api";
 import { HelpIcon } from "@3cloud/shared-ui";
+import "./console-misc.css";
 
 interface ConsumptionRecord { id: number; customer_name: string; model_name: string; tokens_in: number; tokens_out: number; total_tokens: number; amount: number; created_at: string; }
 
@@ -20,61 +21,57 @@ export default function AgentConsumptionPage() {
 
   return (
     <div>
-      <div style={{ background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#fff", padding: "20px 24px", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ fontSize: 24 }}>📊</span>
-        <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>客户消费追踪
-          <HelpIcon text="追踪您名下所有客户的 API 消费明细。支持按客户和日期筛选。" level="page" />
-        </span>
+      <div className="cm-pagehead">
+        <div className="cm-pagehead__titles">
+          <div className="cm-pagehead__title">客户消费追踪
+            <HelpIcon text="追踪您名下所有客户的 API 消费明细。支持按客户和日期筛选。" level="page" />
+          </div>
+          <div className="cm-pagehead__sub">名下所有客户的 API 消费明细，支持按客户与日期筛选。</div>
+        </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+      <div className="cm-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
         {[
-          { label: "今日 Token", value: stats.today_tokens.toLocaleString(), color: "#4f6ef7" },
-          { label: "今日消费", value: `¥${(stats.today_amount / 100).toFixed(2)}`, color: "#22c55e" },
-          { label: "本月 Token", value: stats.month_tokens.toLocaleString(), color: "#8b5cf6" },
-          { label: "本月消费", value: `¥${(stats.month_amount / 100).toFixed(2)}`, color: "#f59e0b" },
+          { label: "今日 Token", value: stats.today_tokens.toLocaleString() },
+          { label: "今日消费", value: `¥${(stats.today_amount / 100).toFixed(2)}` },
+          { label: "本月 Token", value: stats.month_tokens.toLocaleString() },
+          { label: "本月消费", value: `¥${(stats.month_amount / 100).toFixed(2)}` },
         ].map((s, i) => (
-          <div key={i} style={{ background: "var(--color-panel)", borderRadius: 8, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,.06)" }}>
-            <div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>{s.label}</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.value}</div>
+          <div key={i} style={{ background: "var(--color-panel)", border: "1px solid var(--color-divider)", borderRadius: "var(--radius-md)", padding: "16px 20px", boxShadow: "var(--shadow-card)" }}>
+            <div className="cm-kpi-label" style={{ marginBottom: 4 }}>{s.label}</div>
+            <div className="cm-kpi-value" style={{ fontSize: 20 }}>{s.value}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
         <input placeholder="搜索客户名称" value={customerFilter} onChange={e => setCustomerFilter(e.target.value)}
-          style={{ padding: "6px 12px", border: "1px solid var(--color-border)", borderRadius: 6, width: 200, fontSize: 13 }} />
+          style={{ padding: "6px 12px", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", width: 200, fontSize: 13 }} />
         <input type="date" value={dateRange.start} onChange={e => setDateRange({...dateRange, start: e.target.value})}
-          style={{ padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 6, fontSize: 13 }} />
-        <span style={{ fontSize: 13, color: "#888" }}>至</span>
+          style={{ padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: 13 }} />
+        <span style={{ fontSize: 13, color: "var(--color-text-muted)" }}>至</span>
         <input type="date" value={dateRange.end} onChange={e => setDateRange({...dateRange, end: e.target.value})}
-          style={{ padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 6, fontSize: 13 }} />
+          style={{ padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: "var(--radius-sm)", fontSize: 13 }} />
       </div>
 
-      <div style={{ background: "var(--color-panel)", borderRadius: 10, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-          <thead><tr style={{ background: "#fafafa" }}>
-            <th style={{ padding: "10px 14px", textAlign: "left" }}>客户</th>
-            <th style={{ padding: "10px 14px", textAlign: "left" }}>模型</th>
-            <th style={{ padding: "10px 14px", textAlign: "right" }}>输入 Token</th>
-            <th style={{ padding: "10px 14px", textAlign: "right" }}>输出 Token</th>
-            <th style={{ padding: "10px 14px", textAlign: "right" }}>总 Token</th>
-            <th style={{ padding: "10px 14px", textAlign: "right" }}>金额</th>
-            <th style={{ padding: "10px 14px", textAlign: "left" }}>时间</th>
+      <div style={{ background: "var(--color-panel)", border: "1px solid var(--color-divider)", borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-card)" }}>
+        <table className="cm-table">
+          <thead><tr>
+            <th>客户</th><th>模型</th><th className="num">输入 Token</th><th className="num">输出 Token</th><th className="num">总 Token</th><th className="num">金额</th><th>时间</th>
           </tr></thead>
           <tbody>
             {records.map(r => (
-              <tr key={r.id} style={{ borderBottom: "1px solid #f5f5f5" }}>
-                <td style={{ padding: "8px 14px", color: "#4f6ef7", fontWeight: 500 }}>{r.customer_name}</td>
-                <td style={{ padding: "8px 14px" }}>{r.model_name}</td>
-                <td style={{ padding: "8px 14px", textAlign: "right", fontFamily: "monospace", fontSize: 12 }}>{r.tokens_in.toLocaleString()}</td>
-                <td style={{ padding: "8px 14px", textAlign: "right", fontFamily: "monospace", fontSize: 12 }}>{r.tokens_out.toLocaleString()}</td>
-                <td style={{ padding: "8px 14px", textAlign: "right", fontFamily: "monospace", fontWeight: 600 }}>{r.total_tokens.toLocaleString()}</td>
-                <td style={{ padding: "8px 14px", textAlign: "right", fontWeight: 600, color: "#4f6ef7" }}>¥{(r.amount / 100).toFixed(4)}</td>
-                <td style={{ padding: "8px 14px", fontSize: 12, color: "#888" }}>{new Date(r.created_at).toLocaleString()}</td>
+              <tr key={r.id}>
+                <td style={{ color: "var(--color-text)", fontWeight: 500 }}>{r.customer_name}</td>
+                <td>{r.model_name}</td>
+                <td className="num" style={{ fontFamily: "var(--font-family-mono)", fontSize: 12 }}>{r.tokens_in.toLocaleString()}</td>
+                <td className="num" style={{ fontFamily: "var(--font-family-mono)", fontSize: 12 }}>{r.tokens_out.toLocaleString()}</td>
+                <td className="num" style={{ fontFamily: "var(--font-family-mono)", fontWeight: 600 }}>{r.total_tokens.toLocaleString()}</td>
+                <td className="num" style={{ fontWeight: 600 }}>¥{(r.amount / 100).toFixed(4)}</td>
+                <td style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{new Date(r.created_at).toLocaleString()}</td>
               </tr>
             ))}
-            {records.length === 0 && <tr><td colSpan={7} style={{ padding: 40, textAlign: "center", color: "#888" }}>暂无消费记录</td></tr>}
+            {records.length === 0 && <tr><td colSpan={7} style={{ padding: 40, textAlign: "center", color: "var(--color-text-muted)" }}>暂无消费记录</td></tr>}
           </tbody>
         </table>
       </div>

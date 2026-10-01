@@ -1,0 +1,264 @@
+/**
+ * auth.css — 用户端门面页（登录/注册/忘记密码/OAuth）共享样式
+ * 设计语言：精密云基础设施 —— 信号蓝 #1896FF + 墨蓝节点母题，细线与轻阴影，无 emoji。
+ * 仅作用于无侧栏独立认证页；不触碰 shared-ui / tokens.css。
+ */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  background: var(--color-bg);
+  font-family: var(--font-family);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 背景：极淡的网格 + 信号蓝光晕，营造「精密云」气质（克制，不喧宾夺主） */
+.auth-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--color-divider-light) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-divider-light) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 40%, #000 0%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 40%, #000 0%, transparent 75%);
+  pointer-events: none;
+}
+.auth-page::after {
+  content: "";
+  position: absolute;
+  width: 640px;
+  height: 640px;
+  top: -240px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(24, 150, 255, 0.10) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.auth-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 40px 36px;
+  box-shadow: var(--shadow-card);
+}
+
+/* 品牌区：SVG 节点母题 + 字标 */
+.auth-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+.auth-brand__mark {
+  width: 44px;
+  height: 44px;
+  filter: drop-shadow(0 4px 10px rgba(24, 150, 255, 0.25));
+}
+.auth-brand__name {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+.auth-brand__tag {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-top: -4px;
+}
+
+.auth-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 22px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 表单字段 */
+.auth-field { margin-bottom: 16px; }
+.auth-field label {
+  display: block;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+.auth-input {
+  width: 100%;
+  height: 42px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0 13px;
+  font-size: 14px;
+  color: var(--color-text);
+  background: var(--color-panel);
+  box-sizing: border-box;
+  font-family: var(--font-family);
+  transition: border-color var(--duration) var(--ease-out), box-shadow var(--duration) var(--ease-out);
+}
+.auth-input::placeholder { color: var(--color-text-disabled); }
+.auth-input:hover { border-color: var(--color-text-disabled); }
+.auth-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+.auth-input--error { border-color: var(--color-danger-text); }
+.auth-input--error:focus { box-shadow: 0 0 0 3px var(--color-danger-bg); }
+
+/* 主按钮 */
+.auth-btn {
+  width: 100%;
+  height: 46px;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  font-family: var(--font-family);
+  transition: background var(--duration) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+}
+.auth-btn:hover { background: var(--color-primary-hover); }
+.auth-btn:active { background: var(--color-primary-active); transform: translateY(1px); }
+.auth-btn:disabled {
+  background: var(--color-disabled-bg);
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+
+/* 错误提示条（语义 danger） */
+.auth-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--color-danger-text);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.auth-alert svg { flex-shrink: 0; margin-top: 1px; }
+
+/* 分割线 */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  margin: 24px 0 16px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-divider);
+}
+.auth-divider::before { margin-right: 14px; }
+.auth-divider::after { margin-left: 14px; }
+
+/* 第三方登录按钮 */
+.auth-social {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.auth-social__btn {
+  height: 42px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-panel);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family);
+  transition: border-color var(--duration) var(--ease-out), color var(--duration) var(--ease-out), background var(--duration) var(--ease-out);
+}
+.auth-social__btn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-lighter);
+}
+.auth-social__btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.auth-social__btn svg { width: 18px; height: 18px; }
+
+/* 次级链接行 */
+.auth-foot {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+.auth-foot a,
+.auth-link {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+.auth-foot a:hover,
+.auth-link:hover { color: var(--color-primary-hover); text-decoration: underline; }
+
+/* 成功态大图标（邮件已发送等） */
+.auth-success-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  border-radius: var(--radius-xl);
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-success-text);
+}
+
+/* 2FA 步骤切换 tab */
+.auth-step-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.auth-step-tab {
+  flex: 1;
+  height: 38px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: var(--font-family);
+  border: 1px solid var(--color-border);
+  background: var(--color-panel);
+  color: var(--color-text-secondary);
+  transition: all var(--duration) var(--ease-out);
+}
+.auth-step-tab--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .auth-card { padding: 32px 22px; }
+  .auth-social { grid-template-columns: repeat(2, 1fr); }
+}

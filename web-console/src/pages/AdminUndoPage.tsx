@@ -5,14 +5,14 @@ import { HelpIcon, Modal, useToast } from "@3cloud/shared-ui";
 interface UndoRecord { id: number; operation_type: string; operation_label: string; target_type: string; target_id: number; operator_id: number; operator_name: string; snapshot: any; reverted: boolean; expires_at: string; created_at: string; }
 
 const TYPE_MAP: Record<string, { label: string; color: string }> = {
-  user_status_change: { label: "用户状态变更", color: "#f59e0b" },
-  user_delete: { label: "删除用户", color: "#e53935" },
+  user_status_change: { label: "用户状态变更", color: "var(--color-warning-text)" },
+  user_delete: { label: "删除用户", color: "var(--color-danger-text)" },
   user_edit: { label: "编辑用户", color: "#fa8c16" },
-  user_disable: { label: "禁用用户", color: "#f59e0b" },
-  balance_adjust: { label: "余额调整", color: "#4f6ef7" },
+  user_disable: { label: "禁用用户", color: "var(--color-warning-text)" },
+  balance_adjust: { label: "余额调整", color: "var(--color-primary)" },
   role_assign: { label: "角色分配", color: "#722ed1" },
-  vendor_delete: { label: "删除供应商", color: "#e53935" },
-  model_delete: { label: "删除模型", color: "#e53935" },
+  vendor_delete: { label: "删除供应商", color: "var(--color-danger-text)" },
+  model_delete: { label: "删除模型", color: "var(--color-danger-text)" },
   config_edit: { label: "配置修改", color: "#13c2c2" },
 };
 
@@ -61,20 +61,20 @@ export default function AdminUndoPage() {
         <span style={{ fontSize: 24 }}>↩️</span>
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>撤销操作日志
           <HelpIcon text="记录管理员的敏感操作快照，支持在有效时间内一键撤销。配置哪些操作类型可撤销及撤销窗口时长。" level="page" />
-          {backendMissing && <span style={{ fontSize: 11, color: "#f59e0b", marginLeft: 8 }}>⚠️ 后端未接入（/admin/undo 待实现）</span>}
+          {backendMissing && <span style={{ fontSize: 11, color: "var(--color-warning-text)", marginLeft: 8 }}>️ 后端未接入（/admin/undo 待实现）</span>}
         </span>
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <button onClick={() => setTab("log")} style={{ padding: "8px 20px", borderRadius: 8, border: tab === "log" ? "2px solid #4f6ef7" : "1px solid var(--color-border)", background: tab === "log" ? "#eef2ff" : "var(--color-panel)", color: tab === "log" ? "#4f6ef7" : "#666", cursor: "pointer", fontWeight: 600 }}>📋 撤销记录</button>
-        <button onClick={() => setTab("config")} style={{ padding: "8px 20px", borderRadius: 8, border: tab === "config" ? "2px solid #4f6ef7" : "1px solid var(--color-border)", background: tab === "config" ? "#eef2ff" : "var(--color-panel)", color: tab === "config" ? "#4f6ef7" : "#666", cursor: "pointer", fontWeight: 600 }}>⚙️ 撤销配置</button>
+        <button onClick={() => setTab("log")} style={{ padding: "8px 20px", borderRadius: 8, border: tab === "log" ? "2px solid var(--color-primary)" : "1px solid var(--color-border)", background: tab === "log" ? "var(--color-row-selected)" : "var(--color-panel)", color: tab === "log" ? "var(--color-primary)" : "var(--color-text-secondary)", cursor: "pointer", fontWeight: 600 }}> 撤销记录</button>
+        <button onClick={() => setTab("config")} style={{ padding: "8px 20px", borderRadius: 8, border: tab === "config" ? "2px solid var(--color-primary)" : "1px solid var(--color-border)", background: tab === "config" ? "var(--color-row-selected)" : "var(--color-panel)", color: tab === "config" ? "var(--color-primary)" : "var(--color-text-secondary)", cursor: "pointer", fontWeight: 600 }}>️ 撤销配置</button>
       </div>
 
       {tab === "log" && (
         <div style={{ background: "var(--color-panel)", borderRadius: 10, overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
-              <tr style={{ background: "#fafafa" }}>
+              <tr style={{ background: "var(--color-divider-light)" }}>
                 <th style={{ padding: "10px 14px", textAlign: "left" }}>操作时间</th>
                 <th style={{ padding: "10px 14px", textAlign: "left" }}>操作类型</th>
                 <th style={{ padding: "10px 14px", textAlign: "left" }}>操作人</th>
@@ -89,21 +89,21 @@ export default function AdminUndoPage() {
                 const t = TYPE_MAP[r.operation_type];
                 const expired = new Date(r.expires_at) < new Date();
                 return (
-                  <tr key={r.id} style={{ borderBottom: "1px solid #f5f5f5" }}>
-                    <td style={{ padding: "8px 14px", fontSize: 12, color: "#888" }}>{new Date(r.created_at).toLocaleString()}</td>
+                  <tr key={r.id} style={{ borderBottom: "1px solid var(--color-divider)" }}>
+                    <td style={{ padding: "8px 14px", fontSize: 12, color: "var(--color-text-secondary)" }}>{new Date(r.created_at).toLocaleString()}</td>
                     <td style={{ padding: "8px 14px" }}>
-                      <span style={{ padding: "2px 10px", borderRadius: 10, fontSize: 11, fontWeight: 500, background: `${t?.color ?? "#888"}20`, color: t?.color ?? "#888" }}>{t?.label ?? r.operation_type}</span>
+                      <span style={{ padding: "2px 10px", borderRadius: 10, fontSize: 11, fontWeight: 500, background: `${t?.color ?? "var(--color-text-secondary)"}20`, color: t?.color ?? "var(--color-text-secondary)" }}>{t?.label ?? r.operation_type}</span>
                     </td>
                     <td style={{ padding: "8px 14px" }}>{r.operator_name}</td>
                     <td style={{ padding: "8px 14px", fontFamily: "monospace", fontSize: 12 }}>#{r.target_id}</td>
                     <td style={{ padding: "8px 14px", textAlign: "center" }}>
-                      {r.reverted ? <span style={{ color: "#22c55e" }}>✅ 已撤销</span> : expired ? <span style={{ color: "#888" }}>⏰ 已过期</span> : <span style={{ color: "#f59e0b" }}>🟡 可撤销</span>}
+                      {r.reverted ? <span style={{ color: "var(--color-success-text)" }}> 已撤销</span> : expired ? <span style={{ color: "var(--color-text-secondary)" }}>⏰ 已过期</span> : <span style={{ color: "var(--color-warning-text)" }}> 可撤销</span>}
                     </td>
-                    <td style={{ padding: "8px 14px", textAlign: "center", fontSize: 12, color: "#888" }}>{new Date(r.expires_at).toLocaleString()}</td>
+                    <td style={{ padding: "8px 14px", textAlign: "center", fontSize: 12, color: "var(--color-text-secondary)" }}>{new Date(r.expires_at).toLocaleString()}</td>
                     <td style={{ padding: "8px 14px", textAlign: "center" }}>
                       <button onClick={() => setDetail(r)} style={{ padding: "2px 10px", border: "1px solid var(--color-border)", borderRadius: 4, background: "var(--color-panel)", cursor: "pointer", marginRight: 4 }}>详情</button>
                       {!r.reverted && !expired && (
-                        <button onClick={() => undoRecord(r.id)} style={{ padding: "2px 10px", border: "1px solid #22c55e", borderRadius: 4, background: "#f0fdf4", color: "#22c55e", cursor: "pointer", fontWeight: 600 }}>
+                        <button onClick={() => undoRecord(r.id)} style={{ padding: "2px 10px", border: "1px solid var(--color-success-text)", borderRadius: 4, background: "var(--color-success-bg)", color: "var(--color-success-text)", cursor: "pointer", fontWeight: 600 }}>
                           撤销 <HelpIcon text={`恢复到 ${r.operation_label} 操作之前的状态。此操作不可逆。`} />
                         </button>
                       )}
@@ -111,7 +111,7 @@ export default function AdminUndoPage() {
                   </tr>
                 );
               })}
-              {records.length === 0 && <tr><td colSpan={7} style={{ padding: 40, textAlign: "center", color: "#888" }}>暂无撤销记录</td></tr>}
+              {records.length === 0 && <tr><td colSpan={7} style={{ padding: 40, textAlign: "center", color: "var(--color-text-secondary)" }}>暂无撤销记录</td></tr>}
             </tbody>
           </table>
         </div>
@@ -119,25 +119,25 @@ export default function AdminUndoPage() {
 
       {tab === "config" && (
         <div style={card}>
-          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}>⚙️ 撤销窗口配置 <HelpIcon text="配置撤销窗口时长（秒）和哪些操作类型可以撤销。" /></h3>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid #f5f5f5" }}>
-            <span style={{ width: 140, fontSize: 13, color: "#666" }}>撤销窗口 (秒)</span>
+          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}>️ 撤销窗口配置 <HelpIcon text="配置撤销窗口时长（秒）和哪些操作类型可以撤销。" /></h3>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--color-divider)" }}>
+            <span style={{ width: 140, fontSize: 13, color: "var(--color-text-secondary)" }}>撤销窗口 (秒)</span>
             <input type="number" value={timeoutSec} onChange={e => setTimeoutSec(Number(e.target.value))}
               style={{ width: 100, padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4, textAlign: "center" }} />
-            <span style={{ fontSize: 12, color: "#888" }}>操作后在此时间内可撤销，建议 300-600 秒</span>
+            <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>操作后在此时间内可撤销，建议 300-600 秒</span>
           </div>
           <div style={{ padding: "12px 0" }}>
             <span style={{ fontSize: 13, fontWeight: 600 }}>可撤销操作类型 <HelpIcon text="勾选的操作类型将在执行时自动记录快照，支持在窗口期内撤销。" /></span>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
               {Object.entries(TYPE_MAP).map(([key, val]) => (
-                <label key={key} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 12px", border: `2px solid ${enabledTypes.includes(key) ? val.color : "#d9d9d9"}`, borderRadius: 6, cursor: "pointer", background: enabledTypes.includes(key) ? `${val.color}10` : "transparent" }}>
+                <label key={key} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 12px", border: `2px solid ${enabledTypes.includes(key) ? val.color : "var(--color-border)"}`, borderRadius: 6, cursor: "pointer", background: enabledTypes.includes(key) ? `${val.color}10` : "transparent" }}>
                   <input type="checkbox" checked={enabledTypes.includes(key)} onChange={() => setEnabledTypes(enabledTypes.includes(key) ? enabledTypes.filter(t => t !== key) : [...enabledTypes, key])} />
-                  <span style={{ fontSize: 12, color: enabledTypes.includes(key) ? val.color : "#888" }}>{val.label}</span>
+                  <span style={{ fontSize: 12, color: enabledTypes.includes(key) ? val.color : "var(--color-text-secondary)" }}>{val.label}</span>
                 </label>
               ))}
             </div>
           </div>
-          <button onClick={saveConfig} style={{ marginTop: 12, padding: "8px 24px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存配置</button>
+          <button onClick={saveConfig} style={{ marginTop: 12, padding: "8px 24px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存配置</button>
         </div>
       )}
 
@@ -146,12 +146,12 @@ export default function AdminUndoPage() {
         {detail && (
           <div style={{ fontSize: 13 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
-              <div><span style={{ color: "#888" }}>操作类型：</span>{TYPE_MAP[detail.operation_type]?.label ?? detail.operation_type}</div>
-              <div><span style={{ color: "#888" }}>操作人：</span>{detail.operator_name}</div>
-              <div><span style={{ color: "#888" }}>目标类型：</span>{detail.target_type}</div>
-              <div><span style={{ color: "#888" }}>目标ID：</span>#{detail.target_id}</div>
-              <div><span style={{ color: "#888" }}>操作时间：</span>{new Date(detail.created_at).toLocaleString()}</div>
-              <div><span style={{ color: "#888" }}>过期时间：</span>{new Date(detail.expires_at).toLocaleString()}</div>
+              <div><span style={{ color: "var(--color-text-secondary)" }}>操作类型：</span>{TYPE_MAP[detail.operation_type]?.label ?? detail.operation_type}</div>
+              <div><span style={{ color: "var(--color-text-secondary)" }}>操作人：</span>{detail.operator_name}</div>
+              <div><span style={{ color: "var(--color-text-secondary)" }}>目标类型：</span>{detail.target_type}</div>
+              <div><span style={{ color: "var(--color-text-secondary)" }}>目标ID：</span>#{detail.target_id}</div>
+              <div><span style={{ color: "var(--color-text-secondary)" }}>操作时间：</span>{new Date(detail.created_at).toLocaleString()}</div>
+              <div><span style={{ color: "var(--color-text-secondary)" }}>过期时间：</span>{new Date(detail.expires_at).toLocaleString()}</div>
             </div>
             <div style={{ background: "#1e1e1e", color: "#d4d4d4", padding: 12, borderRadius: 6, fontFamily: "monospace", fontSize: 12, whiteSpace: "pre-wrap", maxHeight: 300, overflow: "auto" }}>
               {JSON.stringify(detail.snapshot, null, 2)}

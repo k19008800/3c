@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { HelpIcon, SkeletonGroup } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 
@@ -12,8 +13,8 @@ interface FunnelData { stages: FunnelStage[]; rates: { visit_to_register: number
 
 const MOCK: FunnelData = {
   stages: [
-    { name: "网站访问", value: 12000, color: "#4f6ef7" },
-    { name: "注册账号", value: 4800, color: "#7c3aed" },
+    { name: "网站访问", value: 12000, color: "var(--color-primary)" },
+    { name: "注册账号", value: 4800, color: "var(--color-primary)" },
     { name: "完成实名", value: 2100, color: "#f59e0b" },
     { name: "首次充值", value: 860, color: "#22c55e" },
     { name: "首次调用 API", value: 520, color: "#e53935" },
@@ -40,13 +41,13 @@ export default function AdminConversionFunnelPage() {
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>转化漏斗</h2>
         <HelpIcon text="conversion_funnel" />
-        {data.demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/conversion/funnel 待接入）</span>}
+        {data.demo && <span style={{ fontSize: 11, color: "#f59e0b" }}><PIcon name="alert" size={14}/> 演示数据（后端 /admin/conversion/funnel 待接入）</span>}
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
         {["week", "month", "quarter", "year"].map(p => (
           <button key={p} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--color-border)",
-            background: period === p ? "#4f6ef7" : "#fff", color: period === p ? "#fff" : "#333", cursor: "pointer", fontSize: 13 }}
+            background: period === p ? "var(--color-primary)" : "#fff", color: period === p ? "#fff" : "#333", cursor: "pointer", fontSize: 13 }}
             onClick={() => setPeriod(p)}>
             {{ week: "本周", month: "本月", quarter: "本季", year: "本年" }[p]}
           </button>
@@ -54,7 +55,7 @@ export default function AdminConversionFunnelPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>📊 转化漏斗 <HelpIcon text="conversion_funnel" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="chart" size={14}/> 转化漏斗 <HelpIcon text="conversion_funnel" /></div>
         {funnelQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <div>
             {data.stages.map((s: FunnelStage, i: number) => {
@@ -82,9 +83,9 @@ export default function AdminConversionFunnelPage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginTop: 20 }}>
-        {[{ icon: "📊", label: "访问到注册", value: `${data.rates.visit_to_register}%` },
-          { icon: "💳", label: "注册到充值", value: `${data.rates.register_to_topup}%` },
-          { icon: "🚀", label: "充值到调用", value: `${data.rates.topup_to_api}%` },
+        {[{ icon: <PIcon name="chart" size={20}/>, label: "访问到注册", value: `${data.rates.visit_to_register}%` },
+          { icon: <PIcon name="card" size={20}/>, label: "注册到充值", value: `${data.rates.register_to_topup}%` },
+          { icon: <PIcon name="rocket" size={20}/>, label: "充值到调用", value: `${data.rates.topup_to_api}%` },
         ].map((s, i) => (
           <div key={i} style={card}>
             <div style={{ fontSize: 24 }}>{s.icon}</div>

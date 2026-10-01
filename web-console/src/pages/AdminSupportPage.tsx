@@ -135,10 +135,10 @@ export default function AdminSupportPage() {
         客服效能
         <HelpIcon text={activeHelp} level="page" />
       </h2>
-      <p style={{ color: "#94a3b8", marginTop: 0, fontSize: 13 }}>智能客服辅助与客服效能统计 · SPEC-§28</p>
+      <p style={{ color: "var(--color-text-muted)", marginTop: 0, fontSize: 13 }}>智能客服辅助与客服效能统计 · SPEC-§28</p>
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         {TABS.map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)} style={{ ...btnBase, background: tab === k ? "var(--color-primary)" : "var(--color-panel)", color: tab === k ? "#fff" : "#475569", border: `1px solid var(--color-border)` }}>{l}</button>
+          <button key={k} onClick={() => setTab(k)} style={{ ...btnBase, background: tab === k ? "var(--color-primary)" : "var(--color-panel)", color: tab === k ? "#fff" : "var(--color-text-secondary)", border: `1px solid var(--color-border)` }}>{l}</button>
         ))}
       </div>
 
@@ -148,10 +148,10 @@ export default function AdminSupportPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
             <h4 style={{ margin: 0 }}>客服效能指标</h4>
             {PERIOD_OPTIONS.map(([v, l]) => (
-              <button key={v} onClick={() => setPeriod(v)} style={{ ...btnBase, background: period === v ? "var(--color-primary)" : "var(--color-bg)", color: period === v ? "#fff" : "#475569", padding: "4px 12px", fontSize: 12 }}>{l}</button>
+              <button key={v} onClick={() => setPeriod(v)} style={{ ...btnBase, background: period === v ? "var(--color-primary)" : "var(--color-bg)", color: period === v ? "#fff" : "var(--color-text-secondary)", padding: "4px 12px", fontSize: 12 }}>{l}</button>
             ))}
           </div>
-          {kpiQ.isLoading ? <div style={{ color: "#94a3b8" }}>加载中...</div> : kpiQ.isError ? <div style={{ color: "var(--color-danger-text)" }}>加载失败：{extractError(kpiQ.error)}</div> : kpi && (
+          {kpiQ.isLoading ? <div style={{ color: "var(--color-text-muted)" }}>加载中...</div> : kpiQ.isError ? <div style={{ color: "var(--color-danger-text)" }}>加载失败：{extractError(kpiQ.error)}</div> : kpi && (
             <>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
                 {[
@@ -169,7 +169,7 @@ export default function AdminSupportPage() {
                   </div>
                 ))}
               </div>
-              <div style={{ fontSize: 12, color: "#94a3b8" }}>
+              <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
                 平均响应 = 用户消息到客服首次回复的间隔均值（chat_messages）；平均解决 = 工单创建到解决时长均值；满意度 = 工单 metadata.satisfaction（0-5）。
               </div>
             </>
@@ -187,8 +187,8 @@ export default function AdminSupportPage() {
               {Object.entries(TICKET_STATUS_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
-          {ticketsQ.isLoading ? <div style={{ color: "#94a3b8" }}>加载中...</div> : ticketsQ.isError ? <div style={{ color: "var(--color-danger-text)" }}>加载失败：{extractError(ticketsQ.error)}</div> : tickets.length === 0 ? (
-            <div style={{ color: "#94a3b8" }}>暂无工单</div>
+          {ticketsQ.isLoading ? <div style={{ color: "var(--color-text-muted)" }}>加载中...</div> : ticketsQ.isError ? <div style={{ color: "var(--color-danger-text)" }}>加载失败：{extractError(ticketsQ.error)}</div> : tickets.length === 0 ? (
+            <div style={{ color: "var(--color-text-muted)" }}>暂无工单</div>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead><tr style={{ color: "var(--color-text-secondary)", textAlign: "left" }}>
@@ -235,9 +235,9 @@ export default function AdminSupportPage() {
                 意图: {intentResult.intent ?? "未知"} <span style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>置信度 {(intentResult.confidence * 100).toFixed(0)}%</span>
               </div>
               {intentResult.matched_keywords?.length > 0 && <div style={{ color: "var(--color-text-secondary)", fontSize: 13, marginTop: 4 }}>命中关键词: {intentResult.matched_keywords.join("、")}</div>}
-              {intentResult.reply && <div style={{ marginTop: 8, padding: 10, background: "#eef2ff", borderRadius: 6, fontSize: 14 }}>💡 推荐回复: {intentResult.reply}</div>}
+              {intentResult.reply && <div style={{ marginTop: 8, padding: 10, background: "var(--color-row-selected)", borderRadius: 6, fontSize: 14 }}> 推荐回复: {intentResult.reply}</div>}
               {(intentResult.suggested_actions ?? []).map((a: any, i: number) => (
-                <div key={i} style={{ marginTop: 6, fontSize: 13, color: "#1e40af" }}>📌 {a.label} <span style={{ color: "#94a3b8" }}>({a.action})</span></div>
+                <div key={i} style={{ marginTop: 6, fontSize: 13, color: "#1e40af" }}> {a.label} <span style={{ color: "var(--color-text-muted)" }}>({a.action})</span></div>
               ))}
             </div>
           )}
@@ -258,16 +258,16 @@ export default function AdminSupportPage() {
                 <div style={{ padding: 12, background: "var(--color-bg)", borderRadius: 8, marginBottom: 12 }}>
                   <strong>{diagResult.user.username} ({diagResult.user.email})</strong>
                   <div style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>余额: ¥{diagResult.user.balance} · 状态: {diagResult.user.status}</div>
-                  {diagResult.balance_warning && <div style={{ color: "#d97706", fontWeight: 600, marginTop: 4 }}>⚠ {diagResult.balance_warning.note}</div>}
+                  {diagResult.balance_warning && <div style={{ color: "#d97706", fontWeight: 600, marginTop: 4 }}> {diagResult.balance_warning.note}</div>}
                 </div>
               )}
               {diagResult.analysis && (
-                <div style={{ padding: 12, background: "#eef2ff", borderRadius: 8, marginBottom: 12 }}>
-                  <strong>🔍 分析结果</strong>
-                  <div style={{ fontSize: 13, color: "#475569", marginTop: 4 }}>
+                <div style={{ padding: 12, background: "var(--color-row-selected)", borderRadius: 8, marginBottom: 12 }}>
+                  <strong> 分析结果</strong>
+                  <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 4 }}>
                     调用 {diagResult.analysis.total_calls} 次 · 成功 {diagResult.analysis.success_count} · 失败 {diagResult.analysis.failed_count} · 成功率 {diagResult.analysis.success_rate}% · 平均延迟 {diagResult.analysis.avg_latency_ms}ms
                   </div>
-                  <div style={{ fontSize: 13, color: "#1e40af", marginTop: 4 }}>💡 {diagResult.analysis.suggestion}</div>
+                  <div style={{ fontSize: 13, color: "#1e40af", marginTop: 4 }}> {diagResult.analysis.suggestion}</div>
                 </div>
               )}
               {(diagResult.recent_calls ?? []).length > 0 && (
@@ -306,18 +306,18 @@ export default function AdminSupportPage() {
               <button onClick={() => keyGenMut.mutate()} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", alignSelf: "flex-start" }}>生成</button>
             </div>
             {genKey && (
-              <div style={{ marginTop: 12, padding: 12, background: "#1e293b", color: "#e2e8f0", borderRadius: 8, fontFamily: "monospace", wordBreak: "break-all" }}>
+              <div style={{ marginTop: 12, padding: 12, background: "var(--color-ink-800)", color: "#e2e8f0", borderRadius: 8, fontFamily: "monospace", wordBreak: "break-all" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span>{genKey.key}</span>
                   <CopyButton text={genKey.key} label="复制 Key" />
                 </div>
-                <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 6 }}>有效期至: {genKey.expires_at ? new Date(genKey.expires_at).toLocaleString() : "—"} · 额度: {genKey.token_limit} tokens / ¥{genKey.cost_limit}</div>
+                <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 6 }}>有效期至: {genKey.expires_at ? new Date(genKey.expires_at).toLocaleString() : "—"} · 额度: {genKey.token_limit} tokens / ¥{genKey.cost_limit}</div>
               </div>
             )}
           </div>
           <div style={card}>
             <h4 style={{ margin: "0 0 12px" }}>我的测试 Key</h4>
-            {keys.length === 0 ? <div style={{ color: "#94a3b8" }}>暂无测试 Key</div> : (
+            {keys.length === 0 ? <div style={{ color: "var(--color-text-muted)" }}>暂无测试 Key</div> : (
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead><tr style={{ color: "var(--color-text-secondary)", textAlign: "left" }}>
                   <th style={{ padding: "8px" }}>前缀</th><th style={{ padding: "8px" }}>名称</th><th style={{ padding: "8px" }}>已用</th><th style={{ padding: "8px" }}>状态</th><th style={{ padding: "8px" }}>过期</th><th style={{ padding: "8px" }}>操作</th>
@@ -346,7 +346,7 @@ export default function AdminSupportPage() {
       {tab === "audit" && (
         <div style={card}>
           <h4 style={{ margin: "0 0 12px" }}>客服操作审计</h4>
-          {audit.length === 0 ? <div style={{ color: "#94a3b8" }}>暂无操作记录</div> : (
+          {audit.length === 0 ? <div style={{ color: "var(--color-text-muted)" }}>暂无操作记录</div> : (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead><tr style={{ color: "var(--color-text-secondary)", textAlign: "left" }}>
                 <th style={{ padding: "8px" }}>时间</th><th style={{ padding: "8px" }}>操作者</th><th style={{ padding: "8px" }}>操作类型</th><th style={{ padding: "8px" }}>详情</th>

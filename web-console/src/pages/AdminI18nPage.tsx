@@ -165,7 +165,7 @@ export default function AdminI18nPage() {
   return (
     <div>
       <div style={{ background: "linear-gradient(135deg,#667eea,#764ba2)", color: "#fff", padding: "20px 24px", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ fontSize: 24 }}>🌐</span>
+        <span style={{ fontSize: 24 }}></span>
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>国际化翻译管理
           <HelpIcon text="管理多语言翻译键值。按命名空间分组，支持增删改查。覆盖率即时显示各语言翻译完成度。" level="page" />
         </span>
@@ -180,28 +180,28 @@ export default function AdminI18nPage() {
               <span style={{ fontSize: 13, fontWeight: 600 }}>{l.label}</span>
             </div>
             <div style={{ fontSize: 22, fontWeight: 700, fontFamily: "monospace" }}>{l.pct}%</div>
-            <div style={{ height: 6, borderRadius: 3, background: "#f0f0f0", marginTop: 8, overflow: "hidden" }}>
-              <div style={{ height: "100%", borderRadius: 3, background: l.pct >= 80 ? "#22c55e" : l.pct >= 50 ? "#f59e0b" : "#e53935", width: `${l.pct}%`, transition: "width .6s" }} />
+            <div style={{ height: 6, borderRadius: 3, background: "var(--color-divider)", marginTop: 8, overflow: "hidden" }}>
+              <div style={{ height: "100%", borderRadius: 3, background: l.pct >= 80 ? "var(--color-success-text)" : l.pct >= 50 ? "var(--color-warning-text)" : "var(--color-danger-text)", width: `${l.pct}%`, transition: "width .6s" }} />
             </div>
-            <div style={{ fontSize: 11, color: "#888", marginTop: 4 }}>{l.filled}/{l.total} 项</div>
+            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 4 }}>{l.filled}/{l.total} 项</div>
           </div>
         ))}
       </div>
 
       {/* Filter */}
       <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
-        <span style={{ fontSize: 13, color: "#666" }}>命名空间:</span>
-        {[{ name: "", label: "全部", color: "#666" }, ...NAMESPACES].map((ns) => (
+        <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>命名空间:</span>
+        {[{ name: "", label: "全部", color: "var(--color-text-secondary)" }, ...NAMESPACES].map((ns) => (
           <button key={ns.name} onClick={() => setNamespace(ns.name)} style={{
-            padding: "4px 14px", borderRadius: 14, border: namespace === ns.name ? "2px solid #4f6ef7" : "1px solid var(--color-border)",
-            background: namespace === ns.name ? "#eef2ff" : "var(--color-panel)", color: namespace === ns.name ? "#4f6ef7" : "#666",
+            padding: "4px 14px", borderRadius: 14, border: namespace === ns.name ? "2px solid var(--color-primary)" : "1px solid var(--color-border)",
+            background: namespace === ns.name ? "var(--color-row-selected)" : "var(--color-panel)", color: namespace === ns.name ? "var(--color-primary)" : "var(--color-text-secondary)",
             cursor: "pointer", fontSize: 12, fontWeight: 500,
           }}>{ns.label}</button>
         ))}
         <div style={{ flex: 1 }} />
         <input placeholder="搜索键名/翻译值..." value={search} onChange={(e) => setSearch(e.target.value)}
           style={{ padding: "6px 12px", border: "1px solid var(--color-border)", borderRadius: 6, width: 240, fontSize: 13 }} />
-        <button onClick={() => setShowNew(true)} style={{ padding: "6px 16px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>
+        <button onClick={() => setShowNew(true)} style={{ padding: "6px 16px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>
           + 新增翻译键
           <HelpIcon text="创建新的翻译键。键名全局唯一，建议使用 namespace.key 格式；同一键可分别填写多种语言。" />
         </button>
@@ -209,7 +209,7 @@ export default function AdminI18nPage() {
 
       {/* New entry form */}
       {showNew && (
-        <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, padding: 16, marginBottom: 16 }}>
+        <div style={{ background: "var(--color-success-bg)", border: "1px solid var(--color-success-border)", borderRadius: 8, padding: 16, marginBottom: 16 }}>
           <div style={{ display: "flex", gap: 12, marginBottom: 10 }}>
             <select value={newNs} onChange={(e) => setNewNs(e.target.value)} style={{ padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4 }}>
               {NAMESPACES.map((ns) => <option key={ns.name} value={ns.name}>{ns.label}</option>)}
@@ -218,13 +218,13 @@ export default function AdminI18nPage() {
           </div>
           {LANGS.map((l) => (
             <div key={l.code} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
-              <span style={{ width: 80, fontSize: 13, color: "#666" }}>{l.flag} {l.label}</span>
+              <span style={{ width: 80, fontSize: 13, color: "var(--color-text-secondary)" }}>{l.flag} {l.label}</span>
               <input placeholder={`${l.label}翻译`} value={newValues[l.code] ?? ""} onChange={(e) => setNewValues({ ...newValues, [l.code]: e.target.value })}
                 style={{ flex: 1, padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4 }} />
             </div>
           ))}
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-            <button onClick={createEntry} style={{ padding: "6px 16px", background: "#22c55e", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer" }}>创建</button>
+            <button onClick={createEntry} style={{ padding: "6px 16px", background: "var(--color-success-text)", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer" }}>创建</button>
             <button onClick={() => setShowNew(false)} style={{ padding: "6px 16px", background: "var(--color-border)", border: "none", borderRadius: 4, cursor: "pointer" }}>取消</button>
           </div>
         </div>
@@ -234,7 +234,7 @@ export default function AdminI18nPage() {
       <div style={{ background: "var(--color-panel)", borderRadius: 10, overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
-            <tr style={{ background: "#fafafa" }}>
+            <tr style={{ background: "var(--color-divider-light)" }}>
               <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600 }}>键名</th>
               <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600 }}>命名空间</th>
               {LANGS.map((l) => <th key={l.code} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600 }}>{l.flag}</th>)}
@@ -245,23 +245,23 @@ export default function AdminI18nPage() {
             {filtered.map((e) => {
               const ns = NAMESPACES.find((n) => n.name === e.scope);
               return (
-                <tr key={e.key} style={{ borderBottom: "1px solid #f5f5f5" }}>
-                  <td style={{ padding: "8px 14px", fontFamily: "monospace", fontSize: 12, color: "#4f6ef7" }}>{e.key}</td>
+                <tr key={e.key} style={{ borderBottom: "1px solid var(--color-divider)" }}>
+                  <td style={{ padding: "8px 14px", fontFamily: "monospace", fontSize: 12, color: "var(--color-primary)" }}>{e.key}</td>
                   <td style={{ padding: "8px 14px" }}><span style={{ padding: "2px 10px", borderRadius: 10, fontSize: 11, fontWeight: 500, background: `${ns?.color}20`, color: ns?.color }}>{ns?.label ?? e.scope}</span></td>
                   {LANGS.map((l) => (
                     <td key={l.code} style={{ padding: "8px 14px", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {langValue(e, l) ? <span style={{ color: "#333" }}>{langValue(e, l)}</span> : <span style={{ color: "#e53935", fontStyle: "italic" }}>未翻译</span>}
+                      {langValue(e, l) ? <span style={{ color: "var(--color-text)" }}>{langValue(e, l)}</span> : <span style={{ color: "var(--color-danger-text)", fontStyle: "italic" }}>未翻译</span>}
                     </td>
                   ))}
                   <td style={{ padding: "8px 14px", textAlign: "center" }}>
                     <button onClick={() => openEdit(e)} style={{ padding: "2px 10px", border: "1px solid var(--color-border)", borderRadius: 4, background: "var(--color-panel)", cursor: "pointer", marginRight: 4 }}>编辑</button>
-                    <button onClick={() => deleteEntry(e)} style={{ padding: "2px 10px", border: "1px solid #e53935", borderRadius: 4, background: "var(--color-panel)", color: "#e53935", cursor: "pointer" }}>删除</button>
+                    <button onClick={() => deleteEntry(e)} style={{ padding: "2px 10px", border: "1px solid var(--color-danger-text)", borderRadius: 4, background: "var(--color-panel)", color: "var(--color-danger-text)", cursor: "pointer" }}>删除</button>
                   </td>
                 </tr>
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={7} style={{ padding: 40, textAlign: "center", color: "#888" }}>暂无翻译数据</td></tr>
+              <tr><td colSpan={7} style={{ padding: 40, textAlign: "center", color: "var(--color-text-secondary)" }}>暂无翻译数据</td></tr>
             )}
           </tbody>
         </table>
@@ -271,21 +271,21 @@ export default function AdminI18nPage() {
       <Modal open={!!editing} onClose={() => setEditing(null)} title={`编辑翻译 — ${editing?.key ?? ""}`}>
         {editing && (
           <div>
-            <div style={{ background: "#f5f5f5", borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontFamily: "monospace", fontSize: 13 }}>{editing.key}</div>
+            <div style={{ background: "var(--color-divider)", borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontFamily: "monospace", fontSize: 13 }}>{editing.key}</div>
             {LANGS.map((l) => (
               <div key={l.code} style={{ display: "flex", gap: 10, marginBottom: 10, alignItems: "center" }}>
-                <span style={{ width: 90, fontSize: 13, color: "#888" }}>{l.flag} {l.label}</span>
+                <span style={{ width: 90, fontSize: 13, color: "var(--color-text-secondary)" }}>{l.flag} {l.label}</span>
                 {editing.langs[l.lang] ? (
                   <input value={editValues[l.code] ?? ""} onChange={(e) => setEditValues({ ...editValues, [l.code]: e.target.value })}
                     style={{ flex: 1, padding: "8px 12px", border: "1px solid var(--color-border)", borderRadius: 6, fontSize: 13 }} />
                 ) : (
-                  <span style={{ flex: 1, fontSize: 12, color: "#e53935", fontStyle: "italic" }}>该语言尚未翻译，请使用「新增翻译键」补充</span>
+                  <span style={{ flex: 1, fontSize: 12, color: "var(--color-danger-text)", fontStyle: "italic" }}>该语言尚未翻译，请使用「新增翻译键」补充</span>
                 )}
               </div>
             ))}
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
               <button onClick={() => setEditing(null)} style={{ padding: "8px 16px", border: "1px solid var(--color-border)", borderRadius: 6, background: "var(--color-panel)", cursor: "pointer" }}>取消</button>
-              <button onClick={saveEdit} style={{ padding: "8px 16px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>保存翻译</button>
+              <button onClick={saveEdit} style={{ padding: "8px 16px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>保存翻译</button>
             </div>
           </div>
         )}

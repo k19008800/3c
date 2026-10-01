@@ -64,7 +64,7 @@ export default function AdminSysCachePage() {
       <h2>
         缓存管理
         <HelpIcon text="缓存管理控制台 — 查看 Redis 缓存键列表、按模式搜索、删除指定缓存键、一键清理业务缓存（billing:*）。" level="page" />
-        {demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/sys/cache 待接入）</span>}
+        {demo && <span style={{ fontSize: 11, color: "var(--color-warning-text)" }}>️ 演示数据（后端 /admin/sys/cache 待接入）</span>}
       </h2>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
@@ -85,7 +85,7 @@ export default function AdminSysCachePage() {
             </button>
           </div>
         )) : (
-          <div style={{ padding: 32, textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+          <div style={{ padding: 32, textAlign: "center", color: "var(--color-text-muted)", fontSize: 13 }}>
             {q.data ? "未找到匹配的缓存键" : "加载中..."}
           </div>
         )}

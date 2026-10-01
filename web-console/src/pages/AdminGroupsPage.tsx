@@ -77,8 +77,8 @@ const MODEL_TAG_STYLE: CSSProperties = {
   display: "inline-block",
   padding: "2px 8px",
   borderRadius: 4,
-  background: "#f0f2ff",
-  color: "#4f6ef7",
+  background: "var(--color-primary-lighter)",
+  color: "var(--color-primary)",
   fontSize: 11,
   border: "1px solid rgba(79,110,247,0.12)",
   margin: "1px 2px",
@@ -88,8 +88,8 @@ const MODEL_TAG_STYLE: CSSProperties = {
 const MODEL_MORE_STYLE: CSSProperties = {
   padding: "2px 8px",
   borderRadius: 4,
-  background: "#f5f5f5",
-  color: "#888",
+  background: "var(--color-divider)",
+  color: "var(--color-text-secondary)",
   fontSize: 11,
   margin: "1px 2px",
 };
@@ -100,7 +100,7 @@ const MODEL_MORE_STYLE: CSSProperties = {
  */
 function renderModels(models: string[]) {
   if (models.length === 0) {
-    return <span style={{ color: "#bbb", fontSize: 12 }}>全部模型</span>;
+    return <span style={{ color: "var(--color-text-muted)", fontSize: 12 }}>全部模型</span>;
   }
   const shown = models.slice(0, 3);
   return (
@@ -228,11 +228,11 @@ function GroupFormModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={initial ? `✏️ 编辑分组 · ${initial.name}` : "＋ 新建分组"} width={560}>
+    <Modal open={open} onClose={onClose} title={initial ? `️ 编辑分组 · ${initial.name}` : "＋ 新建分组"} width={560}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div className="c3-form-group" style={{ marginBottom: 0 }}>
           <label>
-            分组名称 <span style={{ color: "#e53935" }}>*</span>
+            分组名称 <span style={{ color: "var(--color-danger-text)" }}>*</span>
             <HelpIcon text="分组的唯一名称，用于成员归属展示与权限识别，最多 50 个字符" />
           </label>
           <input type="text" placeholder="如：基础模型组" value={form.name} onChange={(e) => set({ name: e.target.value })} />
@@ -292,13 +292,13 @@ function GroupFormModal({
           />
         </div>
 
-        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#333", cursor: "pointer" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--color-text)", cursor: "pointer" }}>
           <input type="checkbox" checked={form.isDefault} onChange={(e) => set({ isDefault: e.target.checked })} />
           设为默认组（新注册用户自动归属，同一时刻仅一个默认组）
           <HelpIcon text="默认组仅允许一个：设为默认后其他默认组会自动复位；默认组不可删除" />
         </label>
 
-        {error && <div style={{ color: "#e53935", fontSize: 13 }}>{error}</div>}
+        {error && <div style={{ color: "var(--color-danger-text)", fontSize: 13 }}>{error}</div>}
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, paddingTop: 6, alignItems: "center" }}>
           <button type="button" className="c3-btn c3-btn--default c3-btn--sm" onClick={onClose}>取消</button>
@@ -411,7 +411,7 @@ export default function AdminGroupsPage() {
       title: "分组名称",
       dataIndex: "name",
       render: (_, r) => (
-        <span style={{ fontWeight: 600, color: "#333" }}>
+        <span style={{ fontWeight: 600, color: "var(--color-text)" }}>
           {r.name}
           {r.isDefault && (
             <span style={{ marginLeft: 6 }}>
@@ -425,31 +425,31 @@ export default function AdminGroupsPage() {
       key: "description",
       title: "描述",
       dataIndex: "description",
-      render: (v) => (v ? <span style={{ color: "#888" }}>{String(v)}</span> : <span style={{ color: "#bbb" }}>-</span>),
+      render: (v) => (v ? <span style={{ color: "var(--color-text-secondary)" }}>{String(v)}</span> : <span style={{ color: "var(--color-text-muted)" }}>-</span>),
     },
     {
       key: "pricingGroup",
       title: "定价分组",
       dataIndex: "pricingGroup",
-      render: (v) => (v ? <Tag type="blue">{String(v)}</Tag> : <span style={{ color: "#bbb" }}>默认</span>),
+      render: (v) => (v ? <Tag type="blue">{String(v)}</Tag> : <span style={{ color: "var(--color-text-muted)" }}>默认</span>),
     },
     {
       key: "rateLimitQps",
       title: "QPS 上限",
       dataIndex: "rateLimitQps",
-      render: (v) => (v != null ? String(v) : <span style={{ color: "#bbb" }}>不限</span>),
+      render: (v) => (v != null ? String(v) : <span style={{ color: "var(--color-text-muted)" }}>不限</span>),
     },
     {
       key: "rateLimitTpm",
       title: "TPM 上限",
       dataIndex: "rateLimitTpm",
-      render: (v) => (v != null ? String(v) : <span style={{ color: "#bbb" }}>不限</span>),
+      render: (v) => (v != null ? String(v) : <span style={{ color: "var(--color-text-muted)" }}>不限</span>),
     },
     {
       key: "dailyQuota",
       title: "日额度(元)",
       dataIndex: "dailyQuota",
-      render: (v) => (v != null ? `¥${v}` : <span style={{ color: "#bbb" }}>不限</span>),
+      render: (v) => (v != null ? `¥${v}` : <span style={{ color: "var(--color-text-muted)" }}>不限</span>),
     },
     {
       key: "modelWhitelist",
@@ -463,7 +463,7 @@ export default function AdminGroupsPage() {
       title: "默认组",
       dataIndex: "isDefault",
       render: (v) =>
-        v ? <Tag type="purple">默认</Tag> : <span style={{ color: "#bbb" }}>—</span>,
+        v ? <Tag type="purple">默认</Tag> : <span style={{ color: "var(--color-text-muted)" }}>—</span>,
     },
     {
       key: "status",
@@ -508,12 +508,12 @@ export default function AdminGroupsPage() {
 
   /* ── 成员列定义 ── */
   const memberColumns: ColumnDef<GroupMember>[] = [
-    { key: "email", title: "邮箱", dataIndex: "email", render: (v) => <span style={{ color: "#333" }}>{String(v)}</span> },
+    { key: "email", title: "邮箱", dataIndex: "email", render: (v) => <span style={{ color: "var(--color-text)" }}>{String(v)}</span> },
     {
       key: "name",
       title: "名称",
       dataIndex: "name",
-      render: (v) => (v ? String(v) : <span style={{ color: "#bbb" }}>-</span>),
+      render: (v) => (v ? String(v) : <span style={{ color: "var(--color-text-muted)" }}>-</span>),
     },
     { key: "joinedAt", title: "加入时间", dataIndex: "joinedAt", render: (v) => String(v).slice(0, 10) },
     {
@@ -524,7 +524,7 @@ export default function AdminGroupsPage() {
           <select
             value={pendingGroup[m.userId] ?? membersGroup?.id ?? ""}
             onChange={(e) => setPendingGroup((prev) => ({ ...prev, [m.userId]: Number(e.target.value) }))}
-            style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid #d9d9d9", fontSize: 12, background: "#fff", color: "#333" }}
+            style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 12, background: "#fff", color: "var(--color-text)" }}
           >
             {(groupsQ.data ?? []).map((g) => (
               <option key={g.id} value={g.id} disabled={g.status !== "active"}>
@@ -563,7 +563,7 @@ export default function AdminGroupsPage() {
       />
 
       <Panel
-        title="👥 用户分组"
+        title=" 用户分组"
         help="分组决定成员的可用模型与配额：模型白名单为空 = 全部模型可用；QPS/TPM/日额度为空 = 不限制；默认组仅一个，新注册用户自动归属，且不可删除。"
         extra={
           <>
@@ -580,9 +580,9 @@ export default function AdminGroupsPage() {
           <EmptyState title="暂无分组" description="点击右上角「＋ 新增分组」创建第一个用户分组" />
         ) : (
           <>
-            <Table columns={columns} dataSource={groups} rowKey="id" />
+            <Table className="cm-wide" columns={columns} dataSource={groups} rowKey="id" />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
-              <span style={{ fontSize: 12, color: "#888" }}>共 {groups.length} 个分组</span>
+              <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>共 {groups.length} 个分组</span>
             </div>
           </>
         )}
@@ -607,7 +607,7 @@ export default function AdminGroupsPage() {
       <Modal
         open={!!membersGroup}
         onClose={() => setMembersGroup(null)}
-        title={`👥 成员列表 · ${membersGroup?.name ?? ""}`}
+        title={` 成员列表 · ${membersGroup?.name ?? ""}`}
         width={760}
       >
         {membersGroup &&
@@ -617,9 +617,9 @@ export default function AdminGroupsPage() {
             <EmptyState title="暂无成员" description="该分组下还没有用户，可在其他分组的成员列表中将用户移入本组" />
           ) : (
             <>
-              <Table columns={memberColumns} dataSource={membersQ.data?.list ?? []} rowKey="id" />
+              <Table className="cm-wide" columns={memberColumns} dataSource={membersQ.data?.list ?? []} rowKey="id" />
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, flexWrap: "wrap", gap: 8 }}>
-                <span style={{ fontSize: 12, color: "#888" }}>共 {membersQ.data?.total ?? 0} 名成员</span>
+                <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>共 {membersQ.data?.total ?? 0} 名成员</span>
                 <Pagination
                   current={memberPage}
                   total={membersQ.data?.total ?? 0}

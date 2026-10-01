@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../../lib/api";
 import { HelpIcon, Modal, SkeletonGroup, useToast, ConfirmPopover, EmptyState } from "@3cloud/shared-ui";
@@ -87,23 +88,23 @@ export default function AdminAgentApprovalsPage() {
     onError: (e: any) => { toast.error(extractError(e)); },
   });
 
-  const statCard = (color: string, badge: number, icon: string, label: string, value: number, unit: string) => (
+  const statCard = (color: string, badge: number, icon: ReactNode, label: string, value: number, unit: string) => (
     <div style={{ ...card, display: "flex", alignItems: "center", gap: 12, padding: "16px 20px" }}>
       <div style={{ width: 38, height: 38, borderRadius: 10, background: color, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 700 }}>{badge}</div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 12, color: "#888" }}>{icon} {label}</div>
-        <div style={{ fontSize: 20, fontWeight: 700 }}>{value}<span style={{ fontSize: 12, color: "#888", marginLeft: 4 }}>{unit}</span></div>
+        <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{icon} {label}</div>
+        <div style={{ fontSize: 20, fontWeight: 700 }}>{value}<span style={{ fontSize: 12, color: "var(--color-text-secondary)", marginLeft: 4 }}>{unit}</span></div>
       </div>
     </div>
   );
 
-  const subTab = (key: "pending" | "approved" | "rejected", icon: string, label: string, count?: number) => (
+  const subTab = (key: "pending" | "approved" | "rejected", icon: ReactNode, label: string, count?: number) => (
     <button onClick={() => setTab(key)} style={{
-      padding: "8px 20px", borderRadius: 8, border: tab === key ? "2px solid #4f6ef7" : "1px solid var(--color-border)",
-      background: tab === key ? "#eef2ff" : "var(--color-panel)", color: tab === key ? "#4f6ef7" : "#666",
+      padding: "8px 20px", borderRadius: 8, border: tab === key ? "2px solid var(--color-primary)" : "1px solid var(--color-border)",
+      background: tab === key ? "var(--color-row-selected)" : "var(--color-panel)", color: tab === key ? "var(--color-primary)" : "var(--color-text-secondary)",
       cursor: "pointer", fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 6,
     }}>
-      {icon} {label} {count != null && <span style={{ background: tab === key ? "#4f6ef7" : "#e0e0e0", color: tab === key ? "#fff" : "#888", borderRadius: 10, padding: "0 7px", fontSize: 11 }}>{count}</span>}
+      {icon} {label} {count != null && <span style={{ background: tab === key ? "var(--color-primary)" : "var(--color-border)", color: tab === key ? "#fff" : "var(--color-text-secondary)", borderRadius: 10, padding: "0 7px", fontSize: 11 }}>{count}</span>}
     </button>
   );
 
@@ -115,9 +116,9 @@ export default function AdminAgentApprovalsPage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 20 }}>
-        {statCard("#e53935", summary.pending, "⏳", "待审核报备", summary.pending, "笔")}
-        {statCard("#4f6ef7", summary.approved + summary.bound, "✅", "已通过/已绑定", summary.approved + summary.bound, "笔")}
-        {statCard("#f59e0b", summary.rejected, "❌", "已驳回", summary.rejected, "笔")}
+        {statCard("var(--color-danger-text)", summary.pending, "", "待审核报备", summary.pending, "笔")}
+        {statCard("var(--color-primary)", summary.approved + summary.bound, "", "已通过/已绑定", summary.approved + summary.bound, "笔")}
+        {statCard("var(--color-warning-text)", summary.rejected, "", "已驳回", summary.rejected, "笔")}
       </div>
 
       <div style={{ ...card, marginBottom: 16, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
@@ -131,9 +132,9 @@ export default function AdminAgentApprovalsPage() {
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {subTab("pending", "⏳", "待审核", pending.length)}
-        {subTab("approved", "✅", "已通过", approved.length)}
-        {subTab("rejected", "❌", "已驳回", rejected.length)}
+        {subTab("pending", "", "待审核", pending.length)}
+        {subTab("approved", "", "已通过", approved.length)}
+        {subTab("rejected", "", "已驳回", rejected.length)}
       </div>
 
       {listQ.isLoading ? <SkeletonGroup lines={5} /> : listQ.isError ? (
@@ -144,7 +145,7 @@ export default function AdminAgentApprovalsPage() {
             <div style={card}>
               <div style={{ fontWeight: 600, marginBottom: 12 }}>待审核报备列表 <HelpIcon text="查看待审核的报备列表，点击「通过」或「驳回」进行审核操作。" /></div>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead><tr style={{ background: "#f8f9fa" }}>
+                <thead><tr style={{ background: "var(--color-table-header-bg)" }}>
                   <th style={{ padding: "10px 12px", textAlign: "left" }}>代理商名</th>
                   <th style={{ padding: "10px 12px", textAlign: "left" }}>客户邮箱</th>
                   <th style={{ padding: "10px 12px", textAlign: "left" }}>客户公司名</th>
@@ -154,21 +155,21 @@ export default function AdminAgentApprovalsPage() {
                 </tr></thead>
                 <tbody>
                   {pending.map((p: ApprovalItem) => (
-                    <tr key={p.id} style={{ borderTop: "1px solid #f0f0f0" }}>
+                    <tr key={p.id} style={{ borderTop: "1px solid var(--color-divider)" }}>
                       <td style={{ padding: "10px 12px", fontWeight: 500 }}>{p.agent_name}</td>
                       <td style={{ padding: "10px 12px", fontFamily: "monospace", fontSize: 12 }}>{p.customer_email}</td>
                       <td style={{ padding: "10px 12px" }}>{p.customer_company ?? p.customer_name ?? "-"}</td>
-                      <td style={{ padding: "10px 12px", color: "#888", fontSize: 12 }}>{p.created_at ? new Date(p.created_at).toLocaleString("zh-CN") : "-"}</td>
-                      <td style={{ padding: "10px 12px", color: "#888" }}>{p.note ?? "-"}</td>
+                      <td style={{ padding: "10px 12px", color: "var(--color-text-secondary)", fontSize: 12 }}>{p.created_at ? new Date(p.created_at).toLocaleString("zh-CN") : "-"}</td>
+                      <td style={{ padding: "10px 12px", color: "var(--color-text-secondary)" }}>{p.note ?? "-"}</td>
                       <td style={{ padding: "10px 12px", display: "flex", gap: 4 }}>
-                        <button style={{ ...btnBase, background: "#22c55e", color: "#fff", fontSize: 12 }}
+                        <button style={{ ...btnBase, background: "var(--color-success-text)", color: "#fff", fontSize: 12 }}
                           onClick={() => approveMut.mutate(p.id)}>通过</button>
-                        <button style={{ ...btnBase, background: "#fff", border: "1px solid #e53935", color: "#e53935", fontSize: 12 }}
+                        <button style={{ ...btnBase, background: "#fff", border: "1px solid var(--color-danger-text)", color: "var(--color-danger-text)", fontSize: 12 }}
                           onClick={() => { setRejecting(p); setRejectReason(""); }}>驳回</button>
                       </td>
                     </tr>
                   ))}
-                  {pending.length === 0 && <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#888" }}>暂无待审核报备</td></tr>}
+                  {pending.length === 0 && <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "var(--color-text-secondary)" }}>暂无待审核报备</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -178,7 +179,7 @@ export default function AdminAgentApprovalsPage() {
             <div style={card}>
               <div style={{ fontWeight: 600, marginBottom: 12 }}>已通过报备列表 <HelpIcon text="查看已通过的报备记录（已解绑/未绑定），如需解除绑定关系可点击「解绑」。" /></div>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead><tr style={{ background: "#f8f9fa" }}>
+                <thead><tr style={{ background: "var(--color-table-header-bg)" }}>
                   <th style={{ padding: "10px 12px", textAlign: "left" }}>代理商名</th>
                   <th style={{ padding: "10px 12px", textAlign: "left" }}>客户邮箱</th>
                   <th style={{ padding: "10px 12px", textAlign: "left" }}>通过时间</th>
@@ -187,19 +188,19 @@ export default function AdminAgentApprovalsPage() {
                 </tr></thead>
                 <tbody>
                   {approved.map((a: ApprovalItem) => (
-                    <tr key={a.id} style={{ borderTop: "1px solid #f0f0f0" }}>
+                    <tr key={a.id} style={{ borderTop: "1px solid var(--color-divider)" }}>
                       <td style={{ padding: "10px 12px", fontWeight: 500 }}>{a.agent_name}</td>
                       <td style={{ padding: "10px 12px", fontFamily: "monospace", fontSize: 12 }}>{a.customer_email}</td>
-                      <td style={{ padding: "10px 12px", color: "#888", fontSize: 12 }}>{a.reviewed_at ? new Date(a.reviewed_at).toLocaleString("zh-CN") : "-"}</td>
+                      <td style={{ padding: "10px 12px", color: "var(--color-text-secondary)", fontSize: 12 }}>{a.reviewed_at ? new Date(a.reviewed_at).toLocaleString("zh-CN") : "-"}</td>
                       <td style={{ padding: "10px 12px" }}>{a.reviewer ?? "-"}</td>
                       <td style={{ padding: "10px 12px" }}>
                         <ConfirmPopover title={`确认解绑 ${a.customer_email}？`} onConfirm={() => unbindMut.mutate({ id: a.id, from: "approved" })}>
-                          <button style={{ ...btnBase, background: "#fff", border: "1px solid #ddd", fontSize: 12 }}>解绑</button>
+                          <button style={{ ...btnBase, background: "#fff", border: "1px solid var(--color-border)", fontSize: 12 }}>解绑</button>
                         </ConfirmPopover>
                       </td>
                     </tr>
                   ))}
-                  {approved.length === 0 && <tr><td colSpan={5} style={{ padding: 40, textAlign: "center", color: "#888" }}>暂无已通过报备</td></tr>}
+                  {approved.length === 0 && <tr><td colSpan={5} style={{ padding: 40, textAlign: "center", color: "var(--color-text-secondary)" }}>暂无已通过报备</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -209,7 +210,7 @@ export default function AdminAgentApprovalsPage() {
             <div style={card}>
               <div style={{ fontWeight: 600, marginBottom: 12 }}>已驳回报备列表 <HelpIcon text="查看被驳回的报备记录，可点击「重新审核」重新进入审核流程。" /></div>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead><tr style={{ background: "#f8f9fa" }}>
+                <thead><tr style={{ background: "var(--color-table-header-bg)" }}>
                   <th style={{ padding: "10px 12px", textAlign: "left" }}>代理商名</th>
                   <th style={{ padding: "10px 12px", textAlign: "left" }}>客户邮箱</th>
                   <th style={{ padding: "10px 12px", textAlign: "left" }}>驳回时间</th>
@@ -219,19 +220,19 @@ export default function AdminAgentApprovalsPage() {
                 </tr></thead>
                 <tbody>
                   {rejected.map((r: ApprovalItem) => (
-                    <tr key={r.id} style={{ borderTop: "1px solid #f0f0f0" }}>
+                    <tr key={r.id} style={{ borderTop: "1px solid var(--color-divider)" }}>
                       <td style={{ padding: "10px 12px", fontWeight: 500 }}>{r.agent_name}</td>
                       <td style={{ padding: "10px 12px", fontFamily: "monospace", fontSize: 12 }}>{r.customer_email}</td>
-                      <td style={{ padding: "10px 12px", color: "#888", fontSize: 12 }}>{r.reviewed_at ? new Date(r.reviewed_at).toLocaleString("zh-CN") : "-"}</td>
-                      <td style={{ padding: "10px 12px", color: "#e53935" }}>{r.reject_reason ?? "-"}</td>
+                      <td style={{ padding: "10px 12px", color: "var(--color-text-secondary)", fontSize: 12 }}>{r.reviewed_at ? new Date(r.reviewed_at).toLocaleString("zh-CN") : "-"}</td>
+                      <td style={{ padding: "10px 12px", color: "var(--color-danger-text)" }}>{r.reject_reason ?? "-"}</td>
                       <td style={{ padding: "10px 12px" }}>{r.reviewer ?? "-"}</td>
                       <td style={{ padding: "10px 12px" }}>
-                        <button style={{ ...btnBase, background: "#4f6ef7", color: "#fff", fontSize: 12 }}
+                        <button style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", fontSize: 12 }}
                           onClick={() => rereviewMut.mutate(r.id)}>重新审核</button>
                       </td>
                     </tr>
                   ))}
-                  {rejected.length === 0 && <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#888" }}>暂无已驳回报备</td></tr>}
+                  {rejected.length === 0 && <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "var(--color-text-secondary)" }}>暂无已驳回报备</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -240,7 +241,7 @@ export default function AdminAgentApprovalsPage() {
           <div style={{ ...card, marginTop: 16 }}>
             <div style={{ fontWeight: 600, marginBottom: 12 }}>已绑定客户列表 <HelpIcon text="展示当前所有代理商-客户绑定关系及累计贡献佣金。" /></div>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead><tr style={{ background: "#f8f9fa" }}>
+              <thead><tr style={{ background: "var(--color-table-header-bg)" }}>
                 <th style={{ padding: "10px 12px", textAlign: "left" }}>代理商名</th>
                 <th style={{ padding: "10px 12px", textAlign: "left" }}>客户邮箱</th>
                 <th style={{ padding: "10px 12px", textAlign: "left" }}>绑定时间</th>
@@ -249,19 +250,19 @@ export default function AdminAgentApprovalsPage() {
               </tr></thead>
               <tbody>
                 {bound.map((b: ApprovalItem) => (
-                  <tr key={b.id} style={{ borderTop: "1px solid #f0f0f0" }}>
+                  <tr key={b.id} style={{ borderTop: "1px solid var(--color-divider)" }}>
                     <td style={{ padding: "10px 12px", fontWeight: 500 }}>{b.agent_name}</td>
                     <td style={{ padding: "10px 12px", fontFamily: "monospace", fontSize: 12 }}>{b.customer_email}</td>
-                    <td style={{ padding: "10px 12px", color: "#888", fontSize: 12 }}>{b.reviewed_at ? new Date(b.reviewed_at).toLocaleString("zh-CN") : "-"}</td>
-                    <td style={{ padding: "10px 12px", fontWeight: 600, color: "#22c55e" }}>{fmtMoney(b.total_commission)}</td>
+                    <td style={{ padding: "10px 12px", color: "var(--color-text-secondary)", fontSize: 12 }}>{b.reviewed_at ? new Date(b.reviewed_at).toLocaleString("zh-CN") : "-"}</td>
+                    <td style={{ padding: "10px 12px", fontWeight: 600, color: "var(--color-success-text)" }}>{fmtMoney(b.total_commission)}</td>
                     <td style={{ padding: "10px 12px" }}>
                       <ConfirmPopover title={`确认解绑 ${b.customer_email}？`} onConfirm={() => unbindMut.mutate({ id: b.id, from: "bound" })}>
-                        <button style={{ ...btnBase, background: "#fff", border: "1px solid #ddd", fontSize: 12 }}>解绑</button>
+                        <button style={{ ...btnBase, background: "#fff", border: "1px solid var(--color-border)", fontSize: 12 }}>解绑</button>
                       </ConfirmPopover>
                     </td>
                   </tr>
                 ))}
-                {bound.length === 0 && <tr><td colSpan={5} style={{ padding: 40, textAlign: "center", color: "#888" }}>暂无绑定客户</td></tr>}
+                {bound.length === 0 && <tr><td colSpan={5} style={{ padding: 40, textAlign: "center", color: "var(--color-text-secondary)" }}>暂无绑定客户</td></tr>}
               </tbody>
             </table>
           </div>
@@ -271,17 +272,17 @@ export default function AdminAgentApprovalsPage() {
       {rejecting && (
         <Modal open onClose={() => setRejecting(null)} title={`驳回报备 · ${rejecting.customer_email}`}>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: 10 }}>
-            <div style={{ fontSize: 13, color: "#666" }}>
+            <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
               代理商：{rejecting.agent_name} · 客户：{rejecting.customer_company ?? rejecting.customer_name ?? rejecting.customer_email}
             </div>
-            <label>驳回原因 <span style={{ color: "#e53935" }}>*</span>
+            <label>驳回原因 <span style={{ color: "var(--color-danger-text)" }}>*</span>
               <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)}
                 placeholder="请填写驳回原因（必填）"
                 style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", width: "100%", minHeight: 80, marginTop: 4 }} />
             </label>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
-              <button style={{ ...btnBase, background: "#fff", border: "1px solid #ddd" }} onClick={() => setRejecting(null)}>取消</button>
-              <button style={{ ...btnBase, background: "#e53935", color: "#fff" }}
+              <button style={{ ...btnBase, background: "#fff", border: "1px solid var(--color-border)" }} onClick={() => setRejecting(null)}>取消</button>
+              <button style={{ ...btnBase, background: "var(--color-danger-text)", color: "#fff" }}
                 disabled={!rejectReason.trim()}
                 onClick={() => rejectMut.mutate({ id: rejecting.id, reason: rejectReason.trim() })}>确认驳回</button>
             </div>

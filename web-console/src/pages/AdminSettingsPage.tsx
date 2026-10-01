@@ -1,18 +1,18 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { api } from "../lib/api";
-import { HelpIcon, useToast } from "@3cloud/shared-ui";
+import { HelpIcon, useToast, PageHeader } from "@3cloud/shared-ui";
 
 const cfgSection: React.CSSProperties = { background: "var(--color-panel)", borderRadius: 10, padding: 20, marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
-const cfgRow: React.CSSProperties = { display: "flex", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #f5f5f5", gap: 12 };
-const cfgLabel: React.CSSProperties = { width: 160, fontSize: 13, color: "#666", flexShrink: 0 };
+const cfgRow: React.CSSProperties = { display: "flex", alignItems: "center", padding: "10px 0", borderBottom: "1px solid var(--color-divider)", gap: 12 };
+const cfgLabel: React.CSSProperties = { width: 160, fontSize: 13, color: "var(--color-text-secondary)", flexShrink: 0 };
 const cfgInput: React.CSSProperties = { padding: "6px 10px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13, width: 200 };
-const toggleTrack: React.CSSProperties = { width: 44, height: 24, borderRadius: 12, background: "#d9d9d9", position: "relative", cursor: "pointer", transition: "background .2s", display: "inline-flex", alignItems: "center", flexShrink: 0 };
+const toggleTrack: React.CSSProperties = { width: 44, height: 24, borderRadius: 12, background: "var(--color-border)", position: "relative", cursor: "pointer", transition: "background .2s", display: "inline-flex", alignItems: "center", flexShrink: 0 };
 const toggleDot: React.CSSProperties = { width: 18, height: 18, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: 3, transition: "transform .2s" };
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
-    <div style={{ ...toggleTrack, background: on ? "#22c55e" : "#d9d9d9" }} onClick={() => onChange(!on)}>
+    <div style={{ ...toggleTrack, background: on ? "var(--color-success-text)" : "var(--color-border)" }} onClick={() => onChange(!on)}>
       <div style={{ ...toggleDot, transform: on ? "translateX(20px)" : "translateX(0)" }} />
     </div>
   );
@@ -149,32 +149,27 @@ export default function AdminSettingsPage() {
     return (v.includes("://") ? v : `https://${v}`).replace(/\/+$/, "");
   })();
 
-  if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#888" }}>加载中…</div>;
+  if (loading) return <div style={{ padding: 40, textAlign: "center", color: "var(--color-text-secondary)" }}>加载中…</div>;
 
   return (
     <div>
-      <div style={{ background: "linear-gradient(135deg,#667eea,#764ba2)", color: "#fff", padding: "20px 24px", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ fontSize: 24 }}>⚙️</span>
-        <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>系统设置
-          <HelpIcon text="配置平台全局设置：站点基本信息、限流规则、安全策略、功能开关、API 服务、计费策略。所有变更写入操作审计日志。" level="page" />
-        </span>
-      </div>
+      <PageHeader title="系统设置" help="配置平台全局设置：站点基本信息、限流规则、安全策略、功能开关、API 服务、计费策略。所有变更写入操作审计日志。" />
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         {(["site","rate","security","feature","api","billing"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
-            padding: "8px 20px", borderRadius: 8, border: tab === t ? "2px solid #4f6ef7" : "1px solid var(--color-border)",
-            background: tab === t ? "#eef2ff" : "var(--color-panel)", color: tab === t ? "#4f6ef7" : "#666",
+            padding: "8px 20px", borderRadius: 8, border: tab === t ? "2px solid var(--color-primary)" : "1px solid var(--color-border)",
+            background: tab === t ? "var(--color-row-selected)" : "var(--color-panel)", color: tab === t ? "var(--color-primary)" : "var(--color-text-secondary)",
             cursor: "pointer", fontWeight: 600, fontSize: 13,
           }}>
-            {t === "site" ? "🌐 站点设置" : t === "rate" ? "🚦 限流设置" : t === "security" ? "🛡️ 安全策略" : t === "feature" ? "🔧 功能开关" : t === "api" ? "🔌 API 服务" : "💰 计费策略"}
+            {t === "site" ? " 站点设置" : t === "rate" ? " 限流设置" : t === "security" ? "️ 安全策略" : t === "feature" ? " 功能开关" : t === "api" ? " API 服务" : " 计费策略"}
           </button>
         ))}
       </div>
 
       {tab === "site" && (
         <div style={cfgSection}>
-          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}>🌐 站点基本信息 <HelpIcon text="配置平台对外展示的名称、描述、LOGO、ICP备案号及维护模式。保存后 Portal 门户实时生效。" /></h3>
+          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}> 站点基本信息 <HelpIcon text="配置平台对外展示的名称、描述、LOGO、ICP备案号及维护模式。保存后 Portal 门户实时生效。" /></h3>
           <div style={cfgRow}><span style={cfgLabel}>站点名称</span><input style={cfgInput} value={siteName} onChange={e => setSiteName(e.target.value)} /></div>
           <div style={cfgRow}><span style={cfgLabel}>站点描述</span><input style={{...cfgInput, width: 400}} value={siteDesc} onChange={e => setSiteDesc(e.target.value)} /></div>
           <div style={cfgRow}><span style={cfgLabel}>公司名称</span><input style={{...cfgInput, width: 400}} value={companyName} onChange={e => setCompanyName(e.target.value)} /></div>
@@ -194,15 +189,15 @@ export default function AdminSettingsPage() {
           <div style={cfgRow}>
             <span style={cfgLabel}>维护模式 <HelpIcon text="开启后仅管理员可访问，普通用户看到维护页面。" /></span>
             <Toggle on={maintenanceMode} onChange={setMaintenanceMode} />
-            <span style={{ fontSize: 12, color: maintenanceMode ? "#e53935" : "#888" }}>{maintenanceMode ? "🔴 已开启" : "⚪ 已关闭"}</span>
+            <span style={{ fontSize: 12, color: maintenanceMode ? "var(--color-danger-text)" : "var(--color-text-secondary)" }}>{maintenanceMode ? " 已开启" : " 已关闭"}</span>
           </div>
-          <button onClick={saveSite} style={{ marginTop: 16, padding: "8px 24px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存站点设置</button>
+          <button onClick={saveSite} style={{ marginTop: 16, padding: "8px 24px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存站点设置</button>
         </div>
       )}
 
       {tab === "rate" && (
         <div style={cfgSection}>
-          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}>🚦 全局限流配置 <HelpIcon text="按分钟限制全平台RPM(请求数)和TPM(Token数)，防止单一模型被恶意调用拖垮平台。0=不限制。" /></h3>
+          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}> 全局限流配置 <HelpIcon text="按分钟限制全平台RPM(请求数)和TPM(Token数)，防止单一模型被恶意调用拖垮平台。0=不限制。" /></h3>
           <div style={cfgRow}>
             <span style={cfgLabel}>启用限流 <HelpIcon text="关闭后所有限流规则失效。" /></span>
             <Toggle on={rateLimitEnabled} onChange={setRateLimitEnabled} />
@@ -210,45 +205,45 @@ export default function AdminSettingsPage() {
           <div style={{...cfgRow, opacity: rateLimitEnabled ? 1 : 0.5}}>
             <span style={cfgLabel}>全局 RPM 上限</span>
             <input style={cfgInput} type="number" value={globalRpm} onChange={e => setGlobalRpm(Number(e.target.value))} disabled={!rateLimitEnabled} />
-            <span style={{ fontSize: 12, color: "#888" }}>请求/分钟</span>
+            <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>请求/分钟</span>
           </div>
           <div style={{...cfgRow, opacity: rateLimitEnabled ? 1 : 0.5}}>
             <span style={cfgLabel}>全局 TPM 上限</span>
             <input style={cfgInput} type="number" value={globalTpm} onChange={e => setGlobalTpm(Number(e.target.value))} disabled={!rateLimitEnabled} />
-            <span style={{ fontSize: 12, color: "#888" }}>Token/分钟</span>
+            <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Token/分钟</span>
           </div>
 
-          <div style={{ margin: "20px 0 6px", fontSize: 13, fontWeight: 600, color: "#333" }}>
-            🧮 客户基线限流 <HelpIcon text="企业/个人客户的默认 RPM/TPM 基线。未设例外的客户按此生效，最终受模型全局限流硬顶约束。此配置由「客户管理 → 额度管理」页读取。" />
+          <div style={{ margin: "20px 0 6px", fontSize: 13, fontWeight: 600, color: "var(--color-text)" }}>
+             客户基线限流 <HelpIcon text="企业/个人客户的默认 RPM/TPM 基线。未设例外的客户按此生效，最终受模型全局限流硬顶约束。此配置由「客户管理 → 额度管理」页读取。" />
           </div>
-          <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>额度管理页生效值 = min(客户例外 ?? 客户类型默认, 模型全局限流硬顶)。</div>
+          <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 6 }}>额度管理页生效值 = min(客户例外 ?? 客户类型默认, 模型全局限流硬顶)。</div>
           <div style={{...cfgRow, opacity: rateLimitEnabled ? 1 : 0.5}}>
             <span style={cfgLabel}>企业 RPM 上限</span>
             <input style={cfgInput} type="number" value={enterpriseRpm} onChange={e => setEnterpriseRpm(Number(e.target.value))} disabled={!rateLimitEnabled} />
-            <span style={{ fontSize: 12, color: "#888" }}>请求/分钟 · 企业客户默认</span>
+            <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>请求/分钟 · 企业客户默认</span>
           </div>
           <div style={{...cfgRow, opacity: rateLimitEnabled ? 1 : 0.5}}>
             <span style={cfgLabel}>企业 TPM 上限</span>
             <input style={cfgInput} type="number" value={enterpriseTpm} onChange={e => setEnterpriseTpm(Number(e.target.value))} disabled={!rateLimitEnabled} />
-            <span style={{ fontSize: 12, color: "#888" }}>Token/分钟 · 企业客户默认</span>
+            <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Token/分钟 · 企业客户默认</span>
           </div>
           <div style={{...cfgRow, opacity: rateLimitEnabled ? 1 : 0.5}}>
             <span style={cfgLabel}>个人 RPM 上限</span>
             <input style={cfgInput} type="number" value={personalRpm} onChange={e => setPersonalRpm(Number(e.target.value))} disabled={!rateLimitEnabled} />
-            <span style={{ fontSize: 12, color: "#888" }}>请求/分钟 · 个人客户默认</span>
+            <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>请求/分钟 · 个人客户默认</span>
           </div>
           <div style={{...cfgRow, opacity: rateLimitEnabled ? 1 : 0.5}}>
             <span style={cfgLabel}>个人 TPM 上限</span>
             <input style={cfgInput} type="number" value={personalTpm} onChange={e => setPersonalTpm(Number(e.target.value))} disabled={!rateLimitEnabled} />
-            <span style={{ fontSize: 12, color: "#888" }}>Token/分钟 · 个人客户默认</span>
+            <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>Token/分钟 · 个人客户默认</span>
           </div>
-          <button onClick={saveRate} style={{ marginTop: 16, padding: "8px 24px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存限流设置</button>
+          <button onClick={saveRate} style={{ marginTop: 16, padding: "8px 24px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存限流设置</button>
         </div>
       )}
 
       {tab === "security" && (
         <div style={cfgSection}>
-          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}>🛡️ 安全策略 <HelpIcon text="配置会话超时、登录限次、MFA强制、IP白名单等安全策略。" /></h3>
+          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}>️ 安全策略 <HelpIcon text="配置会话超时、登录限次、MFA强制、IP白名单等安全策略。" /></h3>
           <div style={cfgRow}><span style={cfgLabel}>会话超时 (分钟) <HelpIcon text="用户登录后无操作超过此时间将自动退出。" /></span><input style={cfgInput} type="number" value={sessionTimeout} onChange={e => setSessionTimeout(Number(e.target.value))} /></div>
           <div style={cfgRow}><span style={cfgLabel}>最大登录尝试次数 <HelpIcon text="连续登录失败超过此次数将被临时锁定。" /></span><input style={cfgInput} type="number" value={maxLoginAttempts} onChange={e => setMaxLoginAttempts(Number(e.target.value))} /></div>
           <div style={cfgRow}><span style={cfgLabel}>强制 MFA <HelpIcon text="开启后所有管理员必须绑定双因素认证。" /></span><Toggle on={mfaRequired} onChange={setMfaRequired} /></div>
@@ -257,69 +252,69 @@ export default function AdminSettingsPage() {
             <span style={cfgLabel}>白名单 IP 列表</span>
             <textarea style={{ ...cfgInput, width: 300, height: 60 }} value={ipWhitelist} onChange={e => setIpWhitelist(e.target.value)} placeholder="一行一个IP，如 10.0.0.1" disabled={!ipWhitelistEnabled} />
           </div>
-          <button onClick={saveSecurity} style={{ marginTop: 16, padding: "8px 24px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存安全配置</button>
+          <button onClick={saveSecurity} style={{ marginTop: 16, padding: "8px 24px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存安全配置</button>
         </div>
       )}
 
       {tab === "feature" && (
         <div style={cfgSection}>
-          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}>🔧 功能开关 <HelpIcon text="控制平台核心功能的开关，关闭后用户将看不到对应入口。紧急情况下可快速关闭高风险功能。" /></h3>
-          <div style={cfgRow}><span style={cfgLabel}>开放注册 <HelpIcon text="关闭后新用户将无法注册。" /></span><Toggle on={registrationOpen} onChange={setRegistrationOpen} /><span style={{ fontSize: 12, color: registrationOpen ? "#22c55e" : "#e53935" }}>{registrationOpen ? "✅ 开放" : "⛔ 关闭"}</span></div>
-          <div style={cfgRow}><span style={cfgLabel}>充值功能 <HelpIcon text="关闭后用户无法充值。" /></span><Toggle on={rechargeEnabled} onChange={setRechargeEnabled} /><span style={{ fontSize: 12, color: rechargeEnabled ? "#22c55e" : "#e53935" }}>{rechargeEnabled ? "✅ 启用" : "⛔ 关闭"}</span></div>
-          <div style={cfgRow}><span style={cfgLabel}>提现功能 <HelpIcon text="关闭后代理商无法发起提现。" /></span><Toggle on={withdrawEnabled} onChange={setWithdrawEnabled} /><span style={{ fontSize: 12, color: withdrawEnabled ? "#22c55e" : "#e53935" }}>{withdrawEnabled ? "✅ 启用" : "⛔ 关闭"}</span></div>
-          <button onClick={saveFeature} style={{ marginTop: 16, padding: "8px 24px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存功能开关</button>
+          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}> 功能开关 <HelpIcon text="控制平台核心功能的开关，关闭后用户将看不到对应入口。紧急情况下可快速关闭高风险功能。" /></h3>
+          <div style={cfgRow}><span style={cfgLabel}>开放注册 <HelpIcon text="关闭后新用户将无法注册。" /></span><Toggle on={registrationOpen} onChange={setRegistrationOpen} /><span style={{ fontSize: 12, color: registrationOpen ? "var(--color-success-text)" : "var(--color-danger-text)" }}>{registrationOpen ? " 开放" : " 关闭"}</span></div>
+          <div style={cfgRow}><span style={cfgLabel}>充值功能 <HelpIcon text="关闭后用户无法充值。" /></span><Toggle on={rechargeEnabled} onChange={setRechargeEnabled} /><span style={{ fontSize: 12, color: rechargeEnabled ? "var(--color-success-text)" : "var(--color-danger-text)" }}>{rechargeEnabled ? " 启用" : " 关闭"}</span></div>
+          <div style={cfgRow}><span style={cfgLabel}>提现功能 <HelpIcon text="关闭后代理商无法发起提现。" /></span><Toggle on={withdrawEnabled} onChange={setWithdrawEnabled} /><span style={{ fontSize: 12, color: withdrawEnabled ? "var(--color-success-text)" : "var(--color-danger-text)" }}>{withdrawEnabled ? " 启用" : " 关闭"}</span></div>
+          <button onClick={saveFeature} style={{ marginTop: 16, padding: "8px 24px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存功能开关</button>
         </div>
       )}
 
       {tab === "api" && (
         <div style={cfgSection}>
-          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}>🔌 对外 API 服务 <HelpIcon text="配置对外 API 网关域名（独立域名 api.&lt;host&gt;，对齐 DeepSeek 用法）。同域同时暴露 OpenAI 与 Anthropic 两套 SDK 兼容 base_url；保存后门户首页与用户接入引导实时生效。值可为域名（api.unmisa.com）或完整地址（http://localhost:3000）。" /></h3>
+          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}> 对外 API 服务 <HelpIcon text="配置对外 API 网关域名（独立域名 api.&lt;host&gt;，对齐 DeepSeek 用法）。同域同时暴露 OpenAI 与 Anthropic 两套 SDK 兼容 base_url；保存后门户首页与用户接入引导实时生效。值可为域名（api.unmisa.com）或完整地址（http://localhost:3000）。" /></h3>
           <div style={cfgRow}>
             <span style={cfgLabel}>API 域名 <HelpIcon text="对外 API 网关域名。OpenAI base_url = https://&lt;此域名&gt;，Anthropic base_url = https://&lt;此域名&gt;/anthropic。" /></span>
             <input style={{...cfgInput, width: 320}} value={apiDomain} onChange={e => setApiDomain(e.target.value)} placeholder="api.unmisa.com" />
           </div>
-          <div style={{ margin: "16px 0 6px", fontSize: 13, fontWeight: 600, color: "#333" }}>
-            📡 对外接入地址（实时派生预览）<HelpIcon text="保存后用户侧接入引导将展示以下地址。" />
+          <div style={{ margin: "16px 0 6px", fontSize: 13, fontWeight: 600, color: "var(--color-text)" }}>
+             对外接入地址（实时派生预览）<HelpIcon text="保存后用户侧接入引导将展示以下地址。" />
           </div>
-          <div style={{ background: "#1e293b", borderRadius: 8, padding: 14, fontFamily: "monospace", fontSize: 12, color: "#e2e8f0", lineHeight: 1.9 }}>
+          <div style={{ background: "var(--color-ink-800)", borderRadius: 8, padding: 14, fontFamily: "monospace", fontSize: 12, color: "#e2e8f0", lineHeight: 1.9 }}>
             <div>OpenAI base_url（SDK）&nbsp;&nbsp;: <span style={{ color: "#34d399" }}>{apiOrigin}/v1</span></div>
             <div>Anthropic base_url（SDK）: <span style={{ color: "#34d399" }}>{apiOrigin}/anthropic</span></div>
             <div>OpenAI 聊天端点&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <span style={{ color: "#fbbf24" }}>{apiOrigin}/v1/chat/completions</span></div>
             <div>Anthropic 消息端点&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <span style={{ color: "#fbbf24" }}>{apiOrigin}/anthropic/v1/messages</span></div>
           </div>
-          <div style={{ fontSize: 12, color: "#888", marginTop: 10 }}>
-            💡 生产环境：确认 DNS（api.&lt;host&gt; → 服务器）与 nginx vhost（deploy/api.unmisa.com.conf）已配置，并签发对应 SSL 证书。
+          <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 10 }}>
+             生产环境：确认 DNS（api.&lt;host&gt; → 服务器）与 nginx vhost（deploy/api.unmisa.com.conf）已配置，并签发对应 SSL 证书。
           </div>
-          <button onClick={saveApi} style={{ marginTop: 16, padding: "8px 24px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存 API 域名</button>
+          <button onClick={saveApi} style={{ marginTop: 16, padding: "8px 24px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存 API 域名</button>
         </div>
       )}
 
       {tab === "billing" && (
         <div style={cfgSection}>
-          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}>💰 计费策略（预扣阈值 + 缓存命中折扣） <HelpIcon text="① 余额预扣阈值旁路：用户可用余额 &gt; 此阈值 → 不预扣、直接转发、响应后按实际用量扣费（零延迟）；余额 ≤ 阈值 → 请求前 Redis Lua 原子冻结（available → frozen），响应后多退少补。② 缓存命中折扣率：上游（DeepSeek/Anthropic/OpenAI）返回缓存命中 token 时，命中部分按「全价 × 折扣率」计费（默认 0.1 = 10%），模型级可在「价格管理」页逐模型覆盖。" /></h3>
+          <h3 style={{ margin: "0 0 16px", fontSize: 15 }}> 计费策略（预扣阈值 + 缓存命中折扣） <HelpIcon text="① 余额预扣阈值旁路：用户可用余额 &gt; 此阈值 → 不预扣、直接转发、响应后按实际用量扣费（零延迟）；余额 ≤ 阈值 → 请求前 Redis Lua 原子冻结（available → frozen），响应后多退少补。② 缓存命中折扣率：上游（DeepSeek/Anthropic/OpenAI）返回缓存命中 token 时，命中部分按「全价 × 折扣率」计费（默认 0.1 = 10%），模型级可在「价格管理」页逐模型覆盖。" /></h3>
           <div style={cfgRow}>
             <span style={cfgLabel}>预扣阈值（元） <HelpIcon text="单位：元。余额大于此值走旁路（事后扣费），小于等于此值走预扣冻结。建议保持默认 ¥100；过低会让小额用户承担预扣冻结延迟，过高会让大额用户暴露在透支窗口。" /></span>
             <input style={cfgInput} type="number" min={0} step={10} value={billingThreshold} onChange={e => setBillingThreshold(Number(e.target.value))} />
-            <span style={{ fontSize: 12, color: "#888" }}>元 · 保存后即时生效（Redis 缓存 60s 内失效）</span>
+            <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>元 · 保存后即时生效（Redis 缓存 60s 内失效）</span>
           </div>
           <div style={cfgRow}>
             <span style={cfgLabel}>缓存命中折扣率 <HelpIcon text="单位：比例（0-1）。上游返回缓存命中 token 时，命中部分按全价 × 此比例计费，未命中部分仍按全价。示例：0.1 = 命中部分按 10% 计费（DeepSeek 官方口径），0.5 = 按 50%（OpenAI 官方口径）。置 1 = 命中不优惠。修改后即时生效。" /></span>
             <input style={cfgInput} type="number" min={0.01} max={1} step={0.01} value={cacheDiscountRate} onChange={e => setCacheDiscountRate(Number(e.target.value))} />
-            <span style={{ fontSize: 12, color: "#888" }}>0-1 · 模型级覆盖见「价格管理」页</span>
+            <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>0-1 · 模型级覆盖见「价格管理」页</span>
           </div>
-          <div style={{ margin: "16px 0 6px", fontSize: 13, fontWeight: 600, color: "#333" }}>
-            📖 旁路模式说明 <HelpIcon text="旁路（余额 &gt; 阈值）：不预扣、零延迟，响应后按实际用量扣费；极端并发竞态下余额可能扣成负数 → 允许记负并写入风控事件（risk_events），该用户后续请求自动转预扣直到充值回正。预扣（余额 ≤ 阈值）：请求前冻结预估费用（输入 tokens 实算 + 输出按 max_tokens 封顶估算），响应后按实际用量多退少补；上游失败/超时自动解冻（Redis TTL 兜底）。" />
+          <div style={{ margin: "16px 0 6px", fontSize: 13, fontWeight: 600, color: "var(--color-text)" }}>
+             旁路模式说明 <HelpIcon text="旁路（余额 &gt; 阈值）：不预扣、零延迟，响应后按实际用量扣费；极端并发竞态下余额可能扣成负数 → 允许记负并写入风控事件（risk_events），该用户后续请求自动转预扣直到充值回正。预扣（余额 ≤ 阈值）：请求前冻结预估费用（输入 tokens 实算 + 输出按 max_tokens 封顶估算），响应后按实际用量多退少补；上游失败/超时自动解冻（Redis TTL 兜底）。" />
           </div>
-          <div style={{ background: "#1e293b", borderRadius: 8, padding: 14, fontFamily: "monospace", fontSize: 12, color: "#e2e8f0", lineHeight: 1.9 }}>
+          <div style={{ background: "var(--color-ink-800)", borderRadius: 8, padding: 14, fontFamily: "monospace", fontSize: 12, color: "#e2e8f0", lineHeight: 1.9 }}>
             <div>余额 &gt; <span style={{ color: "#34d399" }}>{billingThreshold}</span> 元&nbsp;&nbsp;→&nbsp;&nbsp;旁路：直接转发，事后按实际用量扣费（零延迟）</div>
             <div>余额 ≤ <span style={{ color: "#fbbf24" }}>{billingThreshold}</span> 元&nbsp;&nbsp;→&nbsp;&nbsp;预扣：Redis Lua 冻结（available → frozen）+ 多退少补</div>
             <div>记负兜底&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→&nbsp;&nbsp;旁路扣费后余额 &lt; 0 → 写 risk_events，后续强制预扣直到充值回正</div>
             <div>缓存命中&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→&nbsp;&nbsp;费用 = 命中 × 输入价 × <span style={{ color: "#34d399" }}>{cacheDiscountRate}</span> + 未命中 × 输入价 + 输出 × 输出价（命中 token 按 /1K 折算）</div>
           </div>
-          <div style={{ fontSize: 12, color: "#888", marginTop: 10 }}>
-            💡 配置键：<code>system_config.billing.balance_threshold</code>（默认 100）、<code>system_config.billing.cache_hit_discount</code>（默认 0.1）；修改写入操作审计日志，Redis 缓存 60s 内失效即时生效。
+          <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 10 }}>
+             配置键：<code>system_config.billing.balance_threshold</code>（默认 100）、<code>system_config.billing.cache_hit_discount</code>（默认 0.1）；修改写入操作审计日志，Redis 缓存 60s 内失效即时生效。
           </div>
-          <button onClick={saveBilling} style={{ marginTop: 16, padding: "8px 24px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存计费设置</button>
+          <button onClick={saveBilling} style={{ marginTop: 16, padding: "8px 24px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>保存计费设置</button>
         </div>
       )}
     </div>

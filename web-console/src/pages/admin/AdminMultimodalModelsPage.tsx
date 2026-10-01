@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../../lib/api";
 import { HelpIcon, StatusBadge, SkeletonGroup, useToast, ConfirmPopover, EmptyState } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
@@ -23,12 +24,12 @@ interface ModModel {
 }
 
 const TYPE_LABEL: Record<string, string> = {
-  vision: "👁️ 视觉",
-  image_gen: "🎨 图片生成",
-  audio: "🔊 音频",
-  video: "🎬 视频",
-  video_gen: "🎥 视频生成",
-  multimodal: "🌈 多模态",
+  vision: "视觉",
+  image_gen: "图片生成",
+  audio: "音频",
+  video: "视频",
+  video_gen: "视频生成",
+  multimodal: "多模态",
 };
 
 export default function AdminMultimodalModelsPage() {
@@ -75,7 +76,7 @@ export default function AdminMultimodalModelsPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>🎛️ 多模态模型列表 <HelpIcon text="multimodal" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="sliders" size={14}/> 多模态模型列表 <HelpIcon text="multimodal" /></div>
         {listQ.isLoading ? <SkeletonGroup lines={5} /> : listQ.isError ? (
           <EmptyState title="加载失败" description="无法获取多模态模型列表，请检查后端服务或稍后重试" />
         ) : (
@@ -94,7 +95,7 @@ export default function AdminMultimodalModelsPage() {
                 <tr key={m.id} style={{ borderTop: "1px solid #f0f0f0" }}>
                   <td style={{ padding: "10px 12px", fontWeight: 500 }}>{m.display_name ?? m.model_name}</td>
                   <td style={{ padding: "10px 12px" }}>{TYPE_LABEL[m.type ?? ""] ?? m.type ?? "-"}</td>
-                  <td style={{ padding: "10px 12px", color: "#888" }}>{m.vendor_name}</td>
+                  <td style={{ padding: "10px 12px", color: "var(--color-text-muted)" }}>{m.vendor_name}</td>
                   <td style={{ padding: "10px 12px", fontSize: 11 }}>
                     {(m.capabilities ?? []).map((c: string) => (
                       <span key={c} style={{ padding: "2px 6px", background: "#e8f4fd", borderRadius: 4, marginRight: 4, color: "#1976d2" }}>{c}</span>
@@ -112,14 +113,14 @@ export default function AdminMultimodalModelsPage() {
                   <td style={{ padding: "10px 12px" }}>
                     <ConfirmPopover title={m.is_enabled ? "禁用该模型？" : "启用该模型？"}
                       onConfirm={() => toggleMut.mutate({ id: m.id, enabled: !m.is_enabled })}>
-                      <button style={{ ...btnBase, background: m.is_enabled ? "#f0f0f0" : "#4f6ef7", color: m.is_enabled ? "#333" : "#fff", fontSize: 12 }}>
+                      <button style={{ ...btnBase, background: m.is_enabled ? "#f0f0f0" : "var(--color-primary)", color: m.is_enabled ? "var(--color-text)" : "#fff", fontSize: 12 }}>
                         {m.is_enabled ? "禁用" : "启用"}
                       </button>
                     </ConfirmPopover>
                   </td>
                 </tr>
               ))}
-              {list.length === 0 && !listQ.isLoading && <tr><td colSpan={7} style={{ padding: 40, textAlign: "center", color: "#888" }}>暂无模型</td></tr>}
+              {list.length === 0 && !listQ.isLoading && <tr><td colSpan={7} style={{ padding: 40, textAlign: "center", color: "var(--color-text-muted)" }}>暂无模型</td></tr>}
             </tbody>
           </table>
         )}

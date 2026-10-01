@@ -7,6 +7,7 @@ import { withOperation2fa, isOperation2faCanceled, operation2faErrorText, operat
 import type { OperationSummaryItem } from "../components/Operation2faModal";
 import { parseApproval, approvalChainSegments } from "../lib/approval";
 import { HelpIcon, StatusBadge, Modal, EmptyState, SkeletonGroup, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /* ============ 类型 ============ */
 interface ManualTopup {
@@ -472,7 +473,7 @@ export default function AdminManualRechargePage() {
     return (
       <div style={{ fontFamily: "system-ui, sans-serif" }}>
         <h2 style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
-          ✋ 人工上账
+          <PIcon name="hand" size={14}/> 人工上账
           <HelpIcon text={PAGE_HELP} level="page" />
         </h2>
         <div style={card}>
@@ -485,7 +486,7 @@ export default function AdminManualRechargePage() {
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <h2 style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
-        ✋ 人工上账
+        <PIcon name="hand" size={14}/> 人工上账
         <HelpIcon text={PAGE_HELP} level="page" />
       </h2>
 
@@ -608,7 +609,7 @@ export default function AdminManualRechargePage() {
                           {/* R5 审批人不足滞留提示（ARCH §2.7 fail-closed + 前端提示） */}
                           {info.stalled && (
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--color-danger-text)" }}>
-                              ⚠️ 等待可用审批人 <HelpIcon text={HELP_STALLED} />
+                              <PIcon name="alert" size={14}/> 等待可用审批人 <HelpIcon text={HELP_STALLED} />
                             </span>
                           )}
                         </div>
@@ -654,7 +655,7 @@ export default function AdminManualRechargePage() {
             )}
             {form.user && (
               <div style={{ background: "var(--color-bg)", border: "1px solid var(--color-border)", borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>
-                <div style={{ fontSize: 13 }}>✅ {form.user.email} · {form.user.name ?? "-"}</div>
+                <div style={{ fontSize: 13 }}><PIcon name="check" size={14}/> {form.user.email} · {form.user.name ?? "-"}</div>
                 <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 2 }}>
                   用户ID {form.user.id} · 当前余额 ¥{form.user.available_balance.toFixed(2)} · {userStatusLabel(form.user.status)}
                 </div>
@@ -663,7 +664,7 @@ export default function AdminManualRechargePage() {
             )}
             {form.user && form.user.status !== "active" && (
               <div style={{ background: "var(--color-danger-bg)", color: "var(--color-danger-text)", fontSize: 13, padding: "8px 10px", borderRadius: 8, marginBottom: 8 }}>
-                ⚠️ 该用户处于禁用/冻结状态，请先在用户管理中解锁后再上账（提交将被拦截）
+                <PIcon name="alert" size={14}/> 该用户处于禁用/冻结状态，请先在用户管理中解锁后再上账（提交将被拦截）
               </div>
             )}
           </>
@@ -702,7 +703,7 @@ export default function AdminManualRechargePage() {
 
         {/* 凭证占位（R9 后置：不实现上传，仅提示） */}
         <div style={{ ...hintText, background: "var(--color-bg)", padding: "8px 10px", borderRadius: 8 }}>
-          📎 凭证上传 <HelpIcon text={HELP_EVIDENCE} />：对公到账凭证（JPG/PNG/PDF，≤5MB）上传将在后续版本开放（R9）。本期请填写转账单号，由后端校验唯一性。
+          <PIcon name="paperclip" size={14}/> 凭证上传 <HelpIcon text={HELP_EVIDENCE} />：对公到账凭证（JPG/PNG/PDF，≤5MB）上传将在后续版本开放（R9）。本期请填写转账单号，由后端校验唯一性。
         </div>
 
         {/* 转账单号 */}
@@ -734,7 +735,7 @@ export default function AdminManualRechargePage() {
         {/* R5/R6：实时审批路径提示 */}
         {amountValid && amountNum > 0 && (
           <div style={{ fontSize: 12, color: "#fa8c16", marginBottom: 6, lineHeight: 1.6 }}>
-            ⚖️ 本笔审批路径：<strong>{tierHint}</strong>
+            <PIcon name="scale" size={14}/> 本笔审批路径：<strong>{tierHint}</strong>
             {amountTier === 3 ? "（>¥100,000 追加 super_admin 终审）" : amountTier === 2 ? "（>¥10,000 双人审批）" : "（≤¥10,000 单审）"}
             <div style={{ color: "var(--color-text-secondary)", marginTop: 2 }}>
               24h 累计入账超 ¥{DAILY_SOFT_LIMIT.toLocaleString()} 将触发升级审批，累计超 ¥{DAILY_HARD_LIMIT.toLocaleString()} 将被拒绝
@@ -760,7 +761,7 @@ export default function AdminManualRechargePage() {
         {fieldErrors.note && <div style={dangerText}>{fieldErrors.note}</div>}
 
         {formError && (
-          <div style={{ background: "var(--color-danger-bg)", color: "var(--color-danger-text)", fontSize: 13, padding: "8px 10px", borderRadius: 8, marginBottom: 12 }}>⚠️ {formError}</div>
+          <div style={{ background: "var(--color-danger-bg)", color: "var(--color-danger-text)", fontSize: 13, padding: "8px 10px", borderRadius: 8, marginBottom: 12 }}><PIcon name="alert" size={14}/> {formError}</div>
         )}
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", alignItems: "center", marginTop: 6 }}>

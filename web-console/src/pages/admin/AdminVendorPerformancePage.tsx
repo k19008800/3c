@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { HelpIcon, StatusBadge, SkeletonGroup } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 
@@ -23,7 +24,7 @@ export default function AdminVendorPerformancePage() {
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
         {["week", "month", "quarter"].map(p => (
           <button key={p} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--color-border)",
-            background: period === p ? "#4f6ef7" : "#fff", color: period === p ? "#fff" : "#333", cursor: "pointer", fontSize: 13 }}
+            background: period === p ? "var(--color-primary)" : "#fff", color: period === p ? "#fff" : "var(--color-text)", cursor: "pointer", fontSize: 13 }}
             onClick={() => setPeriod(p)}>
             {{ week: "本周", month: "本月", quarter: "本季" }[p]}
           </button>
@@ -31,21 +32,21 @@ export default function AdminVendorPerformancePage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 20 }}>
-        {[{ icon: "📊", label: "平均可用率", value: perfQ.data?.summary?.avg_uptime != null ? `${perfQ.data.summary.avg_uptime}%` : "—" },
-          { icon: "⚡", label: "平均延迟", value: perfQ.data?.summary?.avg_latency != null ? `${perfQ.data.summary.avg_latency}ms` : "—" },
-          { icon: "✅", label: "成功率", value: perfQ.data?.summary?.success_rate != null ? `${perfQ.data.summary.success_rate}%` : "—" },
-          { icon: "🏆", label: "最佳厂商", value: perfQ.data?.summary?.top_performer ?? "—" },
+        {[{ icon: <PIcon name="chart" size={20}/>, label: "平均可用率", value: perfQ.data?.summary?.avg_uptime != null ? `${perfQ.data.summary.avg_uptime}%` : "—" },
+          { icon: <PIcon name="bolt" size={20}/>, label: "平均延迟", value: perfQ.data?.summary?.avg_latency != null ? `${perfQ.data.summary.avg_latency}ms` : "—" },
+          { icon: <PIcon name="check" size={20}/>, label: "成功率", value: perfQ.data?.summary?.success_rate != null ? `${perfQ.data.summary.success_rate}%` : "—" },
+          { icon: <PIcon name="trophy" size={20}/>, label: "最佳厂商", value: perfQ.data?.summary?.top_performer ?? "—" },
         ].map((s, i) => (
           <div key={i} style={card}>
             <div style={{ fontSize: 24 }}>{s.icon}</div>
-            <div style={{ fontSize: 12, color: "#888", margin: "6px 0" }}>{s.label}</div>
+            <div style={{ fontSize: 12, color: "var(--color-text-muted)", margin: "6px 0" }}>{s.label}</div>
             <div style={{ fontSize: 22, fontWeight: 700 }}>{s.value}</div>
           </div>
         ))}
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>🏆 供应商绩效排名 <HelpIcon text="vendor_performance" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="trophy" size={14}/> 供应商绩效排名 <HelpIcon text="vendor_performance" /></div>
         {perfQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
@@ -62,7 +63,7 @@ export default function AdminVendorPerformancePage() {
               {(perfQ.data?.vendors ?? []).map((v: any, i: number) => (
                 <tr key={v.name} style={{ borderTop: "1px solid #f0f0f0" }}>
                   <td style={{ padding: "10px 12px" }}>
-                    {i === 0 ? "🏆" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}
+                    {i === 0 ? "" : i === 1 ? "" : i === 2 ? "" : i + 1}
                   </td>
                   <td style={{ padding: "10px 12px", fontWeight: 500 }}>{v.name}</td>
                   <td style={{ padding: "10px 12px", color: v.uptime >= 99 ? "#22c55e" : v.uptime >= 95 ? "#f59e0b" : "#e53935" }}>

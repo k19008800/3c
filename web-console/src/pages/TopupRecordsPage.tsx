@@ -9,6 +9,7 @@ import {
   Modal,
   EmptyState,
 } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /* ============ 类型 ============ */
 interface TopupRecord {
@@ -135,7 +136,7 @@ export default function TopupRecordsPage() {
     <div>
       {/* 标题 */}
       <h2 style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8, fontSize: 20, fontWeight: 600 }}>
-        📋 充值记录
+        <PIcon name="doc" size={14}/> 充值记录
         <HelpIcon text="查看所有充值订单记录，支持按时间、支付方式、状态筛选，可导出 CSV" level="page" />
       </h2>
 
@@ -157,8 +158,8 @@ export default function TopupRecordsPage() {
             style={{
               padding: "6px 16px",
               borderRadius: 6,
-              border: `1px solid ${timeRange === t.k ? "#4f6ef7" : "#d9d9d9"}`,
-              background: timeRange === t.k ? "#4f6ef7" : "#fff",
+              border: `1px solid ${timeRange === t.k ? "var(--color-primary)" : "var(--color-border)"}`,
+              background: timeRange === t.k ? "var(--color-primary)" : "#fff",
               color: timeRange === t.k ? "#fff" : "#888",
               fontSize: 13,
               cursor: "pointer",
@@ -176,7 +177,7 @@ export default function TopupRecordsPage() {
               style={{
                 padding: "4px 8px",
                 borderRadius: 4,
-                border: "1px solid #d9d9d9",
+                border: "1px solid var(--color-border)",
                 fontSize: 13,
                 width: 130,
               }}
@@ -189,7 +190,7 @@ export default function TopupRecordsPage() {
               style={{
                 padding: "4px 8px",
                 borderRadius: 4,
-                border: "1px solid #d9d9d9",
+                border: "1px solid var(--color-border)",
                 fontSize: 13,
                 width: 130,
               }}
@@ -205,8 +206,8 @@ export default function TopupRecordsPage() {
               style={{
                 padding: "4px 12px",
                 borderRadius: 4,
-                border: "1px solid #4f6ef7",
-                background: "#4f6ef7",
+                border: "1px solid var(--color-primary)",
+                background: "var(--color-primary)",
                 color: "#fff",
                 fontSize: 12,
                 cursor: "pointer",
@@ -227,7 +228,7 @@ export default function TopupRecordsPage() {
           style={{
             padding: "6px 10px",
             borderRadius: 6,
-            border: "1px solid #d9d9d9",
+            border: "1px solid var(--color-border)",
             fontSize: 13,
             minWidth: 120,
             background: "#fff",
@@ -247,7 +248,7 @@ export default function TopupRecordsPage() {
           style={{
             padding: "6px 10px",
             borderRadius: 6,
-            border: "1px solid #d9d9d9",
+            border: "1px solid var(--color-border)",
             fontSize: 13,
             minWidth: 120,
             background: "#fff",
@@ -265,7 +266,7 @@ export default function TopupRecordsPage() {
           style={{
             padding: "4px 12px",
             borderRadius: 4,
-            border: "1px solid #d9d9d9",
+            border: "1px solid var(--color-border)",
             background: "transparent",
             color: "#888",
             fontSize: 12,
@@ -282,8 +283,8 @@ export default function TopupRecordsPage() {
             marginLeft: "auto",
             padding: "6px 16px",
             borderRadius: 6,
-            border: "1px solid #4f6ef7",
-            background: "#4f6ef7",
+            border: "1px solid var(--color-primary)",
+            background: "var(--color-primary)",
             color: "#fff",
             fontSize: 13,
             cursor: exporting ? "not-allowed" : "pointer",
@@ -326,7 +327,7 @@ export default function TopupRecordsPage() {
               <SkeletonGroup lines={6} />
             </div>
           ) : filteredList.length === 0 ? (
-            <EmptyState icon="📭" title="暂无充值记录" description="没有符合条件的充值记录" actionText="去充值" onAction={() => window.location.href = "/recharge"} />
+            <EmptyState icon={<PIcon name="box" size={18}/>} title="暂无充值记录" description="没有符合条件的充值记录" actionText="去充值" onAction={() => window.location.href = "/recharge"} />
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
@@ -362,13 +363,13 @@ export default function TopupRecordsPage() {
                           style={{
                             padding: "4px 12px",
                             borderRadius: 6,
-                            border: "1px solid #d9d9d9",
+                            border: "1px solid var(--color-border)",
                             background: "#fff",
                             fontSize: 12,
                             cursor: "pointer",
                           }}
                         >
-                          📄 查看详情
+                          <PIcon name="doc" size={14}/> 查看详情
                         </button>
                       </td>
                     </tr>
@@ -388,7 +389,7 @@ export default function TopupRecordsPage() {
             <select
               value={pageSize}
               onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-              style={{ padding: "5px 8px", borderRadius: 6, border: "1px solid #d9d9d9", fontSize: 13, background: "#fff", height: 32 }}
+              style={{ padding: "5px 8px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13, background: "#fff", height: 32 }}
             >
               {PAGE_SIZE_OPTIONS.map((ps) => (
                 <option key={ps} value={ps}>{ps}</option>
@@ -401,14 +402,14 @@ export default function TopupRecordsPage() {
               disabled={page <= 1}
               onClick={() => setPage(Math.max(1, page - 1))}
               style={{
-                height: 32, minWidth: 32, padding: "0 10px", borderRadius: 6, border: "1px solid #d9d9d9",
+                height: 32, minWidth: 32, padding: "0 10px", borderRadius: 6, border: "1px solid var(--color-border)",
                 background: "#fff", color: page <= 1 ? "#bbb" : "#555", fontSize: 13, cursor: page <= 1 ? "default" : "pointer",
               }}
             >
               上一页
             </button>
             <button
-              style={{ height: 32, minWidth: 32, padding: "0 10px", borderRadius: 6, border: "1px solid #4f6ef7", background: "#4f6ef7", color: "#fff", fontSize: 13, cursor: "default" }}
+              style={{ height: 32, minWidth: 32, padding: "0 10px", borderRadius: 6, border: "1px solid var(--color-primary)", background: "var(--color-primary)", color: "#fff", fontSize: 13, cursor: "default" }}
             >
               {page}
             </button>
@@ -416,7 +417,7 @@ export default function TopupRecordsPage() {
               disabled={page * pageSize >= total}
               onClick={() => setPage(page + 1)}
               style={{
-                height: 32, minWidth: 32, padding: "0 10px", borderRadius: 6, border: "1px solid #d9d9d9",
+                height: 32, minWidth: 32, padding: "0 10px", borderRadius: 6, border: "1px solid var(--color-border)",
                 background: "#fff", color: page * pageSize >= total ? "#bbb" : "#555", fontSize: 13,
                 cursor: page * pageSize >= total ? "default" : "pointer",
               }}
@@ -440,7 +441,7 @@ export default function TopupRecordsPage() {
                   if (v >= 1 && v <= Math.ceil(total / pageSize)) setPage(v);
                 }
               }}
-              style={{ width: 60, height: 32, padding: "0 8px", borderRadius: 6, border: "1px solid #d9d9d9", fontSize: 13, textAlign: "center" }}
+              style={{ width: 60, height: 32, padding: "0 8px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13, textAlign: "center" }}
             />
             <span style={{ color: "#888", fontSize: 13 }}>页</span>
             <button
@@ -451,7 +452,7 @@ export default function TopupRecordsPage() {
                   if (v >= 1 && v <= Math.ceil(total / pageSize)) setPage(v);
                 }
               }}
-              style={{ height: 32, padding: "0 14px", borderRadius: 6, border: "1px solid #d9d9d9", background: "#fff", color: "#888", fontSize: 12, cursor: "pointer" }}
+              style={{ height: 32, padding: "0 14px", borderRadius: 6, border: "1px solid var(--color-border)", background: "#fff", color: "#888", fontSize: 12, cursor: "pointer" }}
             >
               GO
             </button>
@@ -487,7 +488,7 @@ function DetailContent({ record: r, onClose }: { record: TopupRecord; onClose: (
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <span style={{ fontSize: 12, color: "#888" }}>充值金额</span>
-          <span style={{ fontSize: 18, fontWeight: 600, color: "#6a8aff" }}>¥{(r.amount ?? 0).toFixed(2)}</span>
+          <span style={{ fontSize: 18, fontWeight: 600, color: "var(--color-primary)" }}>¥{(r.amount ?? 0).toFixed(2)}</span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <span style={{ fontSize: 12, color: "#888" }}>支付方式</span>
@@ -534,7 +535,7 @@ function DetailContent({ record: r, onClose }: { record: TopupRecord; onClose: (
                 width: 120,
                 height: 80,
                 borderRadius: 6,
-                border: "1px solid #d9d9d9",
+                border: "1px solid var(--color-border)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -546,7 +547,7 @@ function DetailContent({ record: r, onClose }: { record: TopupRecord; onClose: (
               onClick={() => toast.error("凭证预览功能开发中（后端缺失）")}
             >
               <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 24 }}>📄</div>
+                <div style={{ fontSize: 24 }}><PIcon name="doc" size={14}/></div>
                 <div>{r.voucher}</div>
               </div>
             </div>
@@ -579,8 +580,8 @@ function DetailContent({ record: r, onClose }: { record: TopupRecord; onClose: (
             style={{
               padding: "8px 20px",
               borderRadius: 6,
-              border: "1px solid #4f6ef7",
-              background: "#4f6ef7",
+              border: "1px solid var(--color-primary)",
+              background: "var(--color-primary)",
               color: "#fff",
               fontSize: 13,
               cursor: "pointer",
@@ -594,7 +595,7 @@ function DetailContent({ record: r, onClose }: { record: TopupRecord; onClose: (
           style={{
             padding: "8px 20px",
             borderRadius: 6,
-            border: "1px solid #d9d9d9",
+            border: "1px solid var(--color-border)",
             background: "#fff",
             color: "#333",
             fontSize: 13,

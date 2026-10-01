@@ -8,6 +8,7 @@ import {
   EmptyState,
 } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
+import "./console-misc.css";
 
 /**
  * 销售 — 业绩看板
@@ -52,7 +53,7 @@ export default function SalesPerformancePage() {
     {
       label: "活跃率",
       value: stats?.customer_count ? ((stats.active_count / stats.customer_count) * 100).toFixed(1) + "%" : (stats?.active_rate ? stats.active_rate + "%" : "0%"),
-      color: "#8b5cf6",
+      color: "var(--color-text)",
     },
   ];
 
@@ -62,14 +63,13 @@ export default function SalesPerformancePage() {
       key: "rank", title: "排名",
       render: (_, record, index) => {
         const rank = record.rank ?? index + 1;
-        if (rank === 1) return <span style={{ fontSize: 20 }}>🥇</span>;
-        if (rank === 2) return <span style={{ fontSize: 20 }}>🥈</span>;
-        if (rank === 3) return <span style={{ fontSize: 20 }}>🥉</span>;
         return (
           <span style={{
             display: "inline-flex", alignItems: "center", justifyContent: "center",
-            width: 24, height: 24, borderRadius: "50%", background: "#f5f5f5",
-            fontSize: 12, fontWeight: 700, color: "#999",
+            width: 24, height: 24, borderRadius: "50%",
+            background: rank <= 3 ? "var(--color-warning-bg)" : "var(--color-divider-light)",
+            fontSize: 12, fontWeight: 700,
+            color: rank <= 3 ? "var(--color-warning-text)" : "var(--color-text-secondary)",
           }}>
             {rank}
           </span>
@@ -94,10 +94,10 @@ export default function SalesPerformancePage() {
           : "normal";
         const tierLabel = level === "gold" ? "金牌" : level === "silver" ? "银牌" : level === "bronze" ? "铜牌" : level || "普通";
         const tierStyles: Record<string, React.CSSProperties> = {
-          gold: { background: "linear-gradient(135deg,#fff8e1,#ffecb3)", color: "#bf8a08", border: "1px solid #ffd54f" },
-          silver: { background: "linear-gradient(135deg,#f5f5f5,#e0e0e0)", color: "#757575", border: "1px solid #bdbdbd" },
-          bronze: { background: "linear-gradient(135deg,#ffe0b2,#ffcc80)", color: "#b06a1a", border: "1px solid #ffb74d" },
-          normal: { background: "#f5f5f5", color: "#888", border: "1px solid #d9d9d9" },
+          gold: { background: "var(--color-warning-bg)", color: "var(--color-warning-text)", border: "1px solid var(--color-warning-border)" },
+          silver: { background: "var(--color-divider-light)", color: "var(--color-text-secondary)", border: "1px solid var(--color-divider)" },
+          bronze: { background: "var(--color-warning-bg)", color: "var(--color-warning-text)", border: "1px solid var(--color-warning-border)" },
+          normal: { background: "var(--color-divider-light)", color: "var(--color-text-muted)", border: "1px solid var(--color-divider)" },
         };
         return (
           <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 10, fontSize: 11, fontWeight: 500, ...tierStyles[tierClass] }}>
@@ -143,7 +143,7 @@ export default function SalesPerformancePage() {
       render: (_, record) => {
         const trend = record.trend ?? record.rank_change ?? 0;
         if (trend === 0) return <span style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>— 持平</span>;
-        if (trend > 0) return <span style={{ color: "#22c55e", fontWeight: 600, fontSize: 12 }}>↑ {trend}</span>;
+        if (trend > 0) return <span style={{ color: "var(--color-success-text)", fontWeight: 600, fontSize: 12 }}>↑ {trend}</span>;
         return <span style={{ color: "var(--color-danger-text)", fontWeight: 600, fontSize: 12 }}>↓ {Math.abs(trend)}</span>;
       },
     },
@@ -155,9 +155,13 @@ export default function SalesPerformancePage() {
       key: "rank", title: "排名",
       render: (_, record, index) => {
         const r = record.rank ?? index + 1;
-        if (r === 1) return <span style={{ fontSize: 18 }}>🥇</span>;
-        if (r === 2) return <span style={{ fontSize: 18 }}>🥈</span>;
-        if (r === 3) return <span style={{ fontSize: 18 }}>🥉</span>;
+        if (r <= 3) return (
+          <span style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            width: 22, height: 22, borderRadius: "50%", background: "var(--color-warning-bg)",
+            fontSize: 12, fontWeight: 700, color: "var(--color-warning-text)",
+          }}>{r}</span>
+        );
         return <span style={{ fontSize: 13, fontWeight: 600 }}>{r}</span>;
       },
     },
@@ -189,7 +193,7 @@ export default function SalesPerformancePage() {
         return (
           <span style={{
             display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 12,
-            background: isBonus ? "#f0fdf4" : "#eef2ff",
+            background: isBonus ? "var(--color-success-bg)" : "var(--color-primary-lighter)",
             color: isBonus ? "var(--color-success-text)" : "var(--color-primary)",
           }}>
             {record.reward_type || record.reward_label || "-"}
@@ -225,12 +229,12 @@ export default function SalesPerformancePage() {
       </h2>
 
       {/* 统计卡片 — 对齐 agent-ranking.html */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 16, marginTop: 8 }}>
+      <div className="cm-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 16, marginTop: 8 }}>
         {cards.map(c => (
           <div key={c.label} style={{
             background: "var(--color-panel)", borderRadius: "var(--radius-lg)",
-            padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,.06)",
-            border: "1px solid var(--color-border)",
+            padding: 20, boxShadow: "var(--shadow-card)",
+            border: "1px solid var(--color-divider)",
           }}>
             <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 8 }}>{c.label}</div>
             <div style={{ fontSize: 28, fontWeight: 700, color: c.color }}>{c.value}</div>
@@ -247,7 +251,7 @@ export default function SalesPerformancePage() {
           <h4 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 600, color: "var(--color-text)" }}>
             本月业绩详情
           </h4>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 13 }}>
+          <div className="cm-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 13 }}>
             <InfoRow label="统计周期" value={`${perf.period_start?.slice(0, 10)} ~ ${perf.period_end?.slice(0, 10)}`} />
             <InfoRow label="总消费" value={`¥${Number(perf.total_revenue || 0).toFixed(2)}`} />
             <InfoRow label="佣金" value={`¥${Number(perf.commission || 0).toFixed(2)}`} />
@@ -260,7 +264,7 @@ export default function SalesPerformancePage() {
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>周期：</span>
         <select value={periodType} onChange={e => setPeriodType(e.target.value)}
-          style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13, background: "#fff" }}>
+          style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13, background: "var(--color-panel)" }}>
           <option value="monthly">月度</option>
           <option value="quarterly">季度</option>
           <option value="yearly">年度</option>
@@ -271,7 +275,7 @@ export default function SalesPerformancePage() {
         )}
         <span style={{ fontSize: 13, color: "var(--color-text-secondary)", marginLeft: 8 }}>等级：</span>
         <select value={levelFilter} onChange={e => setLevelFilter(e.target.value)}
-          style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13, background: "#fff" }}>
+          style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13, background: "var(--color-panel)" }}>
           <option value="">全部</option>
           <option value="gold">金牌</option>
           <option value="silver">银牌</option>
@@ -290,8 +294,8 @@ export default function SalesPerformancePage() {
             a.download = `排行榜_${periodMonth}.csv`;
             a.click();
           }}
-            style={{ padding: "6px 14px", borderRadius: 6, border: "1px solid var(--color-border)", background: "#fff", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-            📥 导出 CSV
+            style={{ padding: "6px 14px", borderRadius: 6, border: "1px solid var(--color-border)", background: "var(--color-panel)", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+            导出 CSV
           </button>
         </div>
       </div>
@@ -302,7 +306,7 @@ export default function SalesPerformancePage() {
           display: "inline-block", padding: "4px 12px", borderRadius: 20, fontSize: 13, fontWeight: 500,
           background: "var(--color-primary-light)", color: "var(--color-primary)",
         }}>
-          📅 {periodMonth} · {periodType === "monthly" ? "月度" : periodType === "quarterly" ? "季度" : "年度"}排行
+          {periodMonth} · {periodType === "monthly" ? "月度" : periodType === "quarterly" ? "季度" : "年度"}排行
         </span>
         <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
           数据快照时间: {new Date().toISOString().slice(0, 10)}
@@ -312,20 +316,20 @@ export default function SalesPerformancePage() {
       {/* 排行榜表格 */}
       <div style={{
         background: "var(--color-panel)", borderRadius: "var(--radius-xl)",
-        boxShadow: "0 1px 4px rgba(0,0,0,.06)", overflow: "hidden", marginBottom: 16,
+        boxShadow: "var(--shadow-card)", overflow: "hidden", marginBottom: 16,
       }}>
         <div style={{
           padding: "14px 20px", borderBottom: "1px solid var(--color-divider)",
           display: "flex", justifyContent: "space-between", alignItems: "center",
         }}>
           <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text)", display: "flex", alignItems: "center", gap: 6 }}>
-            🏆 排行榜 — TOP 20
+            排行榜 — TOP 20
             <HelpIcon text="按月消费总额降序排列，显示排名变化趋势" level="button" />
           </h3>
         </div>
 
         {rankingQ.isLoading ? <div style={{ padding: 20 }}><SkeletonGroup lines={4} /></div>
-          : ranking.length === 0 ? <EmptyState icon="🏆" title="暂无排行数据" description="当前周期暂无排名数据" />
+          : ranking.length === 0 ? <EmptyState title="暂无排行数据" description="当前周期暂无排名数据" />
           : <Table columns={rankingColumns} dataSource={ranking} loading={rankingQ.isLoading} emptyText="暂无排名数据" />
         }
       </div>
@@ -334,14 +338,14 @@ export default function SalesPerformancePage() {
       {rewards.length > 0 && (
         <div style={{
           background: "var(--color-panel)", borderRadius: "var(--radius-xl)",
-          boxShadow: "0 1px 4px rgba(0,0,0,.06)", overflow: "hidden",
+          boxShadow: "var(--shadow-card)", overflow: "hidden",
         }}>
           <div style={{
             padding: "14px 20px", borderBottom: "1px solid var(--color-divider)",
             display: "flex", justifyContent: "space-between", alignItems: "center",
           }}>
             <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text)", display: "flex", alignItems: "center", gap: 6 }}>
-              🎁 本期奖励预览
+              本期奖励预览
               <HelpIcon text="排行榜奖励：前3名获得额外佣金加成，4-5名获得一次性奖金" level="button" />
             </h3>
           </div>

@@ -5,6 +5,7 @@ import { useAuthStore, type User } from "../store/auth";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
 import OtpInput from "../components/OtpInput";
 import { useI18n } from "../lib/i18n-context";
+import "./auth.css";
 
 /**
  * 登录页 — 支持 2FA 两步验证 + GitHub 第三方快捷登录
@@ -34,20 +35,57 @@ interface Verify2faResponse {
   user: User;
   accessToken: string;
   refreshToken: string;
-  expiresIn: number;
+  expiresIn?: number;
 }
 
-const inputStyle: React.CSSProperties = {
-  width: "100%", height: 40, border: "1px solid var(--color-border)",
-  borderRadius: 8, padding: "0 12px", fontSize: 14,
-  outline: "none", transition: "border .2s", boxSizing: "border-box",
-  fontFamily: "inherit",
-};
+/** 品牌母题：信号蓝节点网络图（精密云基础设施） */
+function BrandMark() {
+  return (
+    <svg className="auth-brand__mark" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+      <rect x="1" y="1" width="42" height="42" rx="11" fill="#1896FF" />
+      <path d="M15 27 L27 16" stroke="#fff" strokeWidth="2" strokeLinecap="round" opacity="0.85" />
+      <circle cx="14" cy="28" r="4" fill="#fff" />
+      <circle cx="30" cy="14" r="4" fill="#fff" />
+      <circle cx="30" cy="30" r="2.6" fill="#fff" opacity="0.75" />
+    </svg>
+  );
+}
 
-const submitBtnStyle: React.CSSProperties = {
-  width: "100%", height: 44, background: "var(--color-primary)",
-  color: "#fff", border: "none", borderRadius: 8, fontSize: 16,
-  cursor: "pointer", marginTop: 8, fontFamily: "inherit",
+function AlertIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M8 1L15 14H1L8 1Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M8 6.5V9.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <circle cx="8" cy="11.8" r="0.9" fill="currentColor" />
+    </svg>
+  );
+}
+
+/* 第三方登录 SVG 图标 */
+const icons: Record<string, React.ReactNode> = {
+  GitHub: (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-2.17c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.75 2.7 1.25 3.36.95.1-.74.4-1.25.73-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.18-3.09-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.59.23 2.76.11 3.05.73.81 1.18 1.83 1.18 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.05.77 2.12v3.14c0 .3.2.67.8.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z" />
+    </svg>
+  ),
+  微信: (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M9.5 4C5.36 4 2 6.9 2 10.47c0 2.04 1.1 3.86 2.83 5.03l-.7 2.1 2.45-1.23c.65.18 1.34.28 2.05.3a5.4 5.4 0 0 1-.2-1.46c0-3.13 2.98-5.66 6.66-5.66.24 0 .47.01.7.03C15.1 6.2 12.56 4 9.5 4ZM7.2 8.6a.9.9 0 1 1 0-1.8.9.9 0 0 1 0 1.8Zm4.6 0a.9.9 0 1 1 0-1.8.9.9 0 0 1 0 1.8ZM15.6 10.6c-3.2 0-5.8 2.18-5.8 4.87 0 2.68 2.6 4.86 5.8 4.86.63 0 1.24-.09 1.8-.26l2.13 1.07-.6-1.82c1.43-.98 2.37-2.5 2.37-4.19 0-2.69-2.6-4.86-5.7-4.86Zm-1.9 2.7a.8.8 0 1 1 0-1.6.8.8 0 0 1 0 1.6Zm3.7 0a.8.8 0 1 1 0-1.6.8.8 0 0 1 0 1.6Z" />
+    </svg>
+  ),
+  Telegram: (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M21.9 4.3 19.1 19.1c-.2 1-.8 1.2-1.6.8l-4.5-3.3-2.1 2.1c-.2.2-.4.4-.9.4l.3-4.6 8.4-7.6c.4-.3-.1-.5-.6-.2L6.2 13.2 1.7 11.8c-1-.3-1-1 .2-1.4l17.6-6.8c.8-.3 1.5.2 1.4.7Z" />
+    </svg>
+  ),
+  Google: (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M21.6 12.23c0-.68-.06-1.36-.19-2H12v3.83h5.39a4.55 4.55 0 0 1-1.97 2.98v2.46h3.19c1.86-1.72 2.99-4.26 2.99-7.27Z" />
+      <path d="M12 22c2.67 0 4.92-.89 6.56-2.43l-3.19-2.46c-.89.6-2.03.95-3.37.95-2.59 0-4.79-1.75-5.57-4.1H3.12v2.53A10 10 0 0 0 12 22Z" opacity=".85" />
+      <path d="M6.43 13.96a6 6 0 0 1 0-3.92V7.5H3.12a10 10 0 0 0 0 9l3.31-2.54Z" opacity=".7" />
+      <path d="M12 6.38c1.45 0 2.74.5 3.76 1.48l2.82-2.82A9.98 9.98 0 0 0 3.12 7.5l3.31 2.53C7.21 8.13 9.41 6.38 12 6.38Z" opacity=".9" />
+    </svg>
+  ),
 };
 
 export default function LoginPage() {
@@ -149,48 +187,26 @@ export default function LoginPage() {
   };
 
   const socialProviders = [
-    { label: "GitHub", icon: "🐙", available: true },
-    { label: "微信", icon: "💬", available: false },
-    { label: "Telegram", icon: "✈️", available: false },
-    { label: "Google", icon: "🔵", available: false },
+    { label: "GitHub", available: true },
+    { label: "微信", available: false },
+    { label: "Telegram", available: false },
+    { label: "Google", available: false },
   ];
 
   const canVerify2fa = useBackupCode ? backupCode.length > 0 : twoFactorCode.join("").length === 6;
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      background: "var(--color-bg)",
-      fontFamily: 'var(--font-family, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif)',
-    }}>
-      <div style={{
-        width: 420,
-        background: "var(--color-panel)",
-        borderRadius: 16,
-        padding: "40px 32px",
-        boxShadow: "0 2px 16px rgba(0,0,0,0.08)",
-      }}>
-        {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <h1 style={{ fontSize: 24, color: "var(--color-text)", margin: 0 }}>🚀 浩寅云</h1>
-          <p style={{ fontSize: 14, color: "var(--color-text-secondary)", marginTop: 4, marginBottom: 0 }}>
-            AI Token 聚合分发平台
-          </p>
+    <div className="auth-page">
+      <div className="auth-card">
+        {/* Brand */}
+        <div className="auth-brand">
+          <BrandMark />
+          <div className="auth-brand__name">浩寅云</div>
+          <div className="auth-brand__tag">AI Token 聚合分发平台</div>
         </div>
 
         {/* Page Title */}
-        <div style={{
-          fontSize: 18,
-          fontWeight: 600,
-          color: "var(--color-text)",
-          marginBottom: 24,
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-        }}>
+        <div className="auth-title">
           {twoFactorStep ? t("auth.pageTitle2fa") : t("auth.pageTitle")}
           <HelpIcon
             text={twoFactorStep
@@ -202,50 +218,32 @@ export default function LoginPage() {
 
         {/* Error Message */}
         {error && (
-          <div style={{
-            background: "#fff1f0",
-            border: "1px solid #ffccc7",
-            borderRadius: 6,
-            padding: "10px 12px",
-            fontSize: 13,
-            color: "#cf1322",
-            marginBottom: 16,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}>
-            ❌ {error}
+          <div className="auth-alert" role="alert">
+            <AlertIcon />
+            <span>{error}</span>
           </div>
         )}
 
         {twoFactorStep ? (
           /* ════════ 2FA 第二步 ════════ */
           <div>
-            <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 16 }}>
+            <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 16, lineHeight: 1.6 }}>
               账号 <strong>{email}</strong> 已开启两步验证，请选择一种方式完成验证：
             </div>
 
             {/* 验证方式切换 tab */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            <div className="auth-step-tabs">
               <button
+                type="button"
                 onClick={() => setUseBackupCode(false)}
-                style={{
-                  flex: 1, height: 36, borderRadius: 6, fontSize: 13, cursor: "pointer", fontFamily: "inherit",
-                  border: useBackupCode ? "1px solid var(--color-border)" : "1px solid rgba(79,110,247,0.4)",
-                  background: useBackupCode ? "var(--color-panel)" : "rgba(79,110,247,0.08)",
-                  color: useBackupCode ? "var(--color-text-secondary)" : "var(--color-primary)",
-                }}
+                className={useBackupCode ? "auth-step-tab" : "auth-step-tab auth-step-tab--active"}
               >
                 验证器验证码
               </button>
               <button
+                type="button"
                 onClick={() => setUseBackupCode(true)}
-                style={{
-                  flex: 1, height: 36, borderRadius: 6, fontSize: 13, cursor: "pointer", fontFamily: "inherit",
-                  border: useBackupCode ? "1px solid rgba(79,110,247,0.4)" : "1px solid var(--color-border)",
-                  background: useBackupCode ? "rgba(79,110,247,0.08)" : "var(--color-panel)",
-                  color: useBackupCode ? "var(--color-primary)" : "var(--color-text-secondary)",
-                }}
+                className={useBackupCode ? "auth-step-tab auth-step-tab--active" : "auth-step-tab"}
               >
                 备用恢复码
               </button>
@@ -259,7 +257,8 @@ export default function LoginPage() {
                   onChange={(e) => setBackupCode(e.target.value.toUpperCase())}
                   placeholder="XXXX-XXXX-XXXX"
                   maxLength={14}
-                  style={{ ...inputStyle, marginBottom: 8 }}
+                  className="auth-input"
+                  style={{ marginBottom: 8 }}
                 />
                 <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 16 }}>
                   输入启用 2FA 时保存的备用恢复码（大写，可省略分隔符）
@@ -269,7 +268,7 @@ export default function LoginPage() {
             ) : (
               <>
                 <OtpInput value={twoFactorCode} onChange={setTwoFactorCode} />
-                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 16, marginTop: 8 }}>
                   输入验证器（Google Authenticator / Authy 等）当前显示的 6 位动态验证码
                   <HelpIcon text="验证码每 30 秒刷新一次，请使用当前显示的验证码" />
                 </div>
@@ -278,14 +277,11 @@ export default function LoginPage() {
 
             <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "flex-end" }}>
               <button
+                type="button"
                 onClick={handleVerify2fa}
                 disabled={!canVerify2fa || verifying}
-                style={{
-                  ...submitBtnStyle,
-                  width: "auto", padding: "0 24px", marginTop: 0,
-                  background: canVerify2fa && !verifying ? "var(--color-primary)" : "#a0b4f9",
-                  cursor: canVerify2fa && !verifying ? "pointer" : "not-allowed",
-                }}
+                className="auth-btn"
+                style={{ width: "auto", padding: "0 24px", marginTop: 0 }}
               >
                 {verifying ? t("auth.verifying") : t("auth.verifyAndLogin")}
               </button>
@@ -294,8 +290,10 @@ export default function LoginPage() {
 
             <div style={{ textAlign: "center", marginTop: 16 }}>
               <button
+                type="button"
                 onClick={handleBackToLogin}
-                style={{ background: "none", border: "none", color: "var(--color-primary)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                className="auth-link"
+                style={{ background: "none", border: "none", fontSize: 13, cursor: "pointer" }}
               >
                 {t("auth.backToLogin")}
               </button>
@@ -307,8 +305,8 @@ export default function LoginPage() {
           <>
             <form onSubmit={handleSubmit}>
               {/* Email */}
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontSize: 13, color: "var(--color-text)", marginBottom: 6 }}>
+              <div className="auth-field">
+                <label>
                   {t("auth.email")} <span style={{ color: "var(--color-danger-text)" }}>*</span>
                   <HelpIcon text="请输入您注册时使用的邮箱地址" level="button" />
                 </label>
@@ -318,13 +316,13 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="your@email.com"
                   required
-                  style={inputStyle}
+                  className="auth-input"
                 />
               </div>
 
               {/* Password */}
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontSize: 13, color: "var(--color-text)", marginBottom: 6 }}>
+              <div className="auth-field">
+                <label>
                   {t("auth.password")} <span style={{ color: "var(--color-danger-text)" }}>*</span>
                   <HelpIcon text="请输入您的登录密码" level="button" />
                 </label>
@@ -334,17 +332,12 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="请输入密码"
                   required
-                  style={inputStyle}
+                  className="auth-input"
                 />
                 <Link
                   to="/forgot-password"
-                  style={{
-                    float: "right",
-                    fontSize: 13,
-                    color: "var(--color-primary)",
-                    textDecoration: "none",
-                    marginTop: 4,
-                  }}
+                  className="auth-link"
+                  style={{ float: "right", fontSize: 13, marginTop: 6 }}
                 >
                   {t("auth.forgotPassword")}
                 </Link>
@@ -352,8 +345,8 @@ export default function LoginPage() {
 
               {/* Captcha (shown after failed login) */}
               {showCaptcha && (
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: 13, color: "var(--color-text)", marginBottom: 6 }}>
+                <div className="auth-field">
+                  <label>
                     {t("auth.captcha")}
                     <HelpIcon text="验证码用于防止暴力破解，输入图片中的字符" level="button" />
                   </label>
@@ -363,7 +356,7 @@ export default function LoginPage() {
                     onChange={(e) => setCaptcha(e.target.value)}
                     placeholder="输入验证码"
                     maxLength={6}
-                    style={inputStyle}
+                    className="auth-input"
                   />
                 </div>
               )}
@@ -372,55 +365,34 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                style={{
-                  ...submitBtnStyle,
-                  background: loading ? "#a0b4f9" : "var(--color-primary)",
-                  cursor: loading ? "not-allowed" : "pointer",
-                }}
+                className="auth-btn"
               >
                 {loading ? t("auth.loggingIn") : t("auth.loginButton")}
               </button>
             </form>
 
             {/* Register link */}
-            <div style={{ textAlign: "center", marginTop: 20, fontSize: 13, color: "var(--color-text-secondary)" }}>
-              {t("auth.noAccount")} <Link to="/register" style={{ color: "var(--color-primary)", textDecoration: "none" }}>{t("auth.registerNow")}</Link>
+            <div className="auth-foot">
+              {t("auth.noAccount")} <Link to="/register">{t("auth.registerNow")}</Link>
             </div>
 
             {/* Social Login Divider */}
-            <div style={{
-              display: "flex", alignItems: "center", margin: "24px 0 16px",
-              color: "#bbb", fontSize: 13,
-            }}>
-              <span style={{ flex: 1, height: 1, background: "var(--color-divider)", marginRight: 16 }} />
-              {t("auth.orUse")}
-              <span style={{ flex: 1, height: 1, background: "var(--color-divider)", marginLeft: 16 }} />
-            </div>
+            <div className="auth-divider">{t("auth.orUse")}</div>
 
             {/* Social Buttons */}
-            <div style={{ display: "flex", gap: 12 }}>
+            <div className="auth-social">
               {socialProviders.map((p) => (
-                <div key={p.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                  <button
-                    onClick={() => handleSocialLogin(p.label)}
-                    disabled={!p.available}
-                    style={{
-                      width: "100%", height: 40, border: "1px solid var(--color-border)",
-                      borderRadius: 8, background: "#fff", fontSize: 13,
-                      cursor: p.available ? "pointer" : "not-allowed",
-                      fontFamily: "inherit",
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-                      opacity: p.available ? 1 : 0.5,
-                    }}
-                  >
-                    {p.icon} {p.label}
-                  </button>
-                  <HelpIcon
-                    text={p.available
-                      ? "使用 GitHub 账号快捷登录，授权后自动绑定或注册账号"
-                      : `${p.label} 登录即将上线`}
-                  />
-                </div>
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => handleSocialLogin(p.label)}
+                  disabled={!p.available}
+                  className="auth-social__btn"
+                  title={p.available ? "使用 GitHub 账号快捷登录" : `${p.label} 登录即将上线`}
+                >
+                  {icons[p.label]}
+                  <span>{p.label}</span>
+                </button>
               ))}
             </div>
           </>

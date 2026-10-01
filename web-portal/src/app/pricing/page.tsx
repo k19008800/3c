@@ -124,96 +124,102 @@ export default async function PricingPage({
   ];
 
   return (
-    <div style={{ maxWidth: 1000, margin: "0 auto", padding: "48px 24px" }}>
-      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>
-        {t("pricing.title")}
-        <PageHelp text={t("help.pricing")} />
-      </h1>
-      <p style={{ color: "#64748b", marginBottom: 8, fontSize: 15 }}>
-        {t("pricing.subtitle")}
-      </p>
-      <p style={{ color: "#94a3b8", marginBottom: 24, fontSize: 13 }}>
-        每一行 = 一条模型编码（一个模型 × 一个供应商）；同一模型多供应商时并排为多行。模型编码默认按「厂商+模型」规则生成。
-      </p>
+    <div>
+      <section className="page-head">
+        <div className="container">
+          <span className="overline">Pricing</span>
+          <h1>
+            {t("pricing.title")}
+            <PageHelp text={t("help.pricing")} />
+          </h1>
+          <p className="page-subtitle">{t("pricing.subtitle")}</p>
+          <p className="page-note">{t("pricing.note")}</p>
+        </div>
+      </section>
 
-      <PriceCalculator models={models} labels={calculatorLabels} />
+      <section className="container" style={{ paddingBottom: "var(--space-8xl)" }}>
+        <PriceCalculator models={models} labels={calculatorLabels} />
 
-      <h2 style={{ fontSize: 24, fontWeight: 700, margin: "48px 0 16px" }}>{t("pricing.allModels")}</h2>
+        <h2 style={{ fontSize: "var(--font-size-h2)", fontWeight: 700, letterSpacing: "-0.01em", color: "var(--color-text)", margin: "var(--space-7xl) 0 var(--space-2xl)" }}>
+          {t("pricing.allModels")}
+        </h2>
 
-      {/* 分类筛选 */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
-        <span style={{ background: "#2563eb", color: "#fff", borderRadius: 20, padding: "6px 16px", fontSize: 13, fontWeight: 600 }}>
-          {t("pricing.allLabel")} ({models.length})
-        </span>
-        {categories.map((cat) => (
-          <span key={cat} style={{ background: "#f1f5f9", color: "#475569", borderRadius: 20, padding: "6px 16px", fontSize: 13 }}>
-            {CATEGORY_LABELS[cat] ?? cat}
+        {/* 分类筛选 */}
+        <div className="cat-pills" style={{ justifyContent: "flex-start", marginBottom: "var(--space-2xl)" }}>
+          <span style={{ background: "var(--color-primary)", color: "#fff", borderColor: "var(--color-primary)" }}>
+            {t("pricing.allLabel")} ({models.length})
           </span>
-        ))}
-      </div>
-
-      <div style={{ overflow: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", fontSize: 14, minWidth: 760 }}>
-          <thead>
-            <tr style={{ background: "#f8fafc", textAlign: "left", borderBottom: "2px solid #e2e8f0" }}>
-              <th style={{ padding: "12px 16px" }}>{t("pricing.table.code")}</th>
-              <th style={{ padding: "12px 16px" }}>{t("pricing.table.model")}</th>
-              <th style={{ padding: "12px 16px" }}>{t("pricing.table.input")}</th>
-              <th style={{ padding: "12px 16px" }}>{t("pricing.table.output")}</th>
-              <th style={{ padding: "12px 16px" }}>{t("pricing.table.cacheRead")}</th>
-              <th style={{ padding: "12px 16px" }}>{t("pricing.table.cacheWrite")}</th>
-              <th style={{ padding: "12px 16px" }}>{t("pricing.table.context")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {models.map((m) => (
-              <tr key={`${m.name}-${m.vendor}-${m.model_code ?? ""}`} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                <td style={{ padding: "10px 16px", fontFamily: "monospace", fontSize: 13, color: "#2563eb" }}>
-                  {m.model_code ?? <span style={{ color: "#cbd5e1" }}>—</span>}
-                </td>
-                <td style={{ padding: "10px 16px" }}>
-                  <strong>{m.display_name || m.name}（{m.vendor}）</strong>
-                  <div style={{ fontSize: 12, color: "#94a3b8" }}>{m.name}</div>
-                </td>
-                <td style={{ padding: "10px 16px", fontWeight: 600, color: m.input_price === 0 ? "#16a34a" : "#2563eb" }}>
-                  {formatPrice(m.input_price)}
-                </td>
-                <td style={{ padding: "10px 16px", fontWeight: 600, color: m.output_price === 0 ? "#16a34a" : "#2563eb" }}>
-                  {formatPrice(m.output_price)}
-                </td>
-                <td style={{ padding: "10px 16px", color: m.cache_read_input_price == null ? "#94a3b8" : "#475569" }}>
-                  {formatPrice(m.cache_read_input_price)}
-                </td>
-                <td style={{ padding: "10px 16px", color: m.cache_write_input_price == null ? "#94a3b8" : "#475569" }}>
-                  {formatPrice(m.cache_write_input_price)}
-                </td>
-                <td style={{ padding: "10px 16px", color: "#94a3b8" }}>
-                  {m.context_length > 0 ? m.context_length.toLocaleString() : "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {models.length === 0 && (
-        <p style={{ color: "#94a3b8", marginTop: 16, textAlign: "center", padding: 40 }}>
-          {t("pricing.empty")}
-        </p>
-      )}
-
-      {/* FAQ */}
-      <div style={{ marginTop: 60 }}>
-        <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 24 }}>{t("pricing.faq.title")}</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {faqs.map((faq) => (
-            <details key={faq.q} style={{ background: "#fff", borderRadius: 10, padding: "16px 20px", border: "1px solid #e2e8f0" }}>
-              <summary style={{ fontWeight: 600, fontSize: 15, cursor: "pointer", listStyle: "none" }}>Q: {faq.q}</summary>
-              <p style={{ marginTop: 10, color: "#475569", fontSize: 14, lineHeight: 1.8, paddingLeft: 8, borderLeft: "3px solid #2563eb" }}>{faq.a}</p>
-            </details>
+          {categories.map((cat) => (
+            <span key={cat} className="cat-pill">
+              {CATEGORY_LABELS[cat] ?? cat}
+            </span>
           ))}
         </div>
-      </div>
+
+        <div className="table-scroll">
+          <table className="price-table" style={{ minWidth: 820 }}>
+            <thead>
+              <tr>
+                <th>{t("pricing.table.code")}</th>
+                <th>{t("pricing.table.model")}</th>
+                <th>{t("pricing.table.input")}</th>
+                <th>{t("pricing.table.output")}</th>
+                <th>{t("pricing.table.cacheRead")}</th>
+                <th>{t("pricing.table.cacheWrite")}</th>
+                <th>{t("pricing.table.context")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {models.map((m) => (
+                <tr key={`${m.name}-${m.vendor}-${m.model_code ?? ""}`}>
+                  <td className="cell-vendor" style={{ fontFamily: "var(--font-family-mono)", color: "var(--color-primary)" }}>
+                    {m.model_code ?? <span style={{ color: "var(--color-text-disabled)" }}>—</span>}
+                  </td>
+                  <td className="cell-model">
+                    <strong>{m.display_name || m.name}（{m.vendor}）</strong>
+                    <span className="cell-vendor">{m.name}</span>
+                  </td>
+                  <td className="price-num" style={{ color: m.input_price === 0 ? "var(--color-success-text)" : "var(--color-primary)" }}>
+                    {formatPrice(m.input_price)}
+                  </td>
+                  <td className="price-num" style={{ color: m.output_price === 0 ? "var(--color-success-text)" : "var(--color-primary)" }}>
+                    {formatPrice(m.output_price)}
+                  </td>
+                  <td style={{ color: m.cache_read_input_price == null ? "var(--color-text-muted)" : "var(--color-text-secondary)" }}>
+                    {formatPrice(m.cache_read_input_price)}
+                  </td>
+                  <td style={{ color: m.cache_write_input_price == null ? "var(--color-text-muted)" : "var(--color-text-secondary)" }}>
+                    {formatPrice(m.cache_write_input_price)}
+                  </td>
+                  <td style={{ color: "var(--color-text-muted)", fontVariantNumeric: "tabular-nums" }}>
+                    {m.context_length > 0 ? m.context_length.toLocaleString() : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {models.length === 0 && (
+          <p className="empty-state">{t("pricing.empty")}</p>
+        )}
+
+        {/* FAQ */}
+        <div style={{ marginTop: "var(--space-8xl)" }}>
+          <h2 className="section-title" style={{ marginBottom: "var(--space-3xl)" }}>{t("pricing.faq.title")}</h2>
+          <div className="faq-list" style={{ margin: 0 }}>
+            {faqs.map((faq) => (
+              <details key={faq.q} className="faq-item">
+                <summary>
+                  <span className="q-mark">Q</span>
+                  {faq.q}
+                </summary>
+                <p className="faq-answer">{faq.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /**
  * 账号注销与数据管理 — 对齐原型 portal-account-deletion.html
@@ -174,7 +175,7 @@ export default function DeletionPage() {
         <div style={{ maxWidth: 560, margin: "0 auto" }}>
           {/* Warning */}
           <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+            <div style={{ fontSize: 48, marginBottom: 16 }}><PIcon name="alert" size={14}/></div>
             <div style={{ fontSize: 22, fontWeight: 600, color: "var(--color-text)", marginBottom: 8 }}>账号注销待确认</div>
             <div style={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.6 }}>
               您的账号注销申请已提交。<br />
@@ -184,7 +185,7 @@ export default function DeletionPage() {
 
           {/* Countdown */}
           <div style={{ background: "var(--color-panel)", borderRadius: 12, padding: 24, textAlign: "center", marginBottom: 20, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-            <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 8 }}>⏳ 剩余冷静期</div>
+            <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 8 }}><PIcon name="clock" size={14}/> 剩余冷静期</div>
             <div style={{ fontSize: 28, fontWeight: 700, color: "var(--color-danger-text)", fontFamily: "monospace" }}>{countdownText}</div>
           </div>
 
@@ -203,7 +204,7 @@ export default function DeletionPage() {
                   "注销完成邮件将发送至您的注册邮箱",
                 ].map((item, i) => (
                   <li key={i} style={{ padding: "10px 0", fontSize: 13, color: "var(--color-success-text)", display: "flex", alignItems: "center", gap: 10 }}>
-                    ✅ {item}
+                    <PIcon name="check" size={14}/> {item}
                   </li>
                 ))}
               </ul>
@@ -213,7 +214,7 @@ export default function DeletionPage() {
           {/* Timeline */}
           <div style={{ ...card, marginBottom: 24 }}>
             <div style={panelHeader}>
-              <h3 style={{ fontSize: 14, fontWeight: 500, margin: 0 }}>📅 注销时间线</h3>
+              <h3 style={{ fontSize: 14, fontWeight: 500, margin: 0 }}><PIcon name="calendar" size={14}/> 注销时间线</h3>
             </div>
             <div style={panelBody}>
               <div style={{ display: "flex", flexDirection: "column", gap: 16, fontSize: 13 }}>
@@ -252,7 +253,7 @@ export default function DeletionPage() {
 
           {/* Controls */}
           <div style={{ background: "var(--color-primary-light)", padding: 12, borderRadius: 8, marginTop: 24, textAlign: "center" }}>
-            <button onClick={() => setView("normal")} style={{ ...btn, fontSize: 12, padding: "4px 12px" }}>🔄 切换回正常视图（演示）</button>
+            <button onClick={() => setView("normal")} style={{ ...btn, fontSize: 12, padding: "4px 12px" }}><PIcon name="refresh" size={14}/> 切换回正常视图（演示）</button>
           </div>
         </div>
 
@@ -306,10 +307,10 @@ export default function DeletionPage() {
           {/* Export Card */}
           <div style={{
             display: "flex", alignItems: "flex-start", gap: 16, padding: 20, borderRadius: 10, marginBottom: 14,
-            background: "linear-gradient(135deg, rgba(79,110,247,0.04), rgba(79,110,247,0.01))",
-            border: "1px solid rgba(79,110,247,0.12)",
+            background: "var(--color-primary-lighter)",
+            border: "1px solid var(--color-primary-light)",
           }}>
-            <div style={{ width: 48, height: 48, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, background: "rgba(79,110,247,0.1)", flexShrink: 0 }}>📥</div>
+            <div style={{ width: 48, height: 48, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--color-primary-light)", flexShrink: 0 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4" /><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></svg></div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 15, fontWeight: 500, color: "var(--color-text)", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
                 导出我的数据
@@ -319,12 +320,12 @@ export default function DeletionPage() {
                 导出个人资料、消费记录、充值记录等您在本平台的所有数据到本地保存。数据将打包为加密 ZIP 文件，下载链接 72 小时有效。
               </div>
               <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 10 }}>
-                📊 本月已导出：<strong>{exportQuota.used}/{exportQuota.total}</strong> 次
+                <PIcon name="chart" size={14}/> 本月已导出：<strong>{exportQuota.used}/{exportQuota.total}</strong> 次
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
               <button onClick={() => setShowExportModal(true)} disabled={exportQuota.used >= exportQuota.total} style={{ ...btnPrimary, opacity: exportQuota.used >= exportQuota.total ? 0.5 : 1, cursor: exportQuota.used >= exportQuota.total ? "not-allowed" : "pointer" }}>
-                📥 {exportQuota.used >= exportQuota.total ? "本月次数已用完" : "导出我的数据"}
+                <PIcon name="download" size={14}/> {exportQuota.used >= exportQuota.total ? "本月次数已用完" : "导出我的数据"}
               </button>
             </div>
           </div>
@@ -335,7 +336,7 @@ export default function DeletionPage() {
               display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", borderRadius: 8, border: "1px solid var(--color-divider)", marginBottom: 10,
               background: task.status === "completed" ? "var(--color-success-bg)" : "var(--color-primary-light)",
             }}>
-              <div style={{ fontSize: 24 }}>{task.status === "completed" ? "📦" : "⏳"}</div>
+              <div style={{ fontSize: 24 }}>{task.status === "completed" ? "" : ""}</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 500 }}>导出任务 #{task.id}</div>
                 <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
@@ -349,7 +350,7 @@ export default function DeletionPage() {
               </div>
               <div>
                 {task.status === "completed" ? (
-                  <button style={{ ...btnPrimary, padding: "4px 12px", fontSize: 12 }}>📥 下载</button>
+                  <button style={{ ...btnPrimary, padding: "4px 12px", fontSize: 12 }}><PIcon name="download" size={14}/> 下载</button>
                 ) : (
                   <button disabled style={{ ...btn, padding: "4px 12px", fontSize: 12, opacity: 0.5 }}>处理中</button>
                 )}
@@ -373,7 +374,7 @@ export default function DeletionPage() {
             background: "linear-gradient(135deg, rgba(229,57,53,0.04), rgba(229,57,53,0.01))",
             border: "1px solid rgba(229,57,53,0.12)",
           }}>
-            <div style={{ width: 48, height: 48, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, background: "rgba(229,57,53,0.1)", flexShrink: 0 }}>🗑️</div>
+            <div style={{ width: 48, height: 48, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, background: "rgba(229,57,53,0.1)", flexShrink: 0 }}><PIcon name="trash" size={14}/></div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 15, fontWeight: 500, color: "var(--color-text)", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
                 注销我的账号
@@ -383,10 +384,10 @@ export default function DeletionPage() {
                 注销后所有 API Key 将立即失效、所有服务停止。<br />
                 采用<strong>7 天冷静期 + 30 天数据保留期</strong>机制：冷静期内可随时取消注销，超过 37 天后个人数据将永久删除且不可恢复。
               </div>
-              <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 10 }}>⚠️ 注销前请确认：余额已清零、无进行中工单、无审核中退款</div>
+              <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 10 }}><PIcon name="alert" size={14}/> 注销前请确认：余额已清零、无进行中工单、无审核中退款</div>
             </div>
             <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
-              <button onClick={() => setShowDeletionModal(true)} style={btnDanger}>🗑️ 注销账号</button>
+              <button onClick={() => setShowDeletionModal(true)} style={btnDanger}><PIcon name="trash" size={14}/> 注销账号</button>
             </div>
           </div>
         </div>
@@ -395,7 +396,7 @@ export default function DeletionPage() {
       {/* Export Modal */}
       {showExportModal && (
         <ModalOverlay onClose={() => setShowExportModal(false)}>
-          <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 6 }}>📥 导出我的数据</div>
+          <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 6 }}><PIcon name="download" size={14}/> 导出我的数据</div>
           <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 20, lineHeight: 1.5 }}>
             选择需要导出的数据类别，数据将打包为加密 ZIP 文件，下载链接 72 小时有效。
           </div>
@@ -422,7 +423,7 @@ export default function DeletionPage() {
             ))}
           </div>
           <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 12 }}>
-            ✅ 共选择 <strong>{selectedScopes.size}</strong>/8 项数据 · ⚠️ 本月剩余导出次数：<strong>{exportQuota.total - exportQuota.used}</strong> 次
+            <PIcon name="check" size={14}/> 共选择 <strong>{selectedScopes.size}</strong>/8 项数据 · <PIcon name="alert" size={14}/> 本月剩余导出次数：<strong>{exportQuota.total - exportQuota.used}</strong> 次
           </div>
           <div style={{ marginTop: 20 }}>
             <div style={{ display: "block", fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 6 }}>邮箱验证码（发送至您的注册邮箱）</div>
@@ -443,7 +444,7 @@ export default function DeletionPage() {
       {/* Deletion Modal */}
       {showDeletionModal && (
         <ModalOverlay onClose={() => setShowDeletionModal(false)}>
-          <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 6 }}>🗑️ 注销账号</div>
+          <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 6 }}><PIcon name="trash" size={14}/> 注销账号</div>
           <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 20, lineHeight: 1.5 }}>
             确定要注销账号？注销后所有服务将不可用。请先确认以下条件：
           </div>
@@ -460,7 +461,7 @@ export default function DeletionPage() {
                 background: item.pass ? "rgba(102,187,106,0.04)" : "rgba(229,57,53,0.04)",
                 color: item.pass ? "var(--color-success-text)" : "var(--color-danger-text)",
               }}>
-                <span style={{ fontSize: 16 }}>{item.pass ? "✅" : "❌"}</span>
+                <span style={{ fontSize: 16 }}>{item.pass ? "" : ""}</span>
                 {item.label}{item.detail && ` — ${item.detail}`}
               </div>
             ))}
@@ -520,7 +521,7 @@ function OtpInput({ value, onChange }: { value: string[]; onChange: (v: string[]
           maxLength={1}
           style={{
             width: 48, height: 56, textAlign: "center", fontSize: 22, fontWeight: 600,
-            borderRadius: 6, border: `1px solid ${digit ? "rgba(79,110,247,0.4)" : "var(--color-border)"}`,
+            borderRadius: 6, border: `1px solid ${digit ? "var(--color-primary-border)" : "var(--color-border)"}`,
             background: "var(--color-panel)", color: "var(--color-text)", outline: "none",
             fontFamily: "inherit",
           }}

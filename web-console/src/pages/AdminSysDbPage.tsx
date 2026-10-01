@@ -52,13 +52,13 @@ export default function AdminSysDbPage() {
         <div style={{ background: "var(--color-panel)", border: `1px solid var(--color-border)`, borderRadius: 8, padding: 16 }}>
           <h4 style={{ margin: "0 0 8px", fontSize: 14, color: "var(--color-text)" }}>表结构（{tables.length} 张）</h4>
           <div style={{ maxHeight: 400, overflow: "auto" }}>
-            {schemaQ.isLoading ? <div style={{ color: "#94a3b8", fontSize: 12 }}>加载中...</div> : tables.map((t: any) => (
+            {schemaQ.isLoading ? <div style={{ color: "var(--color-text-muted)", fontSize: 12 }}>加载中...</div> : tables.map((t: any) => (
               <div key={t.table_name} style={{ marginBottom: 12 }}>
-                <div style={{ fontWeight: 600, fontSize: 13, color: "var(--color-primary)" }}>{t.table_name} <span style={{ fontSize: 10, color: "#94a3b8" }}>{t.table_type}</span></div>
+                <div style={{ fontWeight: 600, fontSize: 13, color: "var(--color-primary)" }}>{t.table_name} <span style={{ fontSize: 10, color: "var(--color-text-muted)" }}>{t.table_type}</span></div>
                 <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginLeft: 8 }}>
                   {(t.columns ?? []).map((c: any) => (
                     <div key={c.column_name} style={{ margin: "2px 0" }}>
-                      <code>{c.column_name}</code> <span style={{ color: "#94a3b8" }}>{c.data_type}{c.is_nullable === "YES" ? "" : " NOT NULL"}</span>
+                      <code>{c.column_name}</code> <span style={{ color: "var(--color-text-muted)" }}>{c.data_type}{c.is_nullable === "YES" ? "" : " NOT NULL"}</span>
                     </div>
                   ))}
                 </div>
@@ -75,7 +75,7 @@ export default function AdminSysDbPage() {
           <button onClick={runQuery} disabled={!sql.trim() || running} style={{ padding: "6px 16px", borderRadius: 4, border: "none", background: "var(--color-primary)", color: "#fff", cursor: "pointer", opacity: !sql.trim() || running ? 0.6 : 1 }}>
             {running ? "执行中..." : "执行"}
           </button>
-          <span style={{ marginLeft: 8, fontSize: 11, color: "#94a3b8" }}>仅支持 SELECT（自动 LIMIT 200 兜底）</span>
+          <span style={{ marginLeft: 8, fontSize: 11, color: "var(--color-text-muted)" }}>仅支持 SELECT（自动 LIMIT 200 兜底）</span>
 
           {err && <div style={{ marginTop: 8, padding: "8px", background: "var(--color-danger-bg)", borderRadius: 4, fontSize: 12, color: "var(--color-danger-text)" }}>{err}</div>}
 
@@ -106,5 +106,5 @@ export default function AdminSysDbPage() {
   );
 }
 
-const thS: React.CSSProperties = { padding: "4px 6px", textAlign: "left", fontWeight: 600, color: "#475569", whiteSpace: "nowrap" };
+const thS: React.CSSProperties = { padding: "4px 6px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)", whiteSpace: "nowrap" };
 const tdS: React.CSSProperties = { padding: "4px 6px", color: "var(--color-text)", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" };

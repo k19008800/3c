@@ -32,7 +32,7 @@ export default function AdminSysLogsPage() {
       <h2>
         在线日志查看器
         <HelpIcon text="在线日志查看器 — 浏览服务器日志文件、按关键词搜索、控制显示行数。支持查看 PM2 日志和应用日志。" level="page" />
-        {backendMissing && <span style={{ fontSize: 11, color: "#f59e0b", marginLeft: 8 }}>⚠️ 后端未接入（/admin/sys/logs 待实现）</span>}
+        {backendMissing && <span style={{ fontSize: 11, color: "var(--color-warning-text)", marginLeft: 8 }}>️ 后端未接入（/admin/sys/logs 待实现）</span>}
       </h2>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
@@ -52,7 +52,7 @@ export default function AdminSysLogsPage() {
           <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 8 }}>
             文件: {file} | 匹配 {contentQ.data?.total || 0} 行 | 显示 {contentQ.data?.lines?.length || 0} 行
           </div>
-          <pre style={{ background: "#0f172a", color: "#e2e8f0", padding: 16, borderRadius: 8, fontSize: 11, fontFamily: "monospace", maxHeight: 600, overflow: "auto", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+          <pre style={{ background: "var(--color-code-bg)", color: "#e2e8f0", padding: 16, borderRadius: 8, fontSize: 11, fontFamily: "monospace", maxHeight: 600, overflow: "auto", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
             {contentQ.data?.lines?.join("\n") || "无匹配内容"}
           </pre>
         </div>

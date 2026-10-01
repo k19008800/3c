@@ -1,0 +1,131 @@
+/**
+ * 浩寅云 console · misc 页面整改工具类（2026-10）
+ * 作用范围：代理端 / 销售端 / 供应商端 19 个业务页面。
+ * 设计令牌全部引用 packages/shared-ui/tokens.css，不新建色值。
+ * 禁止：靛蓝 #4f6ef7 / 紫 #8b5cf6 / 亮天蓝 #0ea5e9 / 翠绿渐变 hero / emoji 图标。
+ */
+
+/* —— 页头：克制标题区，替代原翠绿渐变 banner —— */
+.cm-pagehead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding: 4px 0 var(--space-xl);
+  border-bottom: 1px solid var(--color-divider);
+  margin-bottom: var(--space-xl);
+}
+.cm-pagehead__titles { min-width: 0; }
+.cm-pagehead__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-page-title);
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+.cm-pagehead__sub {
+  margin-top: var(--space-xs);
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+/* —— 中性化 KPI 数字（金额/数量一律墨蓝、等宽） —— */
+.cm-kpi-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.cm-kpi-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* —— 统一表格：hairline 分隔 + 行 hover —— */
+.cm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-table);
+  background: var(--color-panel);
+}
+.cm-table thead th {
+  background: var(--color-table-header-bg);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  text-align: left;
+  padding: var(--table-cell-padding);
+  border-bottom: 1px solid var(--color-divider);
+  white-space: nowrap;
+}
+.cm-table tbody td {
+  padding: var(--table-cell-padding);
+  border-bottom: 1px solid var(--color-divider);
+  color: var(--color-text);
+  vertical-align: middle;
+}
+.cm-table tbody tr { transition: background var(--duration-fast) var(--ease-out); }
+.cm-table tbody tr:hover { background: var(--color-row-hover); }
+.cm-table tbody tr:last-child td { border-bottom: none; }
+.cm-table .num { font-variant-numeric: tabular-nums; text-align: right; }
+
+/* —— 状态/语义点：纯令牌色，无渐变 —— */
+.cm-dot { width: 8px; height: 8px; border-radius: var(--radius-pill); display: inline-block; }
+.cm-dot--success { background: var(--color-success-text); }
+.cm-dot--warning { background: var(--color-warning-text); }
+.cm-dot--danger  { background: var(--color-danger-text); }
+.cm-dot--info    { background: var(--color-primary); }
+
+/* —— 快捷入口卡片：中性描边，hover 浅蓝，替代彩虹 emoji 卡 —— */
+.cm-quick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-lg);
+  background: var(--color-panel);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-out),
+              background var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+.cm-quick:hover {
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-lighter);
+  color: var(--color-text);
+  box-shadow: var(--shadow-card);
+}
+.cm-quick__label { font-size: var(--font-size-base); }
+
+/* —— 深色独立页（vendor login/register）背景：墨蓝而非纯黑/slate —— */
+.cm-ink-bg {
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 600px at 70% -10%, rgba(24,150,255,0.10), transparent 60%),
+    var(--color-ink-900);
+  color: var(--color-text-inverse);
+  font-family: var(--font-family);
+}
+.cm-ink-card {
+  background: var(--color-ink-800);
+  border: 1px solid var(--color-border-inverse);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-modal);
+}
+.cm-ink-muted { color: var(--color-text-inverse-secondary); }
+
+/* —— 响应式：390px 不破版 —— */
+@media (max-width: 640px) {
+  .cm-pagehead { flex-direction: column; gap: var(--space-md); }
+  .cm-grid-4, .cm-grid-6 { grid-template-columns: repeat(2, 1fr) !important; }
+  .cm-grid-3, .cm-grid-2 { grid-template-columns: 1fr !important; }
+}
+
+/* —— 宽表横向滚动：groups 等多列表在 390px 不再挤压列，外层 .shared-table-container 已有 overflow-x:auto —— */
+.cm-wide .shared-table { min-width: 860px; }

@@ -64,23 +64,27 @@
 /* ===== Type Variants ===== */
 
 .toast-item--success {
-  background: var(--color-success-bg, #e8f5e9);
-  color: var(--color-success-text, #2e7d32);
+  background: var(--color-success-bg, #e8f8f1);
+  color: var(--color-success-text, #0b7a4b);
+  border: 1px solid var(--color-success-border, #a7e8ce);
 }
 
 .toast-item--error {
-  background: var(--color-danger-bg, #ffebee);
-  color: var(--color-danger-text, #c62828);
+  background: var(--color-danger-bg, #feefee);
+  color: var(--color-danger-text, #b42318);
+  border: 1px solid var(--color-danger-border, #facdc9);
 }
 
 .toast-item--warning {
-  background: var(--color-warning-bg, #fff3e0);
-  color: var(--color-warning-text, #e65100);
+  background: var(--color-warning-bg, #fef4e2);
+  color: var(--color-warning-text, #b45d09);
+  border: 1px solid var(--color-warning-border, #fbdcb0);
 }
 
 .toast-item--info {
-  background: var(--color-info-bg, #e3f2fd);
-  color: var(--color-info-text, #1565c0);
+  background: var(--color-info-bg, rgba(24, 150, 255, 0.08));
+  color: var(--color-info-text, #0b6fd6);
+  border: 1px solid var(--color-info-border, rgba(24, 150, 255, 0.3));
 }
 
 /* ===== Icon ===== */

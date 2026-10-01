@@ -17,14 +17,15 @@
   font-size: 64px;
   line-height: 1;
   margin-bottom: var(--space-lg);
-  opacity: 0.6;
+  opacity: 0.35;
+  color: var(--color-text-muted);
 }
 
 .shared-empty-state__title {
   font-size: var(--font-size-lg);
   color: var(--color-text);
   margin-bottom: var(--space-sm);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .shared-empty-state__description {
@@ -32,7 +33,7 @@
   color: var(--color-text-secondary);
   margin-bottom: var(--space-xl);
   max-width: 360px;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .shared-empty-state__action {
@@ -51,10 +52,20 @@
   color: #fff;
   font-size: var(--font-size-md);
   cursor: pointer;
-  transition: background-color var(--transition-fast);
+  transition: background-color var(--transition-fast) var(--ease-out),
+    transform var(--transition-fast) var(--ease-out);
   font-family: var(--font-family);
 }
 
 .shared-empty-state__action-btn:hover {
   background-color: var(--color-primary-hover);
+}
+
+.shared-empty-state__action-btn:active {
+  background-color: var(--color-primary-active);
+}
+
+.shared-empty-state__action-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }

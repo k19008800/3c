@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { HelpIcon, SkeletonGroup } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 
@@ -24,16 +25,16 @@ export default function AdminCostPredictionPage() {
         <span style={{ fontSize: 13, color: "#666" }}>预测天数:</span>
         {[7, 15, 30, 60, 90].map(d => (
           <button key={d} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--color-border)",
-            background: days === d ? "#4f6ef7" : "#fff", color: days === d ? "#fff" : "#333", cursor: "pointer", fontSize: 13 }}
+            background: days === d ? "var(--color-primary)" : "#fff", color: days === d ? "#fff" : "#333", cursor: "pointer", fontSize: 13 }}
             onClick={() => setDays(d)}>{d}天</button>
         ))}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 20 }}>
-        {[{ icon: "📦", label: "预测总成本", value: predQ.data?.summary?.predicted_total != null ? `¥${predQ.data.summary.predicted_total}` : "—" },
-          { icon: "📊", label: "日均成本", value: predQ.data?.summary?.daily_avg != null ? `¥${predQ.data.summary.daily_avg}` : "—" },
-          { icon: "🔮", label: "置信度", value: predQ.data?.summary?.confidence != null ? `${predQ.data.summary.confidence}%` : "—" },
-          { icon: "⚠️", label: "风险级别", value: predQ.data?.summary?.risk_level ?? "—",
+        {[{ icon: <PIcon name="box" size={20}/>, label: "预测总成本", value: predQ.data?.summary?.predicted_total != null ? `¥${predQ.data.summary.predicted_total}` : "—" },
+          { icon: <PIcon name="chart" size={20}/>, label: "日均成本", value: predQ.data?.summary?.daily_avg != null ? `¥${predQ.data.summary.daily_avg}` : "—" },
+          { icon: <PIcon name="crystal" size={20}/>, label: "置信度", value: predQ.data?.summary?.confidence != null ? `${predQ.data.summary.confidence}%` : "—" },
+          { icon: <PIcon name="alert" size={20}/>, label: "风险级别", value: predQ.data?.summary?.risk_level ?? "—",
             color: predQ.data?.summary?.risk_level === "high" ? "#e53935" : predQ.data?.summary?.risk_level === "medium" ? "#f59e0b" : "#22c55e" },
         ].map((s, i) => (
           <div key={i} style={{ ...card, borderLeft: s.color ? `4px solid ${s.color}` : undefined }}>
@@ -45,7 +46,7 @@ export default function AdminCostPredictionPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>🔮 各供应商成本预测 <HelpIcon text="cost_prediction" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="crystal" size={14}/> 各供应商成本预测 <HelpIcon text="cost_prediction" /></div>
         {predQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>

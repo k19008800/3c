@@ -5,6 +5,7 @@ import { withOperation2fa, operation2faHeaders } from "../lib/operation-2fa";
 import type { OperationSummaryItem } from "../components/Operation2faModal";
 import { PageHeader, Panel, Tag, Table, Modal, SkeletonGroup, EmptyState, useToast } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /** 结账管理 · 月度财务锁定（原型 Tab4 重建） */
 
@@ -170,7 +171,7 @@ export default function AdminClosePage() {
 
       {/* 历史结账记录 */}
       <div style={{ marginTop: 16 }}>
-        <Panel title="📋 历史结账记录" help="最近 24 期结账结果。">
+        <Panel title="历史结账记录" help="最近 24 期结账结果。">
         {histQ.isLoading ? (
           <SkeletonGroup lines={6} />
         ) : list.length === 0 ? (
@@ -187,7 +188,7 @@ export default function AdminClosePage() {
           确认锁定 <strong>{cur?.period}</strong> 月的所有财务数据？锁定后该月充值/消费/退款/佣金将不可修改，并自动生成结转凭证。
         </div>
         <div style={{ marginTop: 12, padding: 12, background: "var(--color-bg-warning, #fef3c7)", borderRadius: 8, fontSize: 13, color: "var(--color-warning)" }}>
-          ⚠️ 结账前请确认所有退款、提现、佣金已完成处理。
+          <PIcon name="alert" size={14}/> 结账前请确认所有退款、提现、佣金已完成处理。
         </div>
         <div className="c3-btn-group" style={{ justifyContent: "flex-end" }}>
           <button type="button" className="c3-btn c3-btn--default" onClick={() => setConfirmOpen(false)}>

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { PageHeader, Panel, SkeletonGroup, EmptyState } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /** 资金账户 · 平台资金总览（原型 Tab2 重建） */
 
@@ -46,11 +47,11 @@ export default function AdminFundsAccountsPage() {
   const loading = accQ.isLoading;
 
   const kpis = [
-    { label: "平台总余额", value: acc?.total_balance ?? 0, icon: "💰", color: "var(--color-primary)" },
-    { label: "可用余额", value: acc?.available_balance ?? 0, icon: "💳", color: "var(--color-success)" },
-    { label: "冻结资金", value: acc?.frozen_balance ?? 0, icon: "🧊", color: "var(--color-warning)" },
-    { label: "平台毛利", value: acc?.platform_gross_profit ?? 0, icon: "📈", color: "#1e40af" },
-    { label: "毛利率", value: `${acc?.platform_gross_margin ?? 0}%`, icon: "📊", color: "#7c3aed" },
+    { label: "平台总余额", value: acc?.total_balance ?? 0, icon: <PIcon name="coin" size={20}/>, color: "var(--color-primary)" },
+    { label: "可用余额", value: acc?.available_balance ?? 0, icon: <PIcon name="card" size={20}/>, color: "var(--color-success)" },
+    { label: "冻结资金", value: acc?.frozen_balance ?? 0, icon: <PIcon name="snow" size={20}/>, color: "var(--color-warning)" },
+    { label: "平台毛利", value: acc?.platform_gross_profit ?? 0, icon: <PIcon name="trendUp" size={20}/>, color: "#1e40af" },
+    { label: "毛利率", value: `${acc?.platform_gross_margin ?? 0}%`, icon: <PIcon name="chart" size={20}/>, color: "var(--color-primary)" },
   ];
 
   const fundRows = [
@@ -85,7 +86,7 @@ export default function AdminFundsAccountsPage() {
 
       <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 16, marginTop: 16, alignItems: "start" }}>
         {/* 冻结资金明细 */}
-        <Panel title="🧊 冻结资金明细" help="当前平台冻结资金构成">
+        <Panel title="冻结资金明细" help="当前平台冻结资金构成">
           {loading ? (
             <SkeletonGroup lines={3} />
           ) : (acc?.frozen_detail?.length ?? 0) === 0 ? (
@@ -110,7 +111,7 @@ export default function AdminFundsAccountsPage() {
         </Panel>
 
         {/* 资金构成 */}
-        <Panel title="💰 资金构成" help="平台累计充值、消费、退款与代理佣金（数据源：balance_transactions）">
+        <Panel title="资金构成" help="平台累计充值、消费、退款与代理佣金（数据源：balance_transactions）">
           <div className="c3-grid c3-grid--auto" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 12 }}>
             {fundRows.map(([k, v]) => (
               <div key={k as string} style={{ padding: 12, background: "var(--color-bg-soft, #f8fafc)", borderRadius: 8 }}>
@@ -124,7 +125,7 @@ export default function AdminFundsAccountsPage() {
 
       {/* 资金变动趋势 */}
       <div style={{ marginTop: 16 }}>
-        <Panel title="📈 资金变动趋势" help="近 30 天平台资金累计余额（按天累加充值/消费/退款/佣金/提现净额）。">
+        <Panel title="资金变动趋势" help="近 30 天平台资金累计余额（按天累加充值/消费/退款/佣金/提现净额）。">
         {trendQ.isLoading ? (
           <SkeletonGroup lines={3} />
         ) : trend.length === 0 ? (

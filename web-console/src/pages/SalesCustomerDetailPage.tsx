@@ -11,6 +11,7 @@ import {
   useToast,
 } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
+import "./console-misc.css";
 
 /**
  * 销售 — 客户详情页
@@ -206,11 +207,11 @@ export default function SalesCustomerDetailPage() {
         onClick={() => window.history.back()}
         style={{
           display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13,
-          color: "#6a8aff", cursor: "pointer", marginBottom: 16, padding: "6px 12px",
+          color: "var(--color-primary)", cursor: "pointer", marginBottom: 16, padding: "6px 12px",
           borderRadius: 6, transition: ".15s",
         }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#eef1ff"; (e.currentTarget as HTMLElement).style.color = "#4f6ef7"; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "#6a8aff"; }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--color-primary-light)"; (e.currentTarget as HTMLElement).style.color = "var(--color-primary-active)"; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--color-primary)"; }}
       >
         ← 返回客户列表
       </div>
@@ -223,7 +224,7 @@ export default function SalesCustomerDetailPage() {
       {/* 基本信息 + 消费总览 — 对齐 agent-customers.html detail-cards */}
       <div style={{ ...CARD, marginBottom: 16 }}>
         <h4 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 600, color: "var(--color-text)", display: "flex", alignItems: "center", gap: 6 }}>
-          📋 基本信息
+          基本信息
         </h4>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "16px 32px" }}>
           <InfoItem label="客户邮箱" value={customer.email} />
@@ -234,7 +235,7 @@ export default function SalesCustomerDetailPage() {
       </div>
 
       {/* 消费总览 + 状态变更 + 标签 */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 16 }}>
+      <div className="cm-grid-3" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 16 }}>
         {/* 消费总览 */}
         <div style={{ ...CARD }}>
           <h4 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 600, color: "var(--color-text)" }}>消费总览</h4>
@@ -301,11 +302,11 @@ export default function SalesCustomerDetailPage() {
       <div style={{ ...CARD, marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--color-text)", display: "flex", alignItems: "center", gap: 6 }}>
-            💰 消费明细
+            消费明细
             <HelpIcon text="查看该客户所有模型的 Token 消费记录" level="button" />
           </h4>
           <select value={consumptionTimeFilter} onChange={e => { setConsumptionTimeFilter(e.target.value); setConsumptionPage(1); }}
-            style={{ height: 32, padding: "0 8px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 12, background: "#fff" }}>
+            style={{ height: 32, padding: "0 8px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 12, background: "var(--color-panel)" }}>
             <option value="7d">近 7 天</option>
             <option value="30d">本月</option>
             <option value="90d">近 3 个月</option>
@@ -327,7 +328,7 @@ export default function SalesCustomerDetailPage() {
       {/* 充值记录 — 对齐 agent-customers.html recharge table */}
       <div style={{ ...CARD, marginBottom: 16 }}>
         <h4 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 600, color: "var(--color-text)", display: "flex", alignItems: "center", gap: 6 }}>
-          💳 充值记录
+          充值记录
           <HelpIcon text="查看该客户的充值历史" level="button" />
         </h4>
         <Table columns={rechargeColumns}

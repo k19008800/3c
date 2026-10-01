@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { HelpIcon, StatusBadge, SkeletonGroup } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 
@@ -23,7 +24,7 @@ export default function AdminReconciliationPage() {
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
         {["week", "month", "quarter"].map(p => (
           <button key={p} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--color-border)",
-            background: period === p ? "#4f6ef7" : "#fff", color: period === p ? "#fff" : "#333", cursor: "pointer", fontSize: 13 }}
+            background: period === p ? "var(--color-primary)" : "#fff", color: period === p ? "#fff" : "#333", cursor: "pointer", fontSize: 13 }}
             onClick={() => setPeriod(p)}>
             {{ week: "本周", month: "本月", quarter: "本季" }[p]}
           </button>
@@ -31,10 +32,10 @@ export default function AdminReconciliationPage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 20 }}>
-        {[{ icon: "💰", label: "平台收入", value: recQ.data?.summary?.revenue != null ? `¥${recQ.data.summary.revenue}` : "—" },
-          { icon: "📦", label: "供应商成本", value: recQ.data?.summary?.cost != null ? `¥${recQ.data.summary.cost}` : "—" },
-          { icon: "📈", label: "利润", value: recQ.data?.summary?.profit != null ? `¥${recQ.data.summary.profit}` : "—" },
-          { icon: "📊", label: "毛利率", value: recQ.data?.summary?.margin != null ? `${recQ.data.summary.margin}%` : "—" },
+        {[{ icon: <PIcon name="coin" size={20}/>, label: "平台收入", value: recQ.data?.summary?.revenue != null ? `¥${recQ.data.summary.revenue}` : "—" },
+          { icon: <PIcon name="box" size={20}/>, label: "供应商成本", value: recQ.data?.summary?.cost != null ? `¥${recQ.data.summary.cost}` : "—" },
+          { icon: <PIcon name="trendUp" size={20}/>, label: "利润", value: recQ.data?.summary?.profit != null ? `¥${recQ.data.summary.profit}` : "—" },
+          { icon: <PIcon name="chart" size={20}/>, label: "毛利率", value: recQ.data?.summary?.margin != null ? `${recQ.data.summary.margin}%` : "—" },
         ].map((s, i) => (
           <div key={i} style={card}>
             <div style={{ fontSize: 24 }}>{s.icon}</div>
@@ -45,7 +46,7 @@ export default function AdminReconciliationPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>📊 对账明细 <HelpIcon text="reconciliation" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="chart" size={14}/> 对账明细 <HelpIcon text="reconciliation" /></div>
         {recQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>

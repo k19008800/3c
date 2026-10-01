@@ -13,6 +13,7 @@ import {
 import type { ColumnDef } from "@3cloud/shared-ui";
 import { useI18n } from "../lib/i18n-context";
 import { fmtDate } from "../lib/fmt";
+import { PIcon } from "./_polishIcons";
 
 /* ============ 类型 ============ */
 interface ApiKey {
@@ -41,7 +42,7 @@ const MOCK_GROUPS = ["基础模型组（8 个模型）", "高级模型组（5 �
 const btnBase: React.CSSProperties = {
   padding: "4px 12px",
   borderRadius: 6,
-  border: "1px solid #d9d9d9",
+  border: "1px solid var(--color-border)",
   background: "#fff",
   fontSize: 12,
   cursor: "pointer",
@@ -236,7 +237,7 @@ export default function ApiKeysPage() {
       {/* 标题行 */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <h2 style={{ margin: 0, display: "flex", alignItems: "center", gap: 8, fontSize: 20, fontWeight: 600 }}>
-          🔑 {t("apikey.title")}
+          <PIcon name="key" size={14}/> {t("apikey.title")}
           <HelpIcon text={t("apikey.help.title")} level="page" />
         </h2>
       </div>
@@ -245,7 +246,7 @@ export default function ApiKeysPage() {
       {apiConfig && (
         <div style={{ background: "#1e293b", borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontFamily: "monospace", fontSize: 12, color: "#e2e8f0", lineHeight: 1.9 }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", color: "#94a3b8", fontFamily: "system-ui, sans-serif", marginBottom: 4 }}>
-            <span>🔌 {t("apikey.endpoint.title")}</span>
+            <span><PIcon name="plug" size={14}/> {t("apikey.endpoint.title")}</span>
             <span style={{ fontSize: 11 }}>{t("apikey.endpoint.configHint")}</span>
           </div>
           <div>
@@ -278,7 +279,7 @@ export default function ApiKeysPage() {
               setShowCreate(true);
             }}
             style={{
-              background: "#4f6ef7",
+              background: "var(--color-primary)",
               color: "#fff",
               border: "none",
               padding: "10px 20px",
@@ -300,7 +301,7 @@ export default function ApiKeysPage() {
             style={{
               width: 240,
               height: 40,
-              border: "1px solid #d9d9d9",
+              border: "1px solid var(--color-border)",
               borderRadius: 8,
               padding: "0 12px",
               fontSize: 14,
@@ -312,7 +313,7 @@ export default function ApiKeysPage() {
       {/* 创建成功提示 */}
       {createdSecret && (
         <div style={{ background: "#e8f5e9", border: "1px solid #c8e6c9", borderRadius: 8, padding: 16, marginBottom: 16 }}>
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>✅ {t("apikey.created.oneTime")}</div>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}><PIcon name="check" size={14}/> {t("apikey.created.oneTime")}</div>
           <code style={{ background: "#fff", padding: "8px 12px", borderRadius: 6, display: "block", wordBreak: "break-all", fontFamily: "monospace", fontSize: 14 }}>
             {createdSecret}
           </code>
@@ -355,7 +356,7 @@ export default function ApiKeysPage() {
               style={{
                 width: "100%",
                 padding: "10px 12px",
-                border: "1px solid #d9d9d9",
+                border: "1px solid var(--color-border)",
                 borderRadius: 8,
                 fontSize: 14,
                 boxSizing: "border-box",
@@ -375,7 +376,7 @@ export default function ApiKeysPage() {
               style={{
                 width: "100%",
                 padding: "10px 12px",
-                border: "1px solid #d9d9d9",
+                border: "1px solid var(--color-border)",
                 borderRadius: 8,
                 fontSize: 14,
                 background: "#fff",
@@ -398,7 +399,7 @@ export default function ApiKeysPage() {
                 style={{
                   width: "100%",
                   padding: "10px 12px",
-                  border: "1px solid #d9d9d9",
+                  border: "1px solid var(--color-border)",
                   borderRadius: 8,
                   fontSize: 14,
                   background: "#fff",
@@ -426,7 +427,7 @@ export default function ApiKeysPage() {
               style={{
                 width: "100%",
                 padding: "10px 12px",
-                border: "1px solid #d9d9d9",
+                border: "1px solid var(--color-border)",
                 borderRadius: 8,
                 fontSize: 14,
                 boxSizing: "border-box",
@@ -446,7 +447,7 @@ export default function ApiKeysPage() {
               rows={3}
               style={{
                 width: "100%",
-                border: "1px solid #d9d9d9",
+                border: "1px solid var(--color-border)",
                 borderRadius: 8,
                 padding: 8,
                 fontSize: 13,
@@ -471,7 +472,7 @@ export default function ApiKeysPage() {
                 padding: "10px 24px",
                 border: "none",
                 borderRadius: 8,
-                background: !newName.trim() ? "#a0b4f9" : "#4f6ef7",
+                background: !newName.trim() ? "var(--color-text-disabled)" : "var(--color-primary)",
                 color: "#fff",
                 cursor: !newName.trim() ? "not-allowed" : "pointer",
                 fontSize: 14,

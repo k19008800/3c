@@ -42,15 +42,15 @@ export default function AdminMarketplacePage() {
               <span style={{ fontWeight: 600, fontSize: 15 }}>{m.display_name ?? m.model_name}</span>
               <StatusBadge status={m.status === "active" ? "success" : "default"}>{m.status ?? "active"}</StatusBadge>
             </div>
-            <div style={{ fontSize: 12, color: "#888" }}>{m.vendor_name} · {m.category ?? "文本"}</div>
-            <div style={{ fontSize: 12, color: "#666" }}>{m.description ?? "—"}</div>
+            <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{m.vendor_name} · {m.category ?? "文本"}</div>
+            <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{m.description ?? "—"}</div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
               <span>¥{m.sell_input_price}/1K tokens (输入)</span>
               <span>¥{m.sell_output_price}/1K tokens (输出)</span>
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", fontSize: 11 }}>
               {(m.tags ?? []).map((t: string) => (
-                <span key={t} style={{ padding: "2px 8px", background: "#f0f0f0", borderRadius: 4, color: "#666" }}>{t}</span>
+                <span key={t} style={{ padding: "2px 8px", background: "#f0f0f0", borderRadius: 4, color: "var(--color-text-secondary)" }}>{t}</span>
               ))}
             </div>
           </div>

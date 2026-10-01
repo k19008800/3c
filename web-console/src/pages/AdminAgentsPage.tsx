@@ -204,25 +204,25 @@ export default function AdminAgentsPage() {
       {/* 统计概览 — 原型 stat-grid */}
       <div className="c3-stat-grid">
         <div className="c3-stat-card">
-          <span className="c3-stat-card__icon">🤝</span>
+          <span className="c3-stat-card__icon"></span>
           <div className="c3-stat-card__label">代理商总数</div>
           <div className="c3-stat-card__value">{loading ? "—" : summary?.total ?? 0}</div>
           <div className="c3-stat-card__sub">启用 {enabledCount} · 禁用 {disabledCount}</div>
         </div>
         <div className="c3-stat-card">
-          <span className="c3-stat-card__icon">👥</span>
+          <span className="c3-stat-card__icon"></span>
           <div className="c3-stat-card__label">名下客户合计</div>
           <div className="c3-stat-card__value">{loading ? "—" : summary?.totalCustomers ?? 0}</div>
           <div className="c3-stat-card__sub">平均 {avgCustomers} 户/代理商</div>
         </div>
         <div className="c3-stat-card">
-          <span className="c3-stat-card__icon">💰</span>
+          <span className="c3-stat-card__icon"></span>
           <div className="c3-stat-card__label">本月佣金总额</div>
           <div className="c3-stat-card__value">{loading ? "—" : fmtAmount(summary?.monthCommission ?? 0)}</div>
           <div className="c3-stat-card__trend c3-stat-card__trend--up">↑ 本月累计</div>
         </div>
         <div className="c3-stat-card">
-          <span className="c3-stat-card__icon">💳</span>
+          <span className="c3-stat-card__icon"></span>
           <div className="c3-stat-card__label">待提现金额</div>
           <div className="c3-stat-card__value">{loading ? "—" : fmtAmount(summary?.pendingWithdrawal ?? 0)}</div>
           <div className="c3-stat-card__sub">{summary?.pendingWithdrawalCount ?? 0} 笔待处理</div>
@@ -231,7 +231,7 @@ export default function AdminAgentsPage() {
 
       {/* 列表 — 原型 panel + table */}
       <Panel
-        title="🤝 代理商列表"
+        title=" 代理商列表"
         help="点击「编辑佣金」调整比例，禁用后代理商无法继续推广。"
         extra={
           <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" onClick={() => toast.info("新增代理商功能开发中")}>

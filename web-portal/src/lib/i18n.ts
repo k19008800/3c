@@ -130,6 +130,7 @@ export const EN_DEFAULTS: Record<string, string> = {
   // pricing
   "pricing.title": "Model Pricing",
   "pricing.subtitle": "Transparent · Pay-as-you-go · No hidden fees · Live prices",
+  "pricing.note": "Each row is one model code (one model × one vendor); when a single model is offered by multiple vendors, it appears as separate rows. Model codes follow the default \"vendor + model\" naming rule.",
   "pricing.calculator": "Price Calculator",
   "pricing.allModels": "All Model Prices",
   "pricing.allLabel": "All",

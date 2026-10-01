@@ -1,9 +1,11 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { PageHeader, HelpIcon, StatusBadge, SkeletonGroup, EmptyState, Modal, useToast } from "@3cloud/shared-ui";
 import { useAuthStore, type User } from "../store/auth";
+import { PIcon } from "./_polishIcons";
 
 /** 「以用户身份登录」按钮级帮助文案（PRD §5.3，与列表页一致） */
 const IMPERSONATE_HELP =
@@ -26,12 +28,12 @@ const statusMap: Record<string, "success" | "warning" | "danger" | "info" | "def
 
 type TabKey = "consumption" | "recharges" | "keys" | "tickets" | "ops";
 
-const TABS: { key: TabKey; icon: string; label: string }[] = [
-  { key: "consumption", icon: "📊", label: "消费记录" },
-  { key: "recharges", icon: "🧾", label: "充值记录" },
-  { key: "keys", icon: "🔑", label: "API 密钥" },
-  { key: "tickets", icon: "🎫", label: "工单记录" },
-  { key: "ops", icon: "📝", label: "操作日志" },
+const TABS: { key: TabKey; icon: ReactNode; label: string }[] = [
+  { key: "consumption", icon: <PIcon name="chart" size={20}/>, label: "消费记录" },
+  { key: "recharges", icon: <PIcon name="receipt" size={20}/>, label: "充值记录" },
+  { key: "keys", icon: <PIcon name="key" size={20}/>, label: "API 密钥" },
+  { key: "tickets", icon: <PIcon name="ticket" size={20}/>, label: "工单记录" },
+  { key: "ops", icon: <PIcon name="edit" size={20}/>, label: "操作日志" },
 ];
 
 /** 原型 grid 字段：标签 + 值 */
@@ -253,7 +255,7 @@ export default function AdminCustomerDetailPage() {
           <section className="c3-panel">
             <header className="c3-panel__header">
               <h3 style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                👤 客户信息
+                <PIcon name="user" size={14}/> 客户信息
                 <HelpIcon text="查看客户完整信息：基本资料、消费记录、充值记录、API Key 列表、工单记录、操作日志。可编辑基本信息、重置密码、冻结/解冻。" level="page" />
               </h3>
               <div className="c3-btn-group">
@@ -324,7 +326,7 @@ export default function AdminCustomerDetailPage() {
           {tab === "consumption" && (
             <section className="c3-panel">
               <header className="c3-panel__header">
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>📊 消费记录</h3>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}><PIcon name="chart" size={14}/> 消费记录</h3>
               </header>
               <div className="c3-panel__body" style={{ padding: 0 }}>
                 {consumerQ.isLoading ? <SkeletonGroup lines={5} /> : (
@@ -352,7 +354,7 @@ export default function AdminCustomerDetailPage() {
           {tab === "recharges" && (
             <section className="c3-panel">
               <header className="c3-panel__header">
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>🧾 充值记录</h3>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}><PIcon name="receipt" size={14}/> 充值记录</h3>
               </header>
               <div className="c3-panel__body" style={{ padding: 0 }}>
                 {rechargeQ.isLoading ? <SkeletonGroup lines={4} /> : (
@@ -380,7 +382,7 @@ export default function AdminCustomerDetailPage() {
           {tab === "keys" && (
             <section className="c3-panel">
               <header className="c3-panel__header">
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>🔑 API 密钥</h3>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}><PIcon name="key" size={14}/> API 密钥</h3>
               </header>
               <div className="c3-panel__body" style={{ padding: 0 }}>
                 {apiKeyQ.isLoading ? <SkeletonGroup lines={4} /> : (
@@ -408,7 +410,7 @@ export default function AdminCustomerDetailPage() {
           {tab === "tickets" && (
             <section className="c3-panel">
               <header className="c3-panel__header">
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>🎫 工单记录</h3>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}><PIcon name="ticket" size={14}/> 工单记录</h3>
               </header>
               <div className="c3-panel__body" style={{ padding: 0 }}>
                 {ticketQ.isLoading ? <SkeletonGroup lines={4} /> : (
@@ -436,7 +438,7 @@ export default function AdminCustomerDetailPage() {
           {tab === "ops" && (
             <section className="c3-panel">
               <header className="c3-panel__header">
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>📝 操作日志</h3>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}><PIcon name="edit" size={14}/> 操作日志</h3>
                 <span style={{ fontSize: 12, color: "var(--color-text-secondary, #888)" }}>冻结/解冻、编辑、重置密码等操作均写入审计日志</span>
               </header>
               <div className="c3-panel__body" style={{ padding: 0 }}>
@@ -465,7 +467,7 @@ export default function AdminCustomerDetailPage() {
       )}
 
       {/* 编辑客户弹窗 */}
-      <Modal open={editOpen} onClose={() => setEditOpen(false)} title={`✏️ 编辑客户 — ${c?.username ?? ""}`} width={440}>
+      <Modal open={editOpen} onClose={() => setEditOpen(false)} title={`编辑客户 — ${c?.username ?? ""}`} width={440}>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div className="c3-form-group" style={{ marginBottom: 0 }}>
             <label>邮箱 <span style={{ color: "#e53935" }}>*</span></label>
@@ -492,7 +494,7 @@ export default function AdminCustomerDetailPage() {
       </Modal>
 
       {/* 重置密码弹窗 — 自动生成 / 手动指定 */}
-      <Modal open={resetOpen} onClose={() => { if (!resetPwMut.isPending) { setResetOpen(false); setResetResult(null); } }} title={`🔑 重置密码 — ${c?.username ?? ""}`} width={460}>
+      <Modal open={resetOpen} onClose={() => { if (!resetPwMut.isPending) { setResetOpen(false); setResetResult(null); } }} title={`重置密码 — ${c?.username ?? ""}`} width={460}>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <p style={{ margin: 0, fontSize: 13, color: "#666" }}>
             {c?.email ?? ""} 的登录密码将被重置，旧密码立即失效。
@@ -547,7 +549,7 @@ export default function AdminCustomerDetailPage() {
 
           {resetResult !== null && (
             <div style={{ background: "#f6ffed", border: "1px solid #b7eb8f", borderRadius: 8, padding: "12px 14px" }}>
-              <div style={{ fontSize: 12, color: "#389e0d", marginBottom: 4 }}>✅ 密码已重置，新密码：</div>
+              <div style={{ fontSize: 12, color: "#389e0d", marginBottom: 4 }}><PIcon name="check" size={14}/> 密码已重置，新密码：</div>
               <code style={{ fontSize: 15, fontWeight: 600, wordBreak: "break-all", userSelect: "all" }}>{resetResult}</code>
               <div style={{ fontSize: 12, color: "#666", marginTop: 6 }}>仅本次展示，关闭后无法再次查看，请及时保存。</div>
             </div>

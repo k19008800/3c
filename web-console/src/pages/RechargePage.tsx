@@ -11,6 +11,7 @@ import {
   useToast,
 } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /* ============ 类型 ============ */
 interface RechargeResult {
@@ -46,10 +47,10 @@ const METHOD_LABEL: Record<string, string> = {
   bank_transfer: "对公转账",
 };
 const METHOD_ICONS: Record<string, string> = {
-  alipay: "💙",
-  wechat: "💚",
-  qq: "🐧",
-  bank_transfer: "🏦",
+  alipay: "",
+  wechat: "",
+  qq: "",
+  bank_transfer: "",
 };
 
 const card: React.CSSProperties = {
@@ -62,7 +63,7 @@ const card: React.CSSProperties = {
 const btnBase: React.CSSProperties = {
   padding: "8px 20px",
   borderRadius: 8,
-  border: "1px solid #d9d9d9",
+  border: "1px solid var(--color-border)",
   background: "#fff",
   fontSize: 14,
   cursor: "pointer",
@@ -190,7 +191,7 @@ export default function RechargePage() {
   return (
     <div>
       <h2 style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 8, fontSize: 20, fontWeight: 600 }}>
-        💰 账户充值
+        <PIcon name="coin" size={14}/> 账户充值
         <HelpIcon text="为您的账户充值，支持支付宝、微信支付和对公转账" level="page" />
       </h2>
 
@@ -219,7 +220,7 @@ export default function RechargePage() {
               height: 48,
               padding: "0 16px",
               fontSize: 20,
-              border: "1px solid #d9d9d9",
+              border: "1px solid var(--color-border)",
               borderRadius: 8,
               outline: "none",
               boxSizing: "border-box",
@@ -235,9 +236,9 @@ export default function RechargePage() {
               onClick={() => handleSetAmount(val)}
               style={{
                 ...btnBase,
-                borderColor: amountInput === String(val) ? "#4f6ef7" : "#d9d9d9",
+                borderColor: amountInput === String(val) ? "var(--color-primary)" : "var(--color-border)",
                 background: amountInput === String(val) ? "#eef1ff" : "#fff",
-                color: amountInput === String(val) ? "#4f6ef7" : "#333",
+                color: amountInput === String(val) ? "var(--color-primary)" : "#333",
               }}
             >
               ¥{val.toLocaleString()}
@@ -261,7 +262,7 @@ export default function RechargePage() {
                   alignItems: "center",
                   gap: 8,
                   padding: "12px 20px",
-                  border: `1px solid ${method === m ? "#4f6ef7" : "#d9d9d9"}`,
+                  border: `1px solid ${method === m ? "var(--color-primary)" : "var(--color-border)"}`,
                   borderRadius: 8,
                   cursor: "pointer",
                   background: method === m ? "#eef1ff" : "#fff",
@@ -272,7 +273,7 @@ export default function RechargePage() {
                   name="pay"
                   checked={method === m}
                   onChange={() => {}}
-                  style={{ accentColor: "#4f6ef7" }}
+                  style={{ accentColor: "var(--color-primary)" }}
                 />
                 {METHOD_ICONS[m]} {METHOD_LABEL[m]}
               </label>
@@ -292,7 +293,7 @@ export default function RechargePage() {
               marginBottom: 16,
             }}
           >
-            <h4 style={{ fontSize: 14, marginBottom: 12 }}>🏦 对公转账信息</h4>
+            <h4 style={{ fontSize: 14, marginBottom: 12 }}><PIcon name="bank" size={14}/> 对公转账信息</h4>
 
             {/* 后端缺失：银行信息由 /me/recharge 返回，此处用静态展示 */}
             <div style={{ display: "flex", marginBottom: 8, fontSize: 13 }}>
@@ -302,12 +303,12 @@ export default function RechargePage() {
             <div style={{ display: "flex", marginBottom: 8, fontSize: 13 }}>
               <span style={{ width: 90, color: "#888", flexShrink: 0 }}>银行账号</span>
               <span
-                style={{ color: "#4f6ef7", fontFamily: "monospace", cursor: "pointer" }}
+                style={{ color: "var(--color-primary)", fontFamily: "monospace", cursor: "pointer" }}
                 onClick={() => {
                   navigator.clipboard.writeText("5719020097201298888").then(() => toast.success("账号已复制"));
                 }}
               >
-                5719020097201298888 📋
+                5719020097201298888 <PIcon name="doc" size={14}/>
               </span>
             </div>
             <div style={{ display: "flex", marginBottom: 8, fontSize: 13 }}>
@@ -330,26 +331,26 @@ export default function RechargePage() {
                 borderRadius: 6,
               }}
             >
-              ⚠️ 请在转账备注中注明您的账号邮箱。对公转账到账后需人工审核，预计 1-3 个工作日到账。
+              <PIcon name="alert" size={14}/> 请在转账备注中注明您的账号邮箱。对公转账到账后需人工审核，预计 1-3 个工作日到账。
             </div>
 
             {/* 上传凭证 */}
             <div style={{ marginTop: 16 }}>
-              <h4 style={{ fontSize: 14, marginBottom: 12 }}>📎 上传转账凭证（可选）</h4>
+              <h4 style={{ fontSize: 14, marginBottom: 12 }}><PIcon name="paperclip" size={14}/> 上传转账凭证（可选）</h4>
               {!uploadFile ? (
                 <div
                   onClick={() => fileRef.current?.click()}
                   style={{
-                    border: "2px dashed #d9d9d9",
+                    border: "2px dashed var(--color-border)",
                     borderRadius: 10,
                     padding: 24,
                     textAlign: "center",
                     cursor: "pointer",
                   }}
                 >
-                  <div style={{ fontSize: 32, marginBottom: 8 }}>📄</div>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}><PIcon name="doc" size={14}/></div>
                   <div style={{ fontSize: 13, color: "#888" }}>
-                    拖拽或点击 <strong style={{ color: "#4f6ef7" }}>上传转账凭证</strong>
+                    拖拽或点击 <strong style={{ color: "var(--color-primary)" }}>上传转账凭证</strong>
                   </div>
                   <div style={{ fontSize: 12, color: "#bbb", marginTop: 4 }}>支持 JPG / PNG / PDF，不超过 10MB</div>
                   <input
@@ -372,7 +373,7 @@ export default function RechargePage() {
                     border: "1px solid #c8e6c9",
                   }}
                 >
-                  <span style={{ fontSize: 24 }}>📄</span>
+                  <span style={{ fontSize: 24 }}><PIcon name="doc" size={14}/></span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, color: "#333" }}>{uploadFile.name}</div>
                     <div style={{ fontSize: 12, color: "#888" }}>{(uploadFile.size / 1024 / 1024).toFixed(1)} MB</div>
@@ -388,7 +389,7 @@ export default function RechargePage() {
                 style={{
                   width: "100%",
                   height: 44,
-                  background: isValidAmount ? "#22c55e" : "#a0b4f9",
+                  background: isValidAmount ? "#22c55e" : "var(--color-text-disabled)",
                   color: "#fff",
                   border: "none",
                   borderRadius: 8,
@@ -416,7 +417,7 @@ export default function RechargePage() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 28 }}>⏳</span>
+              <span style={{ fontSize: 28 }}><PIcon name="clock" size={14}/></span>
               <div>
                 <h4 style={{ fontSize: 14, color: "#e65100", margin: "0 0 4px 0" }}>对公转账审核中</h4>
                 <p style={{ fontSize: 13, color: "#888", margin: 0 }}>
@@ -446,7 +447,7 @@ export default function RechargePage() {
             style={{
               width: "100%",
               height: 44,
-              background: !isValidAmount ? "#a0b4f9" : "#4f6ef7",
+              background: !isValidAmount ? "var(--color-text-disabled)" : "var(--color-primary)",
               color: "#fff",
               border: "none",
               borderRadius: 8,
@@ -459,7 +460,7 @@ export default function RechargePage() {
         )}
 
         {/* 充值记录链接 */}
-        <a href="/topup-records" style={{ display: "block", textAlign: "right", marginTop: 16, fontSize: 13, color: "#4f6ef7", textDecoration: "none" }}>
+        <a href="/topup-records" style={{ display: "block", textAlign: "right", marginTop: 16, fontSize: 13, color: "var(--color-primary)", textDecoration: "none" }}>
           充值记录 →
         </a>
       </div>
@@ -473,7 +474,7 @@ export default function RechargePage() {
         {ordersQ.isLoading ? (
           <SkeletonGroup lines={3} />
         ) : (ordersQ.data?.length ?? 0) === 0 ? (
-          <EmptyState icon="💳" title="暂无充值记录" description="您还没有任何充值" actionText="去充值" onAction={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+          <EmptyState icon={<PIcon name="card" size={18}/>} title="暂无充值记录" description="您还没有任何充值" actionText="去充值" onAction={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
         ) : (
           <Table columns={recordColumns} dataSource={ordersQ.data ?? []} loading={ordersQ.isLoading} emptyText="暂无充值记录" />
         )}
@@ -547,7 +548,7 @@ function PayModalContent({
           width: 200,
           height: 200,
           margin: "0 auto 16px",
-          border: "1px solid #d9d9d9",
+          border: "1px solid var(--color-border)",
           borderRadius: 8,
           display: "flex",
           alignItems: "center",
@@ -571,13 +572,13 @@ function PayModalContent({
       <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
         <button
           onClick={onClose}
-          style={{ padding: "10px 18px", borderRadius: 8, border: "1px solid #d9d9d9", background: "#fff", cursor: "pointer" }}
+          style={{ padding: "10px 18px", borderRadius: 8, border: "1px solid var(--color-border)", background: "#fff", cursor: "pointer" }}
         >
           关闭
         </button>
         <button
           onClick={onSuccess}
-          style={{ padding: "10px 18px", borderRadius: 8, border: "none", background: "#4f6ef7", color: "#fff", cursor: "pointer" }}
+          style={{ padding: "10px 18px", borderRadius: 8, border: "none", background: "var(--color-primary)", color: "#fff", cursor: "pointer" }}
         >
           我已支付
         </button>
@@ -608,13 +609,13 @@ function BankModalContent({
         {bankInfo.branch_name && <div>支行: {bankInfo.branch_name}</div>}
       </div>
       <p style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>
-        💡 转账后请在「充值记录」中对应订单上传凭证，财务审核到账后自动充值（工作日 T+1）。
+        <PIcon name="bolt" size={14}/> 转账后请在「充值记录」中对应订单上传凭证，财务审核到账后自动充值（工作日 T+1）。
       </p>
       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-        <button onClick={onClose} style={{ padding: "10px 18px", borderRadius: 8, border: "1px solid #d9d9d9", background: "#fff", cursor: "pointer" }}>
+        <button onClick={onClose} style={{ padding: "10px 18px", borderRadius: 8, border: "1px solid var(--color-border)", background: "#fff", cursor: "pointer" }}>
           关闭
         </button>
-        <button onClick={onSubmitted} style={{ padding: "10px 18px", borderRadius: 8, border: "none", background: "#4f6ef7", color: "#fff", cursor: "pointer" }}>
+        <button onClick={onSubmitted} style={{ padding: "10px 18px", borderRadius: 8, border: "none", background: "var(--color-primary)", color: "#fff", cursor: "pointer" }}>
           我已转账，去上传凭证
         </button>
       </div>

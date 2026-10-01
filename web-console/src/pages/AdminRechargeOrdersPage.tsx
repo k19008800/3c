@@ -7,6 +7,7 @@ import { withOperation2fa, isOperation2faCanceled, operation2faErrorText, operat
 import type { OperationSummaryItem } from "../components/Operation2faModal";
 import { parseApproval, approvalChainSegments } from "../lib/approval";
 import { HelpIcon, StatusBadge, SkeletonGroup, EmptyState, Pagination, SearchBar, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 interface RechargeOrder {
   id: number; order_no: string; user_id: number; username: string; email: string;
@@ -169,7 +170,7 @@ export default function AdminRechargeOrdersPage() {
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <h2 style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
-        🧾 充值订单
+        <PIcon name="receipt" size={14}/> 充值订单
         <HelpIcon text={PAGE_HELP} level="page" />
       </h2>
 
@@ -284,7 +285,7 @@ export default function AdminRechargeOrdersPage() {
                             {/* R5 审批人不足滞留提示（ARCH §2.7） */}
                             {info.stalled && (
                               <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--color-danger-text)" }}>
-                                ⚠️ 等待可用审批人 <HelpIcon text={HELP_STALLED} />
+                                <PIcon name="alert" size={14}/> 等待可用审批人 <HelpIcon text={HELP_STALLED} />
                               </span>
                             )}
                           </div>

@@ -5,6 +5,7 @@ import type { ChartOptions } from "chart.js";
 import { HelpIcon } from "@3cloud/shared-ui";
 import { useAuthStore } from "../store/auth";
 import { api } from "../lib/api";
+import { PIcon } from "./_polishIcons";
 
 // 注册 Chart.js 全部组件（Line/Bar/Tooltip 等），同 StatisticsPage
 Chart.register(...registerables);
@@ -43,7 +44,7 @@ interface HealthState {
 const MODELS = [
   { name: "DeepSeek", color: "#2563eb" },
   { name: "OpenAI", color: "#10b981" },
-  { name: "GLM", color: "#8b5cf6" },
+  { name: "GLM", color: "var(--color-primary)" },
   { name: "Claude", color: "#f59e0b" },
 ];
 
@@ -54,11 +55,11 @@ const PERIODS: { key: Period; label: string }[] = [
   { key: "month", label: "上月" },
 ];
 
-const TABS: { key: ModelTab; label: string; icon: string }[] = [
-  { key: "token", label: "Token 消耗", icon: "📊" },
-  { key: "calls", label: "调用次数", icon: "📶" },
-  { key: "success", label: "成功率", icon: "✅" },
-  { key: "cost", label: "消费明细", icon: "💰" },
+const TABS: { key: ModelTab; label: string; icon: ReactNode }[] = [
+  { key: "token", label: "Token 消耗", icon: <PIcon name="chart" size={20}/> },
+  { key: "calls", label: "调用次数", icon: <PIcon name="signal" size={20}/> },
+  { key: "success", label: "成功率", icon: <PIcon name="check" size={20}/> },
+  { key: "cost", label: "消费明细", icon: <PIcon name="coin" size={20}/> },
 ];
 
 /* ================= 确定性演示数据（对齐原型生成算法） ================= */
@@ -362,7 +363,7 @@ function RangeSlider({ maxIdx, value, onChange, renderLabel }: {
         {(["left", "right"] as const).map((side) => {
           const v = side === "left" ? value[0] : value[1];
           return (
-            <div key={side} style={{ position: "absolute", top: 0, bottom: 0, left: `${pct(v)}%`, width: 8, transform: "translateX(-50%)", background: "#4f6ef7", borderRadius: 6, cursor: "ew-resize", zIndex: 2 }}>
+            <div key={side} style={{ position: "absolute", top: 0, bottom: 0, left: `${pct(v)}%`, width: 8, transform: "translateX(-50%)", background: "var(--color-primary)", borderRadius: 6, cursor: "ew-resize", zIndex: 2 }}>
               <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 2, height: 12, background: "#fff", borderRadius: 1 }} />
             </div>
           );
@@ -378,7 +379,7 @@ function ModelLegend({ visibility, onToggle }: { visibility: Record<number, bool
   return (
     <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #eee" }}>
       <div style={{ fontSize: 11, color: "#666", marginBottom: 8, fontWeight: 500 }}>
-        🔍 模型开关 <span style={{ fontWeight: 400, color: "#888" }}>（点击显示/隐藏该模型曲线）</span>
+        <PIcon name="search" size={14}/> 模型开关 <span style={{ fontWeight: 400, color: "#888" }}>（点击显示/隐藏该模型曲线）</span>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
         {MODELS.map((m, i) => {
@@ -406,7 +407,7 @@ const STAT_CARDS: Record<ModelTab, { label: string; value: string; sub: string; 
   token: [
     { label: "输入 Token ↑", value: "386.5万", sub: "24h 用户输入总量", color: "#2563eb" },
     { label: "输出 Token ↓", value: "1,182.4万", sub: "24h 模型返回总量", color: "#10b981" },
-    { label: "输入/输出比", value: "1 : 3.1", sub: "用户量 / 模型输出量", color: "#8b5cf6" },
+    { label: "输入/输出比", value: "1 : 3.1", sub: "用户量 / 模型输出量", color: "var(--color-primary)" },
     { label: "综合均价", value: "¥1.21", sub: "每 1,000 Tokens", color: "#f59e0b" },
   ],
   calls: [
@@ -468,13 +469,13 @@ function ModelAnalysisPanel() {
 
   return (
     <Panel
-      title="📈 模型运营分析"
+      title="模型运营分析"
       help="按时间范围与维度查看各模型 Token 消耗、调用次数、成功率与消费明细，拖动滑块查看局部区间，点击图例开关显示/隐藏模型曲线"
       extra={
         <div style={{ display: "flex", gap: 4, background: "#f0f2f5", borderRadius: 6, padding: 2 }}>
           {PERIODS.map((p) => (
             <button key={p.key} onClick={() => changePeriod(p.key)}
-              style={{ padding: "4px 12px", fontSize: 12, border: "none", borderRadius: 4, cursor: "pointer", color: period === p.key ? "#fff" : "#888", background: period === p.key ? "#4f6ef7" : "transparent" }}>
+              style={{ padding: "4px 12px", fontSize: 12, border: "none", borderRadius: 4, cursor: "pointer", color: period === p.key ? "#fff" : "#888", background: period === p.key ? "var(--color-primary)" : "transparent" }}>
               {p.label}
             </button>
           ))}
@@ -486,7 +487,7 @@ function ModelAnalysisPanel() {
           <div style={{ display: "flex", gap: 4, borderBottom: "1px solid #eef0f4", marginBottom: 16 }}>
             {TABS.map((t) => (
               <div key={t.key} onClick={() => setTab(t.key)}
-                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", cursor: "pointer", fontSize: 13, color: tab === t.key ? "#4f6ef7" : "#888", fontWeight: tab === t.key ? 600 : 400, borderBottom: tab === t.key ? "2px solid #4f6ef7" : "2px solid transparent" }}>
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", cursor: "pointer", fontSize: 13, color: tab === t.key ? "var(--color-primary)" : "#888", fontWeight: tab === t.key ? 600 : 400, borderBottom: tab === t.key ? "2px solid var(--color-primary)" : "2px solid transparent" }}>
                 <span>{t.icon}</span>{t.label}
               </div>
             ))}
@@ -517,7 +518,7 @@ function ModelAnalysisPanel() {
               renderLabel={(l, r) => (
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: "#64748b", marginBottom: 6 }}>
                   <span>{period === "week" ? labels[l] : period === "month" ? `${l + 1}日` : `${String(l).padStart(2, "0")}:00`}</span>
-                  <span style={{ color: "#4f6ef7", fontWeight: 600 }}>{rangeText(l, r)}</span>
+                  <span style={{ color: "var(--color-primary)", fontWeight: 600 }}>{rangeText(l, r)}</span>
                   <span>{period === "week" ? labels[r] : period === "month" ? `${r + 1}日` : `${String(r).padStart(2, "0")}:59`}</span>
                 </div>
               )}
@@ -550,7 +551,7 @@ function Panel({ title, help, extra, body }: { title: string; help?: string; ext
 }
 
 function HealthCard({ icon, label, ok, valueText, sub, subColor, accent }: {
-  icon: string;
+  icon: ReactNode;
   label: string;
   ok: boolean;
   valueText?: string;
@@ -563,7 +564,7 @@ function HealthCard({ icon, label, ok, valueText, sub, subColor, accent }: {
       <div style={{ fontSize: 20, marginBottom: 4 }}>{icon}</div>
       <div style={{ fontSize: 12, color: "#888" }}>{label}</div>
       <div style={{ fontSize: 18, fontWeight: 700, color: ok ? "#22c55e" : "#f59e0b", marginTop: 4 }}>
-        {valueText ?? (ok ? "🟢 正常" : "🟡 异常")}
+        {valueText ?? (ok ? "正常" : "异常")}
       </div>
       <div style={{ fontSize: 11, color: subColor ?? "#888", marginTop: 2 }}>{sub}</div>
     </div>
@@ -623,11 +624,11 @@ export default function AdminCockpitPage() {
   const vendorOk = health.vendorWarn === 0;
 
   const alertRows = [
-    { level: "🔴 严重", color: "#e53935", text: "GLM 供应商连接超时（3次重试失败）", time: "5分钟前", status: "持续中", statusColor: "#e53935" },
-    { level: "🟡 警告", color: "#f59e0b", text: "API 错误率 4.2% 接近阈值（5%）", time: "12分钟前", status: "监控中", statusColor: "#f59e0b" },
-    { level: "🟡 警告", color: "#f59e0b", text: "磁盘使用率 78%（阈值 80%）", time: "1小时前", status: "监控中", statusColor: "#f59e0b" },
-    { level: "🔴 严重", color: "#e53935", text: "消费异常", time: "2小时前", status: "待处理", statusColor: "#e53935" },
-    { level: "🔴 严重", color: "#e53935", text: "安全事件", time: "3小时前", status: "待处理", statusColor: "#e53935" },
+    { level: "严重", color: "#e53935", text: "GLM 供应商连接超时（3次重试失败）", time: "5分钟前", status: "持续中", statusColor: "#e53935" },
+    { level: "警告", color: "#f59e0b", text: "API 错误率 4.2% 接近阈值（5%）", time: "12分钟前", status: "监控中", statusColor: "#f59e0b" },
+    { level: "警告", color: "#f59e0b", text: "磁盘使用率 78%（阈值 80%）", time: "1小时前", status: "监控中", statusColor: "#f59e0b" },
+    { level: "严重", color: "#e53935", text: "消费异常", time: "2小时前", status: "待处理", statusColor: "#e53935" },
+    { level: "严重", color: "#e53935", text: "安全事件", time: "3小时前", status: "待处理", statusColor: "#e53935" },
   ];
 
   const th: CSSProperties = { textAlign: "left", padding: "10px 12px", fontSize: 12, fontWeight: 500, color: "#64748b", background: "#fafafa", borderBottom: "1px solid #e2e8f0" };
@@ -640,19 +641,19 @@ export default function AdminCockpitPage() {
         数据驾驶舱 <HelpIcon text="系统运行状态实时监控：网关、数据库、缓存、供应商连通性，以及实时用量与模型运营分析" />
       </h2>
       <p style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>
-        {user?.email} · <span style={{ background: "#eef2ff", color: "#4f6ef7", padding: "1px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600 }}>ADMIN</span>
+        {user?.email} · <span style={{ background: "var(--color-primary-light)", color: "var(--color-primary)", padding: "1px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600 }}>ADMIN</span>
       </p>
 
       {/* 系统健康 */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 20 }}>
-        <HealthCard icon="🌐" label="网关状态" ok={health.api} sub={`延迟 12ms · 运行 ${health.uptimeHours || 128}h`} />
-        <HealthCard icon="🗄️" label="数据库" ok={health.db} sub="连接池 8/50 · PG 17" />
-        <HealthCard icon="⚡" label="缓存状态" ok={health.redis} sub="命中率 98% · 内存 1.2G/4G" />
+        <HealthCard icon={<PIcon name="globe" size={18}/>} label="网关状态" ok={health.api} sub={`延迟 12ms · 运行 ${health.uptimeHours || 128}h`} />
+        <HealthCard icon={<PIcon name="database" size={18}/>} label="数据库" ok={health.db} sub="连接池 8/50 · PG 17" />
+        <HealthCard icon={<PIcon name="bolt" size={18}/>} label="缓存状态" ok={health.redis} sub="命中率 98% · 内存 1.2G/4G" />
         <HealthCard
-          icon="🔌"
+          icon={<PIcon name="plug" size={18}/>}
           label="供应商连通"
           ok={vendorOk}
-          valueText={vendorOk ? "🟢 正常" : `🟡 ${health.vendorWarn}异常`}
+          valueText={vendorOk ? "正常" : `${health.vendorWarn}异常`}
           sub={vendorOk ? `${health.vendorCount} 个接入` : (health.vendorName ? `${health.vendorName} 状态异常` : `${health.vendorCount} 个接入 · ${health.vendorWarn} 异常`)}
           subColor={vendorOk ? undefined : "#e53935"}
         />
@@ -660,13 +661,13 @@ export default function AdminCockpitPage() {
 
       {/* 实时监控双栏 */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-        <Panel title="👥 实时用户" help="当前在线用户、活跃会话、等待中请求与最近 30 分钟在线趋势" extra={<span style={{ fontSize: 11, color: "#888", whiteSpace: "nowrap" }}>刷新于 3 秒前</span>}
+        <Panel title="实时用户" help="当前在线用户、活跃会话、等待中请求与最近 30 分钟在线趋势" extra={<span style={{ fontSize: 11, color: "#888", whiteSpace: "nowrap" }}>刷新于 3 秒前</span>}
           body={
             <div style={{ padding: 4 }}>
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>在线用户</div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                  <div style={{ fontSize: 42, fontWeight: 700, color: "#4f6ef7" }}>1,286</div>
+                  <div style={{ fontSize: 42, fontWeight: 700, color: "var(--color-primary)" }}>1,286</div>
                   <div style={{ fontSize: 14, color: "#22c55e" }}>↑ 32</div>
                 </div>
                 <div style={{ fontSize: 11, color: "#888", marginTop: 4 }}>较 5 分钟前</div>
@@ -687,13 +688,13 @@ export default function AdminCockpitPage() {
               </div>
               <div>
                 <div style={{ fontSize: 12, color: "#888", marginBottom: 8 }}>最近 30 分钟在线趋势</div>
-                <SparkBars values={onlineSpark} color="#4f6ef7" />
+                <SparkBars values={onlineSpark} color="var(--color-primary)" />
               </div>
             </div>
           }
         />
 
-        <Panel title="🔥 实时消费" help="今日累计消费、当前消费流速、平台余额与最近 30 分钟消费流速" extra={<span style={{ fontSize: 11, color: "#888", whiteSpace: "nowrap" }}>刷新于 3 秒前</span>}
+        <Panel title="实时消费" help="今日累计消费、当前消费流速、平台余额与最近 30 分钟消费流速" extra={<span style={{ fontSize: 11, color: "#888", whiteSpace: "nowrap" }}>刷新于 3 秒前</span>}
           body={
             <div style={{ padding: 4 }}>
               <div style={{ marginBottom: 20 }}>
@@ -731,7 +732,7 @@ export default function AdminCockpitPage() {
 
       {/* 底部双栏：供应商连通性 + 资源状态 */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-        <Panel title="🔌 供应商连通性" help="各供应商最近一次连通性检测状态"
+        <Panel title="供应商连通性" help="各供应商最近一次连通性检测状态"
           body={
             <div style={{ margin: -16 }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -750,7 +751,7 @@ export default function AdminCockpitPage() {
                     <tr key={r.name}>
                       <td style={{ ...td, color: "#333" }}>{r.name}</td>
                       <td style={td}>
-                        <span style={{ color: r.ok ? "#22c55e" : "#e53935" }}>{r.ok ? "🟢 正常" : "🔴 异常"}</span>
+                        <span style={{ color: r.ok ? "#22c55e" : "#e53935" }}>{r.ok ? "正常" : "异常"}</span>
                       </td>
                       <td style={td}>{r.latency}</td>
                       <td style={td}>{r.err}</td>
@@ -763,14 +764,14 @@ export default function AdminCockpitPage() {
           }
         />
 
-        <Panel title="🗄️ 资源状态" help="服务器 CPU / 内存 / 磁盘 / 数据库连接使用率"
+        <Panel title="资源状态" help="服务器 CPU / 内存 / 磁盘 / 数据库连接使用率"
           body={
             <div style={{ padding: 4 }}>
               {[
-                { label: "CPU", value: 42, color: "#4f6ef7", text: "42%" },
+                { label: "CPU", value: 42, color: "var(--color-primary)", text: "42%" },
                 { label: "内存", value: 68, color: "#f59e0b", text: "68%" },
                 { label: "磁盘", value: 31, color: "#22c55e", text: "31%" },
-                { label: "PG 连接数", value: 24, color: "#4f6ef7", text: "12/50" },
+                { label: "PG 连接数", value: 24, color: "var(--color-primary)", text: "12/50" },
               ].map((r) => (
                 <div key={r.label} style={{ marginBottom: 16 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
@@ -787,7 +788,7 @@ export default function AdminCockpitPage() {
       </div>
 
       {/* 活跃告警 */}
-      <Panel title="🚨 活跃告警" help="最近 24 小时需要关注的告警事件" extra={<span style={{ fontSize: 12, color: "#888" }}>最近 24 小时</span>}
+      <Panel title="活跃告警" help="最近 24 小时需要关注的告警事件" extra={<span style={{ fontSize: 12, color: "#888" }}>最近 24 小时</span>}
         body={
           <div style={{ margin: -16 }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>

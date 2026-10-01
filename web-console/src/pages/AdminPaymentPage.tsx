@@ -1,7 +1,9 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /**
  * 支付通道设置（产品裁决 2026-08-15）
@@ -33,9 +35,9 @@ const fieldRow: React.CSSProperties = { display: "grid", gridTemplateColumns: "1
 const label: React.CSSProperties = { fontSize: 13, color: "var(--color-text-secondary)" };
 const inp: React.CSSProperties = { padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", width: "100%", boxSizing: "border-box", fontFamily: "inherit" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
-const CHANNEL_META: { key: "wechat" | "alipay" | "qq"; title: string; icon: string; fields: { k: string; label: string; placeholder?: string }[] }[] = [
+const CHANNEL_META: { key: "wechat" | "alipay" | "qq"; title: string; icon: ReactNode; fields: { k: string; label: string; placeholder?: string }[] }[] = [
   {
-    key: "wechat", title: "微信支付", icon: "💚",
+    key: "wechat", title: "微信支付", icon: <PIcon name="chat" size={20}/>,
     fields: [
       { k: "app_id", label: "AppID" },
       { k: "mch_id", label: "商户号" },
@@ -44,7 +46,7 @@ const CHANNEL_META: { key: "wechat" | "alipay" | "qq"; title: string; icon: stri
     ],
   },
   {
-    key: "alipay", title: "支付宝", icon: "💙",
+    key: "alipay", title: "支付宝", icon: <PIcon name="card" size={20}/>,
     fields: [
       { k: "app_id", label: "AppID" },
       { k: "private_key", label: "应用私钥", placeholder: "留空保持不变" },
@@ -53,7 +55,7 @@ const CHANNEL_META: { key: "wechat" | "alipay" | "qq"; title: string; icon: stri
     ],
   },
   {
-    key: "qq", title: "QQ 钱包", icon: "🐧",
+    key: "qq", title: "QQ 钱包", icon: <PIcon name="globe" size={20}/>,
     fields: [
       { k: "app_id", label: "AppID" },
       { k: "mch_id", label: "商户号" },
@@ -172,7 +174,7 @@ export default function AdminPaymentPage() {
 
           <div style={card}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-              <span style={{ fontSize: 18 }}>🏦</span>
+              <span style={{ fontSize: 18 }}><PIcon name="bank" size={14}/></span>
               <h3 style={{ margin: 0 }}>对公转账收款账户</h3>
             </div>
             {([

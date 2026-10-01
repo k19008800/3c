@@ -117,7 +117,7 @@ export default function AdminTicketsPage() {
             <StatusBadge status={STATUS_MAP[tk.status] ?? "warning"}>{tk.status_label}</StatusBadge>
             <StatusBadge status={PRIORITY_MAP[tk.priority] ?? "default"}>{tk.priority}</StatusBadge>
             <span style={{ padding: "2px 10px", borderRadius: 6, fontSize: 12, background: "var(--color-bg)", color: "var(--color-text-secondary)" }}>{tk.category_label}</span>
-            {tk.assignee_name && <span style={{ padding: "2px 10px", borderRadius: 6, fontSize: 12, background: "var(--color-bg)", color: "var(--color-primary)" }}>👤 {tk.assignee_name}</span>}
+            {tk.assignee_name && <span style={{ padding: "2px 10px", borderRadius: 6, fontSize: 12, background: "var(--color-bg)", color: "var(--color-primary)" }}> {tk.assignee_name}</span>}
           </div>
 
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
@@ -168,7 +168,7 @@ export default function AdminTicketsPage() {
 
           {detailQ.data.satisfaction && (
             <div style={{ marginTop: 16, padding: 12, background: "var(--color-warning-bg)", borderRadius: 8 }}>
-              <strong>用户评价: {"⭐".repeat(detailQ.data.satisfaction.rating)}{"☆".repeat(5 - detailQ.data.satisfaction.rating)}</strong>
+              <strong>用户评价: {"".repeat(detailQ.data.satisfaction.rating)}{"".repeat(5 - detailQ.data.satisfaction.rating)}</strong>
               {detailQ.data.satisfaction.comment && <div style={{ fontSize: 13, color: "var(--color-text)", marginTop: 4 }}>{detailQ.data.satisfaction.comment}</div>}
             </div>
           )}
@@ -243,7 +243,7 @@ export default function AdminTicketsPage() {
                   <div key={t.id} onClick={() => { setActiveId(t.id); setView("detail"); }} style={{ padding: 10, marginTop: 8, background: "var(--color-bg)", borderRadius: 6, cursor: "pointer", border: "1px solid var(--color-border)" }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-primary)" }}>{t.ticket_no}</div>
                     <div style={{ fontSize: 13, marginTop: 2 }}>{t.title}</div>
-                    <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 4 }}>{t.category_label}{t.assignee_name ? ` · 👤${t.assignee_name}` : ""}</div>
+                    <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 4 }}>{t.category_label}{t.assignee_name ? ` · ${t.assignee_name}` : ""}</div>
                   </div>
                 ))}
               </div>

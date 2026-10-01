@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { HelpIcon, SkeletonGroup } from "@3cloud/shared-ui";
 import { useI18n } from "../lib/i18n-context";
 import { fmtNumber, fmtMoney } from "../lib/fmt";
+import "./dashboard.css";
 
 /* ============ 类型 ============ */
 interface Stats {
@@ -33,6 +34,26 @@ interface RecentCall {
   tokens: string;
   cost: string;
   success: boolean;
+}
+
+/* ============ 内联 SVG 图标（替代 emoji） ============ */
+function IconChart() {
+  return (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 3v18h18" /><path d="M7 15l4-5 3 3 5-6" /></svg>);
+}
+function IconClock() {
+  return (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>);
+}
+function IconWallet() {
+  return (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2" /><path d="M16 12h2" /></svg>);
+}
+function IconKey() {
+  return (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="4" /><path d="M11 11l8 8M16 16l2-2M19 19l1.5-1.5" /></svg>);
+}
+function IconLogs() {
+  return (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 5h16M4 10h16M4 15h10M4 20h7" /></svg>);
+}
+function IconTicket() {
+  return (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8Z" /><path d="M13 6v12" strokeDasharray="2 2" /></svg>);
 }
 
 /* ============ 简单趋势图（纯 SVG，不依赖 Chart.js） ============ */
@@ -69,28 +90,22 @@ function TrendChart({
               gap: 6,
               padding: "4px 10px",
               borderRadius: 999,
-              border: `1.5px solid ${activeModels.has(i) ? m.color : "#d9d9d9"}`,
-              background: activeModels.has(i) ? "#fff" : "#f5f5f5",
-              color: activeModels.has(i) ? "#333" : "#bbb",
+              border: `1.5px solid ${activeModels.has(i) ? m.color : "var(--color-border)"}`,
+              background: activeModels.has(i) ? "var(--color-panel)" : "var(--color-divider-light)",
+              color: activeModels.has(i) ? "var(--color-text)" : "var(--color-text-muted)",
               fontSize: 12,
               cursor: "pointer",
-              opacity: activeModels.has(i) ? 1 : 0.35,
+              transition: "opacity .15s",
             }}
           >
             <span style={{ width: 10, height: 10, borderRadius: "50%", background: m.color, flexShrink: 0 }} />
             {m.name}
-            <span style={{ display: "flex", alignItems: "center", gap: 2, marginLeft: 4 }}>
-              <span style={{ width: 14, height: 3, borderRadius: 2, background: activeModels.has(i) ? m.color : "#bbb" }} />
-              <span style={{ fontSize: 8 }}>↑</span>
-              <span style={{ width: 14, height: 2, background: `repeating-linear-gradient(90deg, ${activeModels.has(i) ? m.color : "#bbb"} 0, ${activeModels.has(i) ? m.color : "#bbb"} 4px, transparent 4px, transparent 6px)` }} />
-              <span style={{ fontSize: 8 }}>↓</span>
-            </span>
           </button>
         ))}
       </div>
       {/* 后端缺失：趋势图数据接口 /me/stats/trend */}
-      <div style={{ textAlign: "center", padding: 20, color: "#888", fontSize: 13 }}>
-        📈 {t("dashboard.trend.missingBackend")}（/me/stats/trend）
+      <div style={{ textAlign: "center", padding: 20, color: "var(--color-text-muted)", fontSize: 13 }}>
+        {t("dashboard.trend.missingBackend")}（/me/stats/trend）
       </div>
     </div>
   );
@@ -116,12 +131,12 @@ export default function DashboardPage() {
     { label: t("dashboard.subs.balance"), value: data?.balance != null ? fmtMoney(data.balance) : "...", sub: data?.estimatedDays != null ? t("dashboard.subs.estimatedDays", { days: String(data.estimatedDays) }) : "—" },
   ];
 
-  /* 模型分布 mock（后端缺失 /me/stats/model-distribution） */
+  /* 模型分布 mock（后端缺失 /me/stats/model-distribution）—— 克制色板：信号蓝/成功绿/警告橙/中性灰 */
   const distData: DistItem[] = [
-    { color: "#6a8aff", name: "DeepSeek V4 Flash", percentage: 52, calls: "6,542", tokens: "2.1M" },
-    { color: "#22c55e", name: "GLM-5-Pro", percentage: 26, calls: "3,210", tokens: "1.5M" },
-    { color: "#f59e0b", name: "Qwen 3.6 Plus", percentage: 15, calls: "1,876", tokens: "0.8M" },
-    { color: "#a78bfa", name: "其他模型", percentage: 7, calls: "717", tokens: "0.3M" },
+    { color: "#1896FF", name: "DeepSeek V4 Flash", percentage: 52, calls: "6,542", tokens: "2.1M" },
+    { color: "#0B7A4B", name: "GLM-5-Pro", percentage: 26, calls: "3,210", tokens: "1.5M" },
+    { color: "#B45D09", name: "Qwen 3.6 Plus", percentage: 15, calls: "1,876", tokens: "0.8M" },
+    { color: "#8B99AC", name: "其他模型", percentage: 7, calls: "717", tokens: "0.3M" },
   ];
 
   /* 最近调用 mock（后端缺失 /me/stats/recent-calls） */
@@ -132,20 +147,20 @@ export default function DashboardPage() {
     { time: "14:25", model: "DeepSeek V4 Flash", tokens: "2K", cost: "¥0.0400", success: false },
   ];
 
-  /* 趋势图模型定义 */
+  /* 趋势图模型定义 —— 克制色板，去紫/粉 */
   const trendModels = [
-    { name: "Qwen3.5-397B", color: "#2563eb", visible: true },
-    { name: "GLM-5.2", color: "#8b5cf6", visible: true },
-    { name: "DeepSeek-V4", color: "#10b981", visible: true },
-    { name: "Kimi-K2.5", color: "#f59e0b", visible: true },
-    { name: "GPT-5.4", color: "#ec4899", visible: true },
+    { name: "Qwen3.5-397B", color: "#1896FF", visible: true },
+    { name: "GLM-5.2", color: "#0B7A4B", visible: true },
+    { name: "DeepSeek-V4", color: "#B45D09", visible: true },
+    { name: "Kimi-K2.5", color: "#8B99AC", visible: true },
+    { name: "GPT-5.4", color: "#0B6FD6", visible: true },
   ];
 
   if (isLoading) {
     return (
       <div style={{ padding: "4px 0" }}>
         <h2 style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 8, fontSize: 20, fontWeight: 600 }}>
-          📊 {t("dashboard.title")}
+          {t("dashboard.title")}
           <HelpIcon text={t("dashboard.help.overview")} level="page" />
         </h2>
         <SkeletonGroup lines={5} />
@@ -153,70 +168,74 @@ export default function DashboardPage() {
     );
   }
 
+  const cardBase: React.CSSProperties = {
+    background: "var(--color-panel)",
+    borderRadius: "var(--radius-lg)",
+    border: "1px solid var(--color-divider)",
+    boxShadow: "var(--shadow-panel)",
+  };
+
   return (
     <div style={{ padding: "4px 0" }}>
       {/* 页面标题 */}
-      <h2 style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8, fontSize: 20, fontWeight: 600, color: "#333" }}>
-        📊 {t("dashboard.title")}
+      <h2 style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8, fontSize: 22, fontWeight: 700, color: "var(--color-text)" }}>
+        {t("dashboard.title")}
         <HelpIcon text={t("dashboard.help.overviewDetail")} level="page" />
       </h2>
 
-      {/* ===== 4 张概览卡片（原型：cards grid 4列） ===== */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
+      {/* ===== 4 张概览卡片 ===== */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }} className="dash-grid">
         {/* 账户余额 */}
         <div
           onClick={() => navigate("/recharge")}
-          style={{ background: "#fff", borderRadius: 8, padding: "16px 20px", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,.06)", transition: "background .2s" }}
+          className="dash-stat dash-stat--clickable"
+          style={{ ...cardBase, padding: "16px 20px", cursor: "pointer" }}
         >
-          <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>{t("dashboard.balance")}</div>
-          <div style={{ fontSize: 22, fontWeight: 600, color: "#333" }}>{fmtMoney(data?.balance ?? 0)}</div>
-          <div style={{ fontSize: 11, color: "#6a8aff", marginTop: 6 }}>{t("dashboard.rechargeNow")} →</div>
+          <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 6 }}>{t("dashboard.balance")}</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: "var(--color-text)", fontFamily: "var(--font-family-mono)" }}>{fmtMoney(data?.balance ?? 0)}</div>
+          <div style={{ fontSize: 12, color: "var(--color-primary)", marginTop: 6, fontWeight: 500 }}>{t("dashboard.rechargeNow")} →</div>
         </div>
 
         {/* 本月消费 */}
         <div
           onClick={() => navigate("/logs")}
-          style={{ background: "#fff", borderRadius: 8, padding: "16px 20px", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,.06)", transition: "background .2s" }}
+          className="dash-stat dash-stat--clickable"
+          style={{ ...cardBase, padding: "16px 20px", cursor: "pointer" }}
         >
-          <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>{t("dashboard.monthlyCost")}</div>
-          <div style={{ fontSize: 22, fontWeight: 600, color: "#333" }}>{fmtMoney(data?.monthlyCost ?? 0)}</div>
-          <div style={{ fontSize: 11, color: "#6a8aff", marginTop: 6 }}>{t("dashboard.viewDetail")} →</div>
+          <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 6 }}>{t("dashboard.monthlyCost")}</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: "var(--color-text)", fontFamily: "var(--font-family-mono)" }}>{fmtMoney(data?.monthlyCost ?? 0)}</div>
+          <div style={{ fontSize: 12, color: "var(--color-primary)", marginTop: 6, fontWeight: 500 }}>{t("dashboard.viewDetail")} →</div>
         </div>
 
         {/* 今日调用 */}
-        <div style={{ background: "#fff", borderRadius: 8, padding: "16px 20px", cursor: "default", boxShadow: "0 1px 4px rgba(0,0,0,.06)" }}>
-          <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>{t("dashboard.todayCalls")}</div>
-          <div style={{ fontSize: 22, fontWeight: 600, color: "#333" }}>{fmtNumber(data?.todayCalls ?? 0)}</div>
+        <div className="dash-stat" style={{ ...cardBase, padding: "16px 20px" }}>
+          <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 6 }}>{t("dashboard.todayCalls")}</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: "var(--color-text)", fontFamily: "var(--font-family-mono)" }}>{fmtNumber(data?.todayCalls ?? 0)}</div>
         </div>
 
         {/* 活跃 API Key */}
         <div
           onClick={() => navigate("/api-keys")}
-          style={{ background: "#fff", borderRadius: 8, padding: "16px 20px", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,.06)", transition: "background .2s" }}
+          className="dash-stat dash-stat--clickable"
+          style={{ ...cardBase, padding: "16px 20px", cursor: "pointer" }}
         >
-          <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>{t("dashboard.activeKeys")}</div>
-          <div style={{ fontSize: 22, fontWeight: 600, color: "#333" }}>{data?.activeKeys ?? "—"} / {data?.totalKeys ?? "—"}</div>
-          <div style={{ fontSize: 11, color: "#6a8aff", marginTop: 6 }}>{t("dashboard.manageKeys")} →</div>
+          <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 6 }}>{t("dashboard.activeKeys")}</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: "var(--color-text)", fontFamily: "var(--font-family-mono)" }}>{data?.activeKeys ?? "—"} / {data?.totalKeys ?? "—"}</div>
+          <div style={{ fontSize: 12, color: "var(--color-primary)", marginTop: 6, fontWeight: 500 }}>{t("dashboard.manageKeys")} →</div>
         </div>
       </div>
 
       {/* ===== 模型 Token 消耗曲线面板 ===== */}
-      <div style={{ background: "#fff", borderRadius: 8, marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.06)", overflow: "hidden" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid #eee" }}>
-          <h3 style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>📈 {t("dashboard.trend.title")}</h3>
-          <div style={{ display: "flex", gap: 4, background: "#f5f5f5", borderRadius: 6, padding: 2 }}>
+      <div style={{ ...cardBase, marginBottom: 16, overflow: "hidden" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid var(--color-divider)" }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text)", display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
+            <IconChart /> {t("dashboard.trend.title")}
+          </h3>
+          <div style={{ display: "flex", gap: 4, background: "var(--color-divider-light)", borderRadius: 6, padding: 2 }}>
             {["dashboard.trend.today", "dashboard.trend.yesterday", "dashboard.trend.week", "dashboard.trend.lastMonth"].map((tKey) => (
               <button
                 key={tKey}
-                style={{
-                  padding: "4px 12px",
-                  fontSize: 12,
-                  border: "none",
-                  background: tKey === "dashboard.trend.today" ? "#4f6ef7" : "transparent",
-                  borderRadius: 4,
-                  cursor: "pointer",
-                  color: tKey === "dashboard.trend.today" ? "#fff" : "#888",
-                }}
+                className={`dash-trend-btn ${tKey === "dashboard.trend.today" ? "dash-trend-btn--active" : ""}`}
               >
                 {t(tKey)}
               </button>
@@ -225,12 +244,15 @@ export default function DashboardPage() {
         </div>
         <div style={{ padding: "16px 20px" }}>
           {/* 4 个子统计卡片 */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 14 }} className="dash-sub-grid">
             {subs.map((s, i) => (
-              <div key={i} style={{ background: i === 3 ? "#fff8e1" : "#f8f9ff", borderRadius: 6, padding: "10px 12px" }}>
-                <div style={{ fontSize: 11, color: "#888", marginBottom: 3 }}>{s.label}</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: i === 3 ? "#f59e0b" : "#333" }}>{s.value}</div>
-                <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>{s.sub}</div>
+              <div key={i} style={{
+                background: i === 3 ? "var(--color-warning-bg)" : "var(--color-primary-lighter)",
+                borderRadius: 6, padding: "10px 12px",
+              }}>
+                <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 3 }}>{s.label}</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: i === 3 ? "var(--color-warning-text)" : "var(--color-text)", fontFamily: "var(--font-family-mono)" }}>{s.value}</div>
+                <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 2 }}>{s.sub}</div>
               </div>
             ))}
           </div>
@@ -244,44 +266,44 @@ export default function DashboardPage() {
             models={trendModels}
           />
 
-          {/* 宝塔风格时间滑块 */}
-          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #eee" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: "#64748b", marginBottom: 6 }}>
+          {/* 时间滑块 */}
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--color-divider)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: "var(--color-text-muted)", marginBottom: 6 }}>
               <span>00:00</span>
-              <span style={{ color: "#6a8aff", fontWeight: 600 }}>{t("dashboard.trend.selected", { range: "00:00 — 23:59（24小时）" })}</span>
+              <span style={{ color: "var(--color-primary)", fontWeight: 600 }}>{t("dashboard.trend.selected", { range: "00:00 — 23:59（24小时）" })}</span>
               <span>23:59</span>
             </div>
-            <div style={{ position: "relative", height: 28, background: "#f5f5f5", borderRadius: 6, cursor: "grab" }}>
-              {/* 后端缺失：时间范围拖拽滑块功能完整版 */}
-              <div style={{ position: "absolute", top: 0, left: 0, height: "100%", width: "100%", background: "linear-gradient(90deg, rgba(106,138,255,0.15), rgba(139,92,246,0.12))", borderRadius: 6 }} />
-              <div style={{ position: "absolute", top: 0, left: 0, height: "100%", width: 8, background: "#6a8aff", borderRadius: 6 }} />
-              <div style={{ position: "absolute", top: 0, right: 0, height: "100%", width: 8, background: "#6a8aff", borderRadius: 6 }} />
+            <div style={{ position: "relative", height: 28, background: "var(--color-divider-light)", borderRadius: 6, cursor: "grab" }}>
+              <div style={{ position: "absolute", top: 0, left: 0, height: "100%", width: "100%", background: "var(--color-primary-lighter)", borderRadius: 6 }} />
+              <div style={{ position: "absolute", top: 0, left: 0, height: "100%", width: 8, background: "var(--color-primary)", borderRadius: 6 }} />
+              <div style={{ position: "absolute", top: 0, right: 0, height: "100%", width: 8, background: "var(--color-primary)", borderRadius: 6 }} />
             </div>
           </div>
         </div>
       </div>
 
       {/* ===== 底部双列：模型分布 + 最近消费 ===== */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }} className="dash-dual">
         {/* 模型调用分布 */}
-        <div style={{ background: "#fff", borderRadius: 8, boxShadow: "0 1px 4px rgba(0,0,0,.06)", overflow: "hidden" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid #eee" }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>📊 {t("dashboard.distribution.title")}</h3>
-            <span style={{ fontSize: 11, color: "#888" }}>{t("dashboard.distribution.recentHour")}</span>
+        <div style={{ ...cardBase, overflow: "hidden" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid var(--color-divider)" }}>
+            <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text)", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+              <IconChart /> {t("dashboard.distribution.title")}
+            </h3>
+            <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>{t("dashboard.distribution.recentHour")}</span>
           </div>
           <div style={{ padding: "16px 20px" }}>
-            {/* 后端缺失：/me/stats/model-distribution 接口，当前使用原型静态数据展示 */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {distData.map((d) => (
                 <div key={d.name} style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, width: 160, flexShrink: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, width: 150, flexShrink: 0 }}>
                     <span style={{ width: 8, height: 8, borderRadius: "50%", background: d.color, flexShrink: 0 }} />
-                    <span style={{ color: "#333" }}>{d.name}</span>
+                    <span style={{ color: "var(--color-text)" }}>{d.name}</span>
                   </div>
-                  <div style={{ flex: 1, height: 6, background: "#f5f5f5", borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ flex: 1, height: 6, background: "var(--color-divider-light)", borderRadius: 3, overflow: "hidden" }}>
                     <div style={{ height: "100%", width: `${d.percentage}%`, background: d.color, borderRadius: 3 }} />
                   </div>
-                  <div style={{ width: 200, textAlign: "right", color: "#888", flexShrink: 0 }}>
+                  <div style={{ width: 180, textAlign: "right", color: "var(--color-text-muted)", flexShrink: 0, fontFamily: "var(--font-family-mono)" }}>
                     {t("dashboard.distribution.callsTokens", { calls: d.calls, tokens: d.tokens })}
                   </div>
                 </div>
@@ -291,34 +313,35 @@ export default function DashboardPage() {
         </div>
 
         {/* 最近消费 */}
-        <div style={{ background: "#fff", borderRadius: 8, boxShadow: "0 1px 4px rgba(0,0,0,.06)", overflow: "hidden" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid #eee" }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>🕐 {t("dashboard.recent.title")}</h3>
-            <span style={{ fontSize: 11, color: "#888", cursor: "pointer" }} onClick={() => navigate("/logs")}>
+        <div style={{ ...cardBase, overflow: "hidden" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid var(--color-divider)" }}>
+            <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text)", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+              <IconClock /> {t("dashboard.recent.title")}
+            </h3>
+            <span style={{ fontSize: 11, color: "var(--color-primary)", cursor: "pointer", fontWeight: 500 }} onClick={() => navigate("/logs")}>
               {t("dashboard.recent.viewAll")} →
             </span>
           </div>
           <div style={{ padding: 0 }}>
-            {/* 后端缺失：/me/stats/recent-calls 接口，当前使用原型静态数据展示 */}
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
-                <tr>
-                  <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #eee", color: "#888", fontWeight: 400 }}>{t("common.time")}</th>
-                  <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #eee", color: "#888", fontWeight: 400 }}>{t("common.model")}</th>
-                  <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #eee", color: "#888", fontWeight: 400 }}>{t("common.token")}</th>
-                  <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #eee", color: "#888", fontWeight: 400 }}>{t("common.cost")}</th>
-                  <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #eee", color: "#888", fontWeight: 400 }}>{t("common.status")}</th>
+                <tr style={{ background: "var(--color-table-header-bg)" }}>
+                  <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid var(--color-divider)", color: "var(--color-text-secondary)", fontWeight: 500, fontSize: 12 }}>{t("common.time")}</th>
+                  <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid var(--color-divider)", color: "var(--color-text-secondary)", fontWeight: 500, fontSize: 12 }}>{t("common.model")}</th>
+                  <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid var(--color-divider)", color: "var(--color-text-secondary)", fontWeight: 500, fontSize: 12 }}>{t("common.token")}</th>
+                  <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid var(--color-divider)", color: "var(--color-text-secondary)", fontWeight: 500, fontSize: 12 }}>{t("common.cost")}</th>
+                  <th style={{ textAlign: "left", padding: "10px 14px", borderBottom: "1px solid var(--color-divider)", color: "var(--color-text-secondary)", fontWeight: 500, fontSize: 12 }}>{t("common.status")}</th>
                 </tr>
               </thead>
               <tbody>
                 {recentCalls.map((call, i) => (
                   <tr key={i} style={{ cursor: "pointer" }}>
-                    <td style={{ padding: "8px 12px", borderBottom: "1px solid #f5f5f5", color: "#333" }}>{call.time}</td>
-                    <td style={{ padding: "8px 12px", borderBottom: "1px solid #f5f5f5", color: "#333" }}>{call.model}</td>
-                    <td style={{ padding: "8px 12px", borderBottom: "1px solid #f5f5f5", color: "#333" }}>{call.tokens}</td>
-                    <td style={{ padding: "8px 12px", borderBottom: "1px solid #f5f5f5", color: "#333" }}>{call.cost}</td>
-                    <td style={{ padding: "8px 12px", borderBottom: "1px solid #f5f5f5" }}>
-                      <span style={{ color: call.success ? "#22c55e" : "#e53935" }}>
+                    <td style={{ padding: "10px 14px", borderBottom: "1px solid var(--color-divider-light)", color: "var(--color-text)", fontFamily: "var(--font-family-mono)", fontSize: 12 }}>{call.time}</td>
+                    <td style={{ padding: "10px 14px", borderBottom: "1px solid var(--color-divider-light)", color: "var(--color-text)" }}>{call.model}</td>
+                    <td style={{ padding: "10px 14px", borderBottom: "1px solid var(--color-divider-light)", color: "var(--color-text)", fontFamily: "var(--font-family-mono)", fontSize: 12 }}>{call.tokens}</td>
+                    <td style={{ padding: "10px 14px", borderBottom: "1px solid var(--color-divider-light)", color: "var(--color-text)", fontFamily: "var(--font-family-mono)", fontSize: 12 }}>{call.cost}</td>
+                    <td style={{ padding: "10px 14px", borderBottom: "1px solid var(--color-divider-light)" }}>
+                      <span style={{ color: call.success ? "var(--color-success-text)" : "var(--color-danger-text)", fontWeight: 500, fontSize: 12 }}>
                         {call.success ? `✓ ${t("common.success")}` : `✗ ${t("common.failed")}(401)`}
                       </span>
                     </td>
@@ -330,33 +353,42 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ===== 快捷入口（原型：4 列按钮） ===== */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 16 }}>
+      {/* ===== 快捷入口 ===== */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }} className="dash-quick-grid">
         {[
-          { icon: "💰", label: t("dashboard.quick.recharge"), to: "/recharge" },
-          { icon: "🔑", label: t("dashboard.quick.createKey"), to: "/api-keys" },
-          { icon: "📈", label: t("dashboard.quick.logs"), to: "/logs" },
-          { icon: "🎫", label: t("dashboard.quick.ticket"), to: "/tickets" },
+          { icon: <IconWallet />, label: t("dashboard.quick.recharge"), to: "/recharge" },
+          { icon: <IconKey />, label: t("dashboard.quick.createKey"), to: "/api-keys" },
+          { icon: <IconLogs />, label: t("dashboard.quick.logs"), to: "/logs" },
+          { icon: <IconTicket />, label: t("dashboard.quick.ticket"), to: "/tickets" },
         ].map((item) => (
           <div
             key={item.label}
             onClick={() => navigate(item.to)}
+            className="dash-quick"
             style={{
-              background: "#fff",
-              borderRadius: 8,
-              padding: 12,
+              ...cardBase,
+              padding: "18px 12px",
               textAlign: "center",
               cursor: "pointer",
               fontSize: 13,
-              color: "#888",
-              boxShadow: "0 1px 4px rgba(0,0,0,.06)",
+              color: "var(--color-text-secondary)",
             }}
           >
-            <div style={{ fontSize: 22, marginBottom: 4 }}>{item.icon}</div>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>{item.icon}</div>
             {item.label}
           </div>
         ))}
       </div>
+
+      {/* 响应式：窄屏塌缩 */}
+      <style>{`
+        @media (max-width: 1100px) {
+          .dash-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .dash-dual { grid-template-columns: 1fr !important; }
+          .dash-sub-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .dash-quick-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+      `}</style>
     </div>
   );
 }

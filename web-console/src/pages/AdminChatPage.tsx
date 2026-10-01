@@ -99,31 +99,31 @@ export default function AdminChatPage() {
         在线客服
         <HelpIcon text={HELP} level="page" />
       </h2>
-      <p style={{ color: "#94a3b8", marginTop: 0, fontSize: 13 }}>客服工作台 · SPEC-§27</p>
+      <p style={{ color: "var(--color-text-muted)", marginTop: 0, fontSize: 13 }}>客服工作台 · SPEC-§27</p>
 
       {/* 状态筛选 */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
         {([["", "全部"], ["open", "进行中"], ["closed", "已关闭"]] as const).map(([v, l]) => (
-          <button key={v} onClick={() => { setStatusFilter(v); setPage(1); }} style={{ ...btnBase, background: statusFilter === v ? "var(--color-primary)" : "var(--color-panel)", color: statusFilter === v ? "#fff" : "#475569", border: `1px solid var(--color-border)` }}>{l}</button>
+          <button key={v} onClick={() => { setStatusFilter(v); setPage(1); }} style={{ ...btnBase, background: statusFilter === v ? "var(--color-primary)" : "var(--color-panel)", color: statusFilter === v ? "#fff" : "var(--color-text-secondary)", border: `1px solid var(--color-border)` }}>{l}</button>
         ))}
-        <span style={{ marginLeft: "auto", fontSize: 12, color: "#94a3b8" }}>共 {convQ.data?.total ?? 0} 个会话（5s 自动刷新）</span>
+        <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--color-text-muted)" }}>共 {convQ.data?.total ?? 0} 个会话（5s 自动刷新）</span>
       </div>
 
       <div style={{ display: "flex", gap: 16 }}>
         {/* 左：会话列表 */}
         <div style={{ ...card, width: 320, maxHeight: 600, overflowY: "auto" }}>
           <h4 style={{ margin: "0 0 10px", fontSize: 14 }}>会话列表</h4>
-          {convQ.isLoading ? <div style={{ color: "#94a3b8", fontSize: 13 }}>加载中...</div> : conversations.length === 0 ? (
-            <div style={{ color: "#94a3b8", fontSize: 13 }}>暂无会话</div>
+          {convQ.isLoading ? <div style={{ color: "var(--color-text-muted)", fontSize: 13 }}>加载中...</div> : conversations.length === 0 ? (
+            <div style={{ color: "var(--color-text-muted)", fontSize: 13 }}>暂无会话</div>
           ) : (
             conversations.map((c) => (
-              <div key={c.id} onClick={() => setCurrentId(c.id)} style={{ padding: 10, marginBottom: 6, background: currentId === c.id ? "#dbeafe" : "var(--color-bg)", borderRadius: 6, cursor: "pointer" }}>
+              <div key={c.id} onClick={() => setCurrentId(c.id)} style={{ padding: 10, marginBottom: 6, background: currentId === c.id ? "var(--color-info-bg)" : "var(--color-bg)", borderRadius: 6, cursor: "pointer" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <strong style={{ fontSize: 13, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.user?.name ?? c.user?.email ?? `用户 #${c.user_id ?? "?"}`}</strong>
                   <StatusBadge status={c.status === "open" ? "warning" : "default"}>{c.status === "open" ? "进行中" : "已关闭"}</StatusBadge>
                 </div>
-                <div style={{ fontSize: 11, color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>{c.last_message ?? "（无消息）"}</div>
-                <div style={{ fontSize: 10, color: "#cbd5e1", marginTop: 2 }}>{c.updated_at ? new Date(c.updated_at).toLocaleString("zh-CN") : ""}</div>
+                <div style={{ fontSize: 11, color: "var(--color-text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>{c.last_message ?? "（无消息）"}</div>
+                <div style={{ fontSize: 10, color: "var(--color-text-inverse-secondary)", marginTop: 2 }}>{c.updated_at ? new Date(c.updated_at).toLocaleString("zh-CN") : ""}</div>
               </div>
             ))
           )}
@@ -150,13 +150,13 @@ export default function AdminChatPage() {
 
           {/* 消息区 */}
           <div style={{ flex: 1, overflowY: "auto", padding: "8px 4px" }}>
-            {!currentId ? <div style={{ color: "#94a3b8", textAlign: "center", padding: 40 }}>请选择一个会话</div> : messagesQ.isLoading ? (
-              <div style={{ color: "#94a3b8", textAlign: "center", padding: 40 }}>消息加载中...</div>
+            {!currentId ? <div style={{ color: "var(--color-text-muted)", textAlign: "center", padding: 40 }}>请选择一个会话</div> : messagesQ.isLoading ? (
+              <div style={{ color: "var(--color-text-muted)", textAlign: "center", padding: 40 }}>消息加载中...</div>
             ) : messages.length === 0 ? (
-              <div style={{ color: "#94a3b8", textAlign: "center", padding: 40 }}>暂无消息，输入内容回复用户</div>
+              <div style={{ color: "var(--color-text-muted)", textAlign: "center", padding: 40 }}>暂无消息，输入内容回复用户</div>
             ) : messages.map((m) => (
               <div key={m.id} style={{ display: "flex", justifyContent: m.role === "staff" ? "flex-end" : "flex-start", marginBottom: 10 }}>
-                <div style={{ maxWidth: "75%", padding: "10px 14px", borderRadius: 10, lineHeight: 1.6, fontSize: 14, background: m.role === "staff" ? "#eef2ff" : m.role === "user" ? "var(--color-bg)" : "#f1f5f9" }}>
+                <div style={{ maxWidth: "75%", padding: "10px 14px", borderRadius: 10, lineHeight: 1.6, fontSize: 14, background: m.role === "staff" ? "var(--color-row-selected)" : m.role === "user" ? "var(--color-bg)" : "var(--color-divider-light)" }}>
                   <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 4 }}>{m.role === "staff" ? "客服" : m.role === "user" ? "用户" : "系统"} · {new Date(m.created_at).toLocaleTimeString("zh-CN")}</div>
                   {m.content}
                 </div>

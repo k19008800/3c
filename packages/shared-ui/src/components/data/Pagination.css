@@ -46,19 +46,30 @@
   font-size: var(--font-size-md);
   font-family: var(--font-family);
   cursor: pointer;
-  transition: border-color var(--transition-fast),
-    color var(--transition-fast),
-    background-color var(--transition-fast);
+  transition: border-color var(--transition-fast) var(--ease-out),
+    color var(--transition-fast) var(--ease-out),
+    background-color var(--transition-fast) var(--ease-out);
   line-height: 1;
 }
 
 .shared-pagination__btn:hover:not(:disabled):not(.shared-pagination__btn--active) {
   border-color: var(--color-primary);
   color: var(--color-primary);
+  background-color: var(--color-primary-lighter);
+}
+
+.shared-pagination__btn:active:not(:disabled):not(.shared-pagination__btn--active) {
+  border-color: var(--color-primary-active);
+  color: var(--color-primary-active);
+}
+
+.shared-pagination__btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .shared-pagination__btn:disabled {
-  color: var(--color-text-muted);
+  color: var(--color-text-disabled);
   cursor: not-allowed;
   background-color: var(--color-disabled-bg);
 }
@@ -75,6 +86,12 @@
 .shared-pagination__btn--active:hover {
   background-color: var(--color-primary-hover);
   border-color: var(--color-primary-hover);
+  color: #fff;
+}
+
+.shared-pagination__btn--active:active {
+  background-color: var(--color-primary-active);
+  border-color: var(--color-primary-active);
   color: #fff;
 }
 

@@ -10,6 +10,7 @@ import {
   useToast,
 } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /* ============ 类型 ============ */
 interface CurrentBilling {
@@ -168,7 +169,7 @@ export default function BillingPage() {
         {historyQ.isLoading ? (
           <SkeletonGroup lines={5} />
         ) : historyQ.data?.length === 0 ? (
-          <EmptyState icon="📋" title="暂无账单记录" description="当前没有账单数据" />
+          <EmptyState icon={<PIcon name="doc" size={18}/>} title="暂无账单记录" description="当前没有账单数据" />
         ) : (
           <>
             <Table

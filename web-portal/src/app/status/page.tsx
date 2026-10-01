@@ -46,46 +46,66 @@ export default function StatusPage() {
     getStatus().then(setStatus);
   }, []);
 
-  if (!status) {
-    return (
-      <div style={{ maxWidth: 760, margin: "0 auto", padding: "48px 24px" }}>
-        <h1 style={{ fontSize: 32, marginBottom: 24 }}>系统状态</h1>
-        <p style={{ color: "#94a3b8" }}>加载中…</p>
-      </div>
-    );
-  }
-
-  const apiOk = status.api.status === "operational";
+  const overviewTone = !status
+    ? "ok"
+    : status.api.status === "operational"
+      ? "ok"
+      : status.api.status === "unknown"
+        ? "warn"
+        : "err";
 
   return (
-    <div style={{ maxWidth: 760, margin: "0 auto", padding: "48px 24px" }}>
-      <h1 style={{ fontSize: 32, marginBottom: 24 }}>系统状态</h1>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 20, background: apiOk ? "#f0fdf4" : status.api.status === "unknown" ? "#fffbeb" : "#fef2f2", borderRadius: 12, marginBottom: 24 }}>
-        <span style={{ width: 12, height: 12, borderRadius: "50%", background: apiOk ? "#22c55e" : status.api.status === "unknown" ? "#f59e0b" : "#ef4444" }} />
-        <div>
-          <div style={{ fontWeight: 700 }}>
-            {apiOk ? "全部系统正常运行" : status.api.status === "unknown" ? "无法连接 API 网关" : "部分系统异常"}
-          </div>
-          <div style={{ fontSize: 13, color: "#64748b" }}>浩寅云 API 网关</div>
+    <div>
+      <section className="page-head">
+        <div className="container">
+          <span className="overline">System Status</span>
+          <h1>系统状态</h1>
+          <p className="page-subtitle">实时查看 浩寅云 各 API 端点与供应商服务的运行状况</p>
         </div>
-      </div>
+      </section>
 
-      <h2 style={{ fontSize: 18, marginBottom: 12 }}>供应商状态</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 12 }}>
-        {status.vendors.map((v) => (
-          <div key={v.name} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: v.status === "operational" ? "#22c55e" : "#f59e0b" }} />
-              <strong>{v.name}</strong>
+      <section className="container" style={{ paddingBottom: "var(--space-8xl)" }}>
+        {!status ? (
+          <p className="empty-state">加载中…</p>
+        ) : (
+          <>
+            <div className={`status-overview ${overviewTone}`}>
+              <span className="so-dot" />
+              <div>
+                <div className="so-title">
+                  {status.api.status === "operational"
+                    ? "全部系统正常运行"
+                    : status.api.status === "unknown"
+                      ? "无法连接 API 网关"
+                      : "部分系统异常"}
+                </div>
+                <div className="so-sub">浩寅云 API 网关</div>
+              </div>
             </div>
-            <div style={{ fontSize: 13, color: "#64748b" }}>
-              状态: {v.status === "operational" ? "正常" : "降级"} · 健康度: {v.healthScore}/100
+
+            <h2 style={{ fontSize: "var(--font-size-h4)", fontWeight: 700, color: "var(--color-text)", marginBottom: "var(--space-lg)" }}>
+              供应商状态
+            </h2>
+            <div className="vendor-grid">
+              {status.vendors.map((v) => {
+                const up = v.status === "operational";
+                return (
+                  <div key={v.name} className="vendor-card">
+                    <div className="vc-head">
+                      <span className={`vc-dot ${up ? "up" : "down"}`} />
+                      <span className="vc-name">{v.name}</span>
+                    </div>
+                    <div className="vc-meta">
+                      状态：{up ? "正常" : "降级"} · 健康度：{v.healthScore}/100
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
-        ))}
-      </div>
-      {status.vendors.length === 0 && <p style={{ color: "#94a3b8" }}>暂无供应商状态</p>}
+            {status.vendors.length === 0 && <p className="empty-state">暂无供应商状态</p>}
+          </>
+        )}
+      </section>
     </div>
   );
 }

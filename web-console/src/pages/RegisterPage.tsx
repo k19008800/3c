@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
 import { useI18n } from "../lib/i18n-context";
+import "./auth.css";
 
 /* 密码强度评估 */
 function getStrength(pw: string): { score: number; label: string; cls: string } {
@@ -26,9 +27,30 @@ function getStrength(pw: string): { score: number; label: string; cls: string } 
 
 const strengthColors: Record<string, string> = {
   weak: "var(--color-danger-text)",
-  medium: "#ffa726",
-  strong: "#66bb6a",
+  medium: "var(--color-warning-text)",
+  strong: "var(--color-success-text)",
 };
+
+function BrandMark() {
+  return (
+    <svg className="auth-brand__mark" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+      <rect x="1" y="1" width="42" height="42" rx="11" fill="#1896FF" />
+      <path d="M15 27 L27 16" stroke="#fff" strokeWidth="2" strokeLinecap="round" opacity="0.85" />
+      <circle cx="14" cy="28" r="4" fill="#fff" />
+      <circle cx="30" cy="14" r="4" fill="#fff" />
+      <circle cx="30" cy="30" r="2.6" fill="#fff" opacity="0.75" />
+    </svg>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3.5 7 8.5 6 8.5-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -74,18 +96,9 @@ export default function RegisterPage() {
   // 注册成功 → 显示激活邮件提示
   if (successEmail) {
     return (
-      <div style={{
-        minHeight: "100vh",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        background: "var(--color-bg)",
-        fontFamily: 'var(--font-family, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif)',
-      }}>
-        <div style={{
-          width: 420, background: "var(--color-panel)", borderRadius: 16,
-          padding: "40px 32px", boxShadow: "0 2px 16px rgba(0,0,0,0.08)",
-          textAlign: "center",
-        }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>📧</div>
+      <div className="auth-page">
+        <div className="auth-card" style={{ textAlign: "center" }}>
+          <div className="auth-success-icon"><MailIcon /></div>
           <div style={{ fontSize: 18, fontWeight: 600, color: "var(--color-text)", marginBottom: 8 }}>
             {t("auth.registerSuccessTitle")}
           </div>
@@ -97,11 +110,8 @@ export default function RegisterPage() {
           <br />
           <Link
             to="/login"
-            style={{
-              display: "inline-block", padding: "10px 32px",
-              background: "var(--color-primary)", color: "#fff",
-              borderRadius: 8, fontSize: 16, textDecoration: "none",
-            }}
+            className="auth-btn"
+            style={{ display: "inline-block", width: "auto", padding: "0 32px", lineHeight: "46px", textDecoration: "none" }}
           >
             {t("auth.goToLogin")}
           </Link>
@@ -111,37 +121,25 @@ export default function RegisterPage() {
   }
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      background: "var(--color-bg)",
-      fontFamily: 'var(--font-family, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif)',
-    }}>
-      <div style={{
-        width: 420, background: "var(--color-panel)", borderRadius: 16,
-        padding: "40px 32px", boxShadow: "0 2px 16px rgba(0,0,0,0.08)",
-      }}>
-        {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <h1 style={{ fontSize: 24, color: "var(--color-text)", margin: 0 }}>🚀 浩寅云</h1>
-          <p style={{ fontSize: 14, color: "var(--color-text-secondary)", marginTop: 4, marginBottom: 0 }}>
-            AI Token 聚合分发平台
-          </p>
+    <div className="auth-page">
+      <div className="auth-card">
+        {/* Brand */}
+        <div className="auth-brand">
+          <BrandMark />
+          <div className="auth-brand__name">浩寅云</div>
+          <div className="auth-brand__tag">AI Token 聚合分发平台</div>
         </div>
 
         {/* Page Title */}
-        <div style={{
-          fontSize: 18, fontWeight: 600, color: "var(--color-text)", marginBottom: 24,
-          display: "flex", alignItems: "center", gap: 6,
-        }}>
+        <div className="auth-title">
           {t("auth.registerTitle")}
           <HelpIcon text={t("auth.registerHelp")} level="page" />
         </div>
 
         <form onSubmit={handleSubmit}>
           {/* Email */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 13, color: "var(--color-text)", marginBottom: 6 }}>
+          <div className="auth-field">
+            <label>
               {t("auth.email")} <span style={{ color: "var(--color-danger-text)" }}>*</span>
               <HelpIcon text="用于登录和接收通知的邮箱地址" level="button" />
             </label>
@@ -151,17 +149,13 @@ export default function RegisterPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="your@email.com"
               required
-              style={{
-                width: "100%", height: 40, border: "1px solid var(--color-border)",
-                borderRadius: 8, padding: "0 12px", fontSize: 14,
-                outline: "none", boxSizing: "border-box", fontFamily: "inherit",
-              }}
+              className="auth-input"
             />
           </div>
 
           {/* Password */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 13, color: "var(--color-text)", marginBottom: 6 }}>
+          <div className="auth-field">
+            <label>
               {t("auth.password")} <span style={{ color: "var(--color-danger-text)" }}>*</span>
               <HelpIcon text="≥8位，字母+数字+特殊字符，推荐使用密码管理器生成" level="button" />
             </label>
@@ -171,27 +165,23 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="≥8位，字母+数字+特殊字符"
               required
-              style={{
-                width: "100%", height: 40, border: "1px solid var(--color-border)",
-                borderRadius: 8, padding: "0 12px", fontSize: 14,
-                outline: "none", boxSizing: "border-box", fontFamily: "inherit",
-              }}
+              className="auth-input"
             />
             {/* Password Strength Bar */}
-            <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+            <div style={{ display: "flex", gap: 4, marginTop: 8 }}>
               {[1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
                   style={{
                     flex: 1, height: 4, borderRadius: 2,
-                    background: i <= strength.score ? (strengthColors[strength.cls] ?? "#eee") : "#eee",
+                    background: i <= strength.score ? (strengthColors[strength.cls] ?? "var(--color-divider)") : "var(--color-divider)",
                     transition: "background .3s",
                   }}
                 />
               ))}
             </div>
             <div style={{
-              fontSize: 12, marginTop: 4,
+              fontSize: 12, marginTop: 6,
               color: strength.cls ? (strengthColors[strength.cls] ?? "var(--color-text-secondary)") : "var(--color-text-secondary)",
             }}>
               强度：{strength.label}
@@ -199,8 +189,8 @@ export default function RegisterPage() {
           </div>
 
           {/* Confirm Password */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 13, color: "var(--color-text)", marginBottom: 6 }}>
+          <div className="auth-field">
+            <label>
               {t("auth.confirmPassword")} <span style={{ color: "var(--color-danger-text)" }}>*</span>
               <HelpIcon text="请再次输入密码以确认" level="button" />
             </label>
@@ -210,11 +200,7 @@ export default function RegisterPage() {
               onChange={(e) => setConfirmPwd(e.target.value)}
               placeholder="再次输入密码"
               required
-              style={{
-                width: "100%", height: 40, border: `1px solid ${pwMatch === false ? "var(--color-danger-text)" : "var(--color-border)"}`,
-                borderRadius: 8, padding: "0 12px", fontSize: 14,
-                outline: "none", boxSizing: "border-box", fontFamily: "inherit",
-              }}
+              className={`auth-input ${pwMatch === false ? "auth-input--error" : ""}`}
             />
             {pwMatch === false && (
               <div style={{ fontSize: 12, color: "var(--color-danger-text)", marginTop: 4 }}>
@@ -224,8 +210,8 @@ export default function RegisterPage() {
           </div>
 
           {/* Invite Code (optional) */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 13, color: "var(--color-text)", marginBottom: 6 }}>
+          <div className="auth-field">
+            <label>
               邀请码（选填）
               <HelpIcon text="由代理商提供的邀请码（选填）。邀请仅作拉新激励，不自动建立客户归属；客户归属以平台报备审核划拨为准。" level="button" />
             </label>
@@ -234,11 +220,7 @@ export default function RegisterPage() {
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value)}
               placeholder="选填，如有邀请码可输入"
-              style={{
-                width: "100%", height: 40, border: "1px solid var(--color-border)",
-                borderRadius: 8, padding: "0 12px", fontSize: 14,
-                outline: "none", boxSizing: "border-box", fontFamily: "inherit",
-              }}
+              className="auth-input"
             />
           </div>
 
@@ -246,29 +228,19 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={registerMut.isPending}
-            style={{
-              width: "100%", height: 44,
-              background: registerMut.isPending ? "#a0b4f9" : "var(--color-primary)",
-              color: "#fff", border: "none", borderRadius: 8, fontSize: 16,
-              cursor: registerMut.isPending ? "not-allowed" : "pointer", marginTop: 8,
-              fontFamily: "inherit",
-            }}
+            className="auth-btn"
           >
             {registerMut.isPending ? t("auth.registering") : t("auth.register")}
           </button>
           {registerMut.isError && (
-            <div style={{
-              marginTop: 12, padding: "10px 12px", background: "#fff1f0",
-              border: "1px solid #ffccc7", borderRadius: 6,
-              fontSize: 13, color: "#cf1322",
-            }}>
-              ❌ {extractError(registerMut.error)}
+            <div className="auth-alert" style={{ marginTop: 12 }}>
+              <span>{extractError(registerMut.error)}</span>
             </div>
           )}
         </form>
 
-        <div style={{ textAlign: "center", marginTop: 20, fontSize: 13, color: "var(--color-text-secondary)" }}>
-          {t("auth.haveAccount")} <Link to="/login" style={{ color: "var(--color-primary)", textDecoration: "none" }}>{t("auth.loginNow")}</Link>
+        <div className="auth-foot">
+          {t("auth.haveAccount")} <Link to="/login">{t("auth.loginNow")}</Link>
         </div>
       </div>
     </div>

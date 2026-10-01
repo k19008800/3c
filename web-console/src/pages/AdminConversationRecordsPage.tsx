@@ -11,6 +11,7 @@ import {
   Modal,
   useToast,
 } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /* ───────── 类型 ───────── */
 
@@ -321,7 +322,7 @@ export default function AdminConversationRecordsPage() {
           onClick={() => void openRetention()}
           style={{ cursor: "pointer", marginLeft: 8 }}
         >
-          ⚙️ 保留策略
+          <PIcon name="settings" size={14}/> 保留策略
         </button>
         <span style={{ fontSize: 12, color: "var(--color-text-muted, #888)", alignSelf: "center" }}>
           导出当前筛选结果（上限 5 万条，操作计入审计日志）

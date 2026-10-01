@@ -9,6 +9,7 @@ import {
   useToast,
 } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 interface RedeemHistory {
   id: number;
@@ -130,7 +131,7 @@ export default function RedemptionPage() {
         {historyQ.isLoading ? (
           <SkeletonGroup lines={4} />
         ) : (historyQ.data?.list?.length ?? 0) === 0 ? (
-          <EmptyState icon="🎁" title="暂无兑换记录" description="您还没有使用过兑换码" />
+          <EmptyState icon={<PIcon name="gift" size={18}/>} title="暂无兑换记录" description="您还没有使用过兑换码" />
         ) : (
           <Table
             columns={historyColumns}

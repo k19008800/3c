@@ -6,6 +6,7 @@ import {
   SkeletonGroup,
   useToast,
 } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 // §22.6 通知偏好设置页
 // 对应 SPEC-§22-用户端体验增强.md §22.6
@@ -82,7 +83,7 @@ export default function NotificationSettingsPage() {
       (await api.put("/me/preferences/notifications", data)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["me-notif-prefs"] });
-      toast.success("✅ 通知偏好已保存");
+      toast.success("通知偏好已保存");
     },
     onError: (e) => toast.error(extractError(e)),
   });
@@ -93,7 +94,7 @@ export default function NotificationSettingsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["me-notif-prefs"] });
       setLocalPrefs(null);
-      toast.success("✅ 已恢复默认设置");
+      toast.success("已恢复默认设置");
     },
     onError: (e) => toast.error(extractError(e)),
   });
@@ -233,7 +234,7 @@ export default function NotificationSettingsPage() {
                       {EVENT_LABELS[event] ?? event}
                       {isForced && (
                         <span style={{ marginLeft: 6, color: "var(--color-primary)", fontSize: 11 }}>
-                          🔒
+                          <PIcon name="lock" size={14}/>
                         </span>
                       )}
                     </td>

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { HelpIcon, SkeletonGroup, EmptyState, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 interface Ann {
   id: number;
@@ -98,7 +99,7 @@ export default function AnnouncementsPage() {
         {listQ.isLoading ? (
           <SkeletonGroup lines={5} />
         ) : (listQ.data?.list?.length ?? 0) === 0 ? (
-          <EmptyState icon="📢" title="暂无公告" description="当前没有公告信息" />
+          <EmptyState icon={<PIcon name="megaphone" size={18}/>} title="暂无公告" description="当前没有公告信息" />
         ) : (
           listQ.data?.list.map((a) => {
             const badge = TYPE_BADGE[a.type] ?? { bg: "var(--color-bg)", color: "var(--color-text-secondary)" };

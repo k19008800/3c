@@ -162,7 +162,7 @@ export default function AdminEmailTemplatesPage() {
             <div style={{ border: "1px solid var(--color-border)", borderRadius: 8, padding: 12, fontSize: 13, lineHeight: 1.7, maxHeight: 240, overflow: "auto" }} dangerouslySetInnerHTML={{ __html: preview.body }} />
             <div style={{ marginTop: 12, padding: "10px 12px", borderRadius: 8, background: "var(--color-bg)", border: "1px solid var(--color-border)" }}>
               <div style={{ fontSize: 12, color: "var(--color-text)", marginBottom: 6 }}>
-                {preview.smtp_enabled ? "✅ SMTP 已配置 —— 输入收件邮箱可真实发送测试邮件" : "⚠️ SMTP 未配置（需在服务端设置 SMTP_HOST/USER/PASS），当前仅预览渲染"}
+                {preview.smtp_enabled ? " SMTP 已配置 —— 输入收件邮箱可真实发送测试邮件" : "️ SMTP 未配置（需在服务端设置 SMTP_HOST/USER/PASS），当前仅预览渲染"}
               </div>
               {preview.smtp_enabled && (
                 <div style={{ display: "flex", gap: 8 }}>

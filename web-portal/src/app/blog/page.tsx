@@ -53,42 +53,42 @@ export default async function BlogPage({
   const { items } = await fetchBlogList(1, 50);
 
   return (
-    <div style={{ maxWidth: 800, margin: "0 auto", padding: "48px 24px" }}>
-      <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>
-        {t("blog.title")}
-        <PageHelp text={t("help.blog")} />
-      </h1>
-      <p style={{ color: "#64748b", marginBottom: 40, fontSize: 15 }}>{t("blog.subtitle")}</p>
+    <div>
+      <section className="page-hero">
+        <div className="container anim-fade-in">
+          <span className="overline">Blog</span>
+          <h1>
+            {t("blog.title")}
+            <PageHelp text={t("help.blog")} />
+          </h1>
+          <p className="page-subtitle">{t("blog.subtitle")}</p>
+        </div>
+      </section>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {items.map((post) => (
-          <a
-            key={post.id}
-            href={`/blog/${post.slug}`}
-            style={{
-              display: "block",
-              border: "1px solid #e2e8f0",
-              borderRadius: 12,
-              padding: "20px 24px",
-              background: "#fff",
-              textDecoration: "none",
-              color: "inherit",
-              transition: "box-shadow .2s",
-            }}
-          >
-            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: "#0f172a" }}>{post.title}</h2>
-            {post.updated_at && (
-              <div style={{ fontSize: 13, color: "#94a3b8" }}>
-                {t("blog.publishedAt")} {formatDate(post.updated_at)}
-              </div>
-            )}
-          </a>
-        ))}
-      </div>
+      <section className="container" style={{ paddingBottom: "var(--space-8xl)" }}>
+        <div className="blog-list">
+          {items.map((post, i) => (
+            <a
+              key={post.id}
+              href={`/blog/${post.slug}`}
+              className={`blog-card anim-fade-in-up anim-fade-in-up-d${(i % 4) + 1}`}
+            >
+              <h2>{post.title}</h2>
+              {post.updated_at && (
+                <div className="blog-meta">
+                  <span>{t("blog.publishedAt")}</span>
+                  <span className="dot-sep" />
+                  <time dateTime={post.updated_at}>{formatDate(post.updated_at)}</time>
+                </div>
+              )}
+            </a>
+          ))}
+        </div>
 
-      {items.length === 0 && (
-        <p style={{ color: "#94a3b8", textAlign: "center", padding: 60 }}>{t("blog.empty")}</p>
-      )}
+        {items.length === 0 && (
+          <p className="empty-state">{t("blog.empty")}</p>
+        )}
+      </section>
     </div>
   );
 }

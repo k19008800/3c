@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { HelpIcon, StatusBadge, Modal, EmptyState, SkeletonGroup, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 interface CouponItem {
   id: number; batch_code: string; batch_name: string;
@@ -53,7 +54,7 @@ export default function AdminCouponPage() {
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <h2 style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
-        🎟️ 兑换码管理
+        <PIcon name="ticket" size={14}/> 兑换码管理
         <HelpIcon text="生成和管理兑换码，查看兑换记录。" level="page" />
       </h2>
 

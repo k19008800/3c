@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { HelpIcon, EmptyState, Pagination } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /**
  * 实时活动流（运维操作）
@@ -64,7 +65,7 @@ export default function AdminActivityPage() {
         ) : listQ.isError ? (
           <p style={{ padding: 20, color: "var(--color-danger-text)" }}>加载失败：{extractError(listQ.error)}</p>
         ) : filtered.length === 0 ? (
-          <EmptyState title="暂无操作记录" description="管理员操作审计日志将显示在此处" icon="📋" />
+          <EmptyState title="暂无操作记录" description="管理员操作审计日志将显示在此处" icon={<PIcon name="doc" size={18}/>} />
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../../lib/api";
 import { HelpIcon, StatusBadge, Modal, SkeletonGroup, EmptyState, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 /**
  * 供应商管理 → 价格变更通知
@@ -67,12 +68,12 @@ interface SubItem {
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const statCard: React.CSSProperties = { flex: 1, background: "var(--color-panel)", borderRadius: 10, padding: "16px 18px", boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "7px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 12, whiteSpace: "nowrap" };
-const btnGhost: React.CSSProperties = { ...btnBase, background: "#fff", color: "#4f6ef7", border: "1px solid #4f6ef7" };
-const btnPrimary: React.CSSProperties = { ...btnBase, background: "#4f6ef7", color: "#fff" };
+const btnGhost: React.CSSProperties = { ...btnBase, background: "#fff", color: "var(--color-primary)", border: "1px solid var(--color-primary)" };
+const btnPrimary: React.CSSProperties = { ...btnBase, background: "var(--color-primary)", color: "#fff" };
 const inputBase: React.CSSProperties = { padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", fontSize: 13 };
-const tabBtn: React.CSSProperties = { padding: "9px 24px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 14, background: "transparent", color: "#666" };
-const tabBtnActive: React.CSSProperties = { ...tabBtn, background: "#eef1ff", color: "#4f6ef7", fontWeight: 600 };
-const th: React.CSSProperties = { padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 12, color: "#666", background: "#f8f9fa" };
+const tabBtn: React.CSSProperties = { padding: "9px 24px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 14, background: "transparent", color: "var(--color-text-secondary)" };
+const tabBtnActive: React.CSSProperties = { ...tabBtn, background: "var(--color-primary-light)", color: "var(--color-primary)", fontWeight: 600 };
+const th: React.CSSProperties = { padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 12, color: "var(--color-text-secondary)", background: "#f8f9fa" };
 const td: React.CSSProperties = { padding: "10px 12px", fontSize: 13, borderTop: "1px solid #f0f0f0", verticalAlign: "middle" };
 
 // 价格格式化：数字、去尾零（如 ¥0.2 / ¥0.000125）
@@ -186,20 +187,20 @@ export default function AdminPriceChangePage() {
       {/* stat cards */}
       <div style={{ display: "flex", gap: 14, marginBottom: 20 }}>
         <div style={statCard}>
-          <div style={{ fontSize: 12, color: "#888" }}>今日变更</div>
-          <div style={{ fontSize: 26, fontWeight: 700, color: "#4f6ef7", marginTop: 6 }}>{stats.today_changes}</div>
+          <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>今日变更</div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: "var(--color-primary)", marginTop: 6 }}>{stats.today_changes}</div>
         </div>
         <div style={statCard}>
-          <div style={{ fontSize: 12, color: "#888" }}>待分发</div>
+          <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>待分发</div>
           <div style={{ fontSize: 26, fontWeight: 700, color: stats.pending_changes > 0 ? "#fb8c00" : "#22c55e", marginTop: 6 }}>{stats.pending_changes}</div>
         </div>
         <div style={statCard}>
-          <div style={{ fontSize: 12, color: "#888" }}>本月影响用户</div>
-          <div style={{ fontSize: 26, fontWeight: 700, color: "#333", marginTop: 6 }}>{stats.month_impacted_users}</div>
+          <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>本月影响用户</div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: "var(--color-text)", marginTop: 6 }}>{stats.month_impacted_users}</div>
         </div>
         <div style={statCard}>
-          <div style={{ fontSize: 12, color: "#888" }}>本月紧急通知</div>
-          <div style={{ fontSize: 26, fontWeight: 700, color: stats.month_urgent > 0 ? "#e53935" : "#333", marginTop: 6 }}>{stats.month_urgent}</div>
+          <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>本月紧急通知</div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: stats.month_urgent > 0 ? "#e53935" : "var(--color-text)", marginTop: 6 }}>{stats.month_urgent}</div>
         </div>
       </div>
 
@@ -225,7 +226,7 @@ export default function AdminPriceChangePage() {
           </div>
 
           {listQ.isLoading ? <SkeletonGroup lines={6} /> : list.length === 0 ? (
-            <EmptyState icon="📉" title="暂无价格变更" description="供应商调价后会自动记录到此处" />
+            <EmptyState icon={<PIcon name="trendDown" size={18}/>} title="暂无价格变更" description="供应商调价后会自动记录到此处" />
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr>
@@ -242,17 +243,17 @@ export default function AdminPriceChangePage() {
                 {list.map((pc: PriceChangeLog) => (
                   <tr key={pc.id} style={{ background: pc.dispatched ? undefined : "#fffaf0" }}>
                     <td style={td}><span style={{ fontWeight: 500 }}>{pc.model_name}</span></td>
-                    <td style={{ ...td, color: "#888" }}>{pc.vendor_name}</td>
+                    <td style={{ ...td, color: "var(--color-text-muted)" }}>{pc.vendor_name}</td>
                     <td style={td}><StatusBadge status={pc.change_type === "both" ? "info" : "default"}>{CHANGE_TYPE_LABEL[pc.change_type]}</StatusBadge></td>
                     <td style={td}>
-                      <span style={{ color: "#888" }}>{fmt(pc.oldSalePrice ?? pc.oldOutputPrice)}</span>
-                      <span style={{ color: "#999", margin: "0 6px" }}>→</span>
+                      <span style={{ color: "var(--color-text-muted)" }}>{fmt(pc.oldSalePrice ?? pc.oldOutputPrice)}</span>
+                      <span style={{ color: "var(--color-text-muted)", margin: "0 6px" }}>→</span>
                       <span style={{ color: pc.direction === "up" ? "#e53935" : "#22c55e", fontWeight: 600 }}>{fmt(pc.newSalePrice ?? pc.newOutputPrice)}</span>
                     </td>
                     <td style={{ ...td, color: pc.direction === "up" ? "#e53935" : "#22c55e", fontWeight: 600 }}>
                       {pc.direction === "up" ? "▲" : "▼"} {pc.change_pct}%
                     </td>
-                    <td style={{ ...td, color: "#888", fontSize: 12 }}>{fmtDt(pc.effectiveAt)}</td>
+                    <td style={{ ...td, color: "var(--color-text-muted)", fontSize: 12 }}>{fmtDt(pc.effectiveAt)}</td>
                     <td style={td}>
                       {pc.dispatched
                         ? <StatusBadge status="success">已分发</StatusBadge>
@@ -275,9 +276,9 @@ export default function AdminPriceChangePage() {
       {/* ── TAB 2: 分发日志 ── */}
       {tab === "dispatch" && (
         <div style={card}>
-          <div style={{ fontWeight: 600, marginBottom: 12 }}>📋 分发执行日志 <HelpIcon text="每次自动或手动分发都会记录一条：评估用户总数、A 紧急 / B 周报 / C 静默各级数量。失败会记录错误原因。" level="button" /></div>
+          <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="doc" size={14}/> 分发执行日志 <HelpIcon text="每次自动或手动分发都会记录一条：评估用户总数、A 紧急 / B 周报 / C 静默各级数量。失败会记录错误原因。" level="button" /></div>
           {dispatchQ.isLoading ? <SkeletonGroup lines={5} /> : (dispatchQ.data?.list ?? []).length === 0 ? (
-            <EmptyState icon="📭" title="暂无分发记录" description="价格变更分发后会自动记录" />
+            <EmptyState icon={<PIcon name="box" size={18}/>} title="暂无分发记录" description="价格变更分发后会自动记录" />
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr>
@@ -296,8 +297,8 @@ export default function AdminPriceChangePage() {
                     <td style={td}>{d.total_users_evaluated}</td>
                     <td style={{ ...td, color: "#e53935", fontWeight: 600 }}>{d.tier_a_count ?? d.tierACount ?? 0}</td>
                     <td style={{ ...td, color: "#fb8c00", fontWeight: 600 }}>{d.tier_b_count ?? d.tierBCount ?? 0}</td>
-                    <td style={{ ...td, color: "#888" }}>{d.tier_c_count ?? d.tierCCount ?? 0}</td>
-                    <td style={{ ...td, color: "#888", fontSize: 12 }}>{fmtDt(d.dispatched_at ?? d.dispatchedAt)}</td>
+                    <td style={{ ...td, color: "var(--color-text-muted)" }}>{d.tier_c_count ?? d.tierCCount ?? 0}</td>
+                    <td style={{ ...td, color: "var(--color-text-muted)", fontSize: 12 }}>{fmtDt(d.dispatched_at ?? d.dispatchedAt)}</td>
                     <td style={td}>
                       {d.error_message ?? d.errorMessage
                         ? <span title={d.error_message ?? d.errorMessage}><StatusBadge status="danger">失败</StatusBadge></span>
@@ -315,10 +316,10 @@ export default function AdminPriceChangePage() {
       {tab === "sub" && (
         <div style={card}>
           <div style={{ fontWeight: 600, marginBottom: 12 }}>
-            🔄 可替代性系数 <HelpIcon text="影响评分 = |变动率| × 用户消费占比 × 可替代性系数。基础值按同类活跃模型数自动计算（≥8→1.5，5-7→1.2，2-4→1.0，仅1→0.5），可在 0.3~2.0 内人工覆盖。" level="button" />
+            <PIcon name="refresh" size={14}/> 可替代性系数 <HelpIcon text="影响评分 = |变动率| × 用户消费占比 × 可替代性系数。基础值按同类活跃模型数自动计算（≥8→1.5，5-7→1.2，2-4→1.0，仅1→0.5），可在 0.3~2.0 内人工覆盖。" level="button" />
           </div>
           {subQ.isLoading ? <SkeletonGroup lines={6} /> : (subQ.data?.list ?? []).length === 0 ? (
-            <EmptyState icon="🔄" title="暂无模型" description="模型上线后可在此查看可替代性系数" />
+            <EmptyState icon={<PIcon name="refresh" size={18}/>} title="暂无模型" description="模型上线后可在此查看可替代性系数" />
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead><tr>
@@ -338,9 +339,9 @@ export default function AdminPriceChangePage() {
                     <td style={td}><StatusBadge status={s.status === "active" ? "success" : "default"}>{s.status === "active" ? "启用" : "停用"}</StatusBadge></td>
                     <td style={td}>{s.peer_count}</td>
                     <td style={td}>{s.auto_coefficient}</td>
-                    <td style={td}>{s.manual_coefficient != null ? <StatusBadge status="info">{s.manual_coefficient}</StatusBadge> : <span style={{ color: "#bbb" }}>—</span>}</td>
-                    <td style={{ ...td, fontWeight: 700, color: "#4f6ef7" }}>{s.effective_coefficient}</td>
-                    <td style={{ ...td, color: "#888", fontSize: 12, maxWidth: 240 }}>{s.coefficient_basis}</td>
+                    <td style={td}>{s.manual_coefficient != null ? <StatusBadge status="info">{s.manual_coefficient}</StatusBadge> : <span style={{ color: "var(--color-text-disabled)" }}>—</span>}</td>
+                    <td style={{ ...td, fontWeight: 700, color: "var(--color-primary)" }}>{s.effective_coefficient}</td>
+                    <td style={{ ...td, color: "var(--color-text-muted)", fontSize: 12, maxWidth: 240 }}>{s.coefficient_basis}</td>
                     <td style={td}><button style={btnGhost} onClick={() => setSubEdit(s)}>覆盖系数</button></td>
                   </tr>
                 ))}
@@ -359,21 +360,21 @@ export default function AdminPriceChangePage() {
               {/* price summary */}
               <div style={{ background: "#f7f9fc", borderRadius: 10, padding: 14, marginBottom: 16 }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 13 }}>
-                  <span style={{ color: "#666" }}>供应商：</span><b>{imp.model.supplierName}</b>
+                  <span style={{ color: "var(--color-text-secondary)" }}>供应商：</span><b>{imp.model.supplierName}</b>
                   <span style={{ color: "#ddd" }}>|</span>
-                  <span style={{ color: "#666" }}>销售价：</span>
+                  <span style={{ color: "var(--color-text-secondary)" }}>销售价：</span>
                   <b>{fmt(imp.old_sale_price)}</b>
-                  <span style={{ color: "#999" }}>→</span>
+                  <span style={{ color: "var(--color-text-muted)" }}>→</span>
                   <b style={{ color: imp.change_rate >= 0 ? "#e53935" : "#22c55e" }}>{fmt(imp.new_sale_price)}</b>
                   <span style={{ color: imp.change_rate >= 0 ? "#e53935" : "#22c55e", fontWeight: 700 }}>
                     {imp.change_rate >= 0 ? "▲" : "▼"} {Math.abs(imp.change_rate)}%
                   </span>
-                  <span style={{ color: "#bbb" }}>|</span>
-                  <span style={{ color: "#666" }}>生效：</span><span>{fmtDt(imp.effective_at)}</span>
+                  <span style={{ color: "var(--color-text-disabled)" }}>|</span>
+                  <span style={{ color: "var(--color-text-secondary)" }}>生效：</span><span>{fmtDt(imp.effective_at)}</span>
                 </div>
-                <div style={{ fontSize: 12, color: "#888", marginTop: 8 }}>
-                  可替代性系数：<b style={{ color: "#4f6ef7" }}>{imp.effective_coefficient}</b>
-                  <span style={{ color: "#bbb" }}>（{imp.coefficient_basis}）</span>
+                <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 8 }}>
+                  可替代性系数：<b style={{ color: "var(--color-primary)" }}>{imp.effective_coefficient}</b>
+                  <span style={{ color: "var(--color-text-disabled)" }}>（{imp.coefficient_basis}）</span>
                 </div>
               </div>
 
@@ -386,15 +387,15 @@ export default function AdminPriceChangePage() {
                 ] as const).map((t) => (
                   <div key={t.k} style={{ flex: 1, background: `${t.color}12`, borderRadius: 10, padding: "10px 14px", textAlign: "center" }}>
                     <div style={{ fontSize: 22, fontWeight: 700, color: t.color }}>{t.v}</div>
-                    <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>{t.label}</div>
+                    <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 2 }}>{t.label}</div>
                   </div>
                 ))}
               </div>
 
               {/* top users */}
-              <div style={{ fontWeight: 600, fontSize: 14, margin: "16px 0 8px" }}>👤 受影响用户 Top10（共 {imp.total_users_evaluated} 个近30天活跃客户参与评估）</div>
+              <div style={{ fontWeight: 600, fontSize: 14, margin: "16px 0 8px" }}><PIcon name="user" size={14}/> 受影响用户 Top10（共 {imp.total_users_evaluated} 个近30天活跃客户参与评估）</div>
               {imp.top_users.length === 0 ? (
-                <EmptyState icon="👤" title="无受影响用户" description="近 30 天无人消费该模型" />
+                <EmptyState icon={<PIcon name="user" size={18}/>} title="无受影响用户" description="近 30 天无人消费该模型" />
               ) : (
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead><tr>
@@ -415,7 +416,7 @@ export default function AdminPriceChangePage() {
                         <td style={td}>{u.coefficient}</td>
                         <td style={{ ...td, fontWeight: 700 }}>{u.score}</td>
                         <td style={td}>{tierBadge(u.tier)}</td>
-                        <td style={{ ...td, color: "#888" }}>{u.channel}</td>
+                        <td style={{ ...td, color: "var(--color-text-muted)" }}>{u.channel}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -425,12 +426,12 @@ export default function AdminPriceChangePage() {
               {/* alternatives */}
               {imp.alternatives.length > 0 && (
                 <>
-                  <div style={{ fontWeight: 600, fontSize: 14, margin: "16px 0 8px" }}>💡 可替代模型建议（发给 A 级用户）</div>
+                  <div style={{ fontWeight: 600, fontSize: 14, margin: "16px 0 8px" }}><PIcon name="bolt" size={14}/> 可替代模型建议（发给 A 级用户）</div>
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                     {imp.alternatives.map((a) => (
                       <div key={a.model_name} style={{ background: "#f0f7ff", borderRadius: 8, padding: "8px 14px", fontSize: 13 }}>
                         <b>{a.model_name}</b>
-                        <span style={{ color: "#888", marginLeft: 8 }}>{fmt(a.min_price)}/1M</span>
+                        <span style={{ color: "var(--color-text-muted)", marginLeft: 8 }}>{fmt(a.min_price)}/1M</span>
                       </div>
                     ))}
                   </div>
@@ -451,12 +452,12 @@ export default function AdminPriceChangePage() {
       <Modal open={subEdit != null} onClose={() => setSubEdit(null)} title={`覆盖系数 · ${subEdit?.model_name ?? ""}`}>
         {subEdit && (
           <div>
-            <p style={{ fontSize: 13, color: "#666", margin: "0 0 14px", lineHeight: 1.6 }}>
+            <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 14px", lineHeight: 1.6 }}>
               当前自动系数：<b>{subEdit.auto_coefficient}</b>（同类活跃模型 {subEdit.peer_count} 个）
               <br />
-              生效系数：<b style={{ color: "#4f6ef7" }}>{subEdit.effective_coefficient}</b>
+              生效系数：<b style={{ color: "var(--color-primary)" }}>{subEdit.effective_coefficient}</b>
               <br />
-              <span style={{ color: "#999", fontSize: 12 }}>清空系数并填写理由 = 恢复自动计算</span>
+              <span style={{ color: "var(--color-text-muted)", fontSize: 12 }}>清空系数并填写理由 = 恢复自动计算</span>
             </p>
             <form
               onSubmit={(e) => {
@@ -470,11 +471,11 @@ export default function AdminPriceChangePage() {
               }}
             >
               <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 13, color: "#333", display: "block", marginBottom: 6 }}>手动系数（0.3 ~ 2.0，留空=恢复自动）</label>
+                <label style={{ fontSize: 13, color: "var(--color-text)", display: "block", marginBottom: 6 }}>手动系数（0.3 ~ 2.0，留空=恢复自动）</label>
                 <input name="coef" type="number" step="0.05" min="0.3" max="2.0" defaultValue={subEdit.manual_coefficient ?? ""} style={{ ...inputBase, width: "100%" }} />
               </div>
               <div style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 13, color: "#333", display: "block", marginBottom: 6 }}>覆盖理由（必填）</label>
+                <label style={{ fontSize: 13, color: "var(--color-text)", display: "block", marginBottom: 6 }}>覆盖理由（必填）</label>
                 <textarea name="reason" rows={3} placeholder="例如：该模型为独家供货，无实际替代" style={{ ...inputBase, width: "100%", resize: "vertical" }} />
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>

@@ -11,6 +11,7 @@ import {
   useToast,
 } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /**
  * 我的工单 — 门户端工单中心
@@ -106,10 +107,10 @@ function formatDate(d: string | null) {
 /* ---------- styles ---------- */
 
 const card: React.CSSProperties = { background: "#fff", padding: 20, borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,.06)", border: "1px solid var(--color-border)" };
-const btnPrimary: React.CSSProperties = { padding: "8px 20px", borderRadius: 6, border: "none", background: "#4f6ef7", color: "#fff", fontSize: 13, cursor: "pointer", fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" };
-const btnGhost: React.CSSProperties = { padding: "8px 16px", borderRadius: 6, border: "1px solid #d9d9d9", background: "#fff", color: "#333", fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" };
-const filterSelect: React.CSSProperties = { padding: "8px 14px", borderRadius: 6, border: "1px solid #d9d9d9", background: "#fff", fontSize: 13, color: "#333", outline: "none", cursor: "pointer" };
-const inp: React.CSSProperties = { width: "100%", padding: "10px 14px", borderRadius: 6, border: "1px solid #d9d9d9", fontSize: 13, outline: "none", boxSizing: "border-box", fontFamily: "inherit" };
+const btnPrimary: React.CSSProperties = { padding: "8px 20px", borderRadius: 6, border: "none", background: "var(--color-primary)", color: "#fff", fontSize: 13, cursor: "pointer", fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" };
+const btnGhost: React.CSSProperties = { padding: "8px 16px", borderRadius: 6, border: "1px solid var(--color-border)", background: "#fff", color: "#333", fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" };
+const filterSelect: React.CSSProperties = { padding: "8px 14px", borderRadius: 6, border: "1px solid var(--color-border)", background: "#fff", fontSize: 13, color: "#333", outline: "none", cursor: "pointer" };
+const inp: React.CSSProperties = { width: "100%", padding: "10px 14px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13, outline: "none", boxSizing: "border-box", fontFamily: "inherit" };
 const lbl: React.CSSProperties = { display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#888", marginBottom: 6 };
 
 export default function TicketsPage() {
@@ -229,7 +230,7 @@ export default function TicketsPage() {
       title: "工单号",
       dataIndex: "ticket_no",
       render: (v, r) => (
-        <span style={{ fontWeight: 600, color: "#4f6ef7" }}>
+        <span style={{ fontWeight: 600, color: "var(--color-primary)" }}>
           {v as string}
           {(r as Ticket).unread > 0 ? (
             <span style={{ background: "#e53935", color: "#fff", borderRadius: 10, padding: "0 6px", fontSize: 11, marginLeft: 6 }}>{(r as Ticket).unread}</span>
@@ -276,7 +277,7 @@ export default function TicketsPage() {
       title: "操作",
       render: (_, r) => (
         <span
-          style={{ color: "#4f6ef7", cursor: "pointer", fontSize: 13 }}
+          style={{ color: "var(--color-primary)", cursor: "pointer", fontSize: 13 }}
           onClick={(e) => { e.stopPropagation(); setActiveId((r as Ticket).id); setView("detail"); }}
         >
           查看详情
@@ -325,7 +326,7 @@ export default function TicketsPage() {
           {listQ.isLoading ? (
             <SkeletonGroup lines={5} />
           ) : (listQ.data?.list?.length ?? 0) === 0 ? (
-            <EmptyState icon="🎫" title="暂无工单" description="您还没有提交过工单，点击上方按钮创建" actionText="创建工单" onAction={() => setView("create")} />
+            <EmptyState icon={<PIcon name="ticket" size={18}/>} title="暂无工单" description="您还没有提交过工单，点击上方按钮创建" actionText="创建工单" onAction={() => setView("create")} />
           ) : (
             <>
               <Table
@@ -398,17 +399,17 @@ export default function TicketsPage() {
               <HelpIcon text="支持图片、PDF 等文件，最多上传 3 个文件" level="button" />
             </label>
             <div
-              style={{ border: "2px dashed #d9d9d9", borderRadius: 8, padding: 24, textAlign: "center", cursor: "pointer", color: "#888", fontSize: 13, transition: "border-color .15s" }}
+              style={{ border: "2px dashed var(--color-border)", borderRadius: 8, padding: 24, textAlign: "center", cursor: "pointer", color: "#888", fontSize: 13, transition: "border-color .15s" }}
               onClick={() => attachments.length < 3 && fileInputRef.current?.click()}
             >
-              📎 点击或拖拽文件到此处上传（最多 3 个）
+              <PIcon name="paperclip" size={14}/> 点击或拖拽文件到此处上传（最多 3 个）
             </div>
             <input ref={fileInputRef} type="file" multiple style={{ display: "none" }} onChange={handleFileChange} accept="image/*,.pdf,.doc,.docx,.txt" />
             {attachments.length > 0 && (
               <div style={{ marginTop: 8 }}>
                 {attachments.map((f, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f5f5f5", border: "1px solid #d9d9d9", padding: "8px 12px", borderRadius: 6, marginBottom: 6, fontSize: 12 }}>
-                    <span style={{ color: "#333" }}>📎 {f.name}</span>
+                  <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f5f5f5", border: "1px solid var(--color-border)", padding: "8px 12px", borderRadius: 6, marginBottom: 6, fontSize: 12 }}>
+                    <span style={{ color: "#333" }}><PIcon name="paperclip" size={14}/> {f.name}</span>
                     <span style={{ color: "#e53935", cursor: "pointer", fontSize: 16 }} onClick={() => removeAttachment(i)}>✕</span>
                   </div>
                 ))}
@@ -447,10 +448,10 @@ export default function TicketsPage() {
                     ✓ 确认解决
                   </button>
                   {showResolvePop && (
-                    <div style={{ position: "absolute", bottom: "100%", right: 0, marginBottom: 8, background: "#fff", border: "1px solid #d9d9d9", borderRadius: 8, padding: 12, boxShadow: "0 -4px 16px rgba(0,0,0,.1)", zIndex: 10, whiteSpace: "nowrap" }}>
+                    <div style={{ position: "absolute", bottom: "100%", right: 0, marginBottom: 8, background: "#fff", border: "1px solid var(--color-border)", borderRadius: 8, padding: 12, boxShadow: "0 -4px 16px rgba(0,0,0,.1)", zIndex: 10, whiteSpace: "nowrap" }}>
                       <p style={{ fontSize: 13, color: "#333", margin: "0 0 10px" }}>确认将此工单标记为已解决？</p>
                       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                        <button style={{ padding: "6px 14px", borderRadius: 6, fontSize: 12, cursor: "pointer", border: "1px solid #d9d9d9", background: "#fff" }} onClick={() => setShowResolvePop(false)}>取消</button>
+                        <button style={{ padding: "6px 14px", borderRadius: 6, fontSize: 12, cursor: "pointer", border: "1px solid var(--color-border)", background: "#fff" }} onClick={() => setShowResolvePop(false)}>取消</button>
                         <button style={{ padding: "6px 14px", borderRadius: 6, fontSize: 12, cursor: "pointer", border: "none", background: "#2e7d32", color: "#fff" }} onClick={() => resolveMut.mutate()}>确认</button>
                       </div>
                     </div>
@@ -469,7 +470,7 @@ export default function TicketsPage() {
           </div>
 
           {/* chat area */}
-          <div style={{ background: "#fff", border: "1px solid #d9d9d9", borderRadius: 12, padding: 24, maxHeight: 500, overflowY: "auto", marginBottom: 16 }}>
+          <div style={{ background: "#fff", border: "1px solid var(--color-border)", borderRadius: 12, padding: 24, maxHeight: 500, overflowY: "auto", marginBottom: 16 }}>
             {detailQ.data.replies.map((r) => (
               <div key={r.id} style={{ marginBottom: 16, maxWidth: "70%", marginLeft: r.is_staff ? 0 : "auto", textAlign: r.is_staff ? "left" : "right" }}>
                 <div style={{
@@ -477,7 +478,7 @@ export default function TicketsPage() {
                   padding: "12px 16px",
                   borderRadius: 12,
                   background: r.is_staff ? "#e8f0ff" : "#f5f5f5",
-                  border: r.is_staff ? "1px solid #c5d4ff" : "1px solid #d9d9d9",
+                  border: r.is_staff ? "1px solid #c5d4ff" : "1px solid var(--color-border)",
                   borderBottomLeftRadius: r.is_staff ? 4 : undefined,
                   borderBottomRightRadius: !r.is_staff ? 4 : undefined,
                   fontSize: 14,
@@ -500,7 +501,7 @@ export default function TicketsPage() {
 
           {/* reply area */}
           {detailQ.data.ticket.status !== "resolved" && (
-            <div style={{ background: "#fff", border: "1px solid #d9d9d9", borderRadius: 12, padding: 16 }}>
+            <div style={{ background: "#fff", border: "1px solid var(--color-border)", borderRadius: 12, padding: 16 }}>
               <textarea
                 style={{ ...inp, minHeight: 80, resize: "vertical", marginBottom: 0 }}
                 value={replyDraft}

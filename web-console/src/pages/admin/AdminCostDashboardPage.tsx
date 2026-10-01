@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { HelpIcon, SkeletonGroup } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 
@@ -23,7 +24,7 @@ export default function AdminCostDashboardPage() {
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
         {["week", "month", "quarter"].map(p => (
           <button key={p} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--color-border)",
-            background: period === p ? "#4f6ef7" : "#fff", color: period === p ? "#fff" : "#333", cursor: "pointer", fontSize: 13 }}
+            background: period === p ? "var(--color-primary)" : "#fff", color: period === p ? "#fff" : "#333", cursor: "pointer", fontSize: 13 }}
             onClick={() => setPeriod(p)}>
             {{ week: "本周", month: "本月", quarter: "本季" }[p]}
           </button>
@@ -31,11 +32,11 @@ export default function AdminCostDashboardPage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 20 }}>
-        {[{ icon: "📦", label: "总成本", value: costQ.data?.summary?.total_cost != null ? `¥${costQ.data.summary.total_cost}` : "—" },
-          { icon: "📊", label: "环比变化", value: costQ.data?.summary?.cost_change != null ? `${costQ.data.summary.cost_change > 0 ? "+" : ""}${costQ.data.summary.cost_change}%` : "—",
+        {[{ icon: <PIcon name="box" size={20}/>, label: "总成本", value: costQ.data?.summary?.total_cost != null ? `¥${costQ.data.summary.total_cost}` : "—" },
+          { icon: <PIcon name="chart" size={20}/>, label: "环比变化", value: costQ.data?.summary?.cost_change != null ? `${costQ.data.summary.cost_change > 0 ? "+" : ""}${costQ.data.summary.cost_change}%` : "—",
             color: costQ.data?.summary?.cost_change > 0 ? "#e53935" : "#22c55e" },
-          { icon: "🏆", label: "成本最高", value: costQ.data?.summary?.top_cost_vendor ?? "—" },
-          { icon: "⚠️", label: "成本异常", value: costQ.data?.summary?.cost_anomalies ?? "—", color: "#e53935" },
+          { icon: <PIcon name="trophy" size={20}/>, label: "成本最高", value: costQ.data?.summary?.top_cost_vendor ?? "—" },
+          { icon: <PIcon name="alert" size={20}/>, label: "成本异常", value: costQ.data?.summary?.cost_anomalies ?? "—", color: "#e53935" },
         ].map((s, i) => (
           <div key={i} style={card}>
             <div style={{ fontSize: 24 }}>{s.icon}</div>
@@ -46,7 +47,7 @@ export default function AdminCostDashboardPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>📉 各供应商成本占比 <HelpIcon text="cost_dashboard" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="trendDown" size={14}/> 各供应商成本占比 <HelpIcon text="cost_dashboard" /></div>
         {costQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
@@ -65,7 +66,7 @@ export default function AdminCostDashboardPage() {
                   <td style={{ padding: "10px 12px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <div style={{ flex: 1, height: 8, background: "#f0f0f0", borderRadius: 4, overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: `${c.percentage}%`, background: "#4f6ef7", borderRadius: 4 }} />
+                        <div style={{ height: "100%", width: `${c.percentage}%`, background: "var(--color-primary)", borderRadius: 4 }} />
                       </div>
                       <span style={{ fontSize: 11, minWidth: 35 }}>{c.percentage}%</span>
                     </div>
@@ -75,7 +76,7 @@ export default function AdminCostDashboardPage() {
                     {c.change != null ? `${c.change > 0 ? "+" : ""}${c.change}%` : "—"}
                   </td>
                   <td style={{ padding: "10px 12px" }}>
-                    {c.trend === "up" ? "📈" : c.trend === "down" ? "📉" : "➡️"}
+                    {c.trend === "up" ? "" : c.trend === "down" ? "" : ""}
                   </td>
                 </tr>
               ))}

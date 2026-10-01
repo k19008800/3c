@@ -10,6 +10,7 @@ import {
   useToast,
 } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /* ============ 类型 ============ */
 interface InvoiceQuota {
@@ -44,7 +45,7 @@ const card: React.CSSProperties = {
 const inp: React.CSSProperties = {
   padding: "8px 12px",
   borderRadius: 6,
-  border: "1px solid #d9d9d9",
+  border: "1px solid var(--color-border)",
   background: "#fff",
   color: "#333",
   fontSize: 13,
@@ -202,7 +203,7 @@ export default function InvoicesPage() {
               disabled={downloadingId === inv.id}
               style={{
                 fontSize: 12,
-                color: "#4f6ef7",
+                color: "var(--color-primary)",
                 cursor: "pointer",
                 background: "none",
                 border: "none",
@@ -248,7 +249,7 @@ export default function InvoicesPage() {
           </div>
           <div style={{ fontSize: 32, fontWeight: 600, color: "#333" }}>¥{available.toFixed(2)}</div>
           <div style={{ fontSize: 12, color: "#888", marginTop: 4 }}>
-            可开票余额 = <span style={{ color: "#4f6ef7" }}>累计充值 ¥{accumulated.toFixed(2)}</span> — <span style={{ color: "#4f6ef7" }}>已开票金额 ¥{invoicedAmount.toFixed(2)}</span>
+            可开票余额 = <span style={{ color: "var(--color-primary)" }}>累计充值 ¥{accumulated.toFixed(2)}</span> — <span style={{ color: "var(--color-primary)" }}>已开票金额 ¥{invoicedAmount.toFixed(2)}</span>
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
@@ -285,7 +286,7 @@ export default function InvoicesPage() {
                   borderRadius: 4,
                   border: "none",
                   background: invoiceType === t.v ? "#fff" : "transparent",
-                  color: invoiceType === t.v ? "#4f6ef7" : "#888",
+                  color: invoiceType === t.v ? "var(--color-primary)" : "#888",
                   fontSize: 13,
                   cursor: "pointer",
                   boxShadow: invoiceType === t.v ? "0 1px 2px rgba(0,0,0,0.1)" : "none",
@@ -303,7 +304,7 @@ export default function InvoicesPage() {
               <HelpIcon text="开票金额不能超过可开票余额，最低开票金额 ¥100" />
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 10 }}>
-              <span style={{ padding: "8px 12px", background: "#fafafa", border: "1px solid #d9d9d9", borderRight: "none", borderRadius: "6px 0 0 6px", color: "#888", fontSize: 14 }}>
+              <span style={{ padding: "8px 12px", background: "#fafafa", border: "1px solid var(--color-border)", borderRight: "none", borderRadius: "6px 0 0 6px", color: "#888", fontSize: 14 }}>
                 ¥
               </span>
               <input
@@ -319,7 +320,7 @@ export default function InvoicesPage() {
                   flex: 1,
                   maxWidth: 300,
                   padding: "8px 12px",
-                  border: "1px solid #d9d9d9",
+                  border: "1px solid var(--color-border)",
                   borderRadius: "0 6px 6px 0",
                   background: "#fff",
                   color: "#333",
@@ -345,9 +346,9 @@ export default function InvoicesPage() {
                     style={{
                       padding: "4px 12px",
                       borderRadius: 6,
-                      border: `1px solid ${amountInput === val ? "#4f6ef7" : "#d9d9d9"}`,
+                      border: `1px solid ${amountInput === val ? "var(--color-primary)" : "var(--color-border)"}`,
                       background: amountInput === val ? "#eef1ff" : "#fff",
-                      color: amountInput === val ? "#4f6ef7" : "#888",
+                      color: amountInput === val ? "var(--color-primary)" : "#888",
                       fontSize: 12,
                       cursor: "pointer",
                     }}
@@ -476,7 +477,7 @@ export default function InvoicesPage() {
                 padding: "10px 32px",
                 borderRadius: 8,
                 border: "none",
-                background: !isValid ? "#f5f5f5" : "#4f6ef7",
+                background: !isValid ? "#f5f5f5" : "var(--color-primary)",
                 color: !isValid ? "#bbb" : "#fff",
                 fontSize: 14,
                 fontWeight: 500,
@@ -485,7 +486,7 @@ export default function InvoicesPage() {
             >
               提交申请
             </button>
-            <a href="#records" style={{ fontSize: 13, color: "#4f6ef7", textDecoration: "none" }}>
+            <a href="#records" style={{ fontSize: 13, color: "var(--color-primary)", textDecoration: "none" }}>
               开票记录 →
             </a>
           </div>
@@ -506,7 +507,7 @@ export default function InvoicesPage() {
               <SkeletonGroup lines={4} />
             </div>
           ) : (listQ.data?.length ?? 0) === 0 ? (
-            <EmptyState icon="🧾" title="暂无开票记录" description="您还没有申请过发票" />
+            <EmptyState icon={<PIcon name="receipt" size={18}/>} title="暂无开票记录" description="您还没有申请过发票" />
           ) : (
             <Table
               columns={invoiceColumns}

@@ -9,6 +9,7 @@ import {
   useToast,
 } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /**
  * 我的数据导出（SPEC-§33.3 GDPR 数据可携带权）
@@ -175,7 +176,7 @@ export default function ConsentPage() {
         /* 直连 /data-export 但未授权（PRD §4.2 + 验收 D4）：友好提示，不白屏 */
         <div style={card}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-            <span style={{ fontSize: 28 }}>🔒</span>
+            <span style={{ fontSize: 28 }}><PIcon name="lock" size={14}/></span>
             <h2 style={{ margin: 0 }}>数据导出暂未开放</h2>
           </div>
           <div style={{ fontSize: 14, color: "var(--color-text)", lineHeight: 1.7, marginBottom: 8 }}>
@@ -249,7 +250,7 @@ export default function ConsentPage() {
             {requestsQ.isLoading ? (
               <SkeletonGroup lines={4} />
             ) : requestsQ.data?.length === 0 ? (
-              <EmptyState icon="📦" title="暂无导出记录" description="您还没有提交过数据导出请求" />
+              <EmptyState icon={<PIcon name="box" size={18}/>} title="暂无导出记录" description="您还没有提交过数据导出请求" />
             ) : (
               <Table
                 columns={exportColumns}

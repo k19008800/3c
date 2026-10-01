@@ -4,6 +4,7 @@ import { api, extractError } from "../../lib/api";
 import { HelpIcon, StatusBadge, Tag, Table, SkeletonGroup, EmptyState, useToast } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
 import { SyncResultModal, type SyncAllResult } from "../../components/SyncResultModal";
+import { PIcon } from "../_polishIcons";
 
 /* ═══════════════════════════════════════
  * 类型
@@ -229,11 +230,11 @@ export default function AdminMarketplaceHealthPage() {
               display: "inline-block",
               transition: "transform .2s",
               fontSize: 10,
-              color: "#999",
+              color: "var(--color-text-muted)",
               transform: expanded === record.model ? "rotate(90deg)" : undefined,
             }}>▶</span>
             <strong>{record.model}</strong>
-            <span style={{ fontSize: 11, color: "#888" }}>· {fmtNum(record.traffic_volume)} 请求</span>
+            <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>· {fmtNum(record.traffic_volume)} 请求</span>
           </div>
           {expanded === record.model && renderDetail()}
         </div>
@@ -264,7 +265,7 @@ export default function AdminMarketplaceHealthPage() {
     <div>
       {/* 标题 + 帮助 */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>🤖 模型市场</h2>
+        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}><PIcon name="bot" size={14}/> 模型市场</h2>
         <HelpIcon text="模型广场：按数据窗口聚合各模型健康度（成功率/延迟/最低价/请求量），展开模型行查看各供应商明细；点击「同步模型」从全部启用供应商的上游一键拉取模型并填充模型广场。" level="page" />
       </div>
 
@@ -282,15 +283,15 @@ export default function AdminMarketplaceHealthPage() {
                 border: "none",
                 borderRadius: 4,
                 cursor: "pointer",
-                background: windowKey === w.key ? "#4f6ef7" : "transparent",
-                color: windowKey === w.key ? "#fff" : "#888",
+                background: windowKey === w.key ? "var(--color-primary)" : "transparent",
+                color: windowKey === w.key ? "#fff" : "var(--color-text-muted)",
               }}
             >
               {w.label}
             </button>
           ))}
         </div>
-        <span style={{ fontSize: 11, color: "#888" }}>每 30s 自动刷新</span>
+        <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>每 30s 自动刷新</span>
 
         <div style={{ flex: 1 }} />
 
@@ -334,9 +335,9 @@ export default function AdminMarketplaceHealthPage() {
         <button
           onClick={() => syncAllMutation.mutate()}
           disabled={syncAllMutation.isPending}
-          style={{ padding: "8px 14px", borderRadius: 8, border: "none", background: "#4f6ef7", color: "#fff", cursor: syncAllMutation.isPending ? "wait" : "pointer", fontWeight: 600, fontSize: 13 }}
+          style={{ padding: "8px 14px", borderRadius: 8, border: "none", background: "var(--color-primary)", color: "#fff", cursor: syncAllMutation.isPending ? "wait" : "pointer", fontWeight: 600, fontSize: 13 }}
         >
-          {syncAllMutation.isPending ? "同步中…" : "🔄 同步模型"}
+          {syncAllMutation.isPending ? "同步中…" : "同步模型"}
         </button>
         <HelpIcon text="模型广场同步：从全部启用中供应商的上游 /v1/models 拉取模型并自动填充模型库，同步完成后本页数据自动刷新。" />
       </div>
@@ -360,7 +361,7 @@ export default function AdminMarketplaceHealthPage() {
       </div>
 
       {/* 口径说明 */}
-      <div style={{ fontSize: 11, color: "#888", marginTop: -8 }}>
+      <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginTop: -8 }}>
         成功率≥95% 健康 · 90~95% 降级 · &lt;90% 异常 · 零流量显示"无数据"。数据来自最近 {windowKey} 生产流量 + 通道测试。
         最低价格 = 各供应商输入价最低值。
       </div>

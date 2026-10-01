@@ -62,34 +62,12 @@ export default function PriceCalculator({
   const cost = (inputTokens / 1000) * inputPrice + (outputTokens / 1000) * outputPrice;
 
   return (
-    <div style={{ border: "1px solid #e2e8f0", borderRadius: 12, padding: 24, background: "#fff" }}>
-      <h3 style={{ marginBottom: 16 }}>
-        {L.title}
-        <span
-          title={L.estimate}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 16,
-            height: 16,
-            borderRadius: "50%",
-            border: "1px solid #cbd5e1",
-            background: "#f8fafc",
-            color: "#64748b",
-            fontSize: 11,
-            fontWeight: 700,
-            marginLeft: 8,
-            cursor: "help",
-          }}
-        >
-          ?
-        </span>
-      </h3>
-      <div style={{ display: "grid", gap: 16, gridTemplateColumns: "1fr 1fr" }}>
-        <div>
-          <label style={{ display: "block", fontSize: 14, marginBottom: 6 }}>{L.model}</label>
-          <select value={selected} onChange={(e) => setSelected(e.target.value)} style={{ width: "100%", padding: 10, borderRadius: 6, border: "1px solid #cbd5e1" }}>
+    <div className="calc-card">
+      <h3>{L.title}</h3>
+      <div className="calc-grid">
+        <div className="calc-field">
+          <label>{L.model}</label>
+          <select value={selected} onChange={(e) => setSelected(e.target.value)}>
             <option value="">{L.selectPlaceholder}</option>
             {models.map((m) => (
               <option key={keyOf(m)} value={keyOf(m)}>
@@ -98,32 +76,30 @@ export default function PriceCalculator({
             ))}
           </select>
         </div>
-        <div>
-          <label style={{ display: "block", fontSize: 14, marginBottom: 6 }}>{L.inputTokens}</label>
+        <div className="calc-field">
+          <label>{L.inputTokens}</label>
           <input
             type="number"
             value={inputTokens}
             min={0}
             onChange={(e) => setInputTokens(Number(e.target.value))}
-            style={{ width: "100%", padding: 10, borderRadius: 6, border: "1px solid #cbd5e1" }}
           />
         </div>
       </div>
-      <div style={{ marginTop: 16 }}>
-        <label style={{ display: "block", fontSize: 14, marginBottom: 6 }}>{L.outputTokens}</label>
+      <div className="calc-field" style={{ marginTop: "var(--space-lg)" }}>
+        <label>{L.outputTokens}</label>
         <input
           type="number"
           value={outputTokens}
           min={0}
           onChange={(e) => setOutputTokens(Number(e.target.value))}
-          style={{ width: "100%", padding: 10, borderRadius: 6, border: "1px solid #cbd5e1" }}
         />
       </div>
-      <div style={{ marginTop: 20, padding: 16, background: "#f8fafc", borderRadius: 8 }}>
-        <div style={{ fontSize: 13, color: "#64748b" }}>
-          {model ? `${model.display_name ?? model.name}：输入 ¥${inputPrice}/1K · 输出 ¥${outputPrice}/1K` : L.selectPrompt}
+      <div className="calc-result">
+        <div className="cr-detail">
+          {model ? `${model.display_name ?? model.name}：输入 ¥${inputPrice.toFixed(4)}/1K · 输出 ¥${outputPrice.toFixed(4)}/1K` : L.selectPrompt}
         </div>
-        <div style={{ fontSize: 24, fontWeight: 800, marginTop: 8 }}>
+        <div className="cr-value">
           {model ? `≈ ¥${cost.toFixed(4)}` : "—"}
         </div>
       </div>

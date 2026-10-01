@@ -11,6 +11,7 @@ import {
   useToast,
 } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 // Register all Chart.js components once
 Chart.register(...registerables);
@@ -118,12 +119,13 @@ const DIM_OPTIONS = [
   { value: "calls", label: "调用次数" },
 ] as const;
 
+// 分类色对齐 tokens --cat-1..6（克制六色，去除高饱和紫/粉/亮黄）；Chart.js canvas 需字面 hex
 const MODEL_COLORS: Record<string, string> = {
-  "DeepSeek-V4": "#6a8aff",
-  "GLM-5-Pro": "#ff8a65",
-  "Qwen3.5": "#66bb6a",
-  "Kimi-K2": "#ba68c8",
-  "GPT-5.4": "#ffd54f",
+  "DeepSeek-V4": "#1896FF", // cat-1
+  "GLM-5-Pro": "#B45D09", // cat-3
+  "Qwen3.5": "#0B7A4B", // cat-2
+  "Kimi-K2": "#0F766E", // cat-5（原紫 #ba68c8）
+  "GPT-5.4": "#4B5563", // cat-6（原亮黄 #ffd54f）
 };
 
 const SUPPLIER_OPTIONS = [
@@ -151,8 +153,8 @@ function getTodayStr(): string {
 /* ---------- styles ---------- */
 
 const card: React.CSSProperties = { background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,.06)", marginBottom: 16, overflow: "hidden" };
-const btnPrimary: React.CSSProperties = { padding: "6px 16px", borderRadius: 6, border: "none", background: "#4f6ef7", color: "#fff", fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" };
-const filterSelect: React.CSSProperties = { padding: "6px 10px", borderRadius: 6, border: "1px solid #d9d9d9", background: "#fff", color: "#333", fontSize: 13, minWidth: 100, outline: "none" };
+const btnPrimary: React.CSSProperties = { padding: "6px 16px", borderRadius: 6, border: "none", background: "var(--color-primary)", color: "#fff", fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" };
+const filterSelect: React.CSSProperties = { padding: "6px 10px", borderRadius: 6, border: "1px solid var(--color-border)", background: "#fff", color: "#333", fontSize: 13, minWidth: 100, outline: "none" };
 
 export default function StatisticsPage() {
   const { toast } = useToast();
@@ -262,7 +264,7 @@ export default function StatisticsPage() {
             backgroundColor: "#fff",
             titleColor: "#333",
             bodyColor: "#666",
-            borderColor: "#d9d9d9",
+            borderColor: "var(--color-border)",
             borderWidth: 1,
             padding: 10,
             callbacks: {
@@ -313,7 +315,7 @@ export default function StatisticsPage() {
             backgroundColor: "#fff",
             titleColor: "#333",
             bodyColor: "#666",
-            borderColor: "#d9d9d9",
+            borderColor: "var(--color-border)",
             borderWidth: 1,
             padding: 10,
             callbacks: { label: (ctx: any) => `${ctx.label}: ${ctx.parsed}%` },
@@ -420,8 +422,8 @@ export default function StatisticsPage() {
             key={r.value}
             onClick={() => setTimeRange(r.value)}
             style={{
-              padding: "6px 16px", borderRadius: 6, border: "1px solid #d9d9d9",
-              background: timeRange === r.value ? "#4f6ef7" : "#fff",
+              padding: "6px 16px", borderRadius: 6, border: "1px solid var(--color-border)",
+              background: timeRange === r.value ? "var(--color-primary)" : "#fff",
               color: timeRange === r.value ? "#fff" : "#888",
               fontSize: 13, cursor: "pointer",
             }}
@@ -430,9 +432,9 @@ export default function StatisticsPage() {
           </button>
         ))}
         <div style={{ display: timeRange === "custom" ? "flex" : "none", alignItems: "center", gap: 6 }}>
-          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid #d9d9d9", fontSize: 13, width: 120 }} />
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid var(--color-border)", fontSize: 13, width: 120 }} />
           <span style={{ color: "#888", fontSize: 13 }}>至</span>
-          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid #d9d9d9", fontSize: 13, width: 120 }} />
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid var(--color-border)", fontSize: 13, width: 120 }} />
           <button style={btnPrimary}>应用</button>
         </div>
       </div>
@@ -516,7 +518,7 @@ export default function StatisticsPage() {
                   onClick={() => setGranularity(g.value)}
                   style={{
                     padding: "4px 12px", borderRadius: 4, border: "none",
-                    background: granularity === g.value ? "#4f6ef7" : "transparent",
+                    background: granularity === g.value ? "var(--color-primary)" : "transparent",
                     color: granularity === g.value ? "#fff" : "#888",
                     fontSize: 12, cursor: "pointer",
                   }}
@@ -533,7 +535,7 @@ export default function StatisticsPage() {
                   onClick={() => setDimension(dim.value)}
                   style={{
                     padding: "4px 12px", borderRadius: 4, border: "none",
-                    background: dimension === dim.value ? "#4f6ef7" : "transparent",
+                    background: dimension === dim.value ? "var(--color-primary)" : "transparent",
                     color: dimension === dim.value ? "#fff" : "#888",
                     fontSize: 12, cursor: "pointer",
                   }}
@@ -549,7 +551,7 @@ export default function StatisticsPage() {
             {statsQ.isLoading ? (
               <SkeletonGroup lines={6} />
             ) : !d ? (
-              <EmptyState icon="📊" title="暂无数据" description="选择时间范围查看消费趋势（后端接口待实现）" />
+              <EmptyState icon={<PIcon name="chart" size={18}/>} title="暂无数据" description="选择时间范围查看消费趋势（后端接口待实现）" />
             ) : (
               <canvas ref={trendCanvasRef} />
             )}
@@ -568,7 +570,7 @@ export default function StatisticsPage() {
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px",
                   borderRadius: 12, background: activeModels.has(name) ? "#eef1ff" : "#f5f5f5",
-                  border: `1px solid ${activeModels.has(name) ? "#4f6ef7" : "#d9d9d9"}`,
+                  border: `1px solid ${activeModels.has(name) ? "var(--color-primary)" : "var(--color-border)"}`,
                   fontSize: 12, color: activeModels.has(name) ? "#333" : "#888",
                   cursor: "pointer",
                 }}
@@ -612,7 +614,7 @@ export default function StatisticsPage() {
             </select>
             <button
               onClick={() => { setFilterSupplier(""); setFilterModel(""); setFilterKey(""); setFilterStatus(""); setPage(1); }}
-              style={{ padding: "4px 12px", borderRadius: 4, border: "1px solid #d9d9d9", background: "transparent", color: "#888", fontSize: 12, cursor: "pointer" }}
+              style={{ padding: "4px 12px", borderRadius: 4, border: "1px solid var(--color-border)", background: "transparent", color: "#888", fontSize: 12, cursor: "pointer" }}
             >
               重置
             </button>
@@ -622,7 +624,7 @@ export default function StatisticsPage() {
           {statsQ.isLoading ? (
             <SkeletonGroup lines={8} />
           ) : !d ? (
-            <EmptyState icon="📋" title="暂无数据" description="选择筛选条件查看调用明细（后端接口待实现）" />
+            <EmptyState icon={<PIcon name="doc" size={18}/>} title="暂无数据" description="选择筛选条件查看调用明细（后端接口待实现）" />
           ) : (
             <>
               <Table
@@ -648,7 +650,7 @@ export default function StatisticsPage() {
       <div style={card}>
         <div style={{ padding: "14px 20px", borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
-            🏆 模型调用排行
+            <PIcon name="trophy" size={14}/> 模型调用排行
             <HelpIcon text="按费用金额降序排列的模型调用排名" level="button" />
           </h3>
           <span style={{ color: "#888", fontSize: 12 }}>按费用金额降序</span>
@@ -656,7 +658,7 @@ export default function StatisticsPage() {
         <div style={{ padding: "16px 20px", display: "flex", gap: 24 }}>
           <div style={{ flex: 1 }}>
             {!d?.model_ranking ? (
-              <EmptyState icon="🏆" title="暂无排行数据" description="选择时间范围查看模型调用排名（后端接口待实现）" />
+              <EmptyState icon={<PIcon name="trophy" size={18}/>} title="暂无排行数据" description="选择时间范围查看模型调用排名（后端接口待实现）" />
             ) : (
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
@@ -713,13 +715,13 @@ export default function StatisticsPage() {
       <div style={card}>
         <div style={{ padding: "14px 20px", borderBottom: "1px solid #eee" }}>
           <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
-            ❌ 失败统计
+            <PIcon name="close" size={14}/> 失败统计
             <HelpIcon text="统计筛选范围内调用失败率和错误码分布" level="button" />
           </h3>
         </div>
         <div style={{ padding: "16px 20px" }}>
           {!d?.fail_stats ? (
-            <EmptyState icon="✅" title="暂无失败统计" description="选择时间范围查看失败统计（后端接口待实现）" />
+            <EmptyState icon={<PIcon name="check" size={18}/>} title="暂无失败统计" description="选择时间范围查看失败统计（后端接口待实现）" />
           ) : (
             <div style={{ display: "flex", gap: 32, alignItems: "center", flexWrap: "wrap" }}>
               <div>
@@ -751,14 +753,14 @@ export default function StatisticsPage() {
       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
         <button
           onClick={handleExportCSV}
-          style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #4f6ef7", background: "#fff", color: "#4f6ef7", fontSize: 13, cursor: "pointer" }}
+          style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid var(--color-primary)", background: "#fff", color: "var(--color-primary)", fontSize: 13, cursor: "pointer" }}
         >
           导出 CSV
           <HelpIcon text="导出当前筛选条件下的数据为 CSV 格式" level="button" />
         </button>
         <button
           onClick={handleExportExcel}
-          style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #4f6ef7", background: "#fff", color: "#4f6ef7", fontSize: 13, cursor: "pointer" }}
+          style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid var(--color-primary)", background: "#fff", color: "var(--color-primary)", fontSize: 13, cursor: "pointer" }}
         >
           导出 Excel
           <HelpIcon text="导出当前筛选条件下的数据为 Excel 格式" level="button" />

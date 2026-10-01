@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "../lib/api";
-import { HelpIcon, useToast } from "@3cloud/shared-ui";
+import { HelpIcon, PageHeader, useToast } from "@3cloud/shared-ui";
 
 interface Role {
   id: number; name: string; label: string; description: string | null;
@@ -65,21 +65,16 @@ export default function AdminRolesPage() {
 
   return (
     <div>
-      <div style={{ background: "linear-gradient(135deg,#667eea,#764ba2)", color: "#fff", padding: "20px 24px", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ fontSize: 24 }}>🔐</span>
-        <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>角色权限管理
-          <HelpIcon text="管理系统角色及其权限位。系统预设角色不可删除/编辑名称，只能调整权限位。自定义角色可自由编辑。权限 bitset 共30位。" level="page" />
-        </span>
-      </div>
+      <PageHeader title="角色权限管理" help="管理系统角色及其权限位。系统预设角色不可删除/编辑名称，只能调整权限位。自定义角色可自由编辑。权限 bitset 共30位。" />
 
-      <div style={{ display: "flex", gap: 16 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <h3 style={{ margin: 0 }}>角色列表</h3>
-            <button onClick={() => setShowNew(true)} style={{ padding: "6px 16px", cursor: "pointer", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 6 }}>+ 新增角色</button>
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+        <div style={{ flex: "1 1 420px", minWidth: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 8 }}>
+            <h3 style={{ margin: 0, fontSize: "var(--font-size-section)" }}>角色列表</h3>
+            <button onClick={() => setShowNew(true)} className="c3-btn c3-btn--primary c3-btn--sm">+ 新增角色</button>
           </div>
           {showNew && (
-            <div style={{ background: "var(--color-success-bg)", border: "1px solid #86efac", borderRadius: 8, padding: 16, marginBottom: 12 }}>
+            <div style={{ background: "var(--color-success-bg)", border: "1px solid var(--color-success-border)", borderRadius: 8, padding: 16, marginBottom: 12 }}>
               <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
                 <input placeholder="角色标识(英文)" value={newName} onChange={e => setNewName(e.target.value)} style={{ flex: 1, padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4 }} />
                 <input placeholder="显示名称" value={newLabel} onChange={e => setNewLabel(e.target.value)} style={{ flex: 1, padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4 }} />
@@ -92,30 +87,30 @@ export default function AdminRolesPage() {
               </div>
             </div>
           )}
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 560 }}>
             <thead>
-              <tr style={{ background: "var(--color-bg)" }}>
-                <th style={{ padding: "8px 12px", textAlign: "left" }}>名称</th>
-                <th style={{ padding: "8px 12px", textAlign: "left" }}>标签</th>
-                <th style={{ padding: "8px 12px", textAlign: "center" }}>用户数</th>
-                <th style={{ padding: "8px 12px", textAlign: "center" }}>系统</th>
-                <th style={{ padding: "8px 12px", textAlign: "center" }}>操作</th>
+              <tr style={{ background: "var(--color-table-header-bg)" }}>
+                <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)", fontSize: 12 }}>名称</th>
+                <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, color: "var(--color-text-secondary)", fontSize: 12 }}>标签</th>
+                <th style={{ padding: "10px 12px", textAlign: "center", fontWeight: 600, color: "var(--color-text-secondary)", fontSize: 12 }}>用户数</th>
+                <th style={{ padding: "10px 12px", textAlign: "center", fontWeight: 600, color: "var(--color-text-secondary)", fontSize: 12 }}>系统</th>
+                <th style={{ padding: "10px 12px", textAlign: "center", fontWeight: 600, color: "var(--color-text-secondary)", fontSize: 12 }}>操作</th>
               </tr>
             </thead>
             <tbody>
               {roles.map(r => (
-                <tr key={r.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                  <td style={{ padding: "8px 12px", fontWeight: 600 }}>{r.name}</td>
-                  <td style={{ padding: "8px 12px" }}>{r.label}</td>
-                  <td style={{ padding: "8px 12px", textAlign: "center" }}>{r.user_count}</td>
-                  <td style={{ padding: "8px 12px", textAlign: "center" }}>{r.is_system ? "✅" : ""}</td>
-                  <td style={{ padding: "8px 12px", textAlign: "center" }}>
-                    <button onClick={() => toggleEdit(r)} style={{ padding: "2px 10px", cursor: "pointer", border: "1px solid var(--color-text-secondary)", borderRadius: 4, background: "var(--color-panel)", marginRight: 4 }}>
+                <tr key={r.id} style={{ borderBottom: "1px solid var(--color-divider)" }}>
+                  <td style={{ padding: "10px 12px", fontWeight: 600 }}>{r.name}</td>
+                  <td style={{ padding: "10px 12px" }}>{r.label}</td>
+                  <td style={{ padding: "10px 12px", textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{r.user_count}</td>
+                  <td style={{ padding: "10px 12px", textAlign: "center" }}>{r.is_system ? <span className="c3-tag c3-tag--blue">内置</span> : ""}</td>
+                  <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                    <button onClick={() => toggleEdit(r)} className="c3-btn c3-btn--default c3-btn--sm" style={{ marginRight: 4 }}>
                       编辑权限
-                      <HelpIcon text="编辑该角色的权限位，勾选对应权限即可。系统角色可调整权限但不可删除。" />
                     </button>
                     {!r.is_system && (
-                      <button onClick={() => delRole(r.id)} style={{ padding: "2px 10px", cursor: "pointer", border: "1px solid var(--color-danger-text)", borderRadius: 4, background: "var(--color-panel)", color: "var(--color-danger-text)" }}>
+                      <button onClick={() => delRole(r.id)} className="c3-btn c3-btn--text c3-btn--sm c3-danger">
                         删除
                       </button>
                     )}
@@ -124,10 +119,11 @@ export default function AdminRolesPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
 
         {editing && (
-          <div style={{ width: 360, background: "var(--color-panel)", border: "1px solid var(--color-border)", borderRadius: 8, padding: 16, position: "sticky", top: 16, height: "fit-content" }}>
+          <div style={{ flex: "0 1 360px", minWidth: 280, background: "var(--color-panel)", border: "1px solid var(--color-border)", borderRadius: 8, padding: 16, position: "sticky", top: 16, height: "fit-content" }}>
             <h4 style={{ margin: "0 0 8px" }}>编辑权限：{editing.label}
               <HelpIcon text="勾选或取消勾选权限位，保存后立即生效。变更记录写入审计日志。" />
             </h4>

@@ -69,7 +69,7 @@ export default function AdminKnowledgeBasePage() {
         客服支撑
         <HelpIcon text="管理端知识库：管理已发布/草稿文章，可创建、编辑、删除与关键词搜索。" level="page" />
       </h2>
-      <p style={{ color: "#94a3b8", marginTop: 0, fontSize: 13 }}>知识库文章管理</p>
+      <p style={{ color: "var(--color-text-muted)", marginTop: 0, fontSize: 13 }}>知识库文章管理</p>
 
       {/* ────────── 文章列表 ────────── */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
@@ -81,7 +81,7 @@ export default function AdminKnowledgeBasePage() {
           style={{ flex: 1, padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14, maxWidth: 360 }}
         />
         <button onClick={() => { setKeyword(search.trim()); setPage(1); }} style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-text)", border: `1px solid var(--color-border)` }}>搜索</button>
-        <button onClick={() => { setEditArticle({}); setEditForm({ title: "", category: "", content: "", status: "draft" }); }} style={{ ...btnBase, background: "#059669", color: "#fff", marginLeft: "auto" }}>
+        <button onClick={() => { setEditArticle({}); setEditForm({ title: "", category: "", content: "", status: "draft" }); }} style={{ ...btnBase, background: "var(--color-success-text)", color: "#fff", marginLeft: "auto" }}>
           + 新建文章
           <HelpIcon text="新建一篇知识库文章并选择状态" />
         </button>
@@ -89,11 +89,11 @@ export default function AdminKnowledgeBasePage() {
 
       <div style={{ ...card, padding: 0, overflow: "hidden" }}>
         {listQ.isLoading ? (
-          <p style={{ padding: 20, color: "#94a3b8" }}>加载中...</p>
+          <p style={{ padding: 20, color: "var(--color-text-muted)" }}>加载中...</p>
         ) : listQ.isError ? (
           <p style={{ padding: 20, color: "var(--color-danger-text)" }}>加载失败：{extractError(listQ.error)}</p>
         ) : articles.length === 0 ? (
-          <p style={{ padding: 20, color: "#94a3b8" }}>暂无文章。点击"新建文章"创建第一篇。</p>
+          <p style={{ padding: 20, color: "var(--color-text-muted)" }}>暂无文章。点击"新建文章"创建第一篇。</p>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead>
@@ -109,7 +109,7 @@ export default function AdminKnowledgeBasePage() {
             </thead>
             <tbody>
               {articles.map((a: any, i: number) => (
-                <tr key={a.id} style={{ borderBottom: `1px solid var(--color-border)`, background: i % 2 === 0 ? "var(--color-panel)" : "#fafafa" }}>
+                <tr key={a.id} style={{ borderBottom: `1px solid var(--color-border)`, background: i % 2 === 0 ? "var(--color-panel)" : "var(--color-divider-light)" }}>
                   <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", fontSize: 12 }}>#{a.id}</td>
                   <td style={{ padding: "10px 16px", color: "var(--color-text)", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</td>
                   <td style={{ padding: "10px 16px", color: "var(--color-text-secondary)", fontSize: 12 }}>{a.category ?? "-"}</td>
@@ -122,7 +122,7 @@ export default function AdminKnowledgeBasePage() {
                     <div style={{ display: "flex", gap: 4 }}>
                       <button onClick={() => { setEditArticle(a); setEditForm({ title: a.title, category: a.category ?? "", content: a.content ?? "", status: a.status }); }} style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-text)", border: `1px solid var(--color-border)`, fontSize: 12 }}>编辑</button>
                       <ConfirmPopover title="确认删除？" description="删除后不可恢复" onConfirm={() => delArticleMut.mutate(a.id)}>
-                        <button style={{ ...btnBase, background: "var(--color-danger-bg)", color: "var(--color-danger-text)", border: `1px solid #fca5a5`, fontSize: 12 }}>删除</button>
+                        <button style={{ ...btnBase, background: "var(--color-danger-bg)", color: "var(--color-danger-text)", border: `1px solid var(--color-danger-border)`, fontSize: 12 }}>删除</button>
                       </ConfirmPopover>
                     </div>
                   </td>
@@ -147,19 +147,19 @@ export default function AdminKnowledgeBasePage() {
       <Modal open={editArticle !== null} onClose={() => setEditArticle(null)} title={editArticle ? "编辑文章" : "新建文章"} width={560}>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
-            <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>标题 *</label>
+            <label style={{ fontSize: 13, color: "var(--color-text-secondary)", display: "block", marginBottom: 4 }}>标题 *</label>
             <input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14 }} />
           </div>
           <div>
-            <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>分类</label>
+            <label style={{ fontSize: 13, color: "var(--color-text-secondary)", display: "block", marginBottom: 4 }}>分类</label>
             <input value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })} placeholder="如：充值 / 开发 / 技术" style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14 }} />
           </div>
           <div>
-            <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>内容 *</label>
+            <label style={{ fontSize: 13, color: "var(--color-text-secondary)", display: "block", marginBottom: 4 }}>内容 *</label>
             <textarea value={editForm.content} onChange={(e) => setEditForm({ ...editForm, content: e.target.value })} rows={10} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14, fontFamily: "monospace" }} />
           </div>
           <div>
-            <label style={{ fontSize: 13, color: "#475569", display: "block", marginBottom: 4 }}>状态</label>
+            <label style={{ fontSize: 13, color: "var(--color-text-secondary)", display: "block", marginBottom: 4 }}>状态</label>
             <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14 }}>
               <option value="draft">草稿</option>
               <option value="published">发布</option>

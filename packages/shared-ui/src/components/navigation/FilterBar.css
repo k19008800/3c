@@ -48,7 +48,21 @@
   outline: none;
   font-family: var(--font-family);
   box-sizing: border-box;
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast) var(--ease-out),
+    box-shadow var(--transition-fast) var(--ease-out);
+}
+
+.sfc-filter-bar__select:hover:not(:focus),
+.sfc-filter-bar__input:hover:not(:focus),
+.sfc-filter-bar__date-input:hover:not(:focus) {
+  border-color: var(--color-text-disabled);
+}
+
+.sfc-filter-bar__select:focus,
+.sfc-filter-bar__input:focus,
+.sfc-filter-bar__date-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
 .sfc-filter-bar__select {
@@ -58,13 +72,6 @@
 
 .sfc-filter-bar__input {
   min-width: 160px;
-}
-
-.sfc-filter-bar__select:focus,
-.sfc-filter-bar__input:focus,
-.sfc-filter-bar__date-input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
 }
 
 .sfc-filter-bar__date-range {
@@ -103,8 +110,13 @@
   border: 1px solid var(--color-border);
   cursor: pointer;
   font-family: var(--font-family);
-  transition: all var(--transition-fast);
+  transition: all var(--transition-fast) var(--ease-out);
   white-space: nowrap;
+}
+
+.sfc-filter-bar__btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .sfc-filter-bar__btn--primary {
@@ -118,6 +130,11 @@
   border-color: var(--color-primary-hover);
 }
 
+.sfc-filter-bar__btn--primary:active {
+  background: var(--color-primary-active);
+  border-color: var(--color-primary-active);
+}
+
 .sfc-filter-bar__btn--reset {
   background: var(--color-panel);
   color: var(--color-text);
@@ -127,4 +144,9 @@
 .sfc-filter-bar__btn--reset:hover {
   border-color: var(--color-primary);
   color: var(--color-primary);
+}
+
+.sfc-filter-bar__btn--reset:active {
+  border-color: var(--color-primary-active);
+  color: var(--color-primary-active);
 }

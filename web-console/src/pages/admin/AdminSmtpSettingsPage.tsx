@@ -12,10 +12,10 @@ import { HelpIcon, StatusBadge, SkeletonGroup, useToast } from "@3cloud/shared-u
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
-const btnPrimary: React.CSSProperties = { ...btnBase, background: "#4f6ef7", color: "#fff" };
-const btnGhost: React.CSSProperties = { ...btnBase, background: "#fff", color: "#4f6ef7", border: "1px solid #4f6ef7" };
+const btnPrimary: React.CSSProperties = { ...btnBase, background: "var(--color-primary)", color: "#fff" };
+const btnGhost: React.CSSProperties = { ...btnBase, background: "#fff", color: "var(--color-primary)", border: "1px solid var(--color-primary)" };
 const inp: React.CSSProperties = { padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", width: "100%", boxSizing: "border-box", fontSize: 13, fontFamily: "inherit" };
-const label: React.CSSProperties = { fontSize: 13, color: "#333", display: "block", marginBottom: 6, fontWeight: 500 };
+const label: React.CSSProperties = { fontSize: 13, color: "var(--color-text)", display: "block", marginBottom: 6, fontWeight: 500 };
 
 export default function AdminSmtpSettingsPage() {
   const { toast } = useToast();
@@ -81,7 +81,7 @@ export default function AdminSmtpSettingsPage() {
       <div style={{ ...card, marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <StatusBadge status={smtpReady ? "success" : "default"}>{smtpReady ? "已启用" : "未启用"}</StatusBadge>
-          <span style={{ fontSize: 13, color: "#666" }}>当前发送账号：<b>{settingsQ.data?.smtp_user || "—"}</b></span>
+          <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>当前发送账号：<b>{settingsQ.data?.smtp_user || "—"}</b></span>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input value={testTo} onChange={(e) => setTestTo(e.target.value)} placeholder="收件邮箱（发送测试邮件）" style={{ ...inp, width: 260 }} />
@@ -98,14 +98,14 @@ export default function AdminSmtpSettingsPage() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: "1px solid var(--color-border)" }}>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 600 }}>启用 SMTP 发送</div>
-                <div style={{ fontSize: 12, color: "#888", marginTop: 4 }}>关闭后所有邮件进入 skipped 状态，仅保留站内信通知</div>
+                <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>关闭后所有邮件进入 skipped 状态，仅保留站内信通知</div>
               </div>
               <div
                 onClick={() => setEnabled(!enabled)}
                 style={{ position: "relative", width: 40, height: 22, cursor: "pointer", flexShrink: 0 }}
               >
-                <div style={{ position: "absolute", inset: 0, borderRadius: 11, background: enabled ? "#4f6ef740" : "#d9d9d9" }}>
-                  <div style={{ position: "absolute", width: 18, height: 18, top: 2, left: enabled ? 20 : 2, background: enabled ? "#4f6ef7" : "#fff", borderRadius: "50%", transition: "transform .2s, background .2s", boxShadow: "0 1px 3px rgba(0,0,0,.2)" }} />
+                <div style={{ position: "absolute", inset: 0, borderRadius: 11, background: enabled ? "#4f6ef740" : "var(--color-border)" }}>
+                  <div style={{ position: "absolute", width: 18, height: 18, top: 2, left: enabled ? 20 : 2, background: enabled ? "var(--color-primary)" : "#fff", borderRadius: "50%", transition: "transform .2s, background .2s", boxShadow: "0 1px 3px rgba(0,0,0,.2)" }} />
                 </div>
               </div>
             </div>
@@ -143,7 +143,7 @@ export default function AdminSmtpSettingsPage() {
               </button>
             </div>
 
-            <div style={{ marginTop: 16, padding: "10px 14px", borderRadius: 8, background: "#f7f9fc", fontSize: 12, color: "#666", lineHeight: 1.7 }}>
+            <div style={{ marginTop: 16, padding: "10px 14px", borderRadius: 8, background: "#f7f9fc", fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.7 }}>
               <b>使用说明：</b>
               ① 配置并保存 SMTP → ② 在「邮件模板」页维护模板并发送测试邮件 → ③ 供应商在「定价」页调价后，价格变更通知每小时自动分发，A 级紧急通知邮件实时发送。
             </div>

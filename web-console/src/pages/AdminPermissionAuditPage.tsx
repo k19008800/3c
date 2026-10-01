@@ -81,7 +81,7 @@ export default function AdminPermissionAuditPage() {
               </tr>
             ))}
             {logs.length === 0 && !logsQ.isLoading && (
-              <tr><td colSpan={5} style={{ padding: 40, textAlign: "center", color: "#888" }}>暂无权限审计记录</td></tr>
+              <tr><td colSpan={5} style={{ padding: 40, textAlign: "center", color: "var(--color-text-secondary)" }}>暂无权限审计记录</td></tr>
             )}
           </tbody>
         </table>

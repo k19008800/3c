@@ -1,0 +1,31 @@
+/**
+ * dashboard.css — 用户端控制台首页交互态
+ * 内联样式无法表达 hover，这里补齐卡片抬升与按钮态；颜色一律引用令牌。
+ */
+.dash-stat,
+.dash-quick {
+  transition: transform var(--duration) var(--ease-out), box-shadow var(--duration) var(--ease-out), border-color var(--duration) var(--ease-out);
+}
+.dash-stat--clickable:hover,
+.dash-quick:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+  border-color: var(--color-primary-border);
+}
+.dash-quick:active,
+.dash-stat--clickable:active { transform: translateY(0); }
+
+.dash-trend-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--color-text-secondary);
+  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+  font-family: var(--font-family);
+}
+.dash-trend-btn:hover { color: var(--color-primary); }
+.dash-trend-btn--active { background: var(--color-primary); color: #fff; }
+.dash-trend-btn--active:hover { color: #fff; }

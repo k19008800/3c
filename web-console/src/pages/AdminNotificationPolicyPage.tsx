@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { api, extractError } from "../lib/api";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 interface NotifPolicy { id: number; channel: string; channel_label: string; event_type: string; event_label: string; template_id: number | null; template_name: string | null; enabled: boolean; throttle_seconds: number; }
 
@@ -27,7 +28,7 @@ const EVENTS = [
 ];
 
 const Toggle: React.FC<{ on: boolean; onChange: (v: boolean) => void }> = ({ on, onChange }) => (
-  <div style={{ width: 44, height: 24, borderRadius: 12, background: on ? "#22c55e" : "#d9d9d9", cursor: "pointer", display: "inline-flex", alignItems: "center", flexShrink: 0, position: "relative" }} onClick={() => onChange(!on)}>
+  <div style={{ width: 44, height: 24, borderRadius: 12, background: on ? "#22c55e" : "var(--color-border)", cursor: "pointer", display: "inline-flex", alignItems: "center", flexShrink: 0, position: "relative" }} onClick={() => onChange(!on)}>
     <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: 3, transform: on ? "translateX(20px)" : "translateX(0)", transition: "transform .2s" }} />
   </div>
 );
@@ -126,43 +127,43 @@ export default function AdminNotificationPolicyPage() {
 
   return (
     <div>
-      <div style={{ background: "linear-gradient(135deg,#667eea,#764ba2)", color: "#fff", padding: "20px 24px", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ fontSize: 24 }}>🔔</span>
+      <div style={{ background: "var(--color-ink-900)", color: "#fff", padding: "20px 24px", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
+        <span style={{ fontSize: 24 }}><PIcon name="bell" size={14}/></span>
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>通知策略管理
           <HelpIcon text="配置各个事件类型的通知渠道、模板和节流策略。支持邮件/SMS/站内信/Webhook/微信等多种渠道。" level="page" />
         </span>
-        {demo && <span style={{ fontSize: 11, color: "#fef08a" }}>⚠️ 演示数据（后端 /admin/notification-policies 待接入）</span>}
+        {demo && <span style={{ fontSize: 11, color: "#fef08a" }}><PIcon name="alert" size={14}/> 演示数据（后端 /admin/notification-policies 待接入）</span>}
       </div>
 
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-        <button onClick={() => setShowNew(true)} style={{ padding: "6px 16px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ 新建策略</button>
+        <button onClick={() => setShowNew(true)} style={{ padding: "6px 16px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ 新建策略</button>
       </div>
 
       {showNew && (
         <div style={{ background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, padding: 16, marginBottom: 16 }}>
           <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
             <div>
-              <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>渠道</label>
+              <label style={{ fontSize: 12, color: "var(--color-text-muted)", display: "block", marginBottom: 4 }}>渠道</label>
               <select value={newChannel} onChange={e => setNewChannel(e.target.value)} style={{ padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4 }}>
                 {CHANNELS.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>事件类型</label>
+              <label style={{ fontSize: 12, color: "var(--color-text-muted)", display: "block", marginBottom: 4 }}>事件类型</label>
               <select value={newEvent} onChange={e => setNewEvent(e.target.value)} style={{ padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4 }}>
                 <option value="">选择事件</option>
                 {EVENTS.map(e => <option key={e.key} value={e.key}>{e.label}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>邮件模板</label>
+              <label style={{ fontSize: 12, color: "var(--color-text-muted)", display: "block", marginBottom: 4 }}>邮件模板</label>
               <select value={newTemplateId} onChange={e => setNewTemplateId(e.target.value)} style={{ padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4 }}>
                 <option value="">不使用模板</option>
                 {templates.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>节流(秒)</label>
+              <label style={{ fontSize: 12, color: "var(--color-text-muted)", display: "block", marginBottom: 4 }}>节流(秒)</label>
               <input type="number" value={newThrottle} onChange={e => setNewThrottle(Number(e.target.value))} style={{ width: 80, padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 4, textAlign: "center" }} />
             </div>
             <button onClick={createPolicy} style={{ padding: "6px 16px", background: "#22c55e", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer" }}>创建</button>
@@ -197,7 +198,7 @@ export default function AdminNotificationPolicyPage() {
                 </td>
               </tr>
             ))}
-            {policies.length === 0 && <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#888" }}>暂无通知策略</td></tr>}
+            {policies.length === 0 && <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "var(--color-text-muted)" }}>暂无通知策略</td></tr>}
           </tbody>
         </table>
       </div>
@@ -207,20 +208,20 @@ export default function AdminNotificationPolicyPage() {
           <div style={{ background: "#fff", borderRadius: 10, padding: 24, maxWidth: 500, width: "90%" }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: "0 0 16px" }}>编辑策略 — {editing.event_label} via {editing.channel_label}</h3>
             <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 13, color: "#666", display: "block", marginBottom: 4 }}>邮件模板</label>
+              <label style={{ fontSize: 13, color: "var(--color-text-secondary)", display: "block", marginBottom: 4 }}>邮件模板</label>
               <select value={editing.template_id ?? ""} onChange={e => setEditing({...editing, template_id: Number(e.target.value) || null})} style={{ width: "100%", padding: "8px 12px", border: "1px solid var(--color-border)", borderRadius: 6 }}>
                 <option value="">不使用模板</option>
                 {templates.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </div>
             <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 13, color: "#666", display: "block", marginBottom: 4 }}>节流时间 (秒)</label>
+              <label style={{ fontSize: 13, color: "var(--color-text-secondary)", display: "block", marginBottom: 4 }}>节流时间 (秒)</label>
               <input type="number" value={editing.throttle_seconds} onChange={e => setEditing({...editing, throttle_seconds: Number(e.target.value)})}
                 style={{ width: "100%", padding: "8px 12px", border: "1px solid var(--color-border)", borderRadius: 6 }} />
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setEditing(null)} style={{ padding: "8px 16px", border: "1px solid var(--color-border)", borderRadius: 6, background: "var(--color-panel)", cursor: "pointer" }}>取消</button>
-              <button onClick={() => savePolicy(editing)} style={{ padding: "8px 16px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>保存</button>
+              <button onClick={() => savePolicy(editing)} style={{ padding: "8px 16px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>保存</button>
             </div>
           </div>
         </div>

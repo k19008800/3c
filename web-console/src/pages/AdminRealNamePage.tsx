@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageHeader, Panel, Modal, Tag, Pagination, useToast, EmptyState, SkeletonGroup } from "@3cloud/shared-ui";
 import { api, extractError } from "../lib/api";
 import "./AdminRealNamePage.css";
+import { PIcon } from "./_polishIcons";
 
 /**
  * 实名认证审核 — 对齐原型 admin-verification.html
@@ -95,11 +97,11 @@ interface AccountDetail {
 type DetailData = RecordDetail | AccountDetail;
 
 /* ───────── 常量 ───────── */
-const TABS: { key: TabKey; icon: string; label: string }[] = [
-  { key: "pending_review", icon: "⏳", label: "待审核" },
-  { key: "unverified", icon: "⚪", label: "未认证" },
-  { key: "approved", icon: "✅", label: "已通过" },
-  { key: "rejected", icon: "❌", label: "已驳回" },
+const TABS: { key: TabKey; icon: ReactNode; label: string }[] = [
+  { key: "pending_review", icon: <PIcon name="clock" size={20}/>, label: "待审核" },
+  { key: "unverified", icon: null /*strip*/, label: "未认证" },
+  { key: "approved", icon: <PIcon name="check" size={20}/>, label: "已通过" },
+  { key: "rejected", icon: <PIcon name="close" size={20}/>, label: "已驳回" },
 ];
 
 const TIME_PRESETS: { key: TimeKey; label: string }[] = [
@@ -173,10 +175,10 @@ function typeTag(t: string) {
 /* 未认证用户账号状态标签组合 */
 function acctTags(r: RnRow) {
   const tags: React.ReactNode[] = [];
-  if (r.isContract) tags.push(<Tag key="c" type="purple">🏢 合同客户</Tag>);
-  if (r.hasKey) tags.push(<Tag key="k" type="orange">🔑 有KEY</Tag>);
-  if (r.hasUsage) tags.push(<Tag key="u" type="red">📡 曾调用被拦截</Tag>);
-  if (!r.isContract && !r.hasKey && !r.hasUsage) tags.push(<Tag key="i" type="gray">⚪ 仅注册</Tag>);
+  if (r.isContract) tags.push(<Tag key="c" type="purple"><PIcon name="building" size={14}/> 合同客户</Tag>);
+  if (r.hasKey) tags.push(<Tag key="k" type="orange"><PIcon name="key" size={14}/> 有KEY</Tag>);
+  if (r.hasUsage) tags.push(<Tag key="u" type="red"><PIcon name="signal" size={14}/> 曾调用被拦截</Tag>);
+  if (!r.isContract && !r.hasKey && !r.hasUsage) tags.push(<Tag key="i" type="gray"> 仅注册</Tag>);
   return <span className="rn-acct-tags">{tags}</span>;
 }
 
@@ -418,8 +420,8 @@ export default function AdminRealNamePage() {
       return (
         <>
           <button type="button" className="c3-btn c3-btn--text" onClick={() => openDrawer(r.id)}>查看</button>{" "}
-          <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" onClick={() => openDirect([r.id])}>⚡ 直接通过</button>{" "}
-          <button type="button" className="c3-btn c3-btn--default c3-btn--sm" onClick={() => openInvite([r.id])}>📨 邀请认证</button>
+          <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" onClick={() => openDirect([r.id])}>直接通过</button>{" "}
+          <button type="button" className="c3-btn c3-btn--default c3-btn--sm" onClick={() => openInvite([r.id])}>邀请认证</button>
         </>
       );
     }
@@ -435,16 +437,16 @@ export default function AdminRealNamePage() {
     if (tab === "pending_review") {
       return (
         <>
-          <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" onClick={() => reviewMut.mutate({ ids: selected, action: "approve" })}>✅ 批量通过</button>
-          <button type="button" className="c3-btn c3-btn--sm rn-btn-danger" onClick={() => openReject(selected)}>❌ 批量驳回</button>
+          <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" onClick={() => reviewMut.mutate({ ids: selected, action: "approve" })}>批量通过</button>
+          <button type="button" className="c3-btn c3-btn--sm rn-btn-danger" onClick={() => openReject(selected)}>批量驳回</button>
         </>
       );
     }
     if (tab === "unverified") {
       return (
         <>
-          <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" onClick={() => openDirect(selected)}>⚡ 批量代审通过</button>
-          <button type="button" className="c3-btn c3-btn--default c3-btn--sm" onClick={() => openInvite(selected)}>📨 批量邀请认证</button>
+          <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" onClick={() => openDirect(selected)}>批量代审通过</button>
+          <button type="button" className="c3-btn c3-btn--default c3-btn--sm" onClick={() => openInvite(selected)}>批量邀请认证</button>
         </>
       );
     }
@@ -485,15 +487,15 @@ export default function AdminRealNamePage() {
           {/* 左：证件影像 */}
           <div className="rn-img-column">
             <div className="rn-section-title">
-              📷 证件影像
+              证件影像
               {!isUnv && detail.images?.length ? (
                 <span style={{ fontWeight: 400, color: "#999", fontSize: 12 }}>（点击放大 · 已加水印防外泄）</span>
               ) : null}
             </div>
             {isUnv ? (
-              <div className="rn-no-imgs"><div className="ni-icon">📤</div>该用户尚未提交认证材料<br />暂无证件影像</div>
+              <div className="rn-no-imgs"><div className="ni-icon"></div>该用户尚未提交认证材料<br />暂无证件影像</div>
             ) : !detail.images?.length ? (
-              <div className="rn-no-imgs"><div className="ni-icon">⚡</div>该用户由管理员代审通过<br />基于合同 / 服务关系，无证件影像记录</div>
+              <div className="rn-no-imgs"><div className="ni-icon"></div>该用户由管理员代审通过<br />基于合同 / 服务关系，无证件影像记录</div>
             ) : (
               <div className="rn-img-grid">
                 {detail.images.map((img, i) => (
@@ -528,14 +530,14 @@ export default function AdminRealNamePage() {
                 if (detail.isContract) warns.push("该用户为企业合同客户，建议直接代审通过");
                 return warns.length ? (
                   <div className="rn-risk-card rn-risk-card--info">
-                    <h4>💡 处理建议</h4>
+                    <h4>处理建议</h4>
                     <ul>{warns.map((w, i) => <li key={i}>{w}</li>)}</ul>
                   </div>
                 ) : null;
               })()
             ) : detail.risk?.length ? (
               <div className="rn-risk-card">
-                <h4>⚠️ 风险提示</h4>
+                <h4>风险提示</h4>
                 <ul>{detail.risk.map((x, i) => <li key={i}>{x}</li>)}</ul>
               </div>
             ) : null}
@@ -545,9 +547,9 @@ export default function AdminRealNamePage() {
               (() => {
                 const sim = Math.round(detail.simScore * 100);
                 const low = sim < 75;
-                const lvl = sim >= 80 ? "✔ 一致" : sim >= 70 ? "⚠ 需人工确认" : "✘ 疑似不一致";
+                const lvl = sim >= 80 ? "✔ 一致" : sim >= 70 ? "需人工确认" : "✘ 疑似不一致";
                 const label = detail.type === "enterprise" ? "法人比对" : "人脸相似度";
-                const lvlText = detail.type === "enterprise" ? (sim >= 80 ? "✔ 法人信息一致" : "⚠ 需人工确认") : lvl;
+                const lvlText = detail.type === "enterprise" ? (sim >= 80 ? "✔ 法人信息一致" : "需人工确认") : lvl;
                 const sub = detail.type === "enterprise" ? "营业执照与法人身份比对结果" : "系统人脸比对结果，仅供参考";
                 return (
                   <div className={`rn-face-match${low ? " rn-face-match--low" : ""}`}>
@@ -562,7 +564,7 @@ export default function AdminRealNamePage() {
             )}
 
             {/* 提交 vs OCR */}
-            <div className="rn-section-title">🔍 提交信息 vs OCR 识别</div>
+            <div className="rn-section-title">提交信息 vs OCR 识别</div>
             {isUnv ? (
               <div style={{ textAlign: "center", color: "#999", padding: 16, fontSize: 13 }}>未提交认证材料，无 OCR 数据</div>
             ) : (
@@ -600,16 +602,16 @@ export default function AdminRealNamePage() {
             )}
 
             {/* 账户信息 */}
-            <div className="rn-section-title">📋 账户信息</div>
+            <div className="rn-section-title">账户信息</div>
             {isUnv ? (
               <table className="rn-compare-table">
                 <tbody>
                   <tr><td style={{ width: 110, color: "#888" }}>注册时间</td><td>{fmtDT(detail.registeredAt)}</td></tr>
                   <tr><td style={{ color: "#888" }}>最后活跃</td><td>{fmtDT(detail.lastLogin)}</td></tr>
                   <tr><td style={{ color: "#888" }}>账号状态</td><td><span className="rn-acct-tags">
-                    {detail.isContract ? <Tag type="purple">🏢 合同客户</Tag> : null}
-                    {detail.hasKey ? <Tag type="orange">🔑 有KEY</Tag> : null}
-                    {detail.hasUsage ? <Tag type="red">📡 曾调用被拦截</Tag> : null}
+                    {detail.isContract ? <Tag type="purple">合同客户</Tag> : null}
+                    {detail.hasKey ? <Tag type="orange">有KEY</Tag> : null}
+                    {detail.hasUsage ? <Tag type="red">曾调用被拦截</Tag> : null}
                   </span></td></tr>
                   <tr><td style={{ color: "#888" }}>KEY 状态</td><td>
                     {detail.hasKey
@@ -617,10 +619,10 @@ export default function AdminRealNamePage() {
                       : <span className="c3-tag c3-tag--gray">未创建</span>}
                   </td></tr>
                   {detail.isContract ? (
-                    <tr><td style={{ color: "#888" }}>合同关系</td><td><Tag type="purple">🏢 合同客户</Tag> · 建议代审通过</td></tr>
+                    <tr><td style={{ color: "#888" }}>合同关系</td><td><Tag type="purple">合同客户</Tag> · 建议代审通过</td></tr>
                   ) : null}
                   <tr><td style={{ color: "#888" }}>认证邀请</td><td>{detail.invites ? `已发送 ${detail.invites} 次` : "未邀请"}</td></tr>
-                  <tr><td style={{ color: "#888" }}>调用限制</td><td><span className="c3-tag c3-tag--red">🔒 未认证 · API 不可用</span></td></tr>
+                  <tr><td style={{ color: "#888" }}>调用限制</td><td><span className="c3-tag c3-tag--red">未认证 · API 不可用</span></td></tr>
                   {detail.keys.length > 0 ? (
                     <tr><td style={{ color: "#888" }}>已建 KEY</td><td>
                       {detail.keys.map((k) => (
@@ -644,7 +646,7 @@ export default function AdminRealNamePage() {
                   {detail.reviewer ? (
                     <tr><td style={{ color: "#888" }}>审核信息</td><td>
                       {detail.reviewer} 于 {fmtDT(detail.reviewedAt)}
-                      {detail.status === "approved" && detail.approvedVia === "admin" ? `（⚡ 管理员代审${detail.directNote ? ` · ${detail.directNote}` : ""}）` : ""}
+                      {detail.status === "approved" && detail.approvedVia === "admin" ? `（<PIcon name="bolt" size={14}/> 管理员代审${detail.directNote ? ` · ${detail.directNote}` : ""}）` : ""}
                       {detail.status === "rejected" ? ` · 原因：${detail.rejectReason}` : ""}
                     </td></tr>
                   ) : null}
@@ -662,19 +664,19 @@ export default function AdminRealNamePage() {
               : isPending
                 ? "核对证件影像与 OCR 信息后决策，操作将全程留痕"
                 : detail.status === "approved"
-                  ? `✅ ${detail.reviewer ?? "管理员"} 于 ${fmtDT(detail.reviewedAt)} 审核通过${detail.approvedVia === "admin" ? `（⚡ 管理员代审${detail.directNote ? ` · ${detail.directNote}` : ""}）` : ""}`
-                  : `❌ 于 ${fmtDT(detail.reviewedAt)} 驳回 · 原因：${detail.rejectReason}`}
+                  ? `<PIcon name="check" size={14}/> ${detail.reviewer ?? "管理员"} 于 ${fmtDT(detail.reviewedAt)} 审核通过${detail.approvedVia === "admin" ? `（管理员代审${detail.directNote ? ` · ${detail.directNote}` : ""}）` : ""}`
+                  : `<PIcon name="close" size={14}/> 于 ${fmtDT(detail.reviewedAt)} 驳回 · 原因：${detail.rejectReason}`}
           </span>
           <span className="spacer" />
           {isUnv ? (
             <>
-              <button type="button" className="c3-btn c3-btn--default c3-btn--sm" onClick={() => openInvite([detail.id])}>📨 邀请认证</button>
-              <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" onClick={() => openDirect([detail.id])}>⚡ 直接通过（代审）</button>
+              <button type="button" className="c3-btn c3-btn--default c3-btn--sm" onClick={() => openInvite([detail.id])}>邀请认证</button>
+              <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" onClick={() => openDirect([detail.id])}>直接通过（代审）</button>
             </>
           ) : isPending ? (
             <>
               <button type="button" className="c3-btn c3-btn--sm rn-btn-danger" onClick={() => openReject([detail.id])}>驳回</button>
-              <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" onClick={() => reviewMut.mutate({ ids: [detail.id], action: "approve" })}>✅ 审核通过</button>
+              <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" onClick={() => reviewMut.mutate({ ids: [detail.id], action: "approve" })}>审核通过</button>
             </>
           ) : (
             <button type="button" className="c3-btn c3-btn--default c3-btn--sm" onClick={() => { setDrawerOpen(false); setDrawerId(null); }}>返回列表</button>
@@ -698,14 +700,14 @@ export default function AdminRealNamePage() {
   /* 未认证说明横幅（仅未认证 Tab） */
   const noticeBanner = tab === "unverified" && (
     <div className="rn-notice-banner">
-      <span className="nb-icon">💡</span>
+      <span className="nb-icon"></span>
       <div>
         <b>实名认证前置策略：</b>注册用户需完成实名认证后方可使用 API KEY 调度 Token。以下用户<u>已注册但未提交</u>认证材料，其 KEY 当前处于<b>禁用</b>状态。可根据账号状态处理：<br />
         <span className="nb-tags">
-          <span className="c3-tag c3-tag--purple">🏢 合同客户</span><span>已签合同 → 一键代审通过</span>
-          <span className="c3-tag c3-tag--orange">🔑 有KEY</span><span>想用但被拦截 → 邀请认证或代审</span>
-          <span className="c3-tag c3-tag--red">📡 曾调用</span><span>调用被拦截 → 优先处理</span>
-          <span className="c3-tag c3-tag--gray">⚪ 仅注册</span><span>无计划使用 → 可忽略</span>
+          <span className="c3-tag c3-tag--purple">合同客户</span><span>已签合同 → 一键代审通过</span>
+          <span className="c3-tag c3-tag--orange">有KEY</span><span>想用但被拦截 → 邀请认证或代审</span>
+          <span className="c3-tag c3-tag--red">曾调用</span><span>调用被拦截 → 优先处理</span>
+          <span className="c3-tag c3-tag--gray">仅注册</span><span>无计划使用 → 可忽略</span>
         </span>
       </div>
     </div>
@@ -718,29 +720,29 @@ export default function AdminRealNamePage() {
       {/* 统计卡片 */}
       <div className="c3-stat-grid c3-stat-grid--cols5">
         <div className="c3-stat-card">
-          <span className="c3-stat-card__icon">⏳</span>
+          <span className="c3-stat-card__icon"></span>
           <div className="c3-stat-card__label">待审核 <span style={{ color: "#bbb", fontWeight: 400 }}>已提交</span></div>
           <div className="c3-stat-card__value">{stats?.pending.count ?? 0}</div>
           <div className={`c3-stat-card__trend${(stats?.pending.overdue ?? 0) > 0 ? " c3-stat-card__trend--down" : ""}`}>
-            {(stats?.pending.overdue ?? 0) > 0 ? `⚠ ${stats!.pending.overdue} 单超 72h` : "·"}
+            {(stats?.pending.overdue ?? 0) > 0 ? `<PIcon name="alert" size={14}/> ${stats!.pending.overdue} 单超 72h` : "·"}
           </div>
         </div>
         <div className="c3-stat-card" style={{ cursor: "pointer" }} onClick={() => switchTab("unverified")} title="点击查看未认证用户">
-          <span className="c3-stat-card__icon">⚪</span>
+          <span className="c3-stat-card__icon"></span>
           <div className="c3-stat-card__label">未认证 <span style={{ color: "#bbb", fontWeight: 400 }}>未提交</span></div>
           <div className="c3-stat-card__value">{stats?.unverified.count ?? 0}</div>
           <div className={`c3-stat-card__trend${(stats?.unverified.blocked ?? 0) > 0 ? " c3-stat-card__trend--down" : ""}`}>
-            {(stats?.unverified.blocked ?? 0) > 0 ? `⚠ ${stats!.unverified.blocked} 人想用被拦截` : "·"}
+            {(stats?.unverified.blocked ?? 0) > 0 ? `<PIcon name="alert" size={14}/> ${stats!.unverified.blocked} 人想用被拦截` : "·"}
           </div>
         </div>
         <div className="c3-stat-card">
-          <span className="c3-stat-card__icon">✅</span>
+          <span className="c3-stat-card__icon"></span>
           <div className="c3-stat-card__label">今日通过</div>
           <div className="c3-stat-card__value">{stats?.todayApproved ?? 0}</div>
           <div className="c3-stat-card__trend c3-stat-card__trend--up">↑ 当日审核量</div>
         </div>
         <div className="c3-stat-card">
-          <span className="c3-stat-card__icon">❌</span>
+          <span className="c3-stat-card__icon"></span>
           <div className="c3-stat-card__label">今日驳回</div>
           <div className="c3-stat-card__value">{stats?.todayRejected ?? 0}</div>
           <div className="c3-stat-card__trend">{(stats?.rejectRate ?? 0) > 0 ? `驳回率 ${stats!.rejectRate}%` : "·"}</div>
@@ -803,9 +805,9 @@ export default function AdminRealNamePage() {
             <span className="c3-filter-label">账号状态</span>
             <select className="c3-filter-select" value={acct} onChange={(e) => { setAcct(e.target.value); setPage(1); }}>
               <option value="">全部</option>
-              <option value="contract">🏢 合同客户</option>
-              <option value="active">🔑 有KEY / 曾调用</option>
-              <option value="idle">⚪ 仅注册</option>
+              <option value="contract">合同客户</option>
+              <option value="active">有KEY / 曾调用</option>
+              <option value="idle">仅注册</option>
             </select>
           </div>
         )}
@@ -878,7 +880,7 @@ export default function AdminRealNamePage() {
                       const riskTxt = overdue
                         ? <span className="rn-risk-cell rn-risk-cell--overdue">⏱ 超72h</span>
                         : (r.risk?.length
-                          ? <span className="rn-risk-cell" title={(r.risk ?? []).join("；")}>⚠️ {(r.risk![0] ?? "").split("，")[0]}</span>
+                          ? <span className="rn-risk-cell" title={(r.risk ?? []).join("；")}>{(r.risk![0] ?? "").split("，")[0]}</span>
                           : <span style={{ color: "#bbb" }}>—</span>);
                       return (
                         <tr key={r.id}>
@@ -901,7 +903,7 @@ export default function AdminRealNamePage() {
                           <td>{r.email}</td>
                           <td>{typeTag(r.type)}</td>
                           <td>{r.name}</td>
-                          <td>{acctTags(r)}{r.hasUsage ? <span className="rn-risk-cell">🔴 想用被拦截</span> : null}</td>
+                          <td>{acctTags(r)}{r.hasUsage ? <span className="rn-risk-cell">想用被拦截</span> : null}</td>
                           <td>{fmtDT(r.lastLogin)}</td>
                           <td>{r.invites ? `${r.invites} 次` : <span style={{ color: "#bbb" }}>—</span>}</td>
                           <td>{rowActions(r)}</td>
@@ -910,7 +912,7 @@ export default function AdminRealNamePage() {
                     }
                     if (tab === "approved") {
                       const src = r.approvedVia === "admin"
-                        ? <span className="rn-src-tag rn-src-admin">⚡ 代审{r.directNote ? `·${r.directNote}` : ""}</span>
+                        ? <span className="rn-src-tag rn-src-admin">代审{r.directNote ? `·${r.directNote}` : ""}</span>
                         : <span className="rn-src-tag rn-src-submit">✔ 用户提交</span>;
                       return (
                         <tr key={r.id}>
@@ -992,7 +994,7 @@ export default function AdminRealNamePage() {
       </Modal>
 
       {/* ===== 代审通过弹窗 ===== */}
-      <Modal open={directOpen} onClose={() => setDirectOpen(false)} title="⚡ 管理员代审通过" width={480}>
+      <Modal open={directOpen} onClose={() => setDirectOpen(false)} title="管理员代审通过" width={480}>
         <p className="rn-direct-desc">
           基于<b>合同 / 服务关系</b>，管理员将直接为该用户完成实名认证。认证通过后该用户即可正常使用 API KEY 调度 Token。代审操作全程留痕（操作人 + 时间 + 备注）。
         </p>
@@ -1015,7 +1017,7 @@ export default function AdminRealNamePage() {
       </Modal>
 
       {/* ===== 邀请认证弹窗 ===== */}
-      <Modal open={inviteOpen} onClose={() => setInviteOpen(false)} title="📨 邀请实名认证" width={440}>
+      <Modal open={inviteOpen} onClose={() => setInviteOpen(false)} title="邀请实名认证" width={440}>
         <p className="rn-direct-desc">
           将向 <b>{inviteIds.length}</b> 个未认证用户发送实名认证邀请，引导其提交认证材料。
         </p>

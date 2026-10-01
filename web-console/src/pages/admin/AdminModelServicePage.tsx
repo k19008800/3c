@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../../lib/api";
 import { HelpIcon, StatusBadge, SkeletonGroup, useToast, ConfirmPopover } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
@@ -51,7 +52,7 @@ export default function AdminModelServicePage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>🎛️ 模型服务列表 <HelpIcon text="model_service" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="sliders" size={14}/> 模型服务列表 <HelpIcon text="model_service" /></div>
         {listQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
@@ -67,8 +68,8 @@ export default function AdminModelServicePage() {
               {(listQ.data?.list ?? []).map((m: any) => (
                 <tr key={m.id} style={{ borderTop: "1px solid #f0f0f0" }}>
                   <td style={{ padding: "10px 12px", fontWeight: 500 }}>{m.display_name ?? m.model_name}</td>
-                  <td style={{ padding: "10px 12px", color: "#888" }}>{m.upstream_model}</td>
-                  <td style={{ padding: "10px 12px", color: "#888" }}>{m.vendor_name ?? "—"}</td>
+                  <td style={{ padding: "10px 12px", color: "var(--color-text-muted)" }}>{m.upstream_model}</td>
+                  <td style={{ padding: "10px 12px", color: "var(--color-text-muted)" }}>{m.vendor_name ?? "—"}</td>
                   <td style={{ padding: "10px 12px" }}>¥{m.cost_input_price} / ¥{m.cost_output_price}</td>
                   <td style={{ padding: "10px 12px" }}>
                     <input type="number" defaultValue={m.priority} style={{ width: 50, padding: 4 }}
@@ -80,7 +81,7 @@ export default function AdminModelServicePage() {
                   <td style={{ padding: "10px 12px" }}>
                     <ConfirmPopover title={m.is_enabled ? "禁用该模型服务？" : "启用该模型服务？"}
                       onConfirm={() => toggleMut.mutate({ id: m.id, enabled: !m.is_enabled })}>
-                      <button style={{ ...btnBase, background: m.is_enabled ? "#f0f0f0" : "#4f6ef7", color: m.is_enabled ? "#333" : "#fff", fontSize: 12 }}>
+                      <button style={{ ...btnBase, background: m.is_enabled ? "#f0f0f0" : "var(--color-primary)", color: m.is_enabled ? "var(--color-text)" : "#fff", fontSize: 12 }}>
                         {m.is_enabled ? "禁用" : "启用"}
                       </button>
                     </ConfirmPopover>

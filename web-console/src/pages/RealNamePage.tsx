@@ -1,7 +1,9 @@
 import { useState, useRef } from "react";
+import type { ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { HelpIcon, Modal, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /**
  * 实名认证 — 对齐原型 portal-verification.html
@@ -186,7 +188,7 @@ export default function RealNamePage() {
       {verifyStatus === "unverified" && (
         <>
           <div style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "16px 18px", borderRadius: 8, background: "#fff3e0", border: "1px solid #ffe0b2", marginBottom: 20 }}>
-            <span style={{ fontSize: 20 }}>⚠️</span>
+            <span style={{ fontSize: 20 }}><PIcon name="alert" size={14}/></span>
             <div>
               <div style={{ fontWeight: 600, color: "#e65100", marginBottom: 4 }}>您尚未完成实名认证</div>
               <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
@@ -210,7 +212,7 @@ export default function RealNamePage() {
                 <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${authType === "personal" ? "var(--color-primary)" : "var(--color-border)"}`, position: "relative" }}>
                   {authType === "personal" && <div style={{ position: "absolute", top: 3, left: 3, width: 10, height: 10, borderRadius: "50%", background: "var(--color-primary)" }} />}
                 </div>
-                <span style={{ fontSize: 28 }}>👤</span>
+                <span style={{ fontSize: 28 }}><PIcon name="user" size={14}/></span>
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 600 }}>个人认证</div>
                   <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>适用于个人开发者，需身份证信息</div>
@@ -228,7 +230,7 @@ export default function RealNamePage() {
                 <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${authType === "enterprise" ? "var(--color-primary)" : "var(--color-border)"}`, position: "relative" }}>
                   {authType === "enterprise" && <div style={{ position: "absolute", top: 3, left: 3, width: 10, height: 10, borderRadius: "50%", background: "var(--color-primary)" }} />}
                 </div>
-                <span style={{ fontSize: 28 }}>🏢</span>
+                <span style={{ fontSize: 28 }}><PIcon name="building" size={14}/></span>
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 600 }}>企业认证</div>
                   <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>适用于企业用户，需营业执照及法人信息</div>
@@ -270,13 +272,13 @@ export default function RealNamePage() {
                     <div style={label}>身份证正面（人像面）<span style={{ color: "var(--color-danger-text)" }}>*</span>
                       <HelpIcon text="请上传身份证人像面照片，支持 JPG/PNG，大小不超过5MB" level="button" />
                     </div>
-                    <UploadArea image={pFront} onUpload={(e) => handleFileUpload(e, setPFront)} onRemove={() => setPFront(null)} icon="📷" text="点击上传身份证人像面" hint="支持 JPG / PNG / JPEG，大小不超过 5MB" error={errors["p-front"]} />
+                    <UploadArea image={pFront} onUpload={(e) => handleFileUpload(e, setPFront)} onRemove={() => setPFront(null)} icon={<PIcon name="camera" size={18}/>} text="点击上传身份证人像面" hint="支持 JPG / PNG / JPEG，大小不超过 5MB" error={errors["p-front"]} />
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={label}>身份证反面（国徽面）<span style={{ color: "var(--color-danger-text)" }}>*</span>
                       <HelpIcon text="请上传身份证国徽面照片，支持 JPG/PNG，大小不超过5MB" level="button" />
                     </div>
-                    <UploadArea image={pBack} onUpload={(e) => handleFileUpload(e, setPBack)} onRemove={() => setPBack(null)} icon="📷" text="点击上传身份证国徽面" hint="支持 JPG / PNG / JPEG，大小不超过 5MB" error={errors["p-back"]} />
+                    <UploadArea image={pBack} onUpload={(e) => handleFileUpload(e, setPBack)} onRemove={() => setPBack(null)} icon={<PIcon name="camera" size={18}/>} text="点击上传身份证国徽面" hint="支持 JPG / PNG / JPEG，大小不超过 5MB" error={errors["p-back"]} />
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 12 }}>
@@ -335,13 +337,13 @@ export default function RealNamePage() {
                     <div style={label}>营业执照副本<span style={{ color: "var(--color-danger-text)" }}>*</span>
                       <HelpIcon text="请上传清晰可见的营业执照副本扫描件" level="button" />
                     </div>
-                    <UploadArea image={eLicense} onUpload={(e) => handleFileUpload(e, setELicense)} onRemove={() => setELicense(null)} icon="📄" text="点击上传营业执照副本" hint="支持 JPG / PNG / PDF，大小不超过 10MB" error={errors["e-license"]} />
+                    <UploadArea image={eLicense} onUpload={(e) => handleFileUpload(e, setELicense)} onRemove={() => setELicense(null)} icon={<PIcon name="doc" size={18}/>} text="点击上传营业执照副本" hint="支持 JPG / PNG / PDF，大小不超过 10MB" error={errors["e-license"]} />
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={label}>授权委托书<span style={{ color: "var(--color-danger-text)" }}>*</span>
                       <HelpIcon text="经办人非法人本人时需上传授权委托书" level="button" />
                     </div>
-                    <UploadArea image={eAuth} onUpload={(e) => handleFileUpload(e, setEAuth)} onRemove={() => setEAuth(null)} icon="📝" text="点击上传授权委托书" hint="支持 JPG / PNG / PDF，大小不超过 10MB" error={errors["e-auth"]} />
+                    <UploadArea image={eAuth} onUpload={(e) => handleFileUpload(e, setEAuth)} onRemove={() => setEAuth(null)} icon={<PIcon name="edit" size={18}/>} text="点击上传授权委托书" hint="支持 JPG / PNG / PDF，大小不超过 10MB" error={errors["e-auth"]} />
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 12 }}>
@@ -357,8 +359,8 @@ export default function RealNamePage() {
       {/* ===== Status: Under Review ===== */}
       {verifyStatus === "review" && (
         <div style={card}>
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "16px 18px", borderRadius: 8, background: "var(--color-primary-light)", border: "1px solid rgba(79,110,247,0.2)", marginBottom: 24 }}>
-            <span style={{ fontSize: 20 }}>⏳</span>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "16px 18px", borderRadius: 8, background: "var(--color-primary-light)", border: "1px solid var(--color-info-border)", marginBottom: 24 }}>
+            <span style={{ fontSize: 20 }}><PIcon name="clock" size={14}/></span>
             <div>
               <div style={{ fontWeight: 600, color: "var(--color-primary)", marginBottom: 4 }}>认证资料已提交，审核中</div>
               <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
@@ -385,7 +387,7 @@ export default function RealNamePage() {
                       background: done || active ? "var(--color-primary-light)" : "var(--color-panel)",
                       color: done || active ? "var(--color-primary)" : "var(--color-text-secondary)",
                     }}>
-                      {done ? "✓" : active ? "⏳" : "○"}
+                      {done ? "✓" : active ? "" : "○"}
                     </div>
                     <span>{step}</span>
                   </div>
@@ -410,7 +412,7 @@ export default function RealNamePage() {
       {verifyStatus === "verified" && (
         <>
           <div style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "16px 18px", borderRadius: 8, background: "var(--color-success-bg)", border: "1px solid var(--color-success-border)", marginBottom: 20 }}>
-            <span style={{ fontSize: 20 }}>✅</span>
+            <span style={{ fontSize: 20 }}><PIcon name="check" size={14}/></span>
             <div>
               <div style={{ fontWeight: 600, color: "var(--color-success-text)", marginBottom: 4 }}>实名认证已完成</div>
               <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
@@ -437,7 +439,7 @@ export default function RealNamePage() {
 
       {/* Demo Controls */}
       <div style={{ background: "var(--color-primary-light)", padding: 16, borderRadius: 12, marginTop: 12 }}>
-        <div style={{ fontSize: 13, color: "var(--color-primary)", marginBottom: 8 }}>🔄 演示控制 — 切换认证状态</div>
+        <div style={{ fontSize: 13, color: "var(--color-primary)", marginBottom: 8 }}><PIcon name="refresh" size={14}/> 演示控制 — 切换认证状态</div>
         <div style={{ display: "flex", gap: 8 }}>
           {(["unverified", "review", "verified"] as VerifyStatus[]).map((s) => (
             <button key={s} onClick={() => setVerifyStatus(s)} style={{ padding: "4px 12px", borderRadius: 6, fontSize: 12, border: "1px solid var(--color-border)", background: "var(--color-panel)", cursor: "pointer", fontFamily: "inherit" }}>
@@ -488,7 +490,7 @@ function UploadArea({
   image: string | null;
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemove: () => void;
-  icon: string;
+  icon: ReactNode;
   text: string;
   hint: string;
   error?: boolean;

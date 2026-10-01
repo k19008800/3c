@@ -1,70 +1,104 @@
 /**
- * 3Cloud 设计令牌 — 精确对齐 portal-common.css
- * 来源：kb/3cloud/prototypes/portal-common.css (v1, 439行)
- * 所有 shared-ui 组件 + 页面统一引用此文件
+ * 浩寅云 设计令牌（shared-ui 主实现，console 侧）
+ * 冻结模式：docs/design-system/DESIGN-GUIDE-2026-10.md §2
+ * 兼容性铁律：已有变量名不得删除/改名，只改数值并新增；页面与组件大量 var(--xx) 引用。
+ * 设计语言：精密云基础设施 —— 信号蓝 #1896FF + 墨蓝 ink 阶 + 中性灰阶，禁止靛蓝/紫。
  */
 
 :root {
-  /* ===== 色板（对齐 portal-common.css）===== */
-  --color-bg: #f0f2f5;
-  --color-panel: #fff;
-  --color-primary: #4f6ef7;
-  --color-primary-hover: #3b5de7;
-  --color-primary-light: #eef1ff;
-  --color-primary-lighter: #f8f9ff;
-  --color-border: #d9d9d9;
-  --color-divider: #eee;
-  --color-divider-light: #f5f5f5;
+  /* ===== 色板 ===== */
+  --color-bg: #f2f4f8;
+  --color-panel: #ffffff;
+  --color-primary: #1896ff;
+  --color-primary-hover: #0e84e6;
+  --color-primary-active: #0b6fd6;
+  --color-primary-light: rgba(24, 150, 255, 0.10);
+  --color-primary-lighter: rgba(24, 150, 255, 0.06);
+  --color-primary-border: rgba(24, 150, 255, 0.35);
+  --color-border: #d9e0ea;
+  --color-divider: #edf0f5;
+  --color-divider-light: #f4f6f9;
 
-  /* 文字 */
-  --color-text: #333;
-  --color-text-secondary: #888;
-  --color-text-muted: #999;
+  /* 墨蓝阶（暗面 / 侧栏） */
+  --color-ink-900: #0b1220;
+  --color-ink-800: #111b2e;
+  --color-ink-700: #1a2740;
+
+  /* 文字（浅底） */
+  --color-text: #16233a;
+  --color-text-secondary: #5c6b82;
+  --color-text-muted: #8b99ac;
+  --color-text-disabled: #b4bfce;
+
+  /* 文字（暗底反白） */
+  --color-text-inverse: #f4f7fb;
+  --color-text-inverse-secondary: #9aa8bb;
+  --color-text-inverse-muted: #6b7a90;
+
+  /* 描边（暗底） */
+  --color-border-inverse: rgba(255, 255, 255, 0.10);
+  --color-divider-inverse: rgba(255, 255, 255, 0.07);
 
   /* 语义色 */
-  --color-success-bg: #e8f5e9;
-  --color-success-text: #2e7d32;
-  --color-warning-bg: #fff3e0;
-  --color-warning-text: #e65100;
-  --color-danger-bg: #ffebee;
-  --color-danger-text: #e53935;
-  --color-info-bg: #e8f0ff;
-  --color-info-text: #1a3a8a;
+  --color-success-bg: #e8f8f1;
+  --color-success-text: #0b7a4b;
+  --color-success-border: #a7e8ce;
+  --color-warning-bg: #fef4e2;
+  --color-warning-text: #b45d09;
+  --color-warning-border: #fbdcb0;
+  --color-danger-bg: #feefee;
+  --color-danger-text: #b42318;
+  --color-danger-border: #facdc9;
+  --color-info-bg: rgba(24, 150, 255, 0.08);
+  --color-info-text: #0b6fd6;
+  --color-info-border: rgba(24, 150, 255, 0.30);
 
   /* 组件色 */
-  --color-disabled-bg: #f5f5f5;
-  --color-modal-overlay: rgba(0, 0, 0, 0.4);
-  --color-sidebar-bg: #13151e;
-  --color-sidebar-text: #666;
-  --color-sidebar-hover: #ccc;
-  --color-sidebar-active: #6a8aff;
-  --color-sidebar-logo: #e0e0e0;
-  --color-sidebar-divider: rgba(255, 255, 255, 0.06);
-  --color-table-header-bg: #fafafa;
-  --color-row-hover: #f8f9ff;
-  --color-row-selected: #eef1ff;
+  --color-disabled-bg: #f0f2f6;
+  --color-modal-overlay: rgba(11, 18, 32, 0.45);
+  --color-code-bg: #0b1220;
+  --color-bell-badge: #ef4444;
 
-  /* 特殊 */
-  --color-bell-badge: #e53935;
-  --color-success-border: #c8e6c9;
-  --color-danger-border: #ffcdd2;
-  --color-warning-border: #ffe0b2;
-  --color-info-border: #c5d5ff;
+  /* 表格 */
+  --color-table-header-bg: #f7f9fc;
+  --color-row-hover: #f3f8ff;
+  --color-row-selected: rgba(24, 150, 255, 0.08);
+
+  /* 侧栏 */
+  --color-sidebar-bg: #0b1220;
+  --color-sidebar-text: #8b99ac;
+  --color-sidebar-hover: #c9d4e2;
+  --color-sidebar-active: #ffffff;
+  --color-sidebar-active-border: #1896ff;
+  --color-sidebar-logo: #e8eef7;
+  --color-sidebar-divider: rgba(255, 255, 255, 0.06);
+  --color-sidebar-hover-bg: rgba(255, 255, 255, 0.04);
+  --color-sidebar-active-bg: rgba(24, 150, 255, 0.12);
 
   /* ===== 圆角 ===== */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
-  --radius-2xl: 16px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-pill: 999px;
 
-  /* ===== 间距 ===== */
+  /* ===== 间距（保留旧名并扩展） ===== */
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 12px;
   --space-lg: 16px;
   --space-xl: 20px;
   --space-2xl: 24px;
+  --space-3xl: 32px;
+  --space-4xl: 40px;
+  --space-5xl: 48px;
+  --space-6xl: 64px;
+  --space-7xl: 80px;
+  --space-8xl: 96px;
+  --space-9xl: 120px;
+  --space-10xl: 160px;
 
   /* ===== 组件尺寸 ===== */
   --btn-height: 40px;
@@ -80,15 +114,19 @@
   --help-icon-size: 18px;
 
   /* ===== 阴影 ===== */
-  --shadow-panel: 0 1px 4px rgba(0, 0, 0, 0.06);
-  --shadow-modal: 0 4px 20px rgba(0, 0, 0, 0.15);
-  --shadow-toast: 0 4px 12px rgba(0, 0, 0, 0.12);
-  --shadow-tooltip: 0 2px 8px rgba(0, 0, 0, 0.12);
-  --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --shadow-panel: 0 1px 2px rgba(11, 18, 32, 0.06);
+  --shadow-card: 0 2px 8px -2px rgba(11, 18, 32, 0.08);
+  --shadow-modal: 0 24px 64px -16px rgba(11, 18, 32, 0.28);
+  --shadow-toast: 0 12px 32px -8px rgba(11, 18, 32, 0.18);
+  --shadow-tooltip: 0 4px 16px -4px rgba(11, 18, 32, 0.16);
+  --shadow-hover: 0 12px 32px -8px rgba(11, 18, 32, 0.14);
 
   /* ===== 字体 ===== */
-  --font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --font-family-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  --font-family: -apple-system, BlinkMacSystemFont, "SF Pro SC", "Segoe UI",
+    "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", "Noto Sans SC",
+    sans-serif;
+  --font-family-mono: "SF Mono", "JetBrains Mono", "Cascadia Code", "Roboto Mono",
+    Consolas, monospace;
   --font-size-xs: 11px;
   --font-size-sm: 12px;
   --font-size-md: 13px;
@@ -98,39 +136,87 @@
   --font-size-2xl: 20px;
   --font-size-3xl: 22px;
   --font-size-4xl: 28px;
+  --font-size-page-title: 22px;
+  --font-size-section: 16px;
+  --font-size-table: 13px;
 
-  /* ===== 过渡 ===== */
-  --transition-fast: 0.15s;
-  --transition-normal: 0.2s;
-  --transition-slow: 0.25s;
+  /* ===== 动效 ===== */
+  --duration-fast: 150ms;
+  --duration: 200ms;
+  --duration-slow: 300ms;
+  --duration-xslow: 600ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  /* 旧名保留，数值对齐新动效令牌 */
+  --transition-fast: 150ms;
+  --transition-normal: 200ms;
+  --transition-slow: 300ms;
 
   /* ===== Z-index ===== */
   --z-sidebar: 100;
   --z-dropdown: 200;
   --z-sticky: 300;
+  --z-tooltip: 400;
+  --z-overlay: 600;
   --z-modal: 1000;
   --z-toast: 2000;
-  --z-overlay: 600;
 
-  /* ===== 侧栏 ===== */
-  --sidebar-bg: #13151e;
+  /* ===== 侧栏（旧令牌名保留） ===== */
+  --sidebar-bg: #0b1220;
   --sidebar-width: 220px;
   --sidebar-nav-gap: 10px;
-  --sidebar-active-border: 3px solid #6a8aff;
-  --sidebar-active-bg: rgba(79, 110, 247, 0.12);
-  --sidebar-hover-bg: rgba(255, 255, 255, 0.03);
+  --sidebar-active-border: 3px solid #1896ff;
+  --sidebar-active-bg: rgba(24, 150, 255, 0.12);
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.04);
+
+  /* ===== 分类色板（克制六色：图表/图例分类用途，避免高饱和紫/粉滥用） ===== */
+  --cat-1: #1896FF; /* 信号蓝 */
+  --cat-2: #0B7A4B; /* 成功绿 */
+  --cat-3: #B45D09; /* 警告橙 */
+  --cat-4: #8B99AC; /* 中性灰 */
+  --cat-5: #0F766E; /* 青 */
+  --cat-6: #4B5563; /* 石板灰 */
 }
 
 /* ===== 全局重置 ===== */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-  background: #f0f2f5;
-  color: #333;
+  font-family: var(--font-family);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 数字等宽（价格/Token/表格数据） */
+table,
+.c3-rank-amount,
+.c3-qval,
+.c3-todo-value,
+.c3-stat-card__value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 焦点可达性（规范 §2.5）：所有可交互元素统一 focus-visible 环 */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 /* 滚动条 */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #aaa; }
+::-webkit-scrollbar-thumb { background: #c3ccd9; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #9aa8bb; }
+
+/* 动效降级（规范 §2.4）：直接关闭动画，元素回落到基础态（保证弹窗/遮罩可见，不残留 opacity:0） */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-delay: 0ms !important;
+  }
+}

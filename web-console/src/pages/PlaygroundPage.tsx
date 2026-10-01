@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { HelpIcon } from "@3cloud/shared-ui";
@@ -11,6 +12,7 @@ import { CompletionsTab } from "../components/playground/CompletionsTab";
 import { MessagesTab } from "../components/playground/MessagesTab";
 import { ModelCodeSelector } from "../components/playground/ModelCodeSelector";
 import type { ApiKeyRow, ModelRow, PlaygroundTabProps } from "../components/playground/types";
+import { PIcon } from "./_polishIcons";
 
 /**
  * §22.3 用户端 Playground - API 在线调试（多端点）
@@ -28,13 +30,13 @@ import type { ApiKeyRow, ModelRow, PlaygroundTabProps } from "../components/play
 
 type TabKey = "chat" | "rerank" | "responses" | "embeddings" | "completions" | "messages";
 
-const TABS: Array<{ key: TabKey; label: string; icon: string; help: string }> = [
-  { key: "chat", label: "Chat", icon: "💬", help: "OpenAI 兼容对话补全：多消息编辑，验证 /v1/chat/completions 完整计费链路。" },
-  { key: "rerank", label: "Rerank", icon: "🔀", help: "Cohere 兼容重排序：query + documents 相关性打分，RAG 检索精排调试（POST /v1/rerank）。" },
-  { key: "responses", label: "Responses", icon: "🧠", help: "OpenAI Responses API 兼容测试：input/instructions + 非流式与流式 SSE 事件序列（POST /v1/responses）。" },
-  { key: "embeddings", label: "Embeddings", icon: "📐", help: "向量化调试：文本 → embedding 向量，支持单条/批量（POST /v1/embeddings）。" },
-  { key: "completions", label: "Completions", icon: "✍️", help: "文本补全调试（老 SDK 格式，prompt 字段）：验证 /v1/completions 上游兼容。" },
-  { key: "messages", label: "Messages", icon: "🧩", help: "Anthropic Messages API 兼容调试：Claude 格式请求/响应（POST /v1/messages）。" },
+const TABS: Array<{ key: TabKey; label: string; icon: ReactNode; help: string }> = [
+  { key: "chat", label: "Chat", icon: <PIcon name="chat" size={20}/>, help: "OpenAI 兼容对话补全：多消息编辑，验证 /v1/chat/completions 完整计费链路。" },
+  { key: "rerank", label: "Rerank", icon: <PIcon name="swap" size={20}/>, help: "Cohere 兼容重排序：query + documents 相关性打分，RAG 检索精排调试（POST /v1/rerank）。" },
+  { key: "responses", label: "Responses", icon: <PIcon name="bot" size={20}/>, help: "OpenAI Responses API 兼容测试：input/instructions + 非流式与流式 SSE 事件序列（POST /v1/responses）。" },
+  { key: "embeddings", label: "Embeddings", icon: <PIcon name="ruler" size={20}/>, help: "向量化调试：文本 → embedding 向量，支持单条/批量（POST /v1/embeddings）。" },
+  { key: "completions", label: "Completions", icon: <PIcon name="edit" size={20}/>, help: "文本补全调试（老 SDK 格式，prompt 字段）：验证 /v1/completions 上游兼容。" },
+  { key: "messages", label: "Messages", icon: <PIcon name="box" size={20}/>, help: "Anthropic Messages API 兼容调试：Claude 格式请求/响应（POST /v1/messages）。" },
 ];
 
 export default function PlaygroundPage() {
@@ -74,7 +76,7 @@ export default function PlaygroundPage() {
   return (
     <div>
       <h2 style={{ marginBottom: 4 }}>
-        🧪 API Playground
+        <PIcon name="flask" size={14}/> API Playground
         <HelpIcon
           text="在线调试网关全部兼容端点：Chat / Rerank / Responses / Embeddings / Completions / Messages。模型按「模型编码」选择——同一模型来自不同供应商时显示多个编码条目，选择条目即选择供应商；编码规则后台可配置，默认「厂商+模型」。请求体 model 即所选编码，精确路由到对应供应商。调试请求会真实计费。"
           level="page"

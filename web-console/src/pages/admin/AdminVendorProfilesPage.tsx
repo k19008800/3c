@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../../lib/api";
 import { HelpIcon, Modal, SkeletonGroup, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
@@ -36,13 +37,13 @@ export default function AdminVendorProfilesPage() {
           <input style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", flex: 1 }}
             placeholder="搜索厂商..." value={keyword} onChange={e => setKeyword(e.target.value)} />
         </div>
-        <button style={{ ...btnBase, background: "#4f6ef7", color: "#fff" }} onClick={() => setEditItem({ name: "", logo_url: "", description: "", credit_rating: "" })}>
+        <button style={{ ...btnBase, background: "var(--color-primary)", color: "#fff" }} onClick={() => setEditItem({ name: "", logo_url: "", description: "", credit_rating: "" })}>
           ＋ 新增厂商
         </button>
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>🏢 厂商资料列表 <HelpIcon text="vendor_profiles" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="building" size={14}/> 厂商资料列表 <HelpIcon text="vendor_profiles" /></div>
         {listQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
@@ -56,11 +57,11 @@ export default function AdminVendorProfilesPage() {
               {(listQ.data?.list ?? []).map((v: any) => (
                 <tr key={v.id} style={{ borderTop: "1px solid #f0f0f0" }}>
                   <td style={{ padding: "10px 12px", fontWeight: 500 }}>{v.name}</td>
-                  <td style={{ padding: "10px 12px" }}>{v.logo_url ? "🖼️ 已设置" : "—"}</td>
+                  <td style={{ padding: "10px 12px" }}>{v.logo_url ? "已设置" : "—"}</td>
                   <td style={{ padding: "10px 12px" }}>
-                    {v.credit_rating === "AAA" ? "🌟 AAA" : v.credit_rating === "AA" ? "⭐ AA" : v.credit_rating || "—"}
+                    {v.credit_rating === "AAA" ? "AAA" : v.credit_rating === "AA" ? "AA" : v.credit_rating || "—"}
                   </td>
-                  <td style={{ padding: "10px 12px" }}>{v.is_recommended ? "✅ 推荐" : "—"}</td>
+                  <td style={{ padding: "10px 12px" }}>{v.is_recommended ? "推荐" : "—"}</td>
                   <td style={{ padding: "10px 12px" }}>
                     <button style={{ ...btnBase, background: "#fff", border: "1px solid #ddd", fontSize: 12 }}
                       onClick={() => setEditItem(v)}>编辑</button>
@@ -95,7 +96,7 @@ export default function AdminVendorProfilesPage() {
               <input type="checkbox" checked={!!editItem.is_recommended} onChange={e => setEditItem({ ...editItem, is_recommended: e.target.checked })} />
               推荐标记
             </label>
-            <button style={{ ...btnBase, background: "#4f6ef7", color: "#fff", marginTop: 8 }}
+            <button style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", marginTop: 8 }}
               onClick={() => saveMut.mutate(editItem)}>保存</button>
           </div>
         </Modal>

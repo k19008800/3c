@@ -274,13 +274,13 @@ export default function AdminDataExportGrantPage() {
         key: "email",
         title: "用户邮箱",
         dataIndex: "email",
-        render: (v) => <span style={{ color: "#333", fontWeight: 500 }}>{String(v)}</span>,
+        render: (v) => <span style={{ color: "var(--color-text)", fontWeight: 500 }}>{String(v)}</span>,
       },
       {
         key: "name",
         title: "姓名",
         dataIndex: "name",
-        render: (v) => (v ? String(v) : <span style={{ color: "#bbb" }}>-</span>),
+        render: (v) => (v ? String(v) : <span style={{ color: "var(--color-text-muted)" }}>-</span>),
       },
       {
         key: "isEnabled",
@@ -297,14 +297,14 @@ export default function AdminDataExportGrantPage() {
         key: "grantedByName",
         title: "授权人",
         dataIndex: "grantedByName",
-        render: (v) => (v ? String(v) : <span style={{ color: "#bbb" }}>-</span>),
+        render: (v) => (v ? String(v) : <span style={{ color: "var(--color-text-muted)" }}>-</span>),
       },
       {
         key: "grantedAt",
         title: "授权时间",
         dataIndex: "grantedAt",
         render: (v) => (
-          <span style={{ color: "#888", fontSize: 12 }}>{fmtTime(v as string | null)}</span>
+          <span style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>{fmtTime(v as string | null)}</span>
         ),
       },
       {
@@ -312,14 +312,14 @@ export default function AdminDataExportGrantPage() {
         title: "停用时间",
         dataIndex: "disabledAt",
         render: (v) => (
-          <span style={{ color: "#888", fontSize: 12 }}>{fmtTime(v as string | null)}</span>
+          <span style={{ color: "var(--color-text-secondary)", fontSize: 12 }}>{fmtTime(v as string | null)}</span>
         ),
       },
       {
         key: "remark",
         title: "备注",
         dataIndex: "remark",
-        render: (v) => (v ? String(v) : <span style={{ color: "#bbb" }}>-</span>),
+        render: (v) => (v ? String(v) : <span style={{ color: "var(--color-text-muted)" }}>-</span>),
       },
       {
         key: "actions",
@@ -365,7 +365,7 @@ export default function AdminDataExportGrantPage() {
                 <HelpIcon text={HELP.delete} />
               </>
             )}
-            {!canEdit && <span style={{ color: "#bbb", fontSize: 12 }}>—</span>}
+            {!canEdit && <span style={{ color: "var(--color-text-muted)", fontSize: 12 }}>—</span>}
           </div>
         ),
       },
@@ -381,7 +381,7 @@ export default function AdminDataExportGrantPage() {
       <PageHeader title="数据导出授权管理" help={PAGE_HELP} />
 
       <Panel
-        title="📦 数据导出授权"
+        title=" 数据导出授权"
         help={PAGE_HELP}
         extra={
           <>
@@ -409,7 +409,7 @@ export default function AdminDataExportGrantPage() {
         {/* 工具栏：状态筛选 / 搜索 / 刷新（各按钮级帮助） */}
         <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 13, color: "#666" }}>授权状态</span>
+            <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>授权状态</span>
             <HelpIcon text={HELP.statusFilter} />
             <select
               value={status}
@@ -417,7 +417,7 @@ export default function AdminDataExportGrantPage() {
                 setStatus(e.target.value as StatusFilter);
                 setPage(1);
               }}
-              style={{ padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 6, fontSize: 13, background: "#fff", color: "#333" }}
+              style={{ padding: "6px 10px", border: "1px solid var(--color-border)", borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--color-text)" }}
               aria-label="授权状态筛选"
             >
               <option value="enabled">仅启用</option>
@@ -453,7 +453,7 @@ export default function AdminDataExportGrantPage() {
           <SkeletonGroup lines={6} />
         ) : grants.length === 0 ? (
           <EmptyState
-            icon="📦"
+            icon=""
             title={hasActiveFilter ? "无匹配的授权记录" : "暂无授权用户"}
             description={
               hasActiveFilter
@@ -482,7 +482,7 @@ export default function AdminDataExportGrantPage() {
           <>
             <Table columns={columns} dataSource={grants} rowKey="userId" />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, flexWrap: "wrap", gap: 8 }}>
-              <span style={{ fontSize: 12, color: "#888" }}>
+              <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
                 共 {total} 条授权记录
                 <HelpIcon text={HELP.pagination} />
               </span>
@@ -509,7 +509,7 @@ export default function AdminDataExportGrantPage() {
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
-            <label style={{ fontSize: 13, color: "#666", display: "block", marginBottom: 6 }}>
+            <label style={{ fontSize: 13, color: "var(--color-text-secondary)", display: "block", marginBottom: 6 }}>
               搜索用户（按邮箱或姓名）
               <HelpIcon text={HELP.create} />
             </label>
@@ -528,7 +528,7 @@ export default function AdminDataExportGrantPage() {
           {candidatesQ.isLoading ? (
             <SkeletonGroup lines={3} />
           ) : (candidatesQ.data?.list?.length ?? 0) === 0 ? (
-            <EmptyState icon="🔍" title="未找到用户" description="请尝试其他邮箱或姓名关键词" />
+            <EmptyState icon="" title="未找到用户" description="请尝试其他邮箱或姓名关键词" />
           ) : (
             <>
               <div style={{ border: "1px solid var(--color-border)", borderRadius: 8, overflow: "hidden" }}>
@@ -544,17 +544,17 @@ export default function AdminDataExportGrantPage() {
                         alignItems: "center",
                         gap: 10,
                         cursor: "pointer",
-                        background: isSelected ? "#eef2ff" : "#fff",
-                        borderBottom: "1px solid #f5f5f5",
+                        background: isSelected ? "var(--color-row-selected)" : "#fff",
+                        borderBottom: "1px solid var(--color-divider)",
                       }}
                     >
-                      <span style={{ width: 16, textAlign: "center", color: "#4f6ef7" }}>
+                      <span style={{ width: 16, textAlign: "center", color: "var(--color-primary)" }}>
                         {isSelected ? "●" : "○"}
                       </span>
-                      <span style={{ flex: 1, fontWeight: isSelected ? 600 : 400, color: "#333" }}>
+                      <span style={{ flex: 1, fontWeight: isSelected ? 600 : 400, color: "var(--color-text)" }}>
                         {c.email}
                       </span>
-                      <span style={{ color: "#888", fontSize: 13 }}>{c.name ?? "-"}</span>
+                      <span style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>{c.name ?? "-"}</span>
                     </div>
                   );
                 })}
@@ -573,7 +573,7 @@ export default function AdminDataExportGrantPage() {
 
           {/* 备注 */}
           <div>
-            <label style={{ fontSize: 13, color: "#666", display: "block", marginBottom: 6 }}>
+            <label style={{ fontSize: 13, color: "var(--color-text-secondary)", display: "block", marginBottom: 6 }}>
               授权备注（可选，≤500 字）
               <HelpIcon text="填写授权原因或适用场景，便于审计追溯" />
             </label>
@@ -619,17 +619,17 @@ export default function AdminDataExportGrantPage() {
       >
         {toggleTarget && (
           <div>
-            <div style={{ marginBottom: 12, fontSize: 13, color: "#666" }}>
+            <div style={{ marginBottom: 12, fontSize: 13, color: "var(--color-text-secondary)" }}>
               <div style={{ marginBottom: 4 }}>
-                用户：<span style={{ color: "#333", fontWeight: 500 }}>{toggleTarget.email}</span>
+                用户：<span style={{ color: "var(--color-text)", fontWeight: 500 }}>{toggleTarget.email}</span>
                 {toggleTarget.name ? `（${toggleTarget.name}）` : ""}
               </div>
               <div style={{ marginBottom: 4 }}>当前授权状态：{toggleTarget.isEnabled ? "启用" : "停用"}</div>
             </div>
             <div
               style={{
-                background: toggleTarget.isEnabled ? "#fff8e1" : "#f0fdf4",
-                border: `1px solid ${toggleTarget.isEnabled ? "#ffe082" : "#86efac"}`,
+                background: toggleTarget.isEnabled ? "#fff8e1" : "var(--color-success-bg)",
+                border: `1px solid ${toggleTarget.isEnabled ? "#ffe082" : "var(--color-success-border)"}`,
                 borderRadius: 8,
                 padding: "10px 14px",
                 fontSize: 13,

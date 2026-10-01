@@ -70,10 +70,10 @@ export default function AdminSecurityIncidentPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>🛡️ 安全事件列表 <HelpIcon text="security_incident" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>️ 安全事件列表 <HelpIcon text="security_incident" /></div>
         {listQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead><tr style={{ background: "#f8f9fa" }}>
+            <thead><tr style={{ background: "var(--color-table-header-bg)" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>ID</th>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>时间</th>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>事件类型</th>
@@ -85,9 +85,9 @@ export default function AdminSecurityIncidentPage() {
             </tr></thead>
             <tbody>
               {list.map((inc: IncidentRow) => (
-                <tr key={inc.id} style={{ borderTop: "1px solid #f0f0f0" }}>
-                  <td style={{ padding: "10px 12px", color: "#888" }}>#{inc.id}</td>
-                  <td style={{ padding: "10px 12px", color: "#888", fontSize: 12 }}>{inc.created_at?.slice(0, 19).replace("T", " ")}</td>
+                <tr key={inc.id} style={{ borderTop: "1px solid var(--color-divider)" }}>
+                  <td style={{ padding: "10px 12px", color: "var(--color-text-secondary)" }}>#{inc.id}</td>
+                  <td style={{ padding: "10px 12px", color: "var(--color-text-secondary)", fontSize: 12 }}>{inc.created_at?.slice(0, 19).replace("T", " ")}</td>
                   <td style={{ padding: "10px 12px" }}>{inc.incident_type}</td>
                   <td style={{ padding: "10px 12px" }}>
                     <StatusBadge status={inc.severity === "critical" ? "danger" : inc.severity === "high" ? "warning" : "info"}>
@@ -100,15 +100,15 @@ export default function AdminSecurityIncidentPage() {
                       {({ open: "待处理", resolved: "已解决", ignored: "已忽略" } as Record<string, string>)[inc.status] ?? inc.status}
                     </StatusBadge>
                   </td>
-                  <td style={{ padding: "10px 12px", color: "#888" }}>{inc.handler ?? "—"}</td>
+                  <td style={{ padding: "10px 12px", color: "var(--color-text-secondary)" }}>{inc.handler ?? "—"}</td>
                   <td style={{ padding: "10px 12px", display: "flex", gap: 4 }}>
-                    <button style={{ ...btnBase, background: "#fff", border: "1px solid #ddd", fontSize: 12 }}
+                    <button style={{ ...btnBase, background: "#fff", border: "1px solid var(--color-border)", fontSize: 12 }}
                       onClick={() => setDetail(inc)}>查看</button>
                     {inc.status === "open" && (
                       <>
-                        <button style={{ ...btnBase, background: "#22c55e", color: "#fff", fontSize: 12 }}
+                        <button style={{ ...btnBase, background: "var(--color-success-text)", color: "#fff", fontSize: 12 }}
                           onClick={() => handleMut.mutate({ id: inc.id, op: "resolve" })}>解决</button>
-                        <button style={{ ...btnBase, background: "#f59e0b", color: "#fff", fontSize: 12 }}
+                        <button style={{ ...btnBase, background: "var(--color-warning-text)", color: "#fff", fontSize: 12 }}
                           onClick={() => handleMut.mutate({ id: inc.id, op: "ignore" })}>忽略</button>
                       </>
                     )}
@@ -116,7 +116,7 @@ export default function AdminSecurityIncidentPage() {
                 </tr>
               ))}
               {list.length === 0 && !listQ.isLoading && (
-                <tr><td colSpan={8} style={{ padding: 40, textAlign: "center", color: "#888" }}>暂无安全事件</td></tr>
+                <tr><td colSpan={8} style={{ padding: 40, textAlign: "center", color: "var(--color-text-secondary)" }}>暂无安全事件</td></tr>
               )}
             </tbody>
           </table>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { PageHeader, HelpIcon, SkeletonGroup } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 /* ───────── 样式 ───────── */
 
@@ -109,10 +110,10 @@ export default function AdminCustomerSuccessPage() {
         {/* ── 统计卡 ── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 20 }}>
           {[
-            { icon: "⭐", label: "追踪中大客户数", value: data.tracked_count, sub: "较上周 ↑ 5", color: "#4f6ef7" },
-            { icon: "⚠️", label: "即将耗尽余额客户数", value: data.low_balance_count, sub: "较上周 ↑ 3", color: "#e53935" },
-            { icon: "📉", label: "消费下降客户数", value: data.declining_count, sub: "较上周 ↑ 8", color: "#f59e0b" },
-            { icon: "💰", label: "本月续费率", value: `${data.renewal_rate}%`, sub: "较上月 ↑ 2.3%", color: "#22c55e" },
+            { icon: <PIcon name="star" size={20}/>, label: "追踪中大客户数", value: data.tracked_count, sub: "较上周 ↑ 5", color: "var(--color-primary)" },
+            { icon: <PIcon name="alert" size={20}/>, label: "即将耗尽余额客户数", value: data.low_balance_count, sub: "较上周 ↑ 3", color: "#e53935" },
+            { icon: <PIcon name="trendDown" size={20}/>, label: "消费下降客户数", value: data.declining_count, sub: "较上周 ↑ 8", color: "#f59e0b" },
+            { icon: <PIcon name="coin" size={20}/>, label: "本月续费率", value: `${data.renewal_rate}%`, sub: "较上月 ↑ 2.3%", color: "#22c55e" },
           ].map((s, i) => (
             <div key={i} style={{ ...card, borderLeft: `4px solid ${s.color}` }}>
               <div style={{ fontSize: 24 }}>{s.icon}</div>
@@ -127,7 +128,7 @@ export default function AdminCustomerSuccessPage() {
         <div style={{ ...card, marginBottom: 20, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           {["today", "yesterday", "week", "month"].map(p => (
             <button key={p} style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid var(--color-border)",
-              background: period === p ? "#4f6ef7" : "#fff", color: period === p ? "#fff" : "#333", cursor: "pointer", fontSize: 12 }}
+              background: period === p ? "var(--color-primary)" : "#fff", color: period === p ? "#fff" : "#333", cursor: "pointer", fontSize: 12 }}
               onClick={() => setPeriod(p)}>
               {{ today: "今日", yesterday: "昨日", week: "本周", month: "本月" }[p]}
             </button>
@@ -142,14 +143,14 @@ export default function AdminCustomerSuccessPage() {
           </select>
           <input style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", flex: 1, minWidth: 160, fontSize: 12 }}
             placeholder="客户邮箱" value={keyword} onChange={e => setKeyword(e.target.value)} />
-          {data.demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/customer-success 待接入）</span>}
+          {data.demo && <span style={{ fontSize: 11, color: "#f59e0b" }}><PIcon name="alert" size={14}/> 演示数据（后端 /admin/customer-success 待接入）</span>}
         </div>
 
         {q.isLoading && !q.data ? <SkeletonGroup lines={6} /> : (
           <>
             {/* ── 大客户 Top 20 ── */}
             <div style={card}>
-              <div style={{ fontWeight: 600, marginBottom: 12 }}>🏆 大客户 Top {data.top.length} 看板 <HelpIcon text="customer_success" /></div>
+              <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="trophy" size={14}/> 大客户 Top {data.top.length} 看板 <HelpIcon text="customer_success" /></div>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead><tr style={{ background: "#f8f9fa" }}>
                   <th style={{ padding: "10px 12px", textAlign: "left" }}>排名</th>
@@ -166,7 +167,7 @@ export default function AdminCustomerSuccessPage() {
                     <tr key={c.rank} style={{ borderTop: "1px solid #f0f0f0" }}>
                       <td style={{ padding: "10px 12px" }}>
                         <span style={{ display: "inline-flex", width: 22, height: 22, borderRadius: 6, alignItems: "center", justifyContent: "center",
-                          background: c.rank <= 3 ? "#4f6ef7" : "#eef2ff", color: c.rank <= 3 ? "#fff" : "#4f6ef7", fontWeight: 700, fontSize: 12 }}>{c.rank}</span>
+                          background: c.rank <= 3 ? "var(--color-primary)" : "var(--color-primary-light)", color: c.rank <= 3 ? "#fff" : "var(--color-primary)", fontWeight: 700, fontSize: 12 }}>{c.rank}</span>
                       </td>
                       <td style={{ padding: "10px 12px", fontWeight: 500 }}>{c.email}</td>
                       <td style={{ padding: "10px 12px", fontWeight: 600, color: c.balance <= 0 ? "#e53935" : "#333" }}>{fmtMoney(c.balance)}</td>
@@ -196,7 +197,7 @@ export default function AdminCustomerSuccessPage() {
             {/* ── 余额预警 + 消费下降 ── */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, margin: "20px 0" }}>
               <div style={card}>
-                <div style={{ fontWeight: 600, marginBottom: 12 }}>⚠️ 余额预警列表 <HelpIcon text="customer_success" /></div>
+                <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="alert" size={14}/> 余额预警列表 <HelpIcon text="customer_success" /></div>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead><tr style={{ background: "#f8f9fa" }}>
                     <th style={{ padding: "8px 10px", textAlign: "left" }}>客户</th>
@@ -212,14 +213,14 @@ export default function AdminCustomerSuccessPage() {
                         <td style={{ padding: "8px 10px", fontWeight: 700, color: a.balance <= 0 ? "#e53935" : "#f59e0b" }}>{fmtMoney(a.balance)}</td>
                         <td style={{ padding: "8px 10px" }}>{fmtMoney(a.avg_daily_cost)}</td>
                         <td style={{ padding: "8px 10px", color: "#888" }}>{a.exhaustion_estimate}</td>
-                        <td style={{ padding: "8px 10px" }}><button style={{ ...btnBase, background: "#4f6ef7", color: "#fff", fontSize: 11 }}>提醒</button></td>
+                        <td style={{ padding: "8px 10px" }}><button style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", fontSize: 11 }}>提醒</button></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
               <div style={card}>
-                <div style={{ fontWeight: 600, marginBottom: 12 }}>📉 消费下降趋势 <HelpIcon text="customer_success" /></div>
+                <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="trendDown" size={14}/> 消费下降趋势 <HelpIcon text="customer_success" /></div>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead><tr style={{ background: "#f8f9fa" }}>
                     <th style={{ padding: "8px 10px", textAlign: "left" }}>客户</th>
@@ -250,7 +251,7 @@ export default function AdminCustomerSuccessPage() {
 
             {/* ── Top 5 大客户近30天消费趋势 ── */}
             <div style={card}>
-              <div style={{ fontWeight: 600, marginBottom: 12 }}>📈 Top {data.trends.length} 大客户近30天消费趋势 <HelpIcon text="customer_success" /></div>
+              <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="trendUp" size={14}/> Top {data.trends.length} 大客户近30天消费趋势 <HelpIcon text="customer_success" /></div>
               {data.trends.map(t => {
                 const max = Math.max(...t.days, 1);
                 return (
@@ -261,7 +262,7 @@ export default function AdminCustomerSuccessPage() {
                     </div>
                     <div style={{ display: "flex", gap: 2, height: 28, alignItems: "flex-end" }}>
                       {t.days.map((d, i) => (
-                        <div key={i} style={{ flex: 1, background: "#4f6ef7", borderRadius: "2px 2px 0 0", opacity: 0.25 + 0.75 * (d / max), height: `${(d / max) * 100}%`, minHeight: d > 0 ? 3 : 1 }}
+                        <div key={i} style={{ flex: 1, background: "var(--color-primary)", borderRadius: "2px 2px 0 0", opacity: 0.25 + 0.75 * (d / max), height: `${(d / max) * 100}%`, minHeight: d > 0 ? 3 : 1 }}
                           title={`Day ${i + 1}: ¥${d}`} />
                       ))}
                     </div>

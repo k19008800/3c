@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { useAuthStore } from "../store/auth";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
+import "./auth.css";
 
 /**
  * 第三方登录绑定 — GitHub OAuth 真实对接
@@ -31,12 +32,24 @@ interface GitHubCallbackUser {
 }
 
 /** 平台列表：available=false 表示后端未实现，UI 置灰"即将上线" */
-const PROVIDERS: Array<{ provider: string; name: string; icon: string; available: boolean }> = [
-  { provider: "github", name: "GitHub", icon: "🐙", available: true },
-  { provider: "wechat", name: "微信", icon: "💬", available: false },
-  { provider: "telegram", name: "Telegram", icon: "✈️", available: false },
-  { provider: "google", name: "Google", icon: "🔵", available: false },
+const PROVIDERS: Array<{ provider: string; name: string; available: boolean }> = [
+  { provider: "github", name: "GitHub", available: true },
+  { provider: "wechat", name: "微信", available: false },
+  { provider: "telegram", name: "Telegram", available: false },
+  { provider: "google", name: "Google", available: false },
 ];
+
+/* 第三方平台 SVG 图标（替代 emoji） */
+function ProviderIcon({ provider, active }: { provider: string; active: boolean }) {
+  const props = { width: 22, height: 22, viewBox: "0 0 24 24", fill: active ? "var(--color-primary)" : "var(--color-text-muted)", "aria-hidden": true } as const;
+  if (provider === "github")
+    return (<svg {...props}><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-2.17c-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.75 2.7 1.25 3.36.95.1-.74.4-1.25.73-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.18-3.09-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.59.23 2.76.11 3.05.73.81 1.18 1.83 1.18 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.05.77 2.12v3.14c0 .3.2.67.8.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z" /></svg>);
+  if (provider === "wechat")
+    return (<svg {...props}><path d="M9.5 4C5.36 4 2 6.9 2 10.47c0 2.04 1.1 3.86 2.83 5.03l-.7 2.1 2.45-1.23c.65.18 1.34.28 2.05.3a5.4 5.4 0 0 1-.2-1.46c0-3.13 2.98-5.66 6.66-5.66.24 0 .47.01.7.03C15.1 6.2 12.56 4 9.5 4ZM7.2 8.6a.9.9 0 1 1 0-1.8.9.9 0 0 1 0 1.8Zm4.6 0a.9.9 0 1 1 0-1.8.9.9 0 0 1 0 1.8ZM15.6 10.6c-3.2 0-5.8 2.18-5.8 4.87 0 2.68 2.6 4.86 5.8 4.86.63 0 1.24-.09 1.8-.26l2.13 1.07-.6-1.82c1.43-.98 2.37-2.5 2.37-4.19 0-2.69-2.6-4.86-5.7-4.86Zm-1.9 2.7a.8.8 0 1 1 0-1.6.8.8 0 0 1 0 1.6Zm3.7 0a.8.8 0 1 1 0-1.6.8.8 0 0 1 0 1.6Z" /></svg>);
+  if (provider === "telegram")
+    return (<svg {...props}><path d="M21.9 4.3 19.1 19.1c-.2 1-.8 1.2-1.6.8l-4.5-3.3-2.1 2.1c-.2.2-.4.4-.9.4l.3-4.6 8.4-7.6c.4-.3-.1-.5-.6-.2L6.2 13.2 1.7 11.8c-1-.3-1-1 .2-1.4l17.6-6.8c.8-.3 1.5.2 1.4.7Z" /></svg>);
+  return (<svg {...props}><path d="M21.6 12.23c0-.68-.06-1.36-.19-2H12v3.83h5.39a4.55 4.55 0 0 1-1.97 2.98v2.46h3.19c1.86-1.72 2.99-4.26 2.99-7.27Z" /><path d="M12 22c2.67 0 4.92-.89 6.56-2.43l-3.19-2.46c-.89.6-2.03.95-3.37.95-2.59 0-4.79-1.75-5.57-4.1H3.12v2.53A10 10 0 0 0 12 22Z" opacity=".85" /><path d="M6.43 13.96a6 6 0 0 1 0-3.92V7.5H3.12a10 10 0 0 0 0 9l3.31-2.54Z" opacity=".7" /></svg>);
+}
 
 const card: React.CSSProperties = {
   background: "var(--color-panel)", borderRadius: 12, marginBottom: 20,
@@ -130,8 +143,9 @@ export default function OAuthPage() {
   };
 
   return (
-    <div>
-      <h2 style={{ margin: "0 0 4px", display: "flex", alignItems: "center", gap: 8 }}>
+    <div className="auth-page" style={{ display: "block", padding: "40px 24px" }}>
+      <div style={{ maxWidth: 680, margin: "0 auto" }}>
+      <h2 style={{ margin: "0 0 4px", display: "flex", alignItems: "center", gap: 8, fontSize: 22, fontWeight: 700 }}>
         第三方登录绑定
         <HelpIcon text="绑定第三方账号后可使用对应平台快捷登录。当前支持 GitHub，微信 / Telegram / Google 即将上线。" level="page" />
       </h2>
@@ -141,11 +155,11 @@ export default function OAuthPage() {
 
       {/* 回调结果展示：后端回调返回的 user 直接展示 */}
       {callbackUser && (
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 8, background: "rgba(102,187,106,0.08)", border: "1px solid rgba(102,187,106,0.3)", marginBottom: 20, fontSize: 13 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 8, background: "var(--color-success-bg)", border: "1px solid var(--color-success-border)", marginBottom: 20, fontSize: 13, color: "var(--color-text)" }}>
           {callbackUser.avatarUrl ? (
             <img src={callbackUser.avatarUrl} alt="avatar" style={{ width: 36, height: 36, borderRadius: "50%" }} />
           ) : (
-            <span style={{ fontSize: 20 }}>🐙</span>
+            <ProviderIcon provider="github" active />
           )}
           <span>
             <strong>{callbackUser.name || callbackUser.email || `GitHub 用户 #${callbackUser.id}`}</strong> 已通过 GitHub 登录，账号已自动绑定，请前往控制台继续操作。
@@ -153,14 +167,14 @@ export default function OAuthPage() {
         </div>
       )}
       {callbackError && (
-        <div style={{ background: "#fff1f0", border: "1px solid #ffccc7", borderRadius: 6, padding: "10px 12px", fontSize: 13, color: "#cf1322", marginBottom: 20 }}>
-          ❌ {callbackError}
+        <div className="auth-alert" style={{ marginBottom: 20 }}>
+          <span>{callbackError}</span>
         </div>
       )}
 
       {/* Info Banner */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 8, background: "var(--color-primary-light)", border: "1px solid rgba(79,110,247,0.2)", marginBottom: 20, fontSize: 13, color: "var(--color-text)" }}>
-        <span style={{ fontSize: 18 }}>🔒</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 8, background: "var(--color-info-bg)", border: "1px solid var(--color-info-border)", marginBottom: 20, fontSize: 13, color: "var(--color-text)" }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-info-text)" strokeWidth="1.8" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
         <span>绑定第三方账号后，您可以使用对应平台一键登录，无需每次输入密码。</span>
       </div>
 
@@ -185,10 +199,10 @@ export default function OAuthPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                 <div style={{
                   width: 44, height: 44, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 22, background: p.available ? "var(--color-primary-light)" : "var(--color-divider-light)",
+                  background: p.available ? "var(--color-primary-light)" : "var(--color-divider-light)",
                   transition: "background .2s",
                 }}>
-                  {p.icon}
+                  <ProviderIcon provider={p.provider} active={p.available} />
                 </div>
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 500, color: "var(--color-text)", marginBottom: 2 }}>
@@ -212,11 +226,11 @@ export default function OAuthPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{
                   display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 12, fontSize: 12,
-                  background: p.available ? "rgba(102,187,106,0.1)" : "var(--color-divider-light)",
-                  color: p.available ? "#66bb6a" : "var(--color-text-secondary)",
-                  border: `1px solid ${p.available ? "rgba(102,187,106,0.3)" : "var(--color-border)"}`,
+                  background: p.available ? "var(--color-success-bg)" : "var(--color-divider-light)",
+                  color: p.available ? "var(--color-success-text)" : "var(--color-text-secondary)",
+                  border: `1px solid ${p.available ? "var(--color-success-border)" : "var(--color-border)"}`,
                 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: p.available ? "#66bb6a" : "#ccc" }} />
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: p.available ? "var(--color-success-text)" : "var(--color-text-disabled)" }} />
                   {p.available ? "支持" : "即将上线"}
                 </span>
                 {p.available ? (
@@ -286,8 +300,9 @@ export default function OAuthPage() {
       </div>
 
       {/* 后端能力说明 */}
-      <div style={{ background: "var(--color-warning-bg)", padding: 14, borderRadius: 8, border: "1px solid var(--color-warning-border)", fontSize: 13, color: "var(--color-warning-text)", marginTop: 16 }}>
-        💡 当前后端仅实现 GitHub 登录（/auth/oauth/github/url + callback）。绑定列表 / 绑定 / 解绑端点（/auth/oauth/bindings 等）待后端补充后，本页将开放绑定管理。
+      <div style={{ background: "var(--color-warning-bg)", padding: 14, borderRadius: 8, border: "1px solid var(--color-warning-border)", fontSize: 13, color: "var(--color-warning-text)", marginTop: 16, lineHeight: 1.6 }}>
+        当前后端仅实现 GitHub 登录（/auth/oauth/github/url + callback）。绑定列表 / 绑定 / 解绑端点（/auth/oauth/bindings 等）待后端补充后，本页将开放绑定管理。
+      </div>
       </div>
     </div>
   );

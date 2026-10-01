@@ -4,6 +4,7 @@ import { api, extractError } from "../../lib/api";
 import { withOperation2fa, isOperation2faCanceled, operation2faErrorText, operation2faHeaders } from "../../lib/operation-2fa";
 import type { OperationSummaryItem } from "../../components/Operation2faModal";
 import { HelpIcon, StatusBadge, SkeletonGroup, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
@@ -59,7 +60,7 @@ export default function AdminReconciliationDiffPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>🔍 对账差异列表 <HelpIcon text="reconciliation_diff" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="search" size={14}/> 对账差异列表 <HelpIcon text="reconciliation_diff" /></div>
         {diffQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { vendorApi } from "../../lib/vendor-api";
+import "../console-misc.css";
 
 interface VendorModel {
   id: number; model_id: number; model_name: string; display_name: string | null; category: string | null;
@@ -8,9 +9,9 @@ interface VendorModel {
   is_enabled: boolean; health_score: number | null;
 }
 
-const card = { background: "#fff", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
-const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
-const inp: React.CSSProperties = { padding: "8px 12px", borderRadius: 8, border: "1px solid #cbd5e1", width: "100%", boxSizing: "border-box", marginBottom: 10, fontFamily: "inherit" };
+const card = { background: "var(--color-panel)", border: "1px solid var(--color-divider)", padding: 20, borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-card)" };
+const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: "var(--radius-md)", border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
+const inp: React.CSSProperties = { padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)", width: "100%", boxSizing: "border-box", marginBottom: 10, fontFamily: "inherit" };
 
 export default function VendorModelsPage() {
   const qc = useQueryClient();
@@ -37,27 +38,27 @@ export default function VendorModelsPage() {
   });
 
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif" }}>
-      <h2 style={{ marginBottom: 20 }}>模型管理</h2>
+    <div>
+      <h2 style={{ marginBottom: 20, color: "var(--color-text)" }}>模型管理</h2>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-        <button onClick={() => setAddOpen(true)} style={{ ...btnBase, background: "#0ea5e9", color: "#fff" }}>+ 新增模型</button>
+        <button onClick={() => setAddOpen(true)} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff" }}>+ 新增模型</button>
       </div>
 
       <div style={card}>
-        {listQ.isLoading ? <div style={{ color: "#94a3b8" }}>加载中...</div> : (listQ.data?.length ?? 0) === 0 ? <div style={{ color: "#94a3b8", padding: 30, textAlign: "center" }}>暂无关联模型</div> : (
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-            <thead><tr style={{ color: "#64748b", textAlign: "left" }}><th style={{ padding: "8px" }}>平台模型</th><th style={{ padding: "8px" }}>供应商模型名</th><th style={{ padding: "8px" }}>输入价</th><th style={{ padding: "8px" }}>输出价</th><th style={{ padding: "8px" }}>权重</th><th style={{ padding: "8px" }}>状态</th><th style={{ padding: "8px" }}>操作</th></tr></thead>
+        {listQ.isLoading ? <div style={{ color: "var(--color-text-muted)" }}>加载中...</div> : (listQ.data?.length ?? 0) === 0 ? <div style={{ color: "var(--color-text-muted)", padding: 30, textAlign: "center" }}>暂无关联模型</div> : (
+          <table className="cm-table">
+            <thead><tr><th>平台模型</th><th>供应商模型名</th><th className="num">输入价</th><th className="num">输出价</th><th className="num">权重</th><th style={{textAlign:"center"}}>状态</th><th>操作</th></tr></thead>
             <tbody>
               {listQ.data?.map((m) => (
-                <tr key={m.id} style={{ borderTop: "1px solid #f1f5f9" }}>
-                  <td style={{ padding: "8px", fontWeight: 600 }}>{m.model_name}{m.display_name ? ` (${m.display_name})` : ""}</td>
-                  <td style={{ padding: "8px", fontFamily: "monospace", fontSize: 12 }}>{m.upstream_model}</td>
-                  <td style={{ padding: "8px" }}>¥{Number(m.cost_input_price).toFixed(6)}</td>
-                  <td style={{ padding: "8px" }}>¥{Number(m.cost_output_price).toFixed(6)}</td>
-                  <td style={{ padding: "8px" }}>{m.weight}</td>
-                  <td style={{ padding: "8px" }}><span style={{ padding: "2px 10px", borderRadius: 6, fontSize: 12, background: m.is_enabled ? "#dcfce7" : "#f1f5f9", color: m.is_enabled ? "#166534" : "#94a3b8" }}>{m.is_enabled ? "启用" : "停用"}</span></td>
-                  <td style={{ padding: "8px" }}>
-                    <button onClick={() => { setEdit(m); setEditForm({ cost_input_price: String(Number(m.cost_input_price)), cost_output_price: String(Number(m.cost_output_price)), weight: String(m.weight) }); }} style={{ ...btnBase, background: "#f1f5f9", color: "#334155", padding: "4px 10px" }}>编辑</button>
+                <tr key={m.id}>
+                  <td style={{ fontWeight: 600 }}>{m.model_name}{m.display_name ? ` (${m.display_name})` : ""}</td>
+                  <td style={{ fontFamily: "var(--font-family-mono)", fontSize: 12 }}>{m.upstream_model}</td>
+                  <td className="num">¥{Number(m.cost_input_price).toFixed(6)}</td>
+                  <td className="num">¥{Number(m.cost_output_price).toFixed(6)}</td>
+                  <td className="num">{m.weight}</td>
+                  <td style={{ textAlign: "center" }}><span style={{ padding: "2px 10px", borderRadius: "var(--radius-pill)", fontSize: 12, background: m.is_enabled ? "var(--color-success-bg)" : "var(--color-disabled-bg)", color: m.is_enabled ? "var(--color-success-text)" : "var(--color-text-muted)" }}>{m.is_enabled ? "启用" : "停用"}</span></td>
+                  <td>
+                    <button onClick={() => { setEdit(m); setEditForm({ cost_input_price: String(Number(m.cost_input_price)), cost_output_price: String(Number(m.cost_output_price)), weight: String(m.weight) }); }} style={{ ...btnBase, background: "var(--color-divider-light)", color: "var(--color-text)", padding: "4px 10px" }}>编辑</button>
                   </td>
                 </tr>
               ))}
@@ -68,16 +69,16 @@ export default function VendorModelsPage() {
 
       {/* 新增模型弹窗 —— 简单模式：手动填平台模型 id */}
       {addOpen && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-          <div style={{ ...card, width: 420 }}>
-            <h3 style={{ marginBottom: 16 }}>新增模型</h3>
+        <div style={{ position: "fixed", inset: 0, background: "var(--color-modal-overlay)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: "var(--z-modal)" }}>
+          <div style={{ ...card, width: 420, maxWidth: "calc(100vw - 40px)" }}>
+            <h3 style={{ marginBottom: 16, color: "var(--color-text)" }}>新增模型</h3>
             <input value={addForm.model_id} onChange={(e) => setAddForm({ ...addForm, model_id: e.target.value })} placeholder="平台模型 ID（如 deepseek-chat=5）" type="number" style={inp} />
             <input value={addForm.upstream_model} onChange={(e) => setAddForm({ ...addForm, upstream_model: e.target.value })} placeholder="供应商侧模型名（路由映射用）*" style={inp} />
             <input value={addForm.cost_input_price} onChange={(e) => setAddForm({ ...addForm, cost_input_price: e.target.value })} placeholder="输入价格 ¥/1K tokens" type="number" step="0.000001" style={inp} />
             <input value={addForm.cost_output_price} onChange={(e) => setAddForm({ ...addForm, cost_output_price: e.target.value })} placeholder="输出价格 ¥/1K tokens" type="number" step="0.000001" style={inp} />
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button onClick={() => setAddOpen(false)} style={{ ...btnBase, background: "#f1f5f9", color: "#334155" }}>取消</button>
-              <button onClick={() => addMut.mutate()} disabled={!addForm.upstream_model || !addForm.model_id} style={{ ...btnBase, background: "#0ea5e9", color: "#fff" }}>添加</button>
+              <button onClick={() => setAddOpen(false)} style={{ ...btnBase, background: "var(--color-divider-light)", color: "var(--color-text)" }}>取消</button>
+              <button onClick={() => addMut.mutate()} disabled={!addForm.upstream_model || !addForm.model_id} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff" }}>添加</button>
             </div>
           </div>
         </div>
@@ -85,22 +86,22 @@ export default function VendorModelsPage() {
 
       {/* 编辑弹窗 */}
       {edit && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-          <div style={{ ...card, width: 420 }}>
-            <h3 style={{ marginBottom: 16 }}>编辑模型 · {edit.model_name}</h3>
+        <div style={{ position: "fixed", inset: 0, background: "var(--color-modal-overlay)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: "var(--z-modal)" }}>
+          <div style={{ ...card, width: 420, maxWidth: "calc(100vw - 40px)" }}>
+            <h3 style={{ marginBottom: 16, color: "var(--color-text)" }}>编辑模型 · {edit.model_name}</h3>
             <input value={editForm.cost_input_price} onChange={(e) => setEditForm({ ...editForm, cost_input_price: e.target.value })} placeholder="输入价格" type="number" step="0.000001" style={inp} />
             <input value={editForm.cost_output_price} onChange={(e) => setEditForm({ ...editForm, cost_output_price: e.target.value })} placeholder="输出价格" type="number" step="0.000001" style={inp} />
             <input value={editForm.weight} onChange={(e) => setEditForm({ ...editForm, weight: e.target.value })} placeholder="路由权重" type="number" style={inp} />
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button onClick={() => setEdit(null)} style={{ ...btnBase, background: "#f1f5f9", color: "#334155" }}>取消</button>
-              <button onClick={() => editMut.mutate()} style={{ ...btnBase, background: "#0ea5e9", color: "#fff" }}>保存</button>
+              <button onClick={() => setEdit(null)} style={{ ...btnBase, background: "var(--color-divider-light)", color: "var(--color-text)" }}>取消</button>
+              <button onClick={() => editMut.mutate()} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff" }}>保存</button>
             </div>
           </div>
         </div>
       )}
 
       {notice && (
-        <div style={{ position: "fixed", top: 16, right: 16, zIndex: 1100, padding: "12px 20px", borderRadius: 8, color: "#fff", background: notice.type === "success" ? "#16a34a" : "#dc2626", boxShadow: "0 4px 12px rgba(0,0,0,.15)" }}>
+        <div style={{ position: "fixed", top: 16, right: 16, zIndex: "var(--z-toast)", padding: "12px 20px", borderRadius: "var(--radius-md)", color: "#fff", background: notice.type === "success" ? "var(--color-success-text)" : "var(--color-danger-text)", boxShadow: "var(--shadow-toast)" }}>
           {notice.msg}<button onClick={() => setNotice(null)} style={{ marginLeft: 12, background: "none", border: "none", color: "#fff", cursor: "pointer" }}>✕</button>
         </div>
       )}

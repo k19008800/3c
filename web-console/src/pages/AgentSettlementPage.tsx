@@ -12,6 +12,7 @@ import {
   useToast,
 } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
+import "./console-misc.css";
 
 /**
  * 代理端 — 结算对账
@@ -172,7 +173,7 @@ export default function AgentSettlementPage() {
 
       {/* 统计卡片 — 对齐 agent-consumption.html stats-grid */}
       {stats && Object.keys(stats).length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
+        <div className="cm-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
           <StatCard label="待确认" value={stats.pending ?? 0} color="var(--color-warning-text)" subtitle="笔" />
           <StatCard label="已结算" value={stats.settled ?? 0} color="var(--color-success-text)" subtitle="笔" />
           <StatCard label="本月佣金" value={`¥${Number(stats.month_commission ?? 0).toFixed(2)}`} color="var(--color-primary)" subtitle="累计" />
@@ -193,7 +194,7 @@ export default function AgentSettlementPage() {
             style={{
               padding: "6px 16px", borderRadius: 6, border: "1px solid",
               borderColor: statusFilter === t.key ? "var(--color-primary)" : "var(--color-border)",
-              background: statusFilter === t.key ? "var(--color-primary)" : "#fff",
+              background: statusFilter === t.key ? "var(--color-primary)" : "var(--color-panel)",
               color: statusFilter === t.key ? "#fff" : "var(--color-text-secondary)",
               fontSize: 13, cursor: "pointer", transition: ".15s",
             }}
@@ -202,13 +203,13 @@ export default function AgentSettlementPage() {
           </button>
         ))}
         <button onClick={() => { setStatusFilter(""); setPage(1); }}
-          style={{ padding: "6px 14px", borderRadius: 6, border: "1px solid var(--color-border)", background: "#fff", fontSize: 12, cursor: "pointer", color: "var(--color-text-secondary)" }}>
+          style={{ padding: "6px 14px", borderRadius: 6, border: "1px solid var(--color-border)", background: "var(--color-panel)", fontSize: 12, cursor: "pointer", color: "var(--color-text-secondary)" }}>
           重置
         </button>
         <div style={{ marginLeft: "auto" }}>
           <button onClick={exportCSV}
-            style={{ height: 32, padding: "0 14px", borderRadius: 6, border: "1px solid var(--color-border)", background: "#fff", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-            📥 导出 CSV
+            style={{ height: 32, padding: "0 14px", borderRadius: 6, border: "1px solid var(--color-border)", background: "var(--color-panel)", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+            导出 CSV
           </button>
         </div>
       </div>
@@ -217,7 +218,7 @@ export default function AgentSettlementPage() {
       {isLoading && !data ? (
         <SkeletonGroup lines={5} />
       ) : list.length === 0 ? (
-        <EmptyState icon="📊" title="暂无结算数据" description="当前没有结算记录" />
+        <EmptyState title="暂无结算数据" description="当前没有结算记录" />
       ) : (
         <>
           <Table columns={settlementColumns} dataSource={list} loading={isLoading} emptyText="暂无数据" />
@@ -327,8 +328,8 @@ function StatCard({ label, value, subtitle, color }: {
 }) {
   return (
     <div style={{
-      background: "var(--color-panel)", borderRadius: "var(--radius-lg)",
-      padding: "14px 16px", boxShadow: "0 1px 4px rgba(0,0,0,.06)",
+      background: "var(--color-panel)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-divider)",
+      padding: "14px 16px", boxShadow: "var(--shadow-card)",
     }}>
       <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 4 }}>{label}</div>
       <div style={{ fontSize: 20, fontWeight: 600, color: color || "var(--color-text)" }}>{value}</div>
@@ -351,8 +352,8 @@ function actionLabel(action: string): string {
   return m[action] ?? action;
 }
 function actionColor(action: string): string {
-  const m: Record<string, string> = { generate: "#64748b", confirm: "#2563eb", auto_confirm: "#10b981", adjust: "#f59e0b" };
-  return m[action] ?? "#64748b";
+  const m: Record<string, string> = { generate: "var(--color-text-secondary)", confirm: "var(--color-info-text)", auto_confirm: "var(--color-success-text)", adjust: "var(--color-warning-text)" };
+  return m[action] ?? "var(--color-text-secondary)";
 }
 function statusLabel(s: string): string {
   const m: Record<string, string> = { open: "开启", closed: "已关账", settled: "已结算", pending: "待确认" };

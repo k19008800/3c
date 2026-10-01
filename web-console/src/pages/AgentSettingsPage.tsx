@@ -11,6 +11,7 @@ import {
   useToast,
 } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
+import "./console-misc.css";
 
 /* ============ 类型 ============ */
 interface AgentProfile {
@@ -64,7 +65,7 @@ interface ReportInfo {
 /* ============ 样式变量 ============ */
 const CARD: React.CSSProperties = {
   background: "var(--color-panel)", padding: 20,
-  borderRadius: "var(--radius-xl)", boxShadow: "0 1px 4px rgba(0,0,0,.06)",
+  borderRadius: "var(--radius-xl)", border: "1px solid var(--color-divider)", boxShadow: "var(--shadow-card)",
 };
 const BTN_PRIMARY: React.CSSProperties = {
   padding: "10px 20px", borderRadius: "var(--radius-lg)", border: "none",
@@ -304,9 +305,9 @@ export default function AgentSettingsPage() {
 
   /* ===== Tab 标题行 ===== */
   const tabs = [
-    { key: "overview" as const, label: "代理概览", icon: "📈" },
-    { key: "commission" as const, label: "佣金明细", icon: "💰" },
-    { key: "withdraw" as const, label: "提现管理", icon: "💳" },
+    { key: "overview" as const, label: "代理概览" },
+    { key: "commission" as const, label: "佣金明细" },
+    { key: "withdraw" as const, label: "提现管理" },
   ];
 
   return (
@@ -330,7 +331,7 @@ export default function AgentSettingsPage() {
               display: "flex", alignItems: "center", gap: 6, transition: "all .15s",
             }}
           >
-            {t.icon} {t.label}
+            {t.label}
           </button>
         ))}
       </div>
@@ -341,7 +342,7 @@ export default function AgentSettingsPage() {
       {activeTab === "overview" && (
         <>
           {/* 总览卡片 4 列 — 对齐 agent-dashboard.html */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
+          <div className="cm-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
             <StatCard
               label="名下客户数" value={`${sum?.customer_count ?? "-"}`}
               unit="个" hint="当前通过您注册的所有客户总数"
@@ -363,22 +364,21 @@ export default function AgentSettingsPage() {
           </div>
 
           {/* 快捷入口 */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
-            <QuickEntry icon="👥" label="查看客户列表" href="/sales/customers" hint="查看和管理您名下所有客户" />
-            <QuickEntry icon="💰" label="查看佣金明细" href="#" onClick={() => setActiveTab("commission")} hint="查看佣金明细和结算记录" />
-            <QuickEntry icon="💳" label="申请提现" href="#" onClick={() => setShowWithdrawModal(true)} hint="申请将佣金余额提现到您的银行账户" />
-            <QuickEntry icon="📊" label="消费追踪" href="/agent/settlement" hint="按时间维度追踪消费详情" />
+          <div className="cm-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
+            <QuickEntry label="查看客户列表" href="/sales/customers" hint="查看和管理您名下所有客户" />
+            <QuickEntry label="查看佣金明细" href="#" onClick={() => setActiveTab("commission")} hint="查看佣金明细和结算记录" />
+            <QuickEntry label="申请提现" href="#" onClick={() => setShowWithdrawModal(true)} hint="申请将佣金余额提现到您的银行账户" />
+            <QuickEntry label="消费追踪" href="/agent/settlement" hint="按时间维度追踪消费详情" />
           </div>
 
           {/* 代理信息 + 佣金汇总双列 */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+          <div className="cm-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
             {/* 代理信息卡 */}
             <div style={CARD}>
               <h3 style={{ marginBottom: 16, fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
                 代理信息 <HelpIcon text="查看您的代理等级、佣金比例和实名状态" level="button" />
               </h3>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-                <span style={{ fontSize: 28 }}>🛡️</span>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 18 }}>{prof?.level_label ?? "-"}</div>
                   <StatusBadge status={prof?.level === "senior" ? "warning" : prof?.level === "level1" ? "info" : "default"}>
@@ -424,7 +424,7 @@ export default function AgentSettingsPage() {
           </div>
 
           {/* 报备 + 通知偏好 */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div className="cm-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             {/* 报备目标客户 */}
             <div style={CARD}>
               <h3 style={{ marginBottom: 8, fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
@@ -513,7 +513,7 @@ export default function AgentSettingsPage() {
       {activeTab === "commission" && (
         <>
           {/* 佣金总览卡片 */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
+          <div className="cm-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
             <StatCard
               label="累计佣金" value={`¥${(sum?.commission_total ?? 0).toFixed(2)}`}
               hint="历史已结算总额" sub="累计"
@@ -540,7 +540,7 @@ export default function AgentSettingsPage() {
               marginBottom: 16, paddingBottom: 14, borderBottom: "1px solid var(--color-divider)",
             }}>
               <h3 style={{ fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
-                📋 佣金明细
+                佣金明细
                 <HelpIcon text="每笔客户消费产生的佣金记录，支持按时间和客户筛选" level="button" />
               </h3>
             </div>
@@ -571,7 +571,7 @@ export default function AgentSettingsPage() {
                 )) : null}
               </select>
               <button onClick={() => { setCommFilterCustomer(""); setCommTimeFilter("month"); }}
-                style={{ height: 32, padding: "0 14px", borderRadius: 6, border: "1px solid var(--color-border)", background: "#fff", fontSize: 12, cursor: "pointer" }}>
+                style={{ height: 32, padding: "0 14px", borderRadius: 6, border: "1px solid var(--color-border)", background: "var(--color-panel)", fontSize: 12, cursor: "pointer" }}>
                 重置
               </button>
               <button onClick={() => {
@@ -584,14 +584,14 @@ export default function AgentSettingsPage() {
                 link.download = `佣金明细_${new Date().toISOString().slice(0, 10)}.csv`;
                 link.click();
                 toast.success("CSV 已开始导出");
-              }} style={{ marginLeft: "auto", height: 32, padding: "0 14px", borderRadius: 6, border: "1px solid var(--color-border)", background: "#fff", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-                📥 导出 CSV
+              }} style={{ marginLeft: "auto", height: 32, padding: "0 14px", borderRadius: 6, border: "1px solid var(--color-border)", background: "var(--color-panel)", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                导出 CSV
               </button>
             </div>
 
             {/* 表格 */}
             {commissionsQ.isLoading ? <SkeletonGroup lines={5} /> : (commissionsQ.data?.list?.length ?? 0) === 0
-              ? <EmptyState icon="💰" title="暂无佣金记录" description="归属客户消费后产生佣金记录" />
+              ? <EmptyState title="暂无佣金记录" description="归属客户消费后产生佣金记录" />
               : <Table columns={commissionColumns} dataSource={commissionsQ.data?.list ?? []} loading={commissionsQ.isLoading} emptyText="暂无佣金记录" />
             }
           </div>
@@ -604,11 +604,10 @@ export default function AgentSettingsPage() {
       {activeTab === "withdraw" && (
         <>
           {/* 余额卡片 — 对齐 agent-withdraw.html balance-cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+          <div className="cm-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
             <div style={{
               ...CARD, textAlign: "center", position: "relative", overflow: "hidden",
             }}>
-              <span style={{ position: "absolute", right: 16, top: 16, fontSize: 28, opacity: .12 }}>💰</span>
               <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 8 }}>可提现余额</div>
               <div style={{ fontSize: 30, fontWeight: 700, color: "var(--color-primary)" }}>
                 ¥{(sum?.withdrawable ?? 0).toFixed(2)}
@@ -618,7 +617,6 @@ export default function AgentSettingsPage() {
             <div style={{
               ...CARD, textAlign: "center", position: "relative", overflow: "hidden",
             }}>
-              <span style={{ position: "absolute", right: 16, top: 16, fontSize: 28, opacity: .12 }}>⏳</span>
               <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 8 }}>审核中金额</div>
               <div style={{ fontSize: 30, fontWeight: 700, color: "var(--color-warning-text)" }}>
                 ¥{(sum?.pending ?? 0).toFixed(2)}
@@ -636,7 +634,7 @@ export default function AgentSettingsPage() {
               提现申请
               <HelpIcon text="提交提现申请，最低 ¥100，财务审核后打款至您填写的银行账户" level="button" />
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div className="cm-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 13, color: "var(--color-text)", marginBottom: 6 }}>
@@ -691,7 +689,7 @@ export default function AgentSettingsPage() {
               <HelpIcon text="提交提现申请后由财务审核，审核通过后打款至您填写的银行账户" level="button" />
             </div>
             <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 12, lineHeight: 1.6 }}>
-              ⚠️ 提现说明：提交后可提现余额将冻结对应金额，财务审核通过后 1-3 个工作日到账。审核驳回后金额将退回可提现余额，可重新申请。
+              提现说明：提交后可提现余额将冻结对应金额，财务审核通过后 1-3 个工作日到账。审核驳回后金额将退回可提现余额，可重新申请。
             </div>
           </div>
 
@@ -702,7 +700,7 @@ export default function AgentSettingsPage() {
               paddingBottom: 14, borderBottom: "1px solid var(--color-divider)", marginBottom: 16,
             }}>
               <h3 style={{ fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
-                📋 提现记录
+                提现记录
                 <HelpIcon text="查看所有提现申请记录，支持按状态筛选" level="button" />
               </h3>
               <div style={{ display: "flex", gap: 6 }}>
@@ -710,7 +708,7 @@ export default function AgentSettingsPage() {
                   <button key={s}
                     style={{
                       padding: "4px 12px", borderRadius: 6, border: "1px solid var(--color-border)",
-                      background: "#fff", fontSize: 12, cursor: "pointer",
+                      background: "var(--color-panel)", fontSize: 12, cursor: "pointer",
                     }}
                   >
                     {s === "all" ? "全部" : s === "processing" ? "审核中" : s === "completed" ? "已到账" : "已驳回"}
@@ -721,7 +719,7 @@ export default function AgentSettingsPage() {
 
             {withdrawalsQ.isLoading ? <SkeletonGroup lines={4} />
               : (withdrawalsQ.data?.list?.length ?? 0) === 0
-                ? <EmptyState icon="💳" title="暂无提现记录" description="您还没有提交过提现申请" />
+                ? <EmptyState title="暂无提现记录" description="您还没有提交过提现申请" />
                 : <Table columns={withdrawalColumns as any} dataSource={withdrawalsQ.data?.list as any ?? []}
                   loading={withdrawalsQ.isLoading} emptyText="暂无提现记录" />
             }
@@ -736,7 +734,7 @@ export default function AgentSettingsPage() {
         </div>
         <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
           <button onClick={() => setShowWithdrawModal(false)}
-            style={{ padding: "10px 24px", borderRadius: 8, border: "1px solid var(--color-border)", background: "#fff", cursor: "pointer" }}>
+            style={{ padding: "10px 24px", borderRadius: 8, border: "1px solid var(--color-border)", background: "var(--color-panel)", cursor: "pointer" }}>
             取消
           </button>
           <button
@@ -768,13 +766,13 @@ function StatCard({ label, value, unit, hint, trend, action, sub, onClick, href 
   };
   return (
     <div onClick={handleClick} style={{
-      background: "var(--color-panel)", borderRadius: "var(--radius-lg)",
-      padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,.06)",
+      background: "var(--color-panel)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-divider)",
+      padding: "16px 20px", boxShadow: "var(--shadow-card)",
       cursor: onClick || href ? "pointer" : "default",
       transition: "box-shadow .2s, transform .2s",
     }}
-      onMouseEnter={e => { if (onClick || href) { (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; } }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 4px rgba(0,0,0,.06)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
+      onMouseEnter={e => { if (onClick || href) { (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-hover)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; } }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-card)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
     >
       <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
         {label}
@@ -785,18 +783,18 @@ function StatCard({ label, value, unit, hint, trend, action, sub, onClick, href 
         {unit && <span style={{ fontSize: 14, color: "var(--color-text-secondary)", fontWeight: 400 }}> {unit}</span>}
       </div>
       {trend && (
-        <div style={{ fontSize: 11, fontWeight: 500, marginTop: 4, color: trend.startsWith("↑") ? "#22c55e" : "#e53935", display: "flex", alignItems: "center", gap: 4 }}>
+        <div style={{ fontSize: 11, fontWeight: 500, marginTop: 4, color: trend.startsWith("↑") ? "var(--color-success-text)" : "var(--color-danger-text)", display: "flex", alignItems: "center", gap: 4 }}>
           {trend}
         </div>
       )}
       {sub && <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginTop: 4 }}>{sub}</div>}
-      {action && <div style={{ fontSize: 11, color: "#6a8aff", marginTop: 6 }}>{action}</div>}
+      {action && <div style={{ fontSize: 11, color: "var(--color-primary)", marginTop: 6 }}>{action}</div>}
     </div>
   );
 }
 
-function QuickEntry({ icon, label, onClick, href, hint }: {
-  icon: string; label: string; onClick?: () => void; href?: string; hint?: string;
+function QuickEntry({ label, onClick, href, hint }: {
+  label: string; onClick?: () => void; href?: string; hint?: string;
 }) {
   const handleClick = () => {
     if (onClick) onClick();
@@ -805,18 +803,18 @@ function QuickEntry({ icon, label, onClick, href, hint }: {
   return (
     <div onClick={handleClick} style={{
       background: "var(--color-panel)", borderRadius: "var(--radius-lg)", padding: "20px 16px",
-      textAlign: "center", cursor: "pointer", fontSize: 14, color: "#555",
-      boxShadow: "0 1px 4px rgba(0,0,0,.06)", transition: "box-shadow .2s, transform .2s, color .15s",
+      textAlign: "center", cursor: "pointer", fontSize: 14, color: "var(--color-text-secondary)",
+      border: "1px solid var(--color-divider)",
+      boxShadow: "var(--shadow-card)", transition: "box-shadow .2s, transform .2s, color .15s, border-color .15s",
       display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
       position: "relative",
     }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.color = "#4f6ef7"; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 4px rgba(0,0,0,.06)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.color = "#555"; }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-hover)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--color-primary-border)"; (e.currentTarget as HTMLElement).style.color = "var(--color-primary)"; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-card)"; (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--color-divider)"; (e.currentTarget as HTMLElement).style.color = "var(--color-text-secondary)"; }}
     >
       {hint && <span style={{ position: "absolute", top: 10, right: 10 }}>
         <HelpIcon text={hint} level="button" />
       </span>}
-      <div style={{ fontSize: 28 }}>{icon}</div>
       <div style={{ fontSize: 14, fontWeight: 500 }}>{label}</div>
     </div>
   );

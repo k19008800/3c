@@ -30,9 +30,9 @@ export function PageHelp({ text, title = "页面帮助" }: { text: string; title
           width: 22,
           height: 22,
           borderRadius: "50%",
-          border: "1px solid #94a3b8",
-          background: "#f1f5f9",
-          color: "#475569",
+          border: "1px solid var(--color-border)",
+          background: "var(--color-divider-light)",
+          color: "var(--color-text-secondary)",
           fontSize: 13,
           fontWeight: 700,
           lineHeight: 1,
@@ -53,7 +53,7 @@ export function PageHelp({ text, title = "页面帮助" }: { text: string; title
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(15,23,42,.45)",
+            background: "var(--color-modal-overlay)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -64,11 +64,11 @@ export function PageHelp({ text, title = "页面帮助" }: { text: string; title
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: "#fff",
-              borderRadius: 12,
+              background: "var(--color-panel)",
+              borderRadius: "var(--radius-lg)",
               maxWidth: 520,
               width: "100%",
-              boxShadow: "0 20px 60px rgba(0,0,0,.25)",
+              boxShadow: "var(--shadow-modal)",
               overflow: "hidden",
             }}
           >
@@ -78,20 +78,20 @@ export function PageHelp({ text, title = "页面帮助" }: { text: string; title
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "14px 20px",
-                borderBottom: "1px solid #e2e8f0",
+                borderBottom: "1px solid var(--color-divider)",
               }}
             >
-              <strong style={{ fontSize: 15, color: "#0f172a" }}>{title}</strong>
+              <strong style={{ fontSize: 15, color: "var(--color-text)" }}>{title}</strong>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="关闭"
-                style={{ border: "none", background: "none", fontSize: 16, cursor: "pointer", color: "#64748b" }}
+                style={{ border: "none", background: "none", fontSize: 16, cursor: "pointer", color: "var(--color-text-secondary)" }}
               >
                 ✕
               </button>
             </div>
-            <div style={{ padding: "18px 20px", fontSize: 14, color: "#334155", lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
+            <div style={{ padding: "18px 20px", fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.8, whiteSpace: "pre-wrap" }}>
               {text}
             </div>
           </div>
@@ -113,9 +113,9 @@ export function ButtonHelp({ text }: { text: string }) {
           width: 16,
           height: 16,
           borderRadius: "50%",
-          border: "1px solid #cbd5e1",
-          background: "#f8fafc",
-          color: "#64748b",
+          border: "1px solid var(--color-border)",
+          background: "var(--color-divider-light)",
+          color: "var(--color-text-secondary)",
           fontSize: 11,
           fontWeight: 700,
           lineHeight: 1,

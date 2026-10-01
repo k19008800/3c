@@ -10,6 +10,7 @@ import {
   useToast,
 } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
+import "./console-misc.css";
 
 /**
  * 销售 — 跟进提醒
@@ -79,7 +80,6 @@ export default function SalesRemindersPage() {
       key: "title", title: "标题",
       render: (_, record) => (
         <strong style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          {record.type === "call" ? "📞" : record.type === "meeting" ? "🤝" : "📋"}
           {record.title}
         </strong>
       ),
@@ -132,7 +132,7 @@ export default function SalesRemindersPage() {
         const overdue = record.status === "pending" && record.due_at?.slice(0, 10) < now;
         if (record.status === "pending") {
           return overdue
-            ? <StatusBadge status="danger">⚠️ 逾期</StatusBadge>
+            ? <StatusBadge status="danger">逾期</StatusBadge>
             : <StatusBadge status="warning">待办</StatusBadge>;
         }
         if (record.status === "ignored") {
@@ -150,13 +150,13 @@ export default function SalesRemindersPage() {
             <button
               onClick={() => completeMut.mutate(record.id)}
               disabled={completeMut.isPending}
-              style={{ padding: "4px 10px", borderRadius: 4, border: "1px solid var(--color-success-text)", background: "#fff", color: "var(--color-success-text)", fontSize: 12, cursor: "pointer" }}>
+              style={{ padding: "4px 10px", borderRadius: 4, border: "1px solid var(--color-success-text)", background: "var(--color-panel)", color: "var(--color-success-text)", fontSize: 12, cursor: "pointer" }}>
               完成
             </button>
             <button
               onClick={() => ignoreMut.mutate(record.id)}
               disabled={ignoreMut.isPending}
-              style={{ padding: "4px 10px", borderRadius: 4, border: "1px solid var(--color-border)", background: "#fff", color: "var(--color-text-secondary)", fontSize: 12, cursor: "pointer" }}>
+              style={{ padding: "4px 10px", borderRadius: 4, border: "1px solid var(--color-border)", background: "var(--color-panel)", color: "var(--color-text-secondary)", fontSize: 12, cursor: "pointer" }}>
               忽略
             </button>
           </div>
@@ -177,7 +177,7 @@ export default function SalesRemindersPage() {
       </h2>
 
       {/* 统计卡片 */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginTop: 8, marginBottom: 16 }}>
+      <div className="cm-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginTop: 8, marginBottom: 16 }}>
         <StatCard label="全部提醒" value={reminders.length} color="var(--color-text)" />
         <StatCard label="待办" value={pendingCount} color="var(--color-warning-text)" />
         <StatCard label="逾期" value={overdueCount} color="var(--color-danger-text)" />
@@ -188,7 +188,7 @@ export default function SalesRemindersPage() {
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>筛选：</span>
         <select value={status} onChange={e => setStatus(e.target.value)}
-          style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13, background: "#fff" }}>
+          style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid var(--color-border)", fontSize: 13, background: "var(--color-panel)" }}>
           <option value="">全部</option>
           <option value="pending">待办</option>
           <option value="completed">已完成</option>
@@ -208,7 +208,7 @@ export default function SalesRemindersPage() {
           maxWidth: 520,
         }}>
           <h4 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 600, color: "var(--color-text)" }}>
-            📋 新增跟进提醒
+            新增跟进提醒
           </h4>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <input placeholder="客户ID" value={form.user_id}
@@ -219,7 +219,7 @@ export default function SalesRemindersPage() {
               style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", fontSize: 14, width: "100%", boxSizing: "border-box" }} />
             <select value={form.type}
               onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-              style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", fontSize: 14, width: "100%", boxSizing: "border-box", background: "#fff" }}>
+              style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", fontSize: 14, width: "100%", boxSizing: "border-box", background: "var(--color-panel)" }}>
               <option value="follow_up">跟进</option>
               <option value="call">电话</option>
               <option value="meeting">面谈</option>
@@ -248,7 +248,7 @@ export default function SalesRemindersPage() {
 
       {/* 提醒表格 */}
       {q.isLoading ? <SkeletonGroup lines={5} /> : reminders.length === 0 ? (
-        <EmptyState icon="🔔" title="暂无提醒" description="当前没有跟进提醒，点击「新增提醒」创建" />
+        <EmptyState title="暂无提醒" description="当前没有跟进提醒，点击「新增提醒」创建" />
       ) : (
         <Table
           columns={columns}
@@ -264,8 +264,8 @@ export default function SalesRemindersPage() {
 function StatCard({ label, value, color }: { label: string; value: number; color?: string }) {
   return (
     <div style={{
-      background: "var(--color-panel)", borderRadius: "var(--radius-lg)",
-      padding: "14px 16px", boxShadow: "0 1px 4px rgba(0,0,0,.06)",
+      background: "var(--color-panel)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-divider)",
+      padding: "14px 16px", boxShadow: "var(--shadow-card)",
     }}>
       <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 4 }}>{label}</div>
       <div style={{ fontSize: 20, fontWeight: 600, color: color || "var(--color-text)" }}>{value}</div>

@@ -8,6 +8,7 @@ import {
   SearchBar,
   useToast,
 } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /**
  * 用户端 — 帮助中心
@@ -229,7 +230,7 @@ export default function HelpCenterPage() {
             {listQ.isLoading ? (
               <SkeletonGroup lines={6} style={{ padding: 20 }} />
             ) : articles.length === 0 ? (
-              <EmptyState icon="📚" title="暂无帮助文章" description="当前没有相关内容" />
+              <EmptyState icon={<PIcon name="book" size={18}/>} title="暂无帮助文章" description="当前没有相关内容" />
             ) : (
               <div>
                 {articles.map((a: any) => (

@@ -586,7 +586,7 @@ export default function AdminCustomersPage() {
             重置 <HelpIcon text="一键清空搜索关键词与全部筛选条件（时间范围/状态/累计消费/绑定代理商），恢复默认列表。" />
           </button>
           <button type="button" className="c3-btn c3-btn--default c3-btn--sm" onClick={() => exportCsv(rows)}>
-            📥 导出 <HelpIcon text="将当前筛选结果导出为 CSV 文件（邮箱/名称/状态/余额/累计消费/注册时间/绑定代理商）。注意：仅导出当前页数据。" />
+            导出 <HelpIcon text="将当前筛选结果导出为 CSV 文件（邮箱/名称/状态/余额/累计消费/注册时间/绑定代理商）。注意：仅导出当前页数据。" />
           </button>
         </div>
       </div>
@@ -601,26 +601,26 @@ export default function AdminCustomersPage() {
         <span style={{ fontSize: 12, color: "#666" }}>已选 {selectedIds.length} 项</span>
         <div className="c3-btn-group">
           <button type="button" className="c3-btn c3-btn--default c3-btn--sm" disabled={batchStatusMut.isPending} onClick={() => doBatchStatus("disabled")}>
-            ⛔ 批量冻结
+            批量冻结
           </button>
           <button type="button" className="c3-btn c3-btn--default c3-btn--sm" disabled={batchStatusMut.isPending} onClick={() => doBatchStatus("active")}>
-            ✅ 批量解冻
+            批量解冻
           </button>
           <button type="button" className="c3-btn c3-btn--default c3-btn--sm" onClick={openBind}>
-            🤝 批量绑定代理商
+            批量绑定代理商
           </button>
           <button type="button" className="c3-btn c3-btn--default c3-btn--sm" disabled={batchResetMut.isPending} onClick={doBatchReset}>
-            🔑 批量重置密码
+            批量重置密码
           </button>
           <button type="button" className="c3-btn c3-btn--default c3-btn--sm" disabled={batchVerifyMut.isPending} onClick={doBatchVerify}>
-            🪪 批量强制认证
+            批量强制认证
           </button>
         </div>
       </div>
 
       {/* 面板 — 原型 panel：标题 + 新增按钮 + 表格 + 分页 */}
       <Panel
-        title="👥 客户列表"
+        title="客户列表"
         help="点击客户行查看详情（消费记录、充值记录、API Key、工单、操作日志）；可勾选后批量冻结/解冻、重置密码、绑定代理商、强制认证。"
         extra={
           <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" onClick={() => setCreateOpen(true)}>
@@ -686,7 +686,7 @@ export default function AdminCustomersPage() {
       </Modal>
 
       {/* 编辑客户基本信息弹窗（列表「编辑」→ 打开；详情页同表单逻辑） */}
-      <Modal open={!!editTarget} onClose={() => setEditTarget(null)} title={`✏️ 编辑客户 — ${editTarget?.name ?? ""}`} width={440}>
+      <Modal open={!!editTarget} onClose={() => setEditTarget(null)} title={`<PIcon name="edit" size={14}/> 编辑客户 — ${editTarget?.name ?? ""}`} width={440}>
         {editTarget && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div className="c3-form-group" style={{ marginBottom: 0 }}>
@@ -715,7 +715,7 @@ export default function AdminCustomersPage() {
       </Modal>
 
       {/* 批量绑定代理商弹窗 */}
-      <Modal open={bindOpen} onClose={() => setBindOpen(false)} title="🤝 批量绑定代理商" width={400}>
+      <Modal open={bindOpen} onClose={() => setBindOpen(false)} title="批量绑定代理商" width={400}>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <p style={{ margin: 0, fontSize: 13, color: "#666" }}>
             为选中的 {selectedIds.length} 个客户绑定代理商（绑定后该客户归属所选代理商，消费佣金计入该代理商）。
@@ -739,7 +739,7 @@ export default function AdminCustomersPage() {
       </Modal>
 
       {/* 批量重置密码结果弹窗 — 一次性明文展示 */}
-      <Modal open={!!resetResult} onClose={() => setResetResult(null)} title="🔑 批量重置密码完成" width={520}>
+      <Modal open={!!resetResult} onClose={() => setResetResult(null)} title="批量重置密码完成" width={520}>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <p style={{ margin: 0, fontSize: 13, color: "#666" }}>
             以下为各客户的新密码（自动生成），<b>仅本次可见</b>，关闭后无法再次查看，请及时保存并安全告知客户。

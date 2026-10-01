@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /* ───────── 税务银行（对齐后端 /admin/tax-banking 契约） ───────── */
 
@@ -55,15 +56,15 @@ export default function AdminTaxBankingPage() {
   return (
     <div>
       <div style={{ background: "linear-gradient(135deg,#667eea,#764ba2)", color: "#fff", padding: "20px 24px", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ fontSize: 24 }}>💰</span>
+        <span style={{ fontSize: 24 }}><PIcon name="coin" size={14}/></span>
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>税负与银行账户管理
           <HelpIcon text="配置代理商佣金个税、供应商增值税，管理代理商绑定银行账户，提供税务试算工具。" level="page" />
         </span>
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <button onClick={() => setTab("tax")} style={{ padding: "8px 20px", borderRadius: 8, border: tab === "tax" ? "2px solid #4f6ef7" : "1px solid var(--color-border)", background: tab === "tax" ? "#eef2ff" : "var(--color-panel)", color: tab === "tax" ? "#4f6ef7" : "#666", cursor: "pointer", fontWeight: 600 }}>💰 税务配置</button>
-        <button onClick={() => setTab("bank")} style={{ padding: "8px 20px", borderRadius: 8, border: tab === "bank" ? "2px solid #4f6ef7" : "1px solid var(--color-border)", background: tab === "bank" ? "#eef2ff" : "var(--color-panel)", color: tab === "bank" ? "#4f6ef7" : "#666", cursor: "pointer", fontWeight: 600 }}>🏦 银行账户</button>
+        <button onClick={() => setTab("tax")} style={{ padding: "8px 20px", borderRadius: 8, border: tab === "tax" ? "2px solid var(--color-primary)" : "1px solid var(--color-border)", background: tab === "tax" ? "var(--color-primary-light)" : "var(--color-panel)", color: tab === "tax" ? "var(--color-primary)" : "#666", cursor: "pointer", fontWeight: 600 }}><PIcon name="coin" size={14}/> 税务配置</button>
+        <button onClick={() => setTab("bank")} style={{ padding: "8px 20px", borderRadius: 8, border: tab === "bank" ? "2px solid var(--color-primary)" : "1px solid var(--color-border)", background: tab === "bank" ? "var(--color-primary-light)" : "var(--color-panel)", color: tab === "bank" ? "var(--color-primary)" : "#666", cursor: "pointer", fontWeight: 600 }}><PIcon name="bank" size={14}/> 银行账户</button>
       </div>
 
       {tab === "tax" && (
@@ -92,7 +93,7 @@ export default function AdminTaxBankingPage() {
           </div>
 
           <div style={{ background: "var(--color-panel)", borderRadius: 10, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,.06)", gridColumn: "1/-1" }}>
-            <button onClick={() => saveConfigMut.mutate()} disabled={saveConfigMut.isPending} style={{ padding: "8px 24px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, marginBottom: 16 }}>{saveConfigMut.isPending ? "保存中..." : "保存税务配置"}</button>
+            <button onClick={() => saveConfigMut.mutate()} disabled={saveConfigMut.isPending} style={{ padding: "8px 24px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, marginBottom: 16 }}>{saveConfigMut.isPending ? "保存中..." : "保存税务配置"}</button>
             <h3 style={{ margin: "0 0 12px", fontSize: 15 }}>税务试算 <HelpIcon text="输入佣金金额预览税前/个税/税后金额。" /></h3>
             <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
               <span style={{ fontSize: 13, color: "#666" }}>佣金金额 (¥)</span>

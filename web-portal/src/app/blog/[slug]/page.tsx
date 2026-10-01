@@ -70,35 +70,33 @@ export default async function BlogPostPage({
   if (!post) notFound();
 
   return (
-    <div style={{ maxWidth: 760, margin: "0 auto", padding: "48px 24px" }}>
-      <div style={{ marginBottom: 24 }}>
-        <a href="/blog" style={{ color: "#2563eb", textDecoration: "none", fontSize: 14 }}>{t("blog.back")}</a>
+    <div className="container" style={{ paddingTop: "var(--space-7xl)", paddingBottom: "var(--space-8xl)", maxWidth: "820px" }}>
+      <div style={{ marginBottom: "var(--space-2xl)" }}>
+        <a href="/blog" className="article-back">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M19 12H5" /><path d="m12 19-7-7 7-7" />
+          </svg>
+          {t("blog.back")}
+        </a>
       </div>
 
-      <h1 style={{ fontSize: 30, fontWeight: 800, marginBottom: 12, lineHeight: 1.3 }}>
+      <span className="overline">Article</span>
+      <h1 style={{ fontSize: "var(--font-size-h1)", fontWeight: 800, lineHeight: 1.2, letterSpacing: "-0.02em", color: "var(--color-text)", margin: "var(--space-sm) 0 var(--space-md)" }}>
         {post.title}
         <PageHelp text={t("help.blogPost")} />
       </h1>
       {post.updated_at && (
-        <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 32 }}>
-          {t("blog.publishedAt")} {formatDate(post.updated_at)}
+        <div className="blog-meta" style={{ marginBottom: "var(--space-3xl)" }}>
+          <time dateTime={post.updated_at}>
+            {t("blog.publishedAt")} {formatDate(post.updated_at)}
+          </time>
         </div>
       )}
 
-      <article
-        style={{
-          fontSize: 15,
-          lineHeight: 1.9,
-          color: "#334155",
-          whiteSpace: "pre-wrap",
-          wordBreak: "break-word",
-        }}
-      >
-        {post.content}
-      </article>
+      <article className="article-body">{post.content}</article>
 
-      <div style={{ marginTop: 48, borderTop: "1px solid #e2e8f0", paddingTop: 24 }}>
-        <a href="/blog" style={{ color: "#2563eb", textDecoration: "none", fontSize: 14 }}>{t("blog.back")}</a>
+      <div style={{ marginTop: "var(--space-5xl)", borderTop: "1px solid var(--color-divider)", paddingTop: "var(--space-2xl)" }}>
+        <a href="/blog" className="article-back">{t("blog.back")}</a>
       </div>
     </div>
   );

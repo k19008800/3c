@@ -56,11 +56,11 @@ async function getModelHealth(): Promise<Map<string, PublicModelHealth>> {
   return map;
 }
 
-const STATUS_META: Record<PublicModelHealth["status"], { text: string; color: string; bg: string }> = {
-  healthy: { text: "健康", color: "#15803d", bg: "#dcfce7" },
-  degraded: { text: "降级", color: "#b45309", bg: "#fef3c7" },
-  unavailable: { text: "异常", color: "#b91c1c", bg: "#fee2e2" },
-  no_data: { text: "暂无数据", color: "#64748b", bg: "#f1f5f9" },
+const STATUS_META: Record<PublicModelHealth["status"], { text: string; cls: string }> = {
+  healthy: { text: "健康", cls: "healthy" },
+  degraded: { text: "降级", cls: "degraded" },
+  unavailable: { text: "异常", cls: "unavailable" },
+  no_data: { text: "暂无数据", cls: "no_data" },
 };
 
 /** 页面级 [?] 帮助文案（R-MC-05 / PRD 补充 §3） */
@@ -81,60 +81,66 @@ export default async function ModelsPage() {
   const [models, health] = await Promise.all([getModels(), getModelHealth()]);
 
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto", padding: "48px 24px" }}>
-      <h1 style={{ fontSize: 32, marginBottom: 8 }}>
-        模型目录
-        <PageHelp text={PAGE_HELP} />
-      </h1>
-      <p style={{ color: "#64748b", marginBottom: 8 }}>共 {models.length} 个模型编码条目</p>
-      <p style={{ color: "#94a3b8", marginBottom: 32, fontSize: 14 }}>
-        每个条目对应一条全局唯一模型编码；同一模型多供应商时并排为多条编码。编码默认按「厂商+模型」规则生成（如 <code>供应商code-模型名</code>）。
-      </p>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 16 }}>
-        {models.map((m, idx) => {
-          const h = health.get(m.name);
-          const meta = h ? STATUS_META[h.status] : null;
-          // 显示名 = 模型名（供应商名）；编码字段待后端补充，缺失时不拼造
-          const title = `${m.name}（${m.vendor}）`;
-          return (
-            <div key={`${m.name}-${m.vendor}-${idx}`} style={{ border: "1px solid #e2e8f0", borderRadius: 12, padding: 20 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                <div style={{ fontSize: 16, fontWeight: 700 }}>{title}</div>
-                {meta && (
-                  <span style={{ fontSize: 12, fontWeight: 600, color: meta.color, background: meta.bg, padding: "2px 10px", borderRadius: 999 }}>
-                    {meta.text}
-                  </span>
-                )}
-              </div>
-              {m.model_code ? (
-                <code style={{ fontSize: 13, color: "#2563eb" }}>{m.model_code}</code>
-              ) : (
-                <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>模型编码待下发（按「厂商+模型」规则生成）</div>
-              )}
-              <div style={{ marginTop: 12, fontSize: 13, color: "#64748b" }}>
-                逻辑模型: {m.name}
-                <br />
-                供应商: {m.vendor}
-                <br />
-                上下文: {m.context_length ? `${m.context_length} tokens` : "-"}
-                <br />
-                分类: {m.category ?? "-"}
-                <br />
-                {h && h.min_price != null ? (
-                  <>
-                    P50 延迟: {h.p50_ms > 0 ? `${h.p50_ms}ms` : "-"}
-                    <br />
-                    <span style={{ color: "#15803d", fontWeight: 600 }}>最低价: ¥{h.min_price} / 1M tokens</span>
-                  </>
+    <div>
+      <section className="page-head">
+        <div className="container">
+          <span className="overline">Models</span>
+          <h1>
+            模型目录
+            <PageHelp text={PAGE_HELP} />
+          </h1>
+          <p className="page-subtitle">共 {models.length.toLocaleString()} 个模型编码条目</p>
+          <p className="page-note">
+            每个条目对应一条全局唯一模型编码；同一模型多供应商时并排为多条编码。编码默认按「厂商+模型」规则生成（如 <code>供应商code-模型名</code>）。
+          </p>
+        </div>
+      </section>
+
+      <section className="container" style={{ paddingBottom: "var(--space-8xl)" }}>
+        <div className="model-grid-v2">
+          {models.map((m, idx) => {
+            const h = health.get(m.name);
+            const meta = h ? STATUS_META[h.status] : null;
+            // 显示名 = 模型名（供应商名）；编码字段待后端补充，缺失时不拼造
+            const title = `${m.name}（${m.vendor}）`;
+            return (
+              <div key={`${m.name}-${m.vendor}-${idx}`} className="model-card-v2">
+                <div className="mc-head">
+                  <div className="mc-title">{title}</div>
+                  {meta && (
+                    <span className={`status-badge ${meta.cls}`}>
+                      <span className="sb-dot" />
+                      {meta.text}
+                    </span>
+                  )}
+                </div>
+                {m.model_code ? (
+                  <div className="mc-code">{m.model_code}</div>
                 ) : (
-                  <>价格: ¥{m.cost_input_price} / ¥{m.cost_output_price}</>
+                  <div className="mc-empty-code">模型编码待下发（按「厂商+模型」规则生成）</div>
                 )}
+                <div className="mc-rows">
+                  <div><strong>逻辑模型：</strong>{m.name}</div>
+                  <div><strong>供应商：</strong>{m.vendor}</div>
+                  <div><strong>上下文：</strong>{m.context_length ? `${Number(m.context_length).toLocaleString()} tokens` : "—"}</div>
+                  <div><strong>分类：</strong>{m.category ?? "—"}</div>
+                  {h && h.min_price != null ? (
+                    <>
+                      <div><strong>P50 延迟：</strong>{h.p50_ms > 0 ? `${h.p50_ms}ms` : "—"}</div>
+                      <div style={{ color: "var(--color-success-text)", fontWeight: 600 }}>
+                        最低价：¥{h.min_price} / 1M tokens
+                      </div>
+                    </>
+                  ) : (
+                    <div><strong>价格：</strong>¥{m.cost_input_price} / ¥{m.cost_output_price}</div>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-      {models.length === 0 && <p style={{ color: "#94a3b8" }}>暂无模型数据（请确认后端与 seed 状态）</p>}
+            );
+          })}
+        </div>
+        {models.length === 0 && <p className="empty-state">暂无模型数据（请确认后端与 seed 状态）</p>}
+      </section>
     </div>
   );
 }

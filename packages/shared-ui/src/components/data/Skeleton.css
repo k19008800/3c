@@ -8,7 +8,7 @@
 /* ===== 基类 ===== */
 .shared-skeleton {
   display: block;
-  background-color: #e8e8e8;
+  background-color: var(--color-divider);
   position: relative;
   overflow: hidden;
   border-radius: var(--radius-sm);
@@ -29,7 +29,7 @@
     rgba(255, 255, 255, 0.5) 70%,
     transparent 100%
   );
-  animation: shared-skeleton-shimmer 1.6s ease-in-out infinite;
+  animation: shared-skeleton-shimmer 1.6s var(--ease-in-out) infinite;
 }
 
 /* ===== 变体 ===== */

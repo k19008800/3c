@@ -6,6 +6,7 @@ import { useAuthStore } from "../store/auth";
 import { withOperation2fa, isOperation2faCanceled, operation2faErrorText, operation2faHeaders } from "../lib/operation-2fa";
 import type { OperationSummaryItem } from "../components/Operation2faModal";
 import { HelpIcon, StatusBadge, Modal, EmptyState, SkeletonGroup, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /**
  * 手动调账（产品裁决 2026-08-15，对齐原型 admin-adjust.html；R5–R7 整改叠加）
@@ -358,7 +359,7 @@ export default function AdminAdjustPage() {
     return (
       <div style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
         {r.status === "pending" && approveBtn("一级审批通过", "approve", "#22c55e", HELP_APPROVE_L1)}
-        {r.status === "pending_level2" && approveBtn("二级复核通过", "review", "#4f6ef7", HELP_REVIEW_L2)}
+        {r.status === "pending_level2" && approveBtn("二级复核通过", "review", "var(--color-primary)", HELP_REVIEW_L2)}
         {r.status === "pending_super" && (
           isSuperAdmin
             ? approveBtn("终审通过", "super", "#722ed1", HELP_SUPER)
@@ -374,7 +375,7 @@ export default function AdminAdjustPage() {
           <HelpIcon text={HELP_REJECT} />
         </span>
         {r.approval_stalled === true && (
-          <span style={{ fontSize: 12, color: "var(--color-danger-text)" }}>⚠️ 等待可用审批人</span>
+          <span style={{ fontSize: 12, color: "var(--color-danger-text)" }}><PIcon name="alert" size={14}/> 等待可用审批人</span>
         )}
       </div>
     );
@@ -390,18 +391,18 @@ export default function AdminAdjustPage() {
       {/* 统计卡 */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14, marginBottom: 16 }}>
         <div style={{ ...card, cursor: "pointer", marginBottom: 0 }} onClick={() => setTab("approve")}>
-          <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>🕓 待我审批</div>
+          <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}><PIcon name="clock" size={14}/> 待我审批</div>
           <div style={{ fontSize: 24, fontWeight: 700 }}>{(pendingQ.data?.list?.length ?? 0) + (pendingL2Q.data?.list?.length ?? 0) + (pendingL3Q.data?.list?.length ?? 0)}</div>
         </div>
         <div style={{ ...card, marginBottom: 0 }} onClick={() => setTab("ledger")}>
-          <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>📋 调账台账</div>
+          <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}><PIcon name="doc" size={14}/> 调账台账</div>
           <div style={{ fontSize: 24, fontWeight: 700 }}>{ledgerQ.data?.pagination?.total ?? 0}</div>
         </div>
       </div>
 
       {/* Tab 切换 */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center" }}>
-        {([["create", "➕ 发起调账"], ["approve", "✅ 待我审批"], ["ledger", "📋 调账台账"]] as const).map(([key, label]) => (
+        {([["create", "发起调账"], ["approve", "待我审批"], ["ledger", "调账台账"]] as const).map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)} style={{ ...btnBase, display: "inline-flex", alignItems: "center", gap: 4, background: tab === key ? "var(--color-primary)" : "var(--color-panel)", color: tab === key ? "#fff" : "var(--color-text-secondary)", border: "1px solid var(--color-border)" }}>
             {label}
             {key === "create" && <HelpIcon text={HELP_CREATE_ADJUST} />}
@@ -414,7 +415,7 @@ export default function AdminAdjustPage() {
       {tab === "create" && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           <div style={card}>
-            <h3 style={{ marginBottom: 12 }}>📝 调账申请单</h3>
+            <h3 style={{ marginBottom: 12 }}><PIcon name="edit" size={14}/> 调账申请单</h3>
             <div>
               <label style={fieldLabel}>被调账用户 ID *</label>
               <input type="number" value={form.user_id} onChange={(e) => setForm({ ...form, user_id: e.target.value })} placeholder="输入用户 ID" style={inp} />
@@ -447,10 +448,10 @@ export default function AdminAdjustPage() {
             </div>
             {/* R5：调增免审取消 + 分级提示；R6：限额提示 */}
             <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 8, lineHeight: 1.8 }}>
-              ⚖️ 审批路径：<strong style={{ color: "#fa8c16" }}>{tierHint}</strong>
+              <PIcon name="scale" size={14}/> 审批路径：<strong style={{ color: "#fa8c16" }}>{tierHint}</strong>
               {tier === 3 ? "（>¥100,000 追加 super_admin 终审）" : tier === 2 ? "（>¥10,000 双人复核）" : "（调增免审批已取消，至少一级审批）"}
               <div style={{ marginTop: 2 }}>
-                💰 24h 累计调增/上账超 ¥{DAILY_SOFT_LIMIT.toLocaleString()} → 本笔升级双人审批；超 ¥{DAILY_HARD_LIMIT.toLocaleString()} → 拒绝
+                <PIcon name="coin" size={14}/> 24h 累计调增/上账超 ¥{DAILY_SOFT_LIMIT.toLocaleString()} → 本笔升级双人审批；超 ¥{DAILY_HARD_LIMIT.toLocaleString()} → 拒绝
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 4, marginLeft: 4 }}>
                   <HelpIcon text={HELP_LIMIT_ESCALATE} />
                 </span>
@@ -462,14 +463,14 @@ export default function AdminAdjustPage() {
                 disabled={!canSubmit || createMut.isPending}
                 style={{ ...btnBase, width: "100%", background: canSubmit ? "var(--color-primary)" : "#a0b4f9", color: "#fff", height: 42, fontSize: 14 }}
               >
-                {createMut.isPending ? "提交中..." : "🚀 提交调账申请"}
+                {createMut.isPending ? "提交中..." : "提交调账申请"}
               </button>
               <HelpIcon text={HELP_CREATE_ADJUST} />
             </span>
           </div>
 
           <div style={card}>
-            <h3 style={{ marginBottom: 12 }}>⚖️ 分级审批规则</h3>
+            <h3 style={{ marginBottom: 12 }}><PIcon name="scale" size={14}/> 分级审批规则</h3>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead><tr style={{ color: "var(--color-text-secondary)", textAlign: "left" }}>
                 <th style={{ padding: "6px 8px" }}>方向</th><th style={{ padding: "6px 8px" }}>金额</th><th style={{ padding: "6px 8px" }}>审批要求</th>
@@ -483,13 +484,13 @@ export default function AdminAdjustPage() {
               </tbody>
             </table>
             <div style={{ marginTop: 14, fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.8 }}>
-              <div>🔒 <strong>职责分离</strong>：申请人 ≠ 审批人，一级 ≠ 二级，系统自动拦截自审</div>
-              <div>💰 <strong>24h 限额</strong>：操作人/被入账用户累计调增+上账超 ¥50,000 升级双人、超 ¥100,000 拒绝（R6）</div>
-              <div>🔐 <strong>操作级 2FA</strong>：发起/审批/复核/终审/驳回/红冲均需 2FA + 二次确认（R7）</div>
-              <div>📌 <strong>科目映射</strong>：每笔调账自动对应会计科目</div>
-              <div>💾 <strong>前后快照</strong>：记录调账前 / 后余额，账实一致</div>
-              <div>🔴 <strong>红字冲销</strong>：错误调账不删除不编辑，通过「红冲」生成反向记录</div>
-              <div>📦 <strong>永久归档</strong>：调账记录不可篡改，随凭证永久留存</div>
+              <div><PIcon name="lock" size={14}/> <strong>职责分离</strong>：申请人 ≠ 审批人，一级 ≠ 二级，系统自动拦截自审</div>
+              <div><PIcon name="coin" size={14}/> <strong>24h 限额</strong>：操作人/被入账用户累计调增+上账超 ¥50,000 升级双人、超 ¥100,000 拒绝（R6）</div>
+              <div><PIcon name="lock" size={14}/> <strong>操作级 2FA</strong>：发起/审批/复核/终审/驳回/红冲均需 2FA + 二次确认（R7）</div>
+              <div><PIcon name="pin" size={14}/> <strong>科目映射</strong>：每笔调账自动对应会计科目</div>
+              <div><PIcon name="save" size={14}/> <strong>前后快照</strong>：记录调账前 / 后余额，账实一致</div>
+              <div> <strong>红字冲销</strong>：错误调账不删除不编辑，通过「红冲」生成反向记录</div>
+              <div><PIcon name="box" size={14}/> <strong>永久归档</strong>：调账记录不可篡改，随凭证永久留存</div>
             </div>
           </div>
         </div>
@@ -498,7 +499,7 @@ export default function AdminAdjustPage() {
       {/* Tab 2 待我审批 */}
       {tab === "approve" && (
         <div style={card}>
-          <h3 style={{ marginBottom: 12 }}>✅ 待我审批（职责分离：不含自己申请的；单审 / 待双人复核 / 待终审）</h3>
+          <h3 style={{ marginBottom: 12 }}><PIcon name="check" size={14}/> 待我审批（职责分离：不含自己申请的；单审 / 待双人复核 / 待终审）</h3>
           {pendingQ.isLoading ? <SkeletonGroup lines={3} /> : rows.length === 0 ? (
             <EmptyState title="暂无待审批调账" />
           ) : (
@@ -534,7 +535,7 @@ export default function AdminAdjustPage() {
       {tab === "ledger" && (
         <div style={card}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
-            <h3 style={{ margin: 0 }}>📋 调账台账</h3>
+            <h3 style={{ margin: 0 }}><PIcon name="doc" size={14}/> 调账台账</h3>
             <div style={{ display: "flex", gap: 6, marginLeft: "auto", flexWrap: "wrap" }}>
               {([["", "全部"], ["approved", "已生效"], ["pending", "一级待审"], ["pending_level2", "二级待审"], ["pending_super", "待终审"], ["rejected", "已驳回"], ["reversed", "已红冲"]] as const).map(([v, l]) => (
                 <button key={v} onClick={() => setLedgerStatus(v)} style={{ ...btnBase, fontSize: 12, padding: "4px 10px", background: ledgerStatus === v ? "var(--color-primary)" : "var(--color-bg)", color: ledgerStatus === v ? "#fff" : "var(--color-text-secondary)", border: "1px solid var(--color-border)" }}>{l}</button>

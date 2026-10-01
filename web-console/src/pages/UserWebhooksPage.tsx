@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { HelpIcon, StatusBadge, useToast, ConfirmPopover } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /**
  * §22.4 用户端 Webhook 配置
@@ -120,7 +121,7 @@ export default function UserWebhooksPage() {
 
       {!isLoading && (!webhooks || webhooks.length === 0) && !showForm && (
         <div style={{ ...cardStyle, textAlign: "center", padding: 40, color: "#94a3b8" }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🔗</div>
+          <div style={{ fontSize: 40, marginBottom: 12 }}><PIcon name="link" size={14}/></div>
           <p>暂无 Webhook 配置</p>
           <button onClick={openCreate} style={{ background: "var(--color-primary)", color: "#fff", border: "none", padding: "8px 20px", borderRadius: 8, cursor: "pointer", marginTop: 8 }}>
             创建第一个 Webhook
@@ -224,7 +225,7 @@ export default function UserWebhooksPage() {
 
       {/* 签名说明 */}
       <div style={{ ...cardStyle, background: "var(--color-bg)", fontSize: 13, color: "var(--color-text-secondary)" }}>
-        <strong>💡 Webhook 签名验证：</strong>
+        <strong><PIcon name="bolt" size={14}/> Webhook 签名验证：</strong>
         每个 Webhook 投递会包含 HMAC-SHA256 签名，请验证请求头
         <code style={{ background: "var(--color-border)", padding: "1px 6px", borderRadius: 4, marginLeft: 4 }}>X-Webhook-Signature</code>
         以确保消息来源安全。

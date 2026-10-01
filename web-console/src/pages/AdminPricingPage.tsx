@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { HelpIcon, StatusBadge, Modal, EmptyState, SkeletonGroup, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 interface PricingItem {
   id: number; model_id: number; model_name: string;
@@ -51,7 +52,7 @@ export default function AdminPricingPage() {
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <h2 style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
-        🏷️ 价格管理
+        <PIcon name="tag" size={14}/> 价格管理
         <HelpIcon
           text="平台定价管理：本页维护每个模型的平台标价（模型覆盖价，¥/1K tokens）与缓存命中折扣率。实际生效价格按六层优先级解析：L5 活动价（进行中活动，模型级覆盖/全局折扣）＞ L4 分组价（用户所属分组对应 pricing_group 的组价）＞ L3 代理价（绑定代理按层级打折）＞ L2 模型覆盖价（本页配置）＞ L1 平台标准价。上层未配置该模型时逐层降级，任一查询失败静默回退，不阻断请求。"
           level="page"
@@ -61,7 +62,7 @@ export default function AdminPricingPage() {
       {/* P2-1 层级定价说明：六层解析规则 + [?] 帮助 */}
       <div style={{ ...card, marginBottom: 16, fontSize: 13, lineHeight: 1.7 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontWeight: 600 }}>
-          📊 层级定价说明
+          <PIcon name="chart" size={14}/> 层级定价说明
           <HelpIcon
             text="生效价格按以下优先级取第一层命中值（上层未配置该模型 → 逐层降级）：L5 活动价：campaigns 中 status=active 且当前时间在 [startAt, endAt] 内，config.pricing.models.<模型> 覆盖价优先于 config.pricing.discount 全局折扣。L4 分组价：用户分组（user_group_memberships → user_groups.pricingGroup）匹配 vendor_pricing.pricing_group 的组价。L3 代理价：用户绑定代理（agent_customers）按层级折扣：junior 95 折 / senior 9 折 / partner 85 折。L2 模型覆盖价：本页 pricing_group=default 的单价。L1 平台标准价：未配置任何价格时的默认单价。"
             level="page"
@@ -149,7 +150,7 @@ export default function AdminPricingPage() {
 
             {updateMut.isError && (
               <div style={{ marginBottom: 10, padding: "8px 10px", background: "var(--color-danger-bg)", borderRadius: 6, fontSize: 13, color: "var(--color-danger-text)" }}>
-                ⚠️ {extractError(updateMut.error)}
+                <PIcon name="alert" size={14}/> {extractError(updateMut.error)}
               </div>
             )}
 

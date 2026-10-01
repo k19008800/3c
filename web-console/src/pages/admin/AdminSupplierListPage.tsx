@@ -15,6 +15,7 @@ import {
 } from "@3cloud/shared-ui";
 import type { ColumnDef, TimeRangeKey } from "@3cloud/shared-ui";
 import { SyncResultModal, type ModelSyncResult, type SyncAllResult } from "../../components/SyncResultModal";
+import { PIcon } from "../_polishIcons";
 
 /** 供应商状态 → 原型 tag 类型 + 文案 */
 function displayStatus(status: string): { type: "green" | "red" | "orange" | "blue" | "gray"; label: string } {
@@ -34,7 +35,7 @@ function displayHealth(health: string | null): { color: string; label: string } 
     case "error":
     case "failed":
     case "fail": return { color: "#e53935", label: "异常" };
-    default: return { color: "#999", label: "未检测" };
+    default: return { color: "var(--color-text-muted)", label: "未检测" };
   }
 }
 
@@ -233,25 +234,25 @@ export default function AdminSupplierListPage() {
       {/* 统计卡片 — 原型 stat-grid */}
       <div className="c3-stat-grid">
         <div className="c3-stat-card">
-          <span className="c3-stat-card__icon">🔌</span>
+          <span className="c3-stat-card__icon"><PIcon name="plug" size={14}/></span>
           <div className="c3-stat-card__label">供应商总数</div>
           <div className="c3-stat-card__value">{q.isLoading ? "—" : stats.total}</div>
           <div className="c3-stat-card__sub">管理上游 AI 厂商</div>
         </div>
         <div className="c3-stat-card">
-          <span className="c3-stat-card__icon">✅</span>
+          <span className="c3-stat-card__icon"><PIcon name="check" size={14}/></span>
           <div className="c3-stat-card__label">正常运行</div>
           <div className="c3-stat-card__value" style={{ color: "#22c55e" }}>{q.isLoading ? "—" : stats.ok}</div>
           <div className="c3-stat-card__sub">健康率 {stats.healthRate}%</div>
         </div>
         <div className="c3-stat-card">
-          <span className="c3-stat-card__icon">🤖</span>
+          <span className="c3-stat-card__icon"><PIcon name="bot" size={14}/></span>
           <div className="c3-stat-card__label">同步模型总数</div>
           <div className="c3-stat-card__value">{q.isLoading ? "—" : stats.modelTotal}</div>
           <div className="c3-stat-card__sub">{stats.topModel}</div>
         </div>
         <div className="c3-stat-card">
-          <span className="c3-stat-card__icon">⚠️</span>
+          <span className="c3-stat-card__icon"><PIcon name="alert" size={14}/></span>
           <div className="c3-stat-card__label">需要关注</div>
           <div className="c3-stat-card__value" style={{ color: "#e53935" }}>{q.isLoading ? "—" : stats.attention}</div>
           <div className="c3-stat-card__sub">{stats.attentionSub}</div>
@@ -260,7 +261,7 @@ export default function AdminSupplierListPage() {
 
       {/* 面板 — 原型 panel：标题 + 新增按钮 + 表格 */}
       <Panel
-        title="🔌 供应商列表"
+        title="供应商列表"
         help="点击操作列「同步模型」从该供应商上游 /v1/models 一键拉取模型；「全部同步」对所有启用供应商批量执行；连通性测试 / 余额查询见操作列。"
         extra={
           <div className="c3-btn-group">
@@ -270,7 +271,7 @@ export default function AdminSupplierListPage() {
               disabled={syncAllMutation.isPending}
               onClick={() => syncAllMutation.mutate()}
             >
-              {syncAllMutation.isPending ? "同步中…" : "🔄 全部同步"}
+              {syncAllMutation.isPending ? "同步中…" : "全部同步"}
             </button>
             <HelpIcon text="模型广场同步：从全部启用中供应商的上游 /v1/models 拉取模型并自动填充模型库（新建模型自动补 draft 定价占位），一次执行查看汇总与失败明细。" />
             <button type="button" className="c3-btn c3-btn--primary c3-btn--sm" onClick={() => setModalOpen(true)}>

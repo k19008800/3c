@@ -119,13 +119,13 @@ export default function AdminDeletionPage() {
         账号注销审核
         <HelpIcon text={PAGE_HELP} level="page" />
       </h2>
-      <p style={{ color: "#94a3b8", marginTop: 0, fontSize: 13 }}>查看和管理用户账号注销请求 · Sprint 1</p>
+      <p style={{ color: "var(--color-text-muted)", marginTop: 0, fontSize: 13 }}>查看和管理用户账号注销请求 · Sprint 1</p>
 
       {/* 统计卡片 */}
       {stats && (
         <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
           {[
-            { label: "待审核", value: stats.pending, color: "#f59e0b" },
+            { label: "待审核", value: stats.pending, color: "var(--color-warning-text)" },
             { label: "冷却期", value: stats.cooling, color: "#3b82f6" },
             { label: "已完成", value: stats.completed, color: "#10b981" },
             { label: "已驳回", value: stats.rejected, color: "#ef4444" },
@@ -146,7 +146,7 @@ export default function AdminDeletionPage() {
           <button
             key={t.key}
             onClick={() => { setStatusFilter(t.key); setPage(1); }}
-            style={{ ...btnBase, background: statusFilter === t.key ? "var(--color-primary)" : "var(--color-panel)", color: statusFilter === t.key ? "#fff" : "#475569", border: `1px solid var(--color-border)` }}
+            style={{ ...btnBase, background: statusFilter === t.key ? "var(--color-primary)" : "var(--color-panel)", color: statusFilter === t.key ? "#fff" : "var(--color-text-secondary)", border: `1px solid var(--color-border)` }}
           >
             {t.label}
           </button>
@@ -178,11 +178,11 @@ export default function AdminDeletionPage() {
               {list.map((row: any, i: number) => {
                 const st = displayStatus(row.status);
                 return (
-                  <tr key={row.id} style={{ borderBottom: `1px solid var(--color-border)`, background: i % 2 === 0 ? "var(--color-panel)" : "#fafafa" }}>
+                  <tr key={row.id} style={{ borderBottom: `1px solid var(--color-border)`, background: i % 2 === 0 ? "var(--color-panel)" : "var(--color-divider-light)" }}>
                     <td style={{ padding: "10px 16px", color: "var(--color-text)" }}>{row.id}</td>
                     <td style={{ padding: "10px 16px", color: "var(--color-text)" }}>
                       <div>{row.userName ?? row.userEmail}</div>
-                      <div style={{ fontSize: 12, color: "#94a3b8" }}>{row.userEmail}</div>
+                      <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{row.userEmail}</div>
                     </td>
                     <td style={{ padding: "10px 16px" }}>
                       <StatusBadge status={getStatusType(st)}>{statusLabel(st)}</StatusBadge>
@@ -225,7 +225,7 @@ export default function AdminDeletionPage() {
               {detail.user && (
                 <div style={{ background: "var(--color-bg)", borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13 }}>
                   <div style={{ color: "var(--color-text)", fontWeight: 600, marginBottom: 8 }}>用户信息</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", color: "#475569" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", color: "var(--color-text-secondary)" }}>
                     <div>ID: {detail.user.id}</div>
                     <div>邮箱: {detail.user.email}</div>
                     <div>用户名: {detail.user.username ?? "-"}</div>
@@ -240,7 +240,7 @@ export default function AdminDeletionPage() {
               {/* 申请信息 */}
               <div style={{ fontSize: 13, marginBottom: 16 }}>
                 <div style={{ color: "var(--color-text)", fontWeight: 600, marginBottom: 8 }}>申请信息</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4, color: "#475569" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, color: "var(--color-text-secondary)" }}>
                   <div>原因：{detail.request.reason ?? "未填写"}</div>
                   <div>提交时间：{new Date(detail.request.createdAt).toLocaleString("zh-CN")}</div>
                   {detail.request.coolingDeadline && <div>冷却截止：{new Date(detail.request.coolingDeadline).toLocaleString("zh-CN")}</div>}
@@ -256,7 +256,7 @@ export default function AdminDeletionPage() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     {detail.checklist.map((item: any) => (
                       <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 8, color: item.passed === "true" ? "var(--color-success-text)" : "var(--color-danger-text)" }}>
-                        <span>{item.passed === "true" ? "✅" : "❌"}</span>
+                        <span>{item.passed === "true" ? "" : ""}</span>
                         <span>{item.check_item}</span>
                         {item.detail && <span style={{ color: "var(--color-text-secondary)" }}>— {item.detail}</span>}
                       </div>
@@ -295,7 +295,7 @@ export default function AdminDeletionPage() {
           <button
             onClick={() => rejectId !== null && rejectMutation.mutate({ id: rejectId, reason: rejectReason })}
             disabled={!rejectReason || rejectMutation.isPending}
-            style={{ ...btnBase, background: rejectReason ? "var(--color-danger-text)" : "var(--color-border)", color: rejectReason ? "#fff" : "#94a3b8", cursor: rejectReason ? "pointer" : "not-allowed" }}
+            style={{ ...btnBase, background: rejectReason ? "var(--color-danger-text)" : "var(--color-border)", color: rejectReason ? "#fff" : "var(--color-text-muted)", cursor: rejectReason ? "pointer" : "not-allowed" }}
           >
             {rejectMutation.isPending ? "提交中..." : "确认驳回"}
           </button>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { HelpIcon, Modal, SkeletonGroup, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /* ───────── 真实接口契约（GET/POST /admin/subscription/plans） ───────── */
 
@@ -116,14 +117,14 @@ export default function AdminSubscriptionPage() {
   return (
     <div>
       <div style={{ background: "linear-gradient(135deg,#667eea,#764ba2)", color: "#fff", padding: "20px 24px", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ fontSize: 24 }}>📦</span>
+        <span style={{ fontSize: 24 }}><PIcon name="box" size={14}/></span>
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>订阅计划管理
           <HelpIcon text="管理平台订阅计划（月付/年付）。支持创建、编辑、启停计划。" level="page" />
         </span>
       </div>
 
       <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-        <button onClick={openNew} style={{ padding: "6px 16px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ 新建计划</button>
+        <button onClick={openNew} style={{ padding: "6px 16px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ 新建计划</button>
       </div>
 
       {plansQ.isLoading ? <SkeletonGroup lines={4} /> : (
@@ -134,12 +135,12 @@ export default function AdminSubscriptionPage() {
                 <h4 style={{ margin: 0, fontSize: 16 }}>{p.name}</h4>
                 <Toggle on={p.status === "active"} onChange={() => togglePlanStatus(p)} />
               </div>
-              <div style={{ fontSize: 24, fontWeight: 700, margin: "8px 0", color: "#4f6ef7" }}>¥{(p.price / 100).toFixed(2)}<span style={{ fontSize: 14, fontWeight: 400, color: "#888" }}>/{p.billing_cycle === "monthly" ? "月" : "年"}</span></div>
+              <div style={{ fontSize: 24, fontWeight: 700, margin: "8px 0", color: "var(--color-primary)" }}>¥{(p.price / 100).toFixed(2)}<span style={{ fontSize: 14, fontWeight: 400, color: "#888" }}>/{p.billing_cycle === "monthly" ? "月" : "年"}</span></div>
               <p style={{ fontSize: 13, color: "#666", marginBottom: 8 }}>{p.description || "—"}</p>
               {Object.keys(p.quota ?? {}).length > 0 && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 8 }}>
                   {Object.entries(p.quota).map(([k, v]) => (
-                    <span key={k} style={{ padding: "2px 8px", borderRadius: 10, fontSize: 11, background: "#eef2ff", color: "#4f6ef7" }}>{k}: {String(v)}</span>
+                    <span key={k} style={{ padding: "2px 8px", borderRadius: 10, fontSize: 11, background: "var(--color-primary-light)", color: "var(--color-primary)" }}>{k}: {String(v)}</span>
                   ))}
                 </div>
               )}

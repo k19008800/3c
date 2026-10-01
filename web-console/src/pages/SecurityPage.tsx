@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from "react";
+import type { ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
 import OtpInput from "../components/OtpInput";
+import { PIcon } from "./_polishIcons";
 
 /**
  * 账号安全页 — 对齐原型 portal-security.html
@@ -181,7 +183,7 @@ function ChangeEmailPanel() {
                 maxLength={1}
                 style={{
                   width: 48, height: 56, textAlign: "center", fontSize: 22, fontWeight: 600,
-                  borderRadius: 6, border: `1px solid ${digit ? "rgba(79,110,247,0.4)" : "var(--color-border)"}`,
+                  borderRadius: 6, border: `1px solid ${digit ? "var(--color-primary-border)" : "var(--color-border)"}`,
                   background: "var(--color-panel)", color: "var(--color-text)", outline: "none",
                   fontFamily: "inherit",
                 }}
@@ -378,13 +380,13 @@ function TwoFactorPanel() {
             <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
               <button
                 onClick={() => setDisableMode("totp")}
-                style={{ ...tabBase, ...(disableMode === "totp" ? { color: "var(--color-primary)", borderColor: "rgba(79,110,247,0.4)" } : {}) }}
+                style={{ ...tabBase, ...(disableMode === "totp" ? { color: "var(--color-primary)", borderColor: "var(--color-primary-border)" } : {}) }}
               >
                 验证器验证码
               </button>
               <button
                 onClick={() => setDisableMode("backup")}
-                style={{ ...tabBase, ...(disableMode === "backup" ? { color: "var(--color-primary)", borderColor: "rgba(79,110,247,0.4)" } : {}) }}
+                style={{ ...tabBase, ...(disableMode === "backup" ? { color: "var(--color-primary)", borderColor: "var(--color-primary-border)" } : {}) }}
               >
                 备用恢复码
               </button>
@@ -462,7 +464,7 @@ function TwoFactorPanel() {
             {/* 备用码：一次性显示 */}
             <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 6 }}>备用恢复码（仅此一次显示）</div>
             <div style={{ fontSize: 12, color: "var(--color-danger-text)", marginBottom: 8 }}>
-              ⚠️ 请立即保存到安全的地方；遗失后无法找回，只能关闭后重新启用
+              <PIcon name="alert" size={14}/> 请立即保存到安全的地方；遗失后无法找回，只能关闭后重新启用
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6, marginBottom: 12 }}>
               {setupData.backupCodes.map((c) => (
@@ -513,11 +515,11 @@ function ThirdPartyBindPanel() {
     }
   };
 
-  const providers: Array<{ key: string; name: string; icon: string; available: boolean }> = [
-    { key: "github", name: "GitHub", icon: "🐙", available: true },
-    { key: "wechat", name: "微信", icon: "💬", available: false },
-    { key: "telegram", name: "Telegram", icon: "✈️", available: false },
-    { key: "google", name: "Google", icon: "🔵", available: false },
+  const providers: Array<{ key: string; name: string; icon: ReactNode; available: boolean }> = [
+    { key: "github", name: "GitHub", icon: <PIcon name="globe" size={20}/>, available: true },
+    { key: "wechat", name: "微信", icon: <PIcon name="chat" size={20}/>, available: false },
+    { key: "telegram", name: "Telegram", icon: <PIcon name="send" size={20}/>, available: false },
+    { key: "google", name: "Google", icon: <PIcon name="globe" size={20}/>, available: false },
   ];
 
   return (
@@ -620,13 +622,13 @@ function ActiveSessionsPanel() {
             <div key={d.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: "1px solid var(--color-divider)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, background: "var(--color-divider-light)" }}>
-                  {d.device_name?.toLowerCase().includes("mobile") || d.os?.toLowerCase().includes("ios") ? "📱" : "💻"}
+                  {d.device_name?.toLowerCase().includes("mobile") || d.os?.toLowerCase().includes("ios") ? "" : ""}
                 </div>
                 <div>
                   <div style={{ fontSize: 14, color: "var(--color-text)", display: "flex", alignItems: "center", gap: 8 }}>
                     {d.os ?? "—"} · {d.browser ?? "—"}
                     {d.is_current && (
-                      <span style={{ display: "inline-block", padding: "1px 8px", borderRadius: 4, fontSize: 11, background: "rgba(79,110,247,0.1)", color: "var(--color-primary)", border: "1px solid rgba(79,110,247,0.3)" }}>
+                      <span style={{ display: "inline-block", padding: "1px 8px", borderRadius: 4, fontSize: 11, background: "var(--color-primary-light)", color: "var(--color-primary)", border: "1px solid var(--color-primary-border)" }}>
                         当前设备
                       </span>
                     )}
@@ -767,7 +769,7 @@ function ApiKeySecurityPanel() {
       <div style={panelBody}>
         {oldKeys.length > 0 && (
           <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 8, background: "rgba(255,167,38,0.08)", border: "1px solid rgba(255,167,38,0.3)", marginBottom: 16 }}>
-            <span style={{ fontSize: 20 }}>⚠️</span>
+            <span style={{ fontSize: 20 }}><PIcon name="alert" size={14}/></span>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, color: "#ffa726", fontWeight: 500, marginBottom: 2 }}>Key 轮换提醒</div>
               <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>

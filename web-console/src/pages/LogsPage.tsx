@@ -19,6 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { HelpIcon, EmptyState } from "@3cloud/shared-ui";
 import { api } from "../lib/api";
 import type { ModelRow } from "../components/playground/types";
+import { PIcon } from "./_polishIcons";
 
 /** 调用日志行（对齐后端 /me/logs 响应） */
 interface CallLog {
@@ -106,7 +107,7 @@ export default function LogsPage() {
   return (
     <div>
       <h2 style={{ marginBottom: 4 }}>
-        📜 调用日志
+        <PIcon name="scroll" size={14}/> 调用日志
         <HelpIcon
           text="查看您的全部 API 调用记录。按「模型编码」筛选——输入或选择 model_code（如 va-deepseek-v4-flash）即可精确过滤；编码即供应商，不再单独提供供应商维度。旧日志无编码时展示占位。"
           level="page"

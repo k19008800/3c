@@ -15,6 +15,7 @@ import {
 } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
 import type { ModelSyncResult } from "../../components/SyncResultModal";
+import { PIcon } from "../_polishIcons";
 
 interface SupplierDetail {
   id: number;
@@ -68,7 +69,7 @@ function displayHealth(health: string | null): { color: string; label: string } 
     case "error":
     case "failed":
     case "fail": return { color: "#e53935", label: "异常" };
-    default: return { color: "#999", label: "未检测" };
+    default: return { color: "var(--color-text-muted)", label: "未检测" };
   }
 }
 
@@ -240,7 +241,7 @@ export default function AdminSupplierDetailPage() {
     return (
       <>
         <PageHeader title="供应商详情" help="查看和管理单个供应商的完整配置和监控数据。" />
-        <Panel title="🔍 加载中..." flush>
+        <Panel title="加载中..." flush>
           <SkeletonGroup lines={8} />
         </Panel>
       </>
@@ -265,7 +266,7 @@ export default function AdminSupplierDetailPage() {
 
       {/* 基本信息 — 原型 panel-body grid */}
       <Panel
-        title={`🔍 ${supplier.name} 详情`}
+        title={`${supplier.name} 详情`}
         help="基本信息、健康状态、模型与密钥管理。"
         extra={
           <div className="c3-btn-group">
@@ -282,45 +283,45 @@ export default function AdminSupplierDetailPage() {
         }
       >
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, fontSize: 13 }}>
-          <div><div style={{ fontSize: 12, color: "#888" }}>供应商名称</div><div style={{ fontWeight: 600 }}>{supplier.name}</div></div>
-          <div><div style={{ fontSize: 12, color: "#888" }}>状态</div><Tag type={st.type}>{st.label}</Tag></div>
-          <div><div style={{ fontSize: 12, color: "#888" }}>Base URL</div><div style={{ wordBreak: "break-all" }}>{supplier.baseUrl ?? "—"}</div></div>
-          <div><div style={{ fontSize: 12, color: "#888" }}>API 格式</div><div>{supplier.apiType ?? "—"}</div></div>
+          <div><div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>供应商名称</div><div style={{ fontWeight: 600 }}>{supplier.name}</div></div>
+          <div><div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>状态</div><Tag type={st.type}>{st.label}</Tag></div>
+          <div><div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Base URL</div><div style={{ wordBreak: "break-all" }}>{supplier.baseUrl ?? "—"}</div></div>
+          <div><div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>API 格式</div><div>{supplier.apiType ?? "—"}</div></div>
           <div>
-            <div style={{ fontSize: 12, color: "#888" }}>健康状态</div>
+            <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>健康状态</div>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
               <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: h.color }} />
               {h.label}
             </span>
           </div>
-          <div><div style={{ fontSize: 12, color: "#888" }}>最近同步</div><div>{supplier.healthLastCheck ? supplier.healthLastCheck.slice(0, 10) : "—"}</div></div>
-          <div><div style={{ fontSize: 12, color: "#888" }}>供应商编码</div><div>{supplier.code}</div></div>
-          <div><div style={{ fontSize: 12, color: "#888" }}>创建时间</div><div>{supplier.createdAt?.slice(0, 10)}</div></div>
+          <div><div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>最近同步</div><div>{supplier.healthLastCheck ? supplier.healthLastCheck.slice(0, 10) : "—"}</div></div>
+          <div><div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>供应商编码</div><div>{supplier.code}</div></div>
+          <div><div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>创建时间</div><div>{supplier.createdAt?.slice(0, 10)}</div></div>
         </div>
       </Panel>
 
       {/* 统计概览 — 原型 stat-grid */}
       <div className="c3-stat-grid">
         <div className="c3-stat-card">
-          <span className="c3-stat-card__icon">🤖</span>
+          <span className="c3-stat-card__icon"><PIcon name="bot" size={14}/></span>
           <div className="c3-stat-card__label">模型总数</div>
           <div className="c3-stat-card__value">{supplier.modelCount}</div>
           <div className="c3-stat-card__sub">已同步到平台</div>
         </div>
         <div className="c3-stat-card">
-          <span className="c3-stat-card__icon">🔑</span>
+          <span className="c3-stat-card__icon"><PIcon name="key" size={14}/></span>
           <div className="c3-stat-card__label">API Key 数</div>
           <div className="c3-stat-card__value">{keys?.length ?? 0}</div>
           <div className="c3-stat-card__sub">当前生效密钥</div>
         </div>
         <div className="c3-stat-card">
-          <span className="c3-stat-card__icon">✅</span>
+          <span className="c3-stat-card__icon"><PIcon name="check" size={14}/></span>
           <div className="c3-stat-card__label">健康状态</div>
           <div className="c3-stat-card__value" style={{ color: h.color, fontSize: 18 }}>{h.label}</div>
           <div className="c3-stat-card__sub">{supplier.status === "active" ? "在线服务" : "非活跃"}</div>
         </div>
         <div className="c3-stat-card">
-          <span className="c3-stat-card__icon">📅</span>
+          <span className="c3-stat-card__icon"><PIcon name="calendar" size={14}/></span>
           <div className="c3-stat-card__label">创建时间</div>
           <div className="c3-stat-card__value" style={{ fontSize: 18 }}>{supplier.createdAt?.slice(0, 10)}</div>
           <div className="c3-stat-card__sub">平台接入</div>
@@ -329,7 +330,7 @@ export default function AdminSupplierDetailPage() {
 
       {/* 模型管理 — 同步 + 禁用开关 + 批量操作 */}
       <Panel
-        title="🤖 模型管理"
+        title="模型管理"
         help="供应商已同步模型及成本价。点击「同步模型」从上游 /v1/models 一键拉取；行内「禁用/启用」控制该模型是否参与此供应商路由（模型广场调度）；支持勾选批量操作。"
         extra={
           <div className="c3-btn-group">
@@ -339,7 +340,7 @@ export default function AdminSupplierDetailPage() {
               disabled={syncMutation.isPending}
               onClick={() => syncMutation.mutate()}
             >
-              {syncMutation.isPending ? "同步中…" : "🔄 同步模型"}
+              {syncMutation.isPending ? "同步中…" : "同步模型"}
             </button>
             <HelpIcon text="从该供应商上游 /v1/models 拉取模型并自动填充模型库：已存在的模型自动对齐并恢复启用，新建模型自动补一条 draft 定价占位（改价即可上架）。" />
           </div>
@@ -357,7 +358,7 @@ export default function AdminSupplierDetailPage() {
                 />
                 全选
               </label>
-              <span style={{ fontSize: 12, color: "#888" }}>已选 {selected.size} 个模型</span>
+              <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>已选 {selected.size} 个模型</span>
               <div style={{ flex: 1 }} />
               <button
                 type="button"
@@ -386,7 +387,7 @@ export default function AdminSupplierDetailPage() {
 
       {/* API Key — 原型密钥管理 */}
       {keys && keys.length > 0 && (
-        <Panel title="🔑 API Key" help="供应商上游 API 密钥。">
+        <Panel title="API Key" help="供应商上游 API 密钥。">
           <Table columns={keyColumns} dataSource={keys} rowKey="id" />
         </Panel>
       )}

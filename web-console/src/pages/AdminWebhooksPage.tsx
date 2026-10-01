@@ -145,7 +145,7 @@ export default function AdminWebhooksPage() {
     { key: "url", title: "URL", dataIndex: "url", render: (v) => <span style={{ color: "var(--color-text-secondary)", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block" }}>{String(v ?? "")}</span> },
     { key: "events", title: "事件数", dataIndex: "events", render: (v) => { try { return JSON.parse(String(v ?? "[]")).length; } catch { return 0; } } },
     { key: "isActive", title: "状态", dataIndex: "isActive", render: (v, record) => (
-      <button onClick={(e) => { e.stopPropagation(); toggleMut.mutate({ id: (record as any).id, isActive: !(record as any).isActive }); }} style={{ ...btnBase, fontSize: 12, padding: "4px 10px", background: (record as any).isActive ? "var(--color-success-bg)" : "var(--color-bg)", color: (record as any).isActive ? "var(--color-success-text)" : "#94a3b8" }}>
+      <button onClick={(e) => { e.stopPropagation(); toggleMut.mutate({ id: (record as any).id, isActive: !(record as any).isActive }); }} style={{ ...btnBase, fontSize: 12, padding: "4px 10px", background: (record as any).isActive ? "var(--color-success-bg)" : "var(--color-bg)", color: (record as any).isActive ? "var(--color-success-text)" : "var(--color-text-muted)" }}>
         {(record as any).isActive ? "启用" : "禁用"}
       </button>
     ) },
@@ -154,9 +154,9 @@ export default function AdminWebhooksPage() {
       <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
         <button onClick={() => { setEditId((record as any).id); setForm({ name: (record as any).name, url: (record as any).url, events: JSON.parse((record as any).events || "[]"), secret: "", retryCount: (record as any).retryCount, timeoutMs: (record as any).timeoutMs }); }} style={{ ...btnBase, background: "var(--color-bg)", color: "var(--color-text)", border: `1px solid var(--color-border)`, fontSize: 12, padding: "4px 8px" }}>编辑</button>
         <button onClick={() => testMut.mutate((record as any).id)} disabled={testMut.isPending} style={{ ...btnBase, background: "#e0f2fe", color: "#0369a1", fontSize: 12, padding: "4px 8px" }}>测试</button>
-        <button onClick={() => setLogWebhookId(logWebhookId === (record as any).id ? null : (record as any).id)} style={{ ...btnBase, background: "#f0fdf4", color: "var(--color-success-text)", fontSize: 12, padding: "4px 8px" }}>日志</button>
+        <button onClick={() => setLogWebhookId(logWebhookId === (record as any).id ? null : (record as any).id)} style={{ ...btnBase, background: "var(--color-success-bg)", color: "var(--color-success-text)", fontSize: 12, padding: "4px 8px" }}>日志</button>
         <ConfirmPopover title="确认删除此 Webhook？" description="此操作不可撤销" onConfirm={() => delMut.mutate((record as any).id)}>
-          <button style={{ ...btnBase, background: "var(--color-danger-bg)", color: "var(--color-danger-text)", border: `1px solid #fca5a5`, fontSize: 12, padding: "4px 8px" }}>删除</button>
+          <button style={{ ...btnBase, background: "var(--color-danger-bg)", color: "var(--color-danger-text)", border: `1px solid var(--color-danger-border)`, fontSize: 12, padding: "4px 8px" }}>删除</button>
         </ConfirmPopover>
       </div>
     ) },
@@ -167,42 +167,42 @@ export default function AdminWebhooksPage() {
       <h2 style={{ marginBottom: 4 }}>
         全局 Webhook
         <HelpIcon text="全局 Webhook 管理：创建配置后可接收平台事件推送（如用户注册/充值成功/告警触发等）。支持 HMAC 签名验证和自动重试。" level="page" />
-        {demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/webhooks 待接入）</span>}
+        {demo && <span style={{ fontSize: 11, color: "var(--color-warning-text)" }}>️ 演示数据（后端 /admin/webhooks 待接入）</span>}
       </h2>
-      <p style={{ color: "#94a3b8", marginTop: 0, fontSize: 13 }}>§32.1 事件推送 · HMAC 签名 · 自动重试</p>
+      <p style={{ color: "var(--color-text-muted)", marginTop: 0, fontSize: 13 }}>§32.1 事件推送 · HMAC 签名 · 自动重试</p>
 
       {/* 新建/编辑表单 */}
       <div style={{ ...card, marginBottom: 16 }}>
         <h4 style={{ margin: "0 0 12px", fontSize: 14 }}>{editId !== null ? "编辑 Webhook" : "新建 Webhook"}</h4>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div>
-            <label style={{ fontSize: 13, display: "block", marginBottom: 4, color: "#475569" }}>名称 *</label>
+            <label style={{ fontSize: 13, display: "block", marginBottom: 4, color: "var(--color-text-secondary)" }}>名称 *</label>
             <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14, boxSizing: "border-box" }} />
           </div>
           <div>
-            <label style={{ fontSize: 13, display: "block", marginBottom: 4, color: "#475569" }}>回调 URL *</label>
+            <label style={{ fontSize: 13, display: "block", marginBottom: 4, color: "var(--color-text-secondary)" }}>回调 URL *</label>
             <input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14, boxSizing: "border-box" }} />
           </div>
           <div>
-            <label style={{ fontSize: 13, display: "block", marginBottom: 4, color: "#475569" }}>签名密钥（留空自动生成）</label>
+            <label style={{ fontSize: 13, display: "block", marginBottom: 4, color: "var(--color-text-secondary)" }}>签名密钥（留空自动生成）</label>
             <input value={form.secret} onChange={(e) => setForm({ ...form, secret: e.target.value })} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 13, fontFamily: "monospace", boxSizing: "border-box" }} />
           </div>
           <div style={{ display: "flex", gap: 12 }}>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 13, display: "block", marginBottom: 4, color: "#475569" }}>重试次数</label>
+              <label style={{ fontSize: 13, display: "block", marginBottom: 4, color: "var(--color-text-secondary)" }}>重试次数</label>
               <input type="number" value={form.retryCount} onChange={(e) => setForm({ ...form, retryCount: Number(e.target.value) })} min={0} max={5} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14, boxSizing: "border-box" }} />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 13, display: "block", marginBottom: 4, color: "#475569" }}>超时 (ms)</label>
+              <label style={{ fontSize: 13, display: "block", marginBottom: 4, color: "var(--color-text-secondary)" }}>超时 (ms)</label>
               <input type="number" value={form.timeoutMs} onChange={(e) => setForm({ ...form, timeoutMs: Number(e.target.value) })} min={1000} max={30000} step={1000} style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1px solid var(--color-border)`, fontSize: 14, boxSizing: "border-box" }} />
             </div>
           </div>
         </div>
         <div style={{ marginTop: 12 }}>
-          <label style={{ fontSize: 13, display: "block", marginBottom: 4, color: "#475569" }}>订阅事件 *</label>
+          <label style={{ fontSize: 13, display: "block", marginBottom: 4, color: "var(--color-text-secondary)" }}>订阅事件 *</label>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {WEBHOOK_EVENTS.map((evt) => (
-              <label key={evt} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, cursor: "pointer", padding: "4px 8px", borderRadius: 6, background: form.events.includes(evt) ? "#dbeafe" : "var(--color-bg)", border: `1px solid var(--color-border)` }}>
+              <label key={evt} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, cursor: "pointer", padding: "4px 8px", borderRadius: 6, background: form.events.includes(evt) ? "var(--color-info-bg)" : "var(--color-bg)", border: `1px solid var(--color-border)` }}>
                 <input type="checkbox" checked={form.events.includes(evt)} onChange={() => toggleEvent(evt)} style={{ margin: 0 }} />
                 {evt}
               </label>
@@ -243,7 +243,7 @@ export default function AdminWebhooksPage() {
             <div>状态：<span style={{ color: testResult.status === "success" ? "var(--color-success-text)" : "var(--color-danger-text)", fontWeight: 600 }}>{testResult.status}</span></div>
             {testResult.statusCode && <div>状态码：{testResult.statusCode}</div>}
             {testResult.latencyMs !== undefined && <div>耗时：{testResult.latencyMs}ms</div>}
-            <div style={{ background: "#1e293b", color: "#e2e8f0", padding: 12, borderRadius: 6, marginTop: 8, fontSize: 12, fontFamily: "monospace", whiteSpace: "pre-wrap", maxHeight: 200, overflow: "auto" }}>{testResult.body || "(空)"}</div>
+            <div style={{ background: "var(--color-ink-800)", color: "#e2e8f0", padding: 12, borderRadius: 6, marginTop: 8, fontSize: 12, fontFamily: "monospace", whiteSpace: "pre-wrap", maxHeight: 200, overflow: "auto" }}>{testResult.body || "(空)"}</div>
           </div>
         )}
       </Modal>
@@ -253,9 +253,9 @@ export default function AdminWebhooksPage() {
         <div style={{ ...card, marginTop: 16 }}>
           <h4 style={{ margin: "0 0 12px", fontSize: 14 }}>投递日志</h4>
           {logsQ.isLoading ? (
-            <p style={{ color: "#94a3b8" }}>加载中...</p>
+            <p style={{ color: "var(--color-text-muted)" }}>加载中...</p>
           ) : logs.length === 0 ? (
-            <p style={{ color: "#94a3b8" }}>暂无投递记录。</p>
+            <p style={{ color: "var(--color-text-muted)" }}>暂无投递记录。</p>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
@@ -270,7 +270,7 @@ export default function AdminWebhooksPage() {
               </thead>
               <tbody>
                 {logs.map((l: any, i: number) => (
-                  <tr key={l.id} style={{ borderBottom: `1px solid var(--color-border)`, background: i % 2 === 0 ? "var(--color-panel)" : "#fafafa" }}>
+                  <tr key={l.id} style={{ borderBottom: `1px solid var(--color-border)`, background: i % 2 === 0 ? "var(--color-panel)" : "var(--color-divider-light)" }}>
                     <td style={{ padding: "8px 12px", color: "var(--color-text)" }}>{l.event}</td>
                     <td style={{ padding: "8px 12px" }}>
                       <StatusBadge status={l.status === "success" ? "success" : l.status === "pending" ? "warning" : "danger"}>

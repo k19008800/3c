@@ -11,6 +11,7 @@ import {
   useToast,
 } from "@3cloud/shared-ui";
 import type { ColumnDef } from "@3cloud/shared-ui";
+import "./console-misc.css";
 
 /**
  * 销售 — 客户列表
@@ -125,7 +126,7 @@ export default function SalesCustomersPage() {
             onClick={() => window.location.href = `/sales/customers/${record.user_id}`}
             style={{
               padding: "4px 12px", borderRadius: 6, border: "1px solid var(--color-border)",
-              background: "#fff", fontSize: 12, cursor: "pointer", color: "var(--color-text)",
+              background: "var(--color-panel)", fontSize: 12, cursor: "pointer", color: "var(--color-text)",
             }}>
             查看详情
           </button>
@@ -135,7 +136,7 @@ export default function SalesCustomersPage() {
               disabled={assignMut.isPending}
               style={{
                 padding: "4px 12px", borderRadius: 6, border: "1px solid var(--color-primary)",
-                background: "#fff", color: "var(--color-primary)", fontSize: 12, cursor: "pointer",
+                background: "var(--color-panel)", color: "var(--color-primary)", fontSize: 12, cursor: "pointer",
               }}>
               认领
             </button>
@@ -166,7 +167,7 @@ export default function SalesCustomersPage() {
             style={{ width: 240, height: 40, border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "0 12px", fontSize: 14 }}
           />
           <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }}
-            style={{ height: 40, border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "0 8px", fontSize: 13, background: "#fff" }}>
+            style={{ height: 40, border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "0 8px", fontSize: 13, background: "var(--color-panel)" }}>
             <option value="total-desc">累计消费 ↓</option>
             <option value="total-asc">累计消费 ↑</option>
             <option value="month-desc">本月消费 ↓</option>
@@ -176,7 +177,7 @@ export default function SalesCustomersPage() {
           </select>
           <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>注册时间</span>
           <select value={timeRange} onChange={e => { setTimeRange(e.target.value); setPage(1); }}
-            style={{ height: 40, border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "0 8px", fontSize: 13, background: "#fff" }}>
+            style={{ height: 40, border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "0 8px", fontSize: 13, background: "var(--color-panel)" }}>
             <option value="all">全部时间</option>
             <option value="7d">近 7 天</option>
             <option value="30d">近 30 天</option>
@@ -186,7 +187,7 @@ export default function SalesCustomersPage() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}
-            style={{ height: 40, border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "0 8px", fontSize: 13, background: "#fff" }}>
+            style={{ height: 40, border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", padding: "0 8px", fontSize: 13, background: "var(--color-panel)" }}>
             <option value="">全部状态</option>
             <option value="lead">线索</option>
             <option value="trial">试用</option>
@@ -204,7 +205,7 @@ export default function SalesCustomersPage() {
       {q.isLoading && !q.data ? (
         <SkeletonGroup lines={5} />
       ) : customers.length === 0 ? (
-        <EmptyState icon="👥" title="暂无绑定客户" description="当前没有分配给您的客户" />
+        <EmptyState title="暂无绑定客户" description="当前没有分配给您的客户" />
       ) : (
         <>
           <Table columns={columns} dataSource={customers} loading={q.isLoading} emptyText="暂无客户" />

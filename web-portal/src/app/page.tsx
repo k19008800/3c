@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { fetchDictionary, makeT, resolveLang, siteAlternates } from "../lib/i18n";
 import { getCookieLang } from "../lib/i18n-server";
 import { PageHelp } from "../components/Help";
@@ -107,6 +108,58 @@ const MODEL_CATEGORY_LABELS: Record<string, string> = {
   chat: "对话", embedding: "嵌入", image: "图像", audio: "音频", video: "视频", rerank: "重排",
 };
 
+// ===== 品牌母题：线性 SVG 图标（替代 emoji） =====
+function Glyph({ children }: { children: ReactNode }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {children}
+    </svg>
+  );
+}
+
+const FEATURE_ICONS: Record<string, ReactNode> = {
+  unified: (
+    <Glyph>
+      <path d="M10 14a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07l-1.5 1.5" />
+      <path d="M14 10a5 5 0 0 0-7.07 0L4.1 12.83a5 5 0 0 0 7.07 7.07l1.5-1.5" />
+    </Glyph>
+  ),
+  routing: (
+    <Glyph>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M15.5 8.5l-2.1 4.9-4.9 2.1 2.1-4.9z" />
+    </Glyph>
+  ),
+  billing: (
+    <Glyph>
+      <path d="M4 20V10" />
+      <path d="M10 20V4" />
+      <path d="M16 20v-7" />
+      <path d="M21 20H3" />
+    </Glyph>
+  ),
+  vendors: (
+    <Glyph>
+      <rect x="4" y="3" width="16" height="18" rx="1.5" />
+      <path d="M9 8h2M13 8h2M9 12h2M13 12h2M9 16h6" />
+    </Glyph>
+  ),
+  security: (
+    <Glyph>
+      <path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z" />
+      <path d="M9.5 12l2 2 3.5-3.5" />
+    </Glyph>
+  ),
+  multidevice: (
+    <Glyph>
+      <rect x="2" y="5" width="14" height="10" rx="1.5" />
+      <path d="M6 19h6" />
+      <rect x="17" y="9" width="5" height="10" rx="1.2" />
+    </Glyph>
+  ),
+};
+
 // ===== SEO metadata（按语言翻译） =====
 export async function generateMetadata({
   searchParams,
@@ -158,12 +211,12 @@ export default async function HomePage({
   }
 
   const features = [
-    { icon: "🔗", title: t("home.features.unified.title"), desc: t("home.features.unified.desc") },
-    { icon: "🧭", title: t("home.features.routing.title"), desc: t("home.features.routing.desc") },
-    { icon: "📊", title: t("home.features.billing.title"), desc: t("home.features.billing.desc") },
-    { icon: "🏢", title: t("home.features.vendors.title"), desc: t("home.features.vendors.desc") },
-    { icon: "🔐", title: t("home.features.security.title"), desc: t("home.features.security.desc") },
-    { icon: "📱", title: t("home.features.multidevice.title"), desc: t("home.features.multidevice.desc") },
+    { iconKey: "unified", title: t("home.features.unified.title"), desc: t("home.features.unified.desc") },
+    { iconKey: "routing", title: t("home.features.routing.title"), desc: t("home.features.routing.desc") },
+    { iconKey: "billing", title: t("home.features.billing.title"), desc: t("home.features.billing.desc") },
+    { iconKey: "vendors", title: t("home.features.vendors.title"), desc: t("home.features.vendors.desc") },
+    { iconKey: "security", title: t("home.features.security.title"), desc: t("home.features.security.desc") },
+    { iconKey: "multidevice", title: t("home.features.multidevice.title"), desc: t("home.features.multidevice.desc") },
   ];
 
   const steps = [
@@ -182,251 +235,249 @@ export default async function HomePage({
     { q: t("home.faq.q7"), a: t("home.faq.a7") },
   ];
 
+  const statsCells = [
+    { label: t("home.stats.models"), value: String(stats.models ?? 0) },
+    { label: t("home.stats.vendors"), value: String(stats.vendors ?? 0) },
+    { label: t("home.stats.users"), value: String(stats.users ?? 0) },
+    { label: t("home.stats.tokens"), value: formatTokens(stats.totalTokens ?? 0) },
+  ];
+
   return (
     <div>
-      {/* ===== Hero ===== */}
-      <section
-        style={{
-          textAlign: "center",
-          padding: "100px 24px 80px",
-          background: "linear-gradient(180deg, #eff6ff 0%, #fff 40%, #f0f9ff 100%)",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        {/* 背景装饰 */}
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(37,99,235,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
-        <div className="anim-fade-in" style={{ position: "relative", zIndex: 1 }}>
-          <h1 style={{ fontSize: 48, fontWeight: 800, maxWidth: 800, margin: "0 auto 20px", lineHeight: 1.2 }}>
-            {t("home.hero.title")}
-            <PageHelp text={t("help.home")} />
-          </h1>
-          <p style={{ fontSize: 18, color: "#475569", maxWidth: 640, margin: "0 auto 36px", lineHeight: 1.7 }}>
-            {t("home.hero.subtitle")}
-          </p>
-          <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
-            <a href="/models" style={{ background: "#2563eb", color: "#fff", padding: "14px 32px", borderRadius: 8, textDecoration: "none", fontWeight: 600, fontSize: 16, boxShadow: "0 4px 14px rgba(37,99,235,.35)" }}>
-              {t("home.hero.browseModels")}
-            </a>
-            <a href="/pricing" style={{ border: "1px solid #cbd5e1", color: "#0f172a", background: "#fff", padding: "14px 32px", borderRadius: 8, textDecoration: "none", fontWeight: 600, fontSize: 16 }}>
-              {t("home.hero.viewPricing")}
-            </a>
-            <a href="/app/login" style={{ border: "1px solid #cbd5e1", color: "#475569", padding: "14px 32px", borderRadius: 8, textDecoration: "none" }}>
-              {t("home.hero.signup")}
-            </a>
-          </div>
+      {/* ===== Hero：编辑排版式 ===== */}
+      <section className="hero">
+        <div className="container">
+          <div className="hero-grid">
+            <div className="anim-fade-in">
+              <span className="overline">AI API Aggregation Platform</span>
+              <h1 className="hero-title">
+                {t("home.hero.title")}
+                <PageHelp text={t("help.home")} />
+              </h1>
+              <p className="hero-subtitle">{t("home.hero.subtitle")}</p>
+              <div className="hero-actions">
+                <a href="/models" className="btn btn-primary btn-lg">{t("home.hero.browseModels")}</a>
+                <a href="/pricing" className="btn btn-secondary btn-lg">{t("home.hero.viewPricing")}</a>
+                <a href="/app/login" className="btn btn-ghost btn-lg">{t("home.hero.signup")}</a>
+              </div>
+            </div>
 
-          {/* 快速接入代码 */}
-          <div
-            style={{
-              maxWidth: 620,
-              margin: "48px auto 0",
-              background: "#0f172a",
-              borderRadius: 10,
-              padding: "20px 24px",
-              textAlign: "left",
-              fontFamily: "Consolas, Monaco, 'Courier New', monospace",
-              fontSize: 13,
-              color: "#e2e8f0",
-              lineHeight: 1.7,
-              position: "relative",
-            }}
-          >
-            <div style={{ color: "#94a3b8", fontSize: 11, marginBottom: 8 }}>$ {t("home.hero.quickstart")}</div>
-            <div><span style={{ color: "#60a5fa" }}>curl</span> {apiConfig.openaiChatUrl} \</div>
-            <div>&nbsp;&nbsp;-H <span style={{ color: "#34d399" }}>"Authorization: Bearer YOUR_API_KEY"</span> \</div>
-            <div>&nbsp;&nbsp;-H <span style={{ color: "#34d399" }}>"Content-Type: application/json"</span> \</div>
-            <div>&nbsp;&nbsp;-d <span style={{ color: "#34d399" }}>'{`{"model":"deepseek-chat","messages":[{"role":"user","content":"你好"}]}`}'</span></div>
+            {/* Hero 右侧：实时接入终端 */}
+            <div className="hero-visual anim-fade-in">
+              <div className="terminal-card">
+                <div className="terminal-bar">
+                  <span className="terminal-dot" />
+                  <span className="terminal-dot" />
+                  <span className="terminal-dot primary" />
+                  <span className="terminal-title">$ {t("home.hero.quickstart")}</span>
+                </div>
+                <div className="terminal-body">
+                  <div><span className="tok-cmt">$</span> <span className="tok-cmd">curl</span> {apiConfig.openaiChatUrl} \</div>
+                  <div>&nbsp;&nbsp;-H <span className="tok-str">"Authorization: Bearer YOUR_API_KEY"</span> \</div>
+                  <div>&nbsp;&nbsp;-H <span className="tok-str">"Content-Type: application/json"</span> \</div>
+                  <div>&nbsp;&nbsp;-d <span className="tok-str">'{`{"model":"deepseek-chat","messages":[{"role":"user","content":"你好"}]}`}'</span></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ===== StatsBanner ===== */}
-      <section style={{ maxWidth: 1000, margin: "-30px auto 0", padding: "0 24px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }}>
-          {[
-            { label: t("home.stats.models"), value: String(stats.models ?? 0), icon: "🧩" },
-            { label: t("home.stats.vendors"), value: String(stats.vendors ?? 0), icon: "🏭" },
-            { label: t("home.stats.users"), value: String(stats.users ?? 0), icon: "👥" },
-            { label: t("home.stats.tokens"), value: formatTokens(stats.totalTokens ?? 0), icon: "⚡" },
-          ].map((s, i) => (
-            <div key={s.label} className={`anim-fade-in-up anim-fade-in-up-d${i + 1}`} style={{ background: "#fff", borderRadius: 12, padding: "24px 20px", textAlign: "center", boxShadow: "0 4px 20px rgba(0,0,0,.06)", border: "1px solid #f1f5f9" }}>
-              <div style={{ fontSize: 24, marginBottom: 4 }}>{s.icon}</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: "#2563eb" }}>{s.value}</div>
-              <div style={{ fontSize: 14, color: "#64748b", marginTop: 4 }}>{s.label}</div>
+      {/* ===== 统计带 ===== */}
+      <section className="stats-band container">
+        <div className="stats-grid">
+          {statsCells.map((s, i) => (
+            <div key={s.label} className={`stat-cell anim-fade-in-up anim-fade-in-up-d${i + 1}`}>
+              <div className="stat-value">{s.value}</div>
+              <div className="stat-label">{s.label}</div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ===== Features ===== */}
-      <section style={{ maxWidth: 1000, margin: "80px auto", padding: "0 24px" }}>
-        <h2 style={{ textAlign: "center", fontSize: 30, fontWeight: 700, marginBottom: 12 }}>{t("home.features.title")}</h2>
-        <p style={{ textAlign: "center", color: "#64748b", marginBottom: 48, fontSize: 16 }}>{t("home.features.subtitle")}</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
+      {/* ===== 特性区 ===== */}
+      <section className="section container">
+        <div className="section-head">
+          <h2 className="section-title">{t("home.features.title")}</h2>
+          <p className="section-subtitle">{t("home.features.subtitle")}</p>
+        </div>
+        <div className="feature-grid">
           {features.map((f, i) => (
-            <div key={f.title} className={`anim-fade-in-up anim-fade-in-up-d${(i % 4) + 1}`} style={{ border: "1px solid #e2e8f0", borderRadius: 12, padding: "28px 24px", background: "#fff", transition: "box-shadow .2s" }}>
-              <div style={{ fontSize: 28, marginBottom: 12 }}>{f.icon}</div>
-              <h3 style={{ marginBottom: 8, fontSize: 18 }}>{f.title}</h3>
-              <p style={{ color: "#475569", fontSize: 14, lineHeight: 1.7 }}>{f.desc}</p>
+            <div key={f.title} className={`feature-card anim-fade-in-up anim-fade-in-up-d${(i % 4) + 1}`}>
+              <div className="feature-icon">{FEATURE_ICONS[f.iconKey]}</div>
+              <h3>{f.title}</h3>
+              <p>{f.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ===== Model Catalog Preview ===== */}
-      <section style={{ background: "#f8fafc", padding: "80px 24px" }}>
-        <div style={{ maxWidth: 1000, margin: "0 auto" }}>
-          <h2 style={{ textAlign: "center", fontSize: 30, fontWeight: 700, marginBottom: 12 }}>{t("home.popular.title")}</h2>
-          <p style={{ textAlign: "center", color: "#64748b", marginBottom: 40, fontSize: 16 }}>{t("home.popular.subtitle")}</p>
-
-          {/* 分类标签 */}
-          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 32, flexWrap: "wrap" }}>
-            {Array.from(modelsByCategory.keys()).map((cat) => (
-              <span key={cat} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 20, padding: "6px 16px", fontSize: 13, color: "#475569" }}>
-                {MODEL_CATEGORY_LABELS[cat] ?? cat}
-              </span>
-            ))}
+      {/* ===== 模型目录 ===== */}
+      <section className="band-gray section">
+        <div className="container">
+          <div className="section-head">
+            <h2 className="section-title">{t("home.popular.title")}</h2>
+            <p className="section-subtitle">{t("home.popular.subtitle")}</p>
           </div>
 
-          {/* 模型卡片 */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
+          {modelsByCategory.size > 0 && (
+            <div className="cat-pills">
+              {Array.from(modelsByCategory.keys()).map((cat) => (
+                <span key={cat} className="cat-pill">
+                  {MODEL_CATEGORY_LABELS[cat] ?? cat}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="model-grid">
             {pricing.pricing.slice(0, 12).map((m) => (
-              <div key={`${m.name}-${m.vendor}`} style={{ background: "#fff", borderRadius: 10, padding: "20px 24px", border: "1px solid #e2e8f0", transition: "box-shadow .2s" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                  <strong style={{ fontSize: 15 }}>{m.display_name || m.name}</strong>
-                  <span style={{ fontSize: 11, color: "#94a3b8", background: "#f1f5f9", borderRadius: 4, padding: "2px 8px" }}>{MODEL_CATEGORY_LABELS[m.category] ?? m.category}</span>
+              <div key={`${m.name}-${m.vendor}`} className="model-card">
+                <div className="model-card-head">
+                  <strong className="model-name">{m.display_name || m.name}</strong>
+                  <span className="model-tag">{MODEL_CATEGORY_LABELS[m.category] ?? m.category}</span>
                 </div>
-                <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 12, fontFamily: "monospace" }}>{m.name}</div>
-                <div style={{ display: "flex", gap: 16, marginBottom: 8 }}>
-                  <div><span style={{ fontSize: 11, color: "#94a3b8" }}>{t("home.pricing.input")} </span><span style={{ fontWeight: 600, color: "#2563eb" }}>{formatPrice(m.input_price)}</span><span style={{ fontSize: 11, color: "#94a3b8" }}>/1K</span></div>
-                  <div><span style={{ fontSize: 11, color: "#94a3b8" }}>{t("home.pricing.output")} </span><span style={{ fontWeight: 600, color: "#2563eb" }}>{formatPrice(m.output_price)}</span><span style={{ fontSize: 11, color: "#94a3b8" }}>/1K</span></div>
+                <div className="model-code">{m.name}</div>
+                <div className="model-price-row">
+                  <div className="price-item">
+                    <div className="price-cap">{t("home.pricing.input")}</div>
+                    <div className="price-num">{formatPrice(m.input_price)}</div>
+                  </div>
+                  <div className="price-item">
+                    <div className="price-cap">{t("home.pricing.output")}</div>
+                    <div className="price-num">{formatPrice(m.output_price)}</div>
+                  </div>
                 </div>
-                {m.context_length > 0 && <div style={{ fontSize: 11, color: "#94a3b8" }}>{t("home.pricing.context")} {m.context_length.toLocaleString()} tokens</div>}
               </div>
             ))}
           </div>
 
-          <div style={{ textAlign: "center", marginTop: 32 }}>
-            <a href="/models" style={{ color: "#2563eb", textDecoration: "none", fontWeight: 600, fontSize: 15 }}>
+          <div style={{ textAlign: "center", marginTop: "var(--space-3xl)" }}>
+            <a href="/models" className="text-link">
               {t("home.popular.viewAll")} ({pricing.pricing.length}+) →
             </a>
           </div>
         </div>
       </section>
 
-      {/* ===== How It Works ===== */}
-      <section style={{ maxWidth: 1000, margin: "80px auto", padding: "0 24px" }}>
-        <h2 style={{ textAlign: "center", fontSize: 30, fontWeight: 700, marginBottom: 12 }}>{t("home.how.title")}</h2>
-        <p style={{ textAlign: "center", color: "#64748b", marginBottom: 48, fontSize: 16 }}>{t("home.how.subtitle")}</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 32 }}>
+      {/* ===== 接入步骤 ===== */}
+      <section className="section container">
+        <div className="section-head">
+          <h2 className="section-title">{t("home.how.title")}</h2>
+          <p className="section-subtitle">{t("home.how.subtitle")}</p>
+        </div>
+        <div className="steps-grid">
           {steps.map((s) => (
-            <div key={s.step} style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 40, fontWeight: 900, color: "#e2e8f0", marginBottom: 8 }}>{s.step}</div>
-              <h3 style={{ marginBottom: 8, fontSize: 18 }}>{s.title}</h3>
-              <p style={{ color: "#475569", fontSize: 14, lineHeight: 1.7 }}>{s.desc}</p>
+            <div key={s.step} className="step-card">
+              <div className="step-num">{s.step}</div>
+              <h3>{s.title}</h3>
+              <p>{s.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ===== Quick Connect ===== */}
-      <section style={{ background: "#0f172a", padding: "80px 24px", color: "#fff" }}>
-        <div style={{ maxWidth: 1000, margin: "0 auto" }}>
-          <h2 style={{ textAlign: "center", fontSize: 30, fontWeight: 700, marginBottom: 12 }}>{t("home.dev.title")}</h2>
-          <p style={{ textAlign: "center", color: "#94a3b8", marginBottom: 40, fontSize: 16 }}>{t("home.dev.subtitle")}</p>
+      {/* ===== 暗色开发者区 ===== */}
+      <section className="band-dark section">
+        <div className="container">
+          <div className="section-head">
+            <h2 className="section-title">{t("home.dev.title")}</h2>
+            <p className="section-subtitle">{t("home.dev.subtitle")}</p>
+          </div>
 
-          {/* 语言切换标签 */}
-          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 24 }}>
-            {["cURL", "Python", "JavaScript"].map((langName) => (
-              <span key={langName} style={{ background: langName === "cURL" ? "#2563eb" : "transparent", border: langName === "cURL" ? "none" : "1px solid #334155", borderRadius: 6, padding: "6px 18px", fontSize: 13, color: "#fff", cursor: "default" }}>
+          <div className="dev-tabs">
+            {["cURL", "Python", "JavaScript"].map((langName, idx) => (
+              <span key={langName} className={`dev-tab${idx === 0 ? " active" : ""}`}>
                 {langName}
               </span>
             ))}
           </div>
 
-          {/* 代码块 */}
-          <div style={{ background: "#1e293b", borderRadius: 10, padding: "24px 28px", fontFamily: "Consolas, Monaco, 'Courier New', monospace", fontSize: 13, lineHeight: 1.8, overflow: "auto" }}>
-            <div style={{ color: "#64748b", marginBottom: 4 }}># Python · OpenAI SDK（base_url = {apiConfig.openaiBaseUrl}）</div>
-            <div><span style={{ color: "#fbbf24" }}>from</span> openai <span style={{ color: "#fbbf24" }}>import</span> <span style={{ color: "#60a5fa" }}>OpenAI</span></div>
-            <div style={{ marginTop: 8 }}><span style={{ color: "#60a5fa" }}>client</span> = OpenAI(</div>
-            <div>&nbsp;&nbsp;api_key=<span style={{ color: "#34d399" }}>"YOUR_API_KEY"</span>,</div>
-            <div>&nbsp;&nbsp;base_url=<span style={{ color: "#34d399" }}>"{apiConfig.openaiBaseUrl}"</span></div>
+          <div className="code-window">
+            <div className="cmt"># Python · OpenAI SDK（base_url = {apiConfig.openaiBaseUrl}）</div>
+            <div><span className="cmt">from</span> openai <span className="cmt">import</span> <span className="fn">OpenAI</span></div>
+            <div style={{ marginTop: 8 }}><span className="fn">client</span> = OpenAI(</div>
+            <div>&nbsp;&nbsp;api_key=<span className="str">"YOUR_API_KEY"</span>,</div>
+            <div>&nbsp;&nbsp;base_url=<span className="str">"{apiConfig.openaiBaseUrl}"</span></div>
             <div>)</div>
-            <div style={{ marginTop: 8 }}><span style={{ color: "#60a5fa" }}>response</span> = client.chat.completions.create(</div>
-            <div>&nbsp;&nbsp;model=<span style={{ color: "#34d399" }}>"deepseek-chat"</span>,</div>
+            <div style={{ marginTop: 8 }}><span className="fn">response</span> = client.chat.completions.create(</div>
+            <div>&nbsp;&nbsp;model=<span className="str">"deepseek-chat"</span>,</div>
             <div>&nbsp;&nbsp;messages=[{`{"role": "user", "content": "你好"}`}]</div>
             <div>)</div>
-            <div style={{ marginTop: 8 }}><span style={{ color: "#fbbf24" }}>print</span>(response.choices[0].message.content)</div>
-            <div style={{ marginTop: 16, color: "#64748b", borderTop: "1px solid #334155", paddingTop: 12 }}># Anthropic SDK（base_url = {apiConfig.anthropicBaseUrl}，支持 tool_use / 流式）</div>
-            <div><span style={{ color: "#fbbf24" }}>from</span> anthropic <span style={{ color: "#fbbf24" }}>import</span> <span style={{ color: "#60a5fa" }}>Anthropic</span></div>
-            <div><span style={{ color: "#60a5fa" }}>client</span> = Anthropic(base_url=<span style={{ color: "#34d399" }}>"{apiConfig.anthropicBaseUrl}"</span>, api_key=<span style={{ color: "#34d399" }}>"YOUR_API_KEY"</span>)</div>
-            <div>msg = client.messages.create(model=<span style={{ color: "#34d399" }}>"deepseek-chat"</span>, max_tokens=1024, messages=[{`{"role": "user", "content": "你好"}`}])</div>
+            <div style={{ marginTop: 8 }}><span className="cmt">print</span>(response.choices[0].message.content)</div>
+            <div className="cmt" style={{ marginTop: 16, borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 12 }}>
+              # Anthropic SDK（base_url = {apiConfig.anthropicBaseUrl}，支持 tool_use / 流式）
+            </div>
+            <div><span className="cmt">from</span> anthropic <span className="cmt">import</span> <span className="fn">Anthropic</span></div>
+            <div><span className="fn">client</span> = Anthropic(base_url=<span className="str">"{apiConfig.anthropicBaseUrl}"</span>, api_key=<span className="str">"YOUR_API_KEY"</span>)</div>
           </div>
         </div>
       </section>
 
-      {/* ===== Pricing Preview ===== */}
-      <section style={{ maxWidth: 1000, margin: "80px auto", padding: "0 24px" }}>
-        <h2 style={{ textAlign: "center", fontSize: 30, fontWeight: 700, marginBottom: 12 }}>{t("home.pricing.title")}</h2>
-        <p style={{ textAlign: "center", color: "#64748b", marginBottom: 8, fontSize: 16 }}>
-          {t("home.pricing.subtitle")}
-        </p>
+      {/* ===== 价格表 ===== */}
+      <section className="section container">
+        <div className="section-head">
+          <h2 className="section-title">{t("home.pricing.title")}</h2>
+          <p className="section-subtitle">{t("home.pricing.subtitle")}</p>
+        </div>
 
-        <div style={{ overflow: "auto", marginTop: 32 }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", fontSize: 14, minWidth: 600 }}>
+        <div className="price-table-wrap">
+          <table className="price-table">
             <thead>
-              <tr style={{ background: "#f8fafc", textAlign: "left", borderBottom: "2px solid #e2e8f0" }}>
-                <th style={{ padding: "12px 16px" }}>{t("home.pricing.model")}</th>
-                <th style={{ padding: "12px 16px" }}>{t("home.pricing.category")}</th>
-                <th style={{ padding: "12px 16px" }}>{t("home.pricing.input")}</th>
-                <th style={{ padding: "12px 16px" }}>{t("home.pricing.output")}</th>
-                <th style={{ padding: "12px 16px" }}>{t("home.pricing.context")}</th>
+              <tr>
+                <th>{t("home.pricing.model")}</th>
+                <th>{t("home.pricing.category")}</th>
+                <th>{t("home.pricing.input")}</th>
+                <th>{t("home.pricing.output")}</th>
+                <th>{t("home.pricing.context")}</th>
               </tr>
             </thead>
             <tbody>
               {featuredModels.map((m) => (
-                <tr key={`${m.name}-${m.vendor}`} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                  <td style={{ padding: "10px 16px" }}>
+                <tr key={`${m.name}-${m.vendor}`}>
+                  <td className="cell-model">
                     <strong>{m.display_name || m.name}</strong>
-                    <div style={{ fontSize: 11, color: "#94a3b8", fontFamily: "monospace" }}>{m.vendor}</div>
+                    <span className="cell-vendor">{m.vendor}</span>
                   </td>
-                  <td style={{ padding: "10px 16px" }}><span style={{ fontSize: 12, background: "#eff6ff", color: "#2563eb", borderRadius: 4, padding: "2px 8px" }}>{MODEL_CATEGORY_LABELS[m.category] ?? m.category}</span></td>
-                  <td style={{ padding: "10px 16px", fontWeight: 600, color: "#2563eb" }}>{formatPrice(m.input_price)}</td>
-                  <td style={{ padding: "10px 16px", fontWeight: 600, color: "#2563eb" }}>{formatPrice(m.output_price)}</td>
-                  <td style={{ padding: "10px 16px", color: "#94a3b8" }}>{m.context_length > 0 ? m.context_length.toLocaleString() : "—"}</td>
+                  <td><span className="price-tag">{MODEL_CATEGORY_LABELS[m.category] ?? m.category}</span></td>
+                  <td className="price-num">{formatPrice(m.input_price)}</td>
+                  <td className="price-num">{formatPrice(m.output_price)}</td>
+                  <td>{m.context_length > 0 ? m.context_length.toLocaleString() : "—"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <div style={{ textAlign: "center", marginTop: 28 }}>
-          <a href="/pricing" style={{ color: "#2563eb", textDecoration: "none", fontWeight: 600 }}>{t("home.pricing.viewAll")} →</a>
+        <div style={{ textAlign: "center", marginTop: "var(--space-2xl)" }}>
+          <a href="/pricing" className="text-link">{t("home.pricing.viewAll")} →</a>
         </div>
       </section>
 
       {/* ===== FAQ ===== */}
-      <section style={{ background: "#f8fafc", padding: "80px 24px" }}>
-        <div style={{ maxWidth: 720, margin: "0 auto" }}>
-          <h2 style={{ textAlign: "center", fontSize: 30, fontWeight: 700, marginBottom: 48 }}>{t("home.faq.title")}</h2>
-          {faqs.map((faq) => (
-            <details key={faq.q} style={{ background: "#fff", borderRadius: 10, marginBottom: 12, padding: "20px 24px", border: "1px solid #e2e8f0" }}>
-              <summary style={{ fontWeight: 600, fontSize: 16, cursor: "pointer", listStyle: "none" }}>
-                <span style={{ marginRight: 8, color: "#2563eb" }}>Q:</span>{faq.q}
-              </summary>
-              <p style={{ marginTop: 12, color: "#475569", fontSize: 14, lineHeight: 1.8, paddingLeft: 8, borderLeft: "3px solid #2563eb" }}>{faq.a}</p>
-            </details>
-          ))}
+      <section className="band-gray section">
+        <div className="container">
+          <div className="section-head">
+            <h2 className="section-title">{t("home.faq.title")}</h2>
+          </div>
+          <div className="faq-list">
+            {faqs.map((faq) => (
+              <details key={faq.q} className="faq-item">
+                <summary>
+                  <span className="q-mark">Q</span>
+                  {faq.q}
+                </summary>
+                <p className="faq-answer">{faq.a}</p>
+              </details>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* ===== CTA ===== */}
-      <section style={{ textAlign: "center", padding: "80px 24px", background: "linear-gradient(180deg, #eff6ff, #dbeafe)" }}>
-        <h2 style={{ fontSize: 28, fontWeight: 700, marginBottom: 12 }}>{t("home.cta.title")}</h2>
-        <p style={{ color: "#475569", marginBottom: 28, fontSize: 16 }}>{t("home.cta.subtitle")}</p>
-        <a href="/app/login" style={{ display: "inline-block", background: "#2563eb", color: "#fff", padding: "14px 40px", borderRadius: 8, textDecoration: "none", fontWeight: 600, fontSize: 16, boxShadow: "0 4px 14px rgba(37,99,235,.35)" }}>
-          {t("home.cta.button")}
-        </a>
+      <section className="cta-band">
+        <h2>{t("home.cta.title")}</h2>
+        <p>{t("home.cta.subtitle")}</p>
+        <a href="/app/login" className="btn btn-primary btn-lg">{t("home.cta.button")}</a>
       </section>
     </div>
   );

@@ -37,10 +37,10 @@ export default function AdminAuditLogPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>📋 操作日志 <HelpIcon text="operation_audit" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}> 操作日志 <HelpIcon text="operation_audit" /></div>
         {listQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead><tr style={{ background: "#f8f9fa" }}>
+            <thead><tr style={{ background: "var(--color-table-header-bg)" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>时间</th>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>操作员</th>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>操作</th>
@@ -50,8 +50,8 @@ export default function AdminAuditLogPage() {
             </tr></thead>
             <tbody>
               {(listQ.data?.list ?? []).map((log: any) => (
-                <tr key={log.id} style={{ borderTop: "1px solid #f0f0f0" }}>
-                  <td style={{ padding: "10px 12px", color: "#888", fontSize: 12 }}>{log.created_at}</td>
+                <tr key={log.id} style={{ borderTop: "1px solid var(--color-divider)" }}>
+                  <td style={{ padding: "10px 12px", color: "var(--color-text-secondary)", fontSize: 12 }}>{log.created_at}</td>
                   <td style={{ padding: "10px 12px" }}>{log.operator}</td>
                   <td style={{ padding: "10px 12px" }}>
                     <span style={{ padding: "2px 8px", borderRadius: 4,
@@ -64,7 +64,7 @@ export default function AdminAuditLogPage() {
                   <td style={{ padding: "10px 12px", maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis" }}>
                     {log.detail ?? "—"}
                   </td>
-                  <td style={{ padding: "10px 12px", color: "#888", fontSize: 12, fontFamily: "monospace" }}>{log.ip}</td>
+                  <td style={{ padding: "10px 12px", color: "var(--color-text-secondary)", fontSize: 12, fontFamily: "monospace" }}>{log.ip}</td>
                 </tr>
               ))}
             </tbody>

@@ -20,8 +20,8 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--color-primary-light, #eef1ff);
-  color: var(--color-primary, #4f6ef7);
+  background: var(--color-primary-light, rgba(24, 150, 255, 0.1));
+  color: var(--color-primary, #1896ff);
   font-size: var(--font-size-xs, 12px);
   font-weight: 600;
   line-height: 18px;
@@ -34,11 +34,18 @@
   border: none;
   padding: 0;
   flex-shrink: 0;
-  transition: background var(--transition-fast, 0.15s ease);
+  transition: background var(--transition-fast) var(--ease-out),
+    color var(--transition-fast) var(--ease-out);
 }
 
 .help-icon:hover {
-  background: #d9ddf8;
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.help-icon:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 /* ===== Pure CSS Tooltip (button-level) ===== */
@@ -48,8 +55,8 @@
   bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
-  background: var(--color-text, #333);
-  color: #fff;
+  background: var(--color-ink-900, #0b1220);
+  color: var(--color-text-inverse, #f4f7fb);
   padding: 6px 12px;
   border-radius: var(--radius-sm, 6px);
   font-size: var(--font-size-xs, 12px);
@@ -60,10 +67,11 @@
   text-overflow: ellipsis;
   opacity: 0;
   visibility: hidden;
-  transition: opacity var(--transition-fast, 0.15s ease),
-    visibility var(--transition-fast, 0.15s ease);
-  z-index: var(--z-tooltip, 300);
+  transition: opacity var(--transition-fast) var(--ease-out),
+    visibility var(--transition-fast) var(--ease-out);
+  z-index: var(--z-tooltip, 400);
   pointer-events: none;
+  box-shadow: var(--shadow-tooltip);
 }
 
 .help-icon-wrapper:hover .help-tooltip {
@@ -81,7 +89,7 @@
   height: 0;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-top: 5px solid var(--color-text, #333);
+  border-top: 5px solid var(--color-ink-900, #0b1220);
 }
 
 /* ===== PageHelp Modal ===== */
@@ -89,24 +97,25 @@
 .page-help-overlay {
   position: fixed;
   inset: 0;
-  background: var(--color-modal-overlay, rgba(0, 0, 0, 0.4));
+  background: var(--color-modal-overlay, rgba(11, 18, 32, 0.45));
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: var(--z-modal, 400);
-  animation: pageHelpFadeIn 0.2s ease;
+  z-index: var(--z-modal, 1000);
+  animation: pageHelpFadeIn var(--duration) var(--ease-out);
 }
 
 .page-help-modal {
   background: var(--color-panel, #fff);
-  border-radius: var(--radius-xl, 16px);
-  box-shadow: var(--shadow-modal, 0 4px 20px rgba(0, 0, 0, 0.15));
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-modal, 0 24px 64px -16px rgba(11, 18, 32, 0.28));
   width: 480px;
   max-width: 90vw;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  animation: pageHelpSlideDown 0.25s ease;
+  animation: pageHelpSlideDown var(--duration) var(--ease-out);
 }
 
 @keyframes pageHelpFadeIn {

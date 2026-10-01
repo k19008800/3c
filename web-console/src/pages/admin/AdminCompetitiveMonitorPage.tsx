@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { HelpIcon, SkeletonGroup } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 /* ───────── 演示数据（对齐原型 admin-competitive-monitor.html 分布） ───────── */
@@ -38,7 +39,7 @@ export default function AdminCompetitiveMonitorPage() {
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>竞品价格监控</h2>
         <HelpIcon text="competitive_monitor" />
-        {data.demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/competitive/monitor 待接入）</span>}
+        {data.demo && <span style={{ fontSize: 11, color: "#f59e0b" }}><PIcon name="alert" size={14}/> 演示数据（后端 /admin/competitive/monitor 待接入）</span>}
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
@@ -53,7 +54,7 @@ export default function AdminCompetitiveMonitorPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>🔍 竞品价格对比 <HelpIcon text="competitive_monitor" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="search" size={14}/> 竞品价格对比 <HelpIcon text="competitive_monitor" /></div>
         {compQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
@@ -77,10 +78,10 @@ export default function AdminCompetitiveMonitorPage() {
                     <td style={{ padding: "10px 12px" }}>¥{c.comp_a_price}</td>
                     <td style={{ padding: "10px 12px" }}>¥{c.comp_b_price}</td>
                     <td style={{ padding: "10px 12px" }}>¥{c.comp_c_price}</td>
-                    <td style={{ padding: "10px 12px", fontWeight: 600, color: advantage != null && advantage > 0 ? "#22c55e" : advantage != null && advantage < 0 ? "#e53935" : "#888" }}>
+                    <td style={{ padding: "10px 12px", fontWeight: 600, color: advantage != null && advantage > 0 ? "#22c55e" : advantage != null && advantage < 0 ? "#e53935" : "var(--color-text-muted)" }}>
                       {advantage != null ? (advantage > 0 ? `↓${advantage}%` : `↑${Math.abs(advantage)}%`) : "—"}
                     </td>
-                    <td style={{ padding: "10px 12px", color: "#888", fontSize: 11 }}>{c.updated_at}</td>
+                    <td style={{ padding: "10px 12px", color: "var(--color-text-muted)", fontSize: 11 }}>{c.updated_at}</td>
                   </tr>
                 );
               })}

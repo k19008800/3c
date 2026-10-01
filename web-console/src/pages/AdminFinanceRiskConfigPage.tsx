@@ -19,6 +19,7 @@ import { useAuthStore } from "../store/auth";
 import { withOperation2fa, isOperation2faCanceled, operation2faErrorText, operation2faHeaders } from "../lib/operation-2fa";
 import type { OperationSummaryItem } from "../components/Operation2faModal";
 import { HelpIcon, EmptyState, SkeletonGroup, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /** 风控规则配置；人工上账默认单笔上限以 accepted ADR-0001 为准（¥50,000） */
 interface FinanceRules {
@@ -225,7 +226,7 @@ export default function AdminFinanceRiskConfigPage() {
     return (
       <div style={{ fontFamily: "system-ui, sans-serif" }}>
         <h2 style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
-          🛡️ 风控规则配置
+          <PIcon name="shield" size={14}/> 风控规则配置
           <HelpIcon text={PAGE_HELP} level="page" />
         </h2>
         <div style={card}>
@@ -238,7 +239,7 @@ export default function AdminFinanceRiskConfigPage() {
   return (
     <div style={{ fontFamily: "system-ui, sans-serif" }}>
       <h2 style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 20 }}>
-        🛡️ 风控规则配置
+        <PIcon name="shield" size={14}/> 风控规则配置
         <HelpIcon text={PAGE_HELP} level="page" />
       </h2>
 
@@ -255,7 +256,7 @@ export default function AdminFinanceRiskConfigPage() {
           {/* ── 大额规则 ── */}
           <div style={card}>
             <div style={{ ...sectionTitle, display: "flex", alignItems: "center", gap: 6 }}>
-              📏 大额审批规则 <HelpIcon text={HELP_LARGE} />
+              <PIcon name="ruler" size={14}/> 大额审批规则 <HelpIcon text={HELP_LARGE} />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
               <div style={fieldRow}>
@@ -302,7 +303,7 @@ export default function AdminFinanceRiskConfigPage() {
           {/* ── 24h 限额 ── */}
           <div style={card}>
             <div style={{ ...sectionTitle, display: "flex", alignItems: "center", gap: 6 }}>
-              💰 24h 累计限额 <HelpIcon text={HELP_LIMITS} />
+              <PIcon name="coin" size={14}/> 24h 累计限额 <HelpIcon text={HELP_LIMITS} />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
               <div style={fieldRow}>
@@ -344,7 +345,7 @@ export default function AdminFinanceRiskConfigPage() {
           {/* ── 操作级 2FA 策略（仅 super_admin） ── */}
           <div style={card}>
             <div style={{ ...sectionTitle, display: "flex", alignItems: "center", gap: 6 }}>
-              🔐 操作级 2FA 策略 <HelpIcon text={HELP_2FA} />
+              <PIcon name="lock" size={14}/> 操作级 2FA 策略 <HelpIcon text={HELP_2FA} />
               {!isSuperAdmin && <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>（仅 super_admin 可修改，当前只读）</span>}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
@@ -384,7 +385,7 @@ export default function AdminFinanceRiskConfigPage() {
           <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, marginBottom: 24 }}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
               <button onClick={() => saveMut.mutate()} disabled={saveMut.isPending} style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", height: 40, fontSize: 14 }}>
-                {saveMut.isPending ? "提交中..." : "💾 保存风控配置"}
+                {saveMut.isPending ? "提交中..." : "保存风控配置"}
               </button>
               <HelpIcon text={HELP_SAVE} />
             </span>

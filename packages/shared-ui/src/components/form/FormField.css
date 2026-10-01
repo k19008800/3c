@@ -35,14 +35,29 @@
   outline: none;
   box-sizing: border-box;
   font-family: var(--font-family);
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast) var(--ease-out),
+    box-shadow var(--transition-fast) var(--ease-out);
+}
+
+.sfc-form-field__control > input:hover:not(:disabled),
+.sfc-form-field__control > select:hover:not(:disabled),
+.sfc-form-field__control > textarea:hover:not(:disabled) {
+  border-color: var(--color-text-disabled);
 }
 
 .sfc-form-field__control > input:focus,
 .sfc-form-field__control > select:focus,
 .sfc-form-field__control > textarea:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.sfc-form-field__control > input:disabled,
+.sfc-form-field__control > select:disabled,
+.sfc-form-field__control > textarea:disabled {
+  background: var(--color-disabled-bg);
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
 }
 
 .sfc-form-field__control > input::placeholder,

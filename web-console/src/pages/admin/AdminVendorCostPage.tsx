@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../../lib/api";
 import { HelpIcon, Modal, SkeletonGroup, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
@@ -37,7 +38,7 @@ export default function AdminVendorCostPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>📦 成本管理列表 <HelpIcon text="vendor_cost" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="box" size={14}/> 成本管理列表 <HelpIcon text="vendor_cost" /></div>
         {listQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
@@ -56,13 +57,13 @@ export default function AdminVendorCostPage() {
                 return (
                   <tr key={c.id} style={{ borderTop: "1px solid #f0f0f0" }}>
                     <td style={{ padding: "10px 12px", fontWeight: 500 }}>{c.display_name ?? c.model_name}</td>
-                    <td style={{ padding: "10px 12px", color: "#888" }}>{c.vendor_name}</td>
+                    <td style={{ padding: "10px 12px", color: "var(--color-text-muted)" }}>{c.vendor_name}</td>
                     <td style={{ padding: "10px 12px" }}>¥{c.cost_input_price}</td>
                     <td style={{ padding: "10px 12px" }}>¥{c.cost_output_price}</td>
                     <td style={{ padding: "10px 12px" }}>¥{c.sell_input_price} / ¥{c.sell_output_price}</td>
-                    <td style={{ padding: "10px 12px", color: margin != null && margin < 15 ? "#e53935" : margin != null ? "#22c55e" : "#888" }}>
+                    <td style={{ padding: "10px 12px", color: margin != null && margin < 15 ? "#e53935" : margin != null ? "#22c55e" : "var(--color-text-muted)" }}>
                       {margin != null ? `${margin}%` : "—"}
-                      {margin != null && margin < 15 ? " ⚠️" : ""}
+                      {margin != null && margin < 15 ? " " : ""}
                     </td>
                     <td style={{ padding: "10px 12px" }}>
                       <button style={{ ...btnBase, background: "#fff", border: "1px solid #ddd", fontSize: 12 }}
@@ -85,7 +86,7 @@ export default function AdminVendorCostPage() {
             <label>采购成本(输出/1K tokens) <input type="number" step="0.0001" value={editItem.cost_output_price || 0}
               onChange={e => setEditItem({ ...editItem, cost_output_price: Number(e.target.value) })}
               style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", width: "100%" }} /></label>
-            <button style={{ ...btnBase, background: "#4f6ef7", color: "#fff", marginTop: 8 }}
+            <button style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", marginTop: 8 }}
               onClick={() => saveMut.mutate(editItem)}>保存</button>
           </div>
         </Modal>

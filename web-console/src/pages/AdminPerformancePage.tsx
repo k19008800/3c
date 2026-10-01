@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { api } from "../lib/api";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 interface PerfConfig {
   cache_ttl_seconds: number; query_timeout_seconds: number; connection_pool_max: number;
@@ -51,15 +52,15 @@ export default function AdminPerformancePage() {
   return (
     <div>
       <div style={{ background: "linear-gradient(135deg,#667eea,#764ba2)", color: "#fff", padding: "20px 24px", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ fontSize: 24 }}>⚡</span>
+        <span style={{ fontSize: 24 }}><PIcon name="bolt" size={14}/></span>
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>性能配置
           <HelpIcon text="调整平台性能参数：缓存TTL、查询超时、连接池、压缩、批量写入、慢查询阈值、并发限制等。" level="page" />
-          {backendMissing && <span style={{ fontSize: 11, color: "#f59e0b", marginLeft: 8 }}>⚠️ 后端未接入（/admin/performance 待实现），保存将不生效</span>}
+          {backendMissing && <span style={{ fontSize: 11, color: "#f59e0b", marginLeft: 8 }}><PIcon name="alert" size={14}/> 后端未接入（/admin/performance 待实现），保存将不生效</span>}
         </span>
       </div>
 
       <div style={{ background: "var(--color-panel)", borderRadius: 10, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,.06)" }}>
-        <h3 style={{ margin: "0 0 16px", fontSize: 15 }}>⚡ 缓存配置 <HelpIcon text="Redis 缓存默认过期时间。" /></h3>
+        <h3 style={{ margin: "0 0 16px", fontSize: 15 }}><PIcon name="bolt" size={14}/> 缓存配置 <HelpIcon text="Redis 缓存默认过期时间。" /></h3>
         <div style={row}>
           <span style={label}>缓存 TTL (秒) <HelpIcon text="Redis 键默认过期时间，建议 300-600 秒。" /></span>
           <input type="number" value={config.cache_ttl_seconds} onChange={e => setConfig({...config, cache_ttl_seconds: Number(e.target.value)})} style={numberInput} />
@@ -68,7 +69,7 @@ export default function AdminPerformancePage() {
       </div>
 
       <div style={{ background: "var(--color-panel)", borderRadius: 10, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,.06)", marginTop: 16 }}>
-        <h3 style={{ margin: "0 0 16px", fontSize: 15 }}>🗄️ 数据库配置</h3>
+        <h3 style={{ margin: "0 0 16px", fontSize: 15 }}><PIcon name="database" size={14}/> 数据库配置</h3>
         <div style={row}>
           <span style={label}>查询超时 (秒) <HelpIcon text="SQL 语句最大执行时间，超时将返回错误。" /></span>
           <input type="number" value={config.query_timeout_seconds} onChange={e => setConfig({...config, query_timeout_seconds: Number(e.target.value)})} style={numberInput} />
@@ -97,7 +98,7 @@ export default function AdminPerformancePage() {
       </div>
 
       <div style={{ background: "var(--color-panel)", borderRadius: 10, padding: 20, boxShadow: "0 1px 4px rgba(0,0,0,.06)", marginTop: 16 }}>
-        <h3 style={{ margin: "0 0 16px", fontSize: 15 }}>🌐 响应优化</h3>
+        <h3 style={{ margin: "0 0 16px", fontSize: 15 }}><PIcon name="globe" size={14}/> 响应优化</h3>
         <div style={row}>
           <span style={label}>GZip 压缩 <HelpIcon text="对响应体启用 GZip 压缩，减少带宽。" /></span>
           <Toggle on={config.compression_enabled} onChange={v => setConfig({...config, compression_enabled: v})} />
@@ -112,7 +113,7 @@ export default function AdminPerformancePage() {
         </div>
       </div>
 
-      <button onClick={saveConfig} style={{ marginTop: 20, padding: "10px 32px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
+      <button onClick={saveConfig} style={{ marginTop: 20, padding: "10px 32px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
         保存性能配置
         <HelpIcon text="部分参数（连接池、并发限制）需重启服务生效。" />
       </button>

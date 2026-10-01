@@ -22,6 +22,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { HelpIcon, Panel, SkeletonGroup, EmptyState, StatusBadge, Tag } from "@3cloud/shared-ui";
 import type { CSSProperties, ReactNode } from "react";
+import { PIcon } from "./_polishIcons";
 
 /* ============ 类型 ============ */
 
@@ -47,9 +48,9 @@ const MODEL_TAG_STYLE: CSSProperties = {
   padding: "2px 8px",
   borderRadius: 4,
   background: "#f0f2ff",
-  color: "#4f6ef7",
+  color: "var(--color-primary)",
   fontSize: 11,
-  border: "1px solid rgba(79,110,247,0.12)",
+  border: "1px solid var(--color-primary-light)",
   margin: "2px 4px 2px 0",
 };
 
@@ -74,7 +75,7 @@ export default function UserGroupsPage() {
     <div>
       {/* 标题 + 页面级帮助 */}
       <h2 style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8, fontSize: 20, fontWeight: 600 }}>
-        📋 我的分组
+        <PIcon name="doc" size={14}/> 我的分组
         <HelpIcon
           text="展示您当前所属的用户分组及其配额：可用模型白名单、限流（QPS/TPM）与日消费额度。您的 API 调用将按所在分组的配置生效；一个用户同一时刻只属于一个分组，如无分组请联系管理员。"
           level="page"
@@ -91,14 +92,14 @@ export default function UserGroupsPage() {
           display: "flex",
           alignItems: "center",
           gap: 10,
-          border: "1px solid rgba(79,110,247,0.12)",
+          border: "1px solid var(--color-primary-light)",
         }}
       >
-        <span style={{ fontSize: 18 }}>💡</span>
+        <span style={{ fontSize: 18 }}><PIcon name="bolt" size={14}/></span>
         <span style={{ fontSize: 13, color: "#555", flex: 1 }}>
           您当前归属的分组由管理员配置，决定您可调用的模型与配额上限；API Key 仅用于鉴权计费，无需再单独绑定分组。
         </span>
-        <Link to="/api-keys" style={{ fontSize: 13, color: "#4f6ef7", textDecoration: "none", whiteSpace: "nowrap" }}>
+        <Link to="/api-keys" style={{ fontSize: 13, color: "var(--color-primary)", textDecoration: "none", whiteSpace: "nowrap" }}>
           前往 API Key 管理 →
         </Link>
         <HelpIcon text="API Key 不再承担分组绑定，分组归属作用于整个账户" />
@@ -106,7 +107,7 @@ export default function UserGroupsPage() {
 
       {/* ===== 我的分组 ===== */}
       <Panel
-        title="📋 我的分组"
+        title="我的分组"
         help="当前账户所属分组及其配额配置：限流（QPS/TPM）与日额度为空表示不限制，模型白名单为空表示全部模型可用。"
       >
         {groupQ.isLoading ? (
@@ -172,7 +173,7 @@ export default function UserGroupsPage() {
 
       {/* ===== 可用模型 ===== */}
       <Panel
-        title="🤖 可用模型"
+        title="可用模型"
         help="您所在分组允许调用的平台模型列表：白名单为空时展示平台全部可用模型；实际可用性以模型上架状态为准。"
       >
         {modelsQ.isLoading ? (

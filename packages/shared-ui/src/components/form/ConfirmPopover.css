@@ -23,7 +23,7 @@
   box-shadow: var(--shadow-tooltip);
   z-index: var(--z-tooltip);
   padding: var(--space-lg);
-  animation: sfc-popover-fade-in var(--transition-fast) ease;
+  animation: sfc-popover-fade-in var(--duration-fast) var(--ease-out);
 }
 
 @keyframes sfc-popover-fade-in {
@@ -71,7 +71,12 @@
   cursor: pointer;
   background: var(--color-panel);
   color: var(--color-text);
-  transition: all var(--transition-fast);
+  transition: all var(--transition-fast) var(--ease-out);
+}
+
+.sfc-confirm-popover__btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .sfc-confirm-popover__btn--cancel {
@@ -92,6 +97,11 @@
 }
 
 .sfc-confirm-popover__btn--confirm:hover {
-  background: #b71c1c;
-  border-color: #b71c1c;
+  background: #9c1f16;
+  border-color: #9c1f16;
+}
+
+.sfc-confirm-popover__btn--confirm:active {
+  background: #7d1811;
+  border-color: #7d1811;
 }

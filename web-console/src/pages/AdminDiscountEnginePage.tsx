@@ -2,13 +2,14 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /* ───────── 折扣规则（对齐后端 GET/POST/PUT /admin/discount-rules 契约） ───────── */
 
 interface DiscountRule { id: number; name: string; discount_type: string; discount_value: number; conditions: string; priority: number; enabled: boolean; start_date: string; end_date: string; }
 
 const Toggle: React.FC<{ on: boolean; onChange: (v: boolean) => void }> = ({ on, onChange }) => (
-  <div style={{ width: 44, height: 24, borderRadius: 12, background: on ? "#22c55e" : "#d9d9d9", position: "relative", cursor: "pointer", display: "inline-flex", alignItems: "center", flexShrink: 0 }} onClick={() => onChange(!on)}>
+  <div style={{ width: 44, height: 24, borderRadius: 12, background: on ? "#22c55e" : "var(--color-border)", position: "relative", cursor: "pointer", display: "inline-flex", alignItems: "center", flexShrink: 0 }} onClick={() => onChange(!on)}>
     <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: 3, transform: on ? "translateX(20px)" : "translateX(0)", transition: "transform .2s" }} />
   </div>
 );
@@ -58,8 +59,8 @@ export default function AdminDiscountEnginePage() {
 
   return (
     <div>
-      <div style={{ background: "linear-gradient(135deg,#667eea,#764ba2)", color: "#fff", padding: "20px 24px", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ fontSize: 24 }}>🎫</span>
+      <div style={{ background: "var(--color-ink-900)", color: "#fff", padding: "20px 24px", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
+        <span style={{ fontSize: 24 }}><PIcon name="ticket" size={14}/></span>
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>折扣规则引擎
           <HelpIcon text="配置灵活的折扣规则（满减/百分比/固定折扣），按条件匹配自动计算折扣。支持多规则优先级排序。" level="page" />
         </span>
@@ -67,7 +68,7 @@ export default function AdminDiscountEnginePage() {
 
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
         <button onClick={() => { setEditing(null); setShowNew(true); setForm(EMPTY_FORM); }}
-          style={{ padding: "6px 16px", background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ 新建规则</button>
+          style={{ padding: "6px 16px", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ 新建规则</button>
       </div>
 
       {showNew && (
@@ -116,7 +117,7 @@ export default function AdminDiscountEnginePage() {
               <tr key={r.id} style={{ borderBottom: "1px solid #f5f5f5" }}>
                 <td style={{ padding: "8px 14px", fontWeight: 600 }}>{r.name}</td>
                 <td style={{ padding: "8px 14px" }}>
-                  <span style={{ padding: "2px 10px", borderRadius: 10, fontSize: 11, background: "#f0f5ff", color: "#4f6ef7" }}>
+                  <span style={{ padding: "2px 10px", borderRadius: 10, fontSize: 11, background: "var(--color-primary-light)", color: "var(--color-primary)" }}>
                     {r.discount_type === "percentage" ? "比例折扣" : r.discount_type === "fixed" ? "固定减免" : "满减"}
                   </span>
                 </td>
@@ -136,7 +137,7 @@ export default function AdminDiscountEnginePage() {
                 </td>
               </tr>
             ))}
-            {rules.length === 0 && <tr><td colSpan={7} style={{ padding: 40, textAlign: "center", color: "#888" }}>暂无折扣规则</td></tr>}
+            {rules.length === 0 && <tr><td colSpan={7} style={{ padding: 40, textAlign: "center", color: "var(--color-text-muted)" }}>暂无折扣规则</td></tr>}
           </tbody>
         </table>
       </div>

@@ -39,6 +39,7 @@ import {
   useToast,
 } from "@3cloud/shared-ui";
 import type { ColumnDef, TagType } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /** 任务类型：midjourney | suno */
 type TaskType = "mj" | "suno";
@@ -523,7 +524,7 @@ export default function MJSTasksPage() {
 
       {/* 提交面板 */}
       <Panel
-        title="🎨 提交任务"
+        title="提交任务"
         help="选择任务类型与动作并填写 prompt 提交：MJ 支持 imagine/describe/blend/change/simple-change/action/modal/video/edits/shorten；Suno 支持 MUSIC/LYRICS。任务依赖动作（change/simple-change/action/modal/video/edits）需填写引用的原任务 ID。"
       >
         {/* API Key（/v1/mj、/v1/suno 走 API Key 鉴权，非登录 JWT） */}
@@ -613,7 +614,7 @@ export default function MJSTasksPage() {
             disabled={submitting}
             onClick={() => void handleSubmit()}
           >
-            {submitting ? "提交中…" : "🚀 提交任务"}
+            {submitting ? "提交中…" : "提交任务"}
           </button>
           <HelpIcon text="提交任务：提交成功即按任务单价计费并返回任务 ID，加入下方任务列表自动轮询；失败/超时自动退款。" />
         </div>
@@ -621,7 +622,7 @@ export default function MJSTasksPage() {
 
       {/* 任务列表 */}
       <Panel
-        title="📋 任务列表"
+        title="任务列表"
         help="展示本页提交的任务（客户端本地记录，刷新页面后清空）：每 3 秒自动轮询进行中任务的状态；成功任务展示图片/音频结果；失败任务展示失败原因。任务状态：已提交（蓝）/ 处理中（黄）/ 成功（绿）/ 失败（红）。"
         extra={
           <div className="c3-btn-group">
@@ -657,7 +658,7 @@ export default function MJSTasksPage() {
         }
       >
         {tasks.length === 0 ? (
-          <EmptyState icon="🎨" title="暂无任务" description="在上方表单提交 MJ / Suno 任务后，任务列表与实时状态将展示在这里" />
+          <EmptyState icon={<PIcon name="palette" size={18}/>} title="暂无任务" description="在上方表单提交 MJ / Suno 任务后，任务列表与实时状态将展示在这里" />
         ) : (
           <Table columns={columns} dataSource={tasks} rowKey="id" />
         )}

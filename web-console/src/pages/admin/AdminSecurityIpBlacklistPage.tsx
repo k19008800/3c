@@ -78,7 +78,7 @@ export default function AdminSecurityIpBlacklistPage() {
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>IP 黑名单管理</h2>
         <HelpIcon text="ip_blacklist" />
-        {demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/security/ip-blacklist 待接入）</span>}
+        {demo && <span style={{ fontSize: 11, color: "var(--color-warning-text)" }}>️ 演示数据（后端 /admin/security/ip-blacklist 待接入）</span>}
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center", justifyContent: "space-between" }}>
@@ -86,14 +86,14 @@ export default function AdminSecurityIpBlacklistPage() {
           <input style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", flex: 1 }}
             placeholder="搜索 IP 地址..." value={keyword} onChange={e => setKeyword(e.target.value)} />
         </div>
-        <button style={{ ...btnBase, background: "#e53935", color: "#fff" }} onClick={() => setShowAdd(true)}>＋ 添加 IP</button>
+        <button style={{ ...btnBase, background: "var(--color-danger-text)", color: "#fff" }} onClick={() => setShowAdd(true)}>＋ 添加 IP</button>
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>🌍 IP 黑名单列表 <HelpIcon text="ip_blacklist" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}> IP 黑名单列表 <HelpIcon text="ip_blacklist" /></div>
         {listQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead><tr style={{ background: "#f8f9fa" }}>
+            <thead><tr style={{ background: "var(--color-table-header-bg)" }}>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>IP 地址</th>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>加入原因</th>
               <th style={{ padding: "10px 12px", textAlign: "left" }}>加入时间</th>
@@ -102,14 +102,14 @@ export default function AdminSecurityIpBlacklistPage() {
             </tr></thead>
             <tbody>
               {(list ?? []).map((ip: IpRow) => (
-                <tr key={ip.id} style={{ borderTop: "1px solid #f0f0f0" }}>
+                <tr key={ip.id} style={{ borderTop: "1px solid var(--color-divider)" }}>
                   <td style={{ padding: "10px 12px", fontFamily: "monospace", fontWeight: 500 }}>{ip.ip}</td>
                   <td style={{ padding: "10px 12px" }}>{ip.reason}</td>
-                  <td style={{ padding: "10px 12px", color: "#888", fontSize: 12 }}>{ip.created_at}</td>
-                  <td style={{ padding: "10px 12px", color: "#888" }}>{ip.operator}</td>
+                  <td style={{ padding: "10px 12px", color: "var(--color-text-secondary)", fontSize: 12 }}>{ip.created_at}</td>
+                  <td style={{ padding: "10px 12px", color: "var(--color-text-secondary)" }}>{ip.operator}</td>
                   <td style={{ padding: "10px 12px" }}>
                     <ConfirmPopover title={`确认移除 ${ip.ip}？`} onConfirm={() => removeMut.mutate(ip.id)}>
-                      <button style={{ ...btnBase, background: "#fff", border: "1px solid #e53935", color: "#e53935", fontSize: 12 }}>移除</button>
+                      <button style={{ ...btnBase, background: "#fff", border: "1px solid var(--color-danger-text)", color: "var(--color-danger-text)", fontSize: 12 }}>移除</button>
                     </ConfirmPopover>
                   </td>
                 </tr>
@@ -126,7 +126,7 @@ export default function AdminSecurityIpBlacklistPage() {
               style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", width: "100%" }} /></label>
             <label>封禁原因 <textarea value={addForm.reason} onChange={e => setAddForm({ ...addForm, reason: e.target.value })}
               style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", width: "100%", minHeight: 60 }} /></label>
-            <button style={{ ...btnBase, background: "#e53935", color: "#fff", marginTop: 8 }}
+            <button style={{ ...btnBase, background: "var(--color-danger-text)", color: "#fff", marginTop: 8 }}
               onClick={() => addMut.mutate(addForm)}>确认加入黑名单</button>
           </div>
         </Modal>

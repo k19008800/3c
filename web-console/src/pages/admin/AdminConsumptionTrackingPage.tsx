@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { HelpIcon, SkeletonGroup } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
@@ -44,13 +45,13 @@ export default function AdminConsumptionTrackingPage() {
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>消费追踪</h2>
         <HelpIcon text="consumption_tracking" />
-        {data.demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/consumption/tracking 待接入）</span>}
+        {data.demo && <span style={{ fontSize: 11, color: "#f59e0b" }}><PIcon name="alert" size={14}/> 演示数据（后端 /admin/consumption/tracking 待接入）</span>}
       </div>
 
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
         {["today", "yesterday", "week", "month"].map(p => (
           <button key={p} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--color-border)",
-            background: period === p ? "#4f6ef7" : "#fff", color: period === p ? "#fff" : "#333", cursor: "pointer", fontSize: 13 }}
+            background: period === p ? "var(--color-primary)" : "#fff", color: period === p ? "#fff" : "#333", cursor: "pointer", fontSize: 13 }}
             onClick={() => setPeriod(p)}>
             {{ today: "今日", yesterday: "昨日", week: "本周", month: "本月" }[p]}
           </button>
@@ -60,10 +61,10 @@ export default function AdminConsumptionTrackingPage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 20 }}>
-        {[{ icon: "👥", label: "活跃用户数", value: data.summary.active_users },
-          { icon: "🤖", label: "调用模型数", value: data.summary.model_count },
-          { icon: "📊", label: "总请求数", value: data.summary.total_requests.toLocaleString() },
-          { icon: "💰", label: "总消费", value: `¥${data.summary.total_cost.toLocaleString("zh-CN")}` },
+        {[{ icon: <PIcon name="users" size={20}/>, label: "活跃用户数", value: data.summary.active_users },
+          { icon: <PIcon name="bot" size={20}/>, label: "调用模型数", value: data.summary.model_count },
+          { icon: <PIcon name="chart" size={20}/>, label: "总请求数", value: data.summary.total_requests.toLocaleString() },
+          { icon: <PIcon name="coin" size={20}/>, label: "总消费", value: `¥${data.summary.total_cost.toLocaleString("zh-CN")}` },
         ].map((s, i) => (
           <div key={i} style={card}>
             <div style={{ fontSize: 24 }}>{s.icon}</div>
@@ -74,7 +75,7 @@ export default function AdminConsumptionTrackingPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>📊 消费明细 <HelpIcon text="consumption_tracking" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="chart" size={14}/> 消费明细 <HelpIcon text="consumption_tracking" /></div>
         {trackQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>

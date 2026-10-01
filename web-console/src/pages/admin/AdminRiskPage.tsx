@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { HelpIcon, StatusBadge, SkeletonGroup } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
@@ -23,15 +24,15 @@ export default function AdminRiskPage() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 16, marginBottom: 20 }}>
         {[
-          { icon: "🚨", label: "未处理风险事件", value: riskQ.data?.unhandled_events ?? "0", color: "#e53935", link: "/admin/risk/events" },
-          { icon: "⛔", label: "冻结账户", value: riskQ.data?.frozen_accounts ?? "0", color: "#f59e0b" },
-          { icon: "📏", label: "启用规则", value: riskQ.data?.active_rules ?? "0", color: "#4f6ef7" },
-          { icon: "🛡️", label: "今日拦截", value: riskQ.data?.today_blocks ?? "0", color: "#7c3aed" },
-          { icon: "⚠️", label: "安全事件", value: riskQ.data?.pending_incidents ?? "0", color: "#e53935" },
+          { icon: <PIcon name="alert" size={20}/>, label: "未处理风险事件", value: riskQ.data?.unhandled_events ?? "0", color: "#e53935", link: "/admin/risk/events" },
+          { icon: <PIcon name="ban" size={20}/>, label: "冻结账户", value: riskQ.data?.frozen_accounts ?? "0", color: "#f59e0b" },
+          { icon: <PIcon name="ruler" size={20}/>, label: "启用规则", value: riskQ.data?.active_rules ?? "0", color: "var(--color-primary)" },
+          { icon: <PIcon name="shield" size={20}/>, label: "今日拦截", value: riskQ.data?.today_blocks ?? "0", color: "var(--color-primary)" },
+          { icon: <PIcon name="alert" size={20}/>, label: "安全事件", value: riskQ.data?.pending_incidents ?? "0", color: "#e53935" },
         ].map((s, i) => (
           <div key={i} style={{ ...card, borderLeft: `4px solid ${s.color}`, cursor: s.link ? "pointer" : "default" }}>
             <div style={{ fontSize: 24 }}>{s.icon}</div>
-            <div style={{ fontSize: 12, color: "#888", margin: "6px 0" }}>{s.label}</div>
+            <div style={{ fontSize: 12, color: "var(--color-text-muted)", margin: "6px 0" }}>{s.label}</div>
             <div style={{ fontSize: 28, fontWeight: 700, color: s.color }}>{s.value}</div>
           </div>
         ))}
@@ -52,7 +53,7 @@ export default function AdminRiskPage() {
             <tbody>
               {(riskQ.data?.events ?? []).map((e: any) => (
                 <tr key={e.id} style={{ borderTop: "1px solid #f0f0f0" }}>
-                  <td style={{ padding: "10px 12px", color: "#888", fontSize: 12 }}>{e.created_at}</td>
+                  <td style={{ padding: "10px 12px", color: "var(--color-text-muted)", fontSize: 12 }}>{e.created_at}</td>
                   <td style={{ padding: "10px 12px" }}>{e.user_email}</td>
                   <td style={{ padding: "10px 12px" }}>{e.rule_name}</td>
                   <td style={{ padding: "10px 12px" }}>{e.detail}</td>
@@ -62,7 +63,7 @@ export default function AdminRiskPage() {
                     </StatusBadge>
                   </td>
                   <td style={{ padding: "10px 12px" }}>
-                    <button style={{ ...btnBase, background: "#4f6ef7", color: "#fff", fontSize: 12 }}>处理</button>
+                    <button style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", fontSize: 12 }}>处理</button>
                   </td>
                 </tr>
               ))}

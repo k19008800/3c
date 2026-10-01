@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../../lib/api";
 import { HelpIcon, Modal, SkeletonGroup, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
@@ -38,7 +39,7 @@ export default function AdminVendorPricingPage() {
 
       <div style={card}>
         <div style={{ fontWeight: 600, marginBottom: 12, display: "flex", justifyContent: "space-between" }}>
-          <span>💰 厂商定价列表 <HelpIcon text="vendor_pricing" /></span>
+          <span><PIcon name="coin" size={14}/> 厂商定价列表 <HelpIcon text="vendor_pricing" /></span>
         </div>
         {listQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
@@ -58,11 +59,11 @@ export default function AdminVendorPricingPage() {
                 return (
                   <tr key={p.id} style={{ borderTop: "1px solid #f0f0f0" }}>
                     <td style={{ padding: "10px 12px", fontWeight: 500 }}>{p.display_name ?? p.model_name}</td>
-                    <td style={{ padding: "10px 12px", color: "#888" }}>{p.vendor_name}</td>
+                    <td style={{ padding: "10px 12px", color: "var(--color-text-muted)" }}>{p.vendor_name}</td>
                     <td style={{ padding: "10px 12px" }}>¥{p.sell_input_price}</td>
                     <td style={{ padding: "10px 12px" }}>¥{p.sell_output_price}</td>
                     <td style={{ padding: "10px 12px" }}>¥{p.cost_input_price} / ¥{p.cost_output_price}</td>
-                    <td style={{ padding: "10px 12px", color: margin != null && margin < 15 ? "#e53935" : margin != null ? "#22c55e" : "#888" }}>
+                    <td style={{ padding: "10px 12px", color: margin != null && margin < 15 ? "#e53935" : margin != null ? "#22c55e" : "var(--color-text-muted)" }}>
                       {margin != null ? `${margin}%` : "—"}
                     </td>
                     <td style={{ padding: "10px 12px" }}>
@@ -89,7 +90,7 @@ export default function AdminVendorPricingPage() {
             <div style={{ color: "#f59e0b", fontSize: 12 }}>
               注意：涨价需审批，降价即时生效
             </div>
-            <button style={{ ...btnBase, background: "#4f6ef7", color: "#fff", marginTop: 8 }}
+            <button style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", marginTop: 8 }}
               onClick={() => saveMut.mutate(editItem)}>提交调价</button>
           </div>
         </Modal>

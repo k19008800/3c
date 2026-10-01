@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../../lib/api";
 import { HelpIcon, StatusBadge, SkeletonGroup, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
@@ -45,7 +46,7 @@ export default function AdminRiskEventsPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>📋 风控事件列表 <HelpIcon text="risk_events" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="doc" size={14}/> 风控事件列表 <HelpIcon text="risk_events" /></div>
         {listQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
@@ -61,8 +62,8 @@ export default function AdminRiskEventsPage() {
             <tbody>
               {(listQ.data?.list ?? []).map((e: any) => (
                 <tr key={e.id} style={{ borderTop: "1px solid #f0f0f0" }}>
-                  <td style={{ padding: "10px 12px", color: "#888" }}>#{e.id}</td>
-                  <td style={{ padding: "10px 12px", color: "#888", fontSize: 12 }}>{e.created_at}</td>
+                  <td style={{ padding: "10px 12px", color: "var(--color-text-muted)" }}>#{e.id}</td>
+                  <td style={{ padding: "10px 12px", color: "var(--color-text-muted)", fontSize: 12 }}>{e.created_at}</td>
                   <td style={{ padding: "10px 12px" }}>{e.user_email}</td>
                   <td style={{ padding: "10px 12px" }}>{e.rule_name}</td>
                   <td style={{ padding: "10px 12px", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>{e.detail}</td>
@@ -84,7 +85,7 @@ export default function AdminRiskEventsPage() {
                         <button style={{ ...btnBase, background: "#f0f0f0", fontSize: 12 }} onClick={() => handleMut.mutate({ id: e.id, op: "ignore" })}>忽略</button>
                       </>
                     )}
-                    {e.status !== "pending" && <span style={{ fontSize: 11, color: "#888" }}>—</span>}
+                    {e.status !== "pending" && <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>—</span>}
                   </td>
                 </tr>
               ))}

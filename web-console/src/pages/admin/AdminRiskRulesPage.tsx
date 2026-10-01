@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../../lib/api";
 import { HelpIcon, StatusBadge, Modal, SkeletonGroup, useToast, ConfirmPopover } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
@@ -39,8 +40,8 @@ export default function AdminRiskRulesPage() {
 
       <div style={{ ...card, marginBottom: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-          <span style={{ fontWeight: 600 }}>📏 风控规则列表 <HelpIcon text="risk_rules" /></span>
-          <button style={{ ...btnBase, background: "#4f6ef7", color: "#fff" }} onClick={() => setEditItem({ name: "", description: "", type: "frequency", threshold: 0, action: "block" })}>＋ 新增规则</button>
+          <span style={{ fontWeight: 600 }}><PIcon name="ruler" size={14}/> 风控规则列表 <HelpIcon text="risk_rules" /></span>
+          <button style={{ ...btnBase, background: "var(--color-primary)", color: "#fff" }} onClick={() => setEditItem({ name: "", description: "", type: "frequency", threshold: 0, action: "block" })}>＋ 新增规则</button>
         </div>
         {listQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
@@ -61,7 +62,7 @@ export default function AdminRiskRulesPage() {
                   </td>
                   <td style={{ padding: "10px 12px" }}>{r.threshold ?? "—"}</td>
                   <td style={{ padding: "10px 12px" }}>
-                    {({ block: "⛔ 阻断", warn: "⚠️ 告警", freeze: "❄️ 冻结", review: "📋 人工审核" } as Record<string, string>)[r.action] ?? r.action}
+                    {({ block: "阻断", warn: "告警", freeze: "冻结", review: "人工审核" } as Record<string, string>)[r.action] ?? r.action}
                   </td>
                   <td style={{ padding: "10px 12px" }}>
                     <StatusBadge status={r.is_enabled ? "success" : "default"}>{r.is_enabled ? "启用" : "禁用"}</StatusBadge>
@@ -71,7 +72,7 @@ export default function AdminRiskRulesPage() {
                       onClick={() => setEditItem(r)}>编辑</button>
                     <ConfirmPopover title={r.is_enabled ? "禁用该规则？" : "启用该规则？"}
                       onConfirm={() => toggleMut.mutate({ id: r.id, enabled: !r.is_enabled })}>
-                      <button style={{ ...btnBase, background: r.is_enabled ? "#f0f0f0" : "#4f6ef7", color: r.is_enabled ? "#333" : "#fff", fontSize: 12 }}>
+                      <button style={{ ...btnBase, background: r.is_enabled ? "#f0f0f0" : "var(--color-primary)", color: r.is_enabled ? "var(--color-text)" : "#fff", fontSize: 12 }}>
                         {r.is_enabled ? "禁用" : "启用"}
                       </button>
                     </ConfirmPopover>
@@ -111,7 +112,7 @@ export default function AdminRiskRulesPage() {
                 <option value="review">人工审核</option>
               </select>
             </label>
-            <button style={{ ...btnBase, background: "#4f6ef7", color: "#fff", marginTop: 8 }}
+            <button style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", marginTop: 8 }}
               onClick={() => saveMut.mutate(editItem)}>保存</button>
           </div>
         </Modal>

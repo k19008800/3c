@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { HelpIcon, SkeletonGroup } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 
@@ -44,14 +45,14 @@ export default function AdminConsumptionStreamPage() {
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>消费流监控</h2>
         <HelpIcon text="consumption_stream" />
-        {data.demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/consumption/stream 待接入）</span>}
+        {data.demo && <span style={{ fontSize: 11, color: "#f59e0b" }}><PIcon name="alert" size={14}/> 演示数据（后端 /admin/consumption/stream 待接入）</span>}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 20 }}>
-        {[{ icon: "⚡", label: "实时 QPS", value: data.metrics.qps },
-          { icon: "💰", label: "当前消费速率", value: `¥${data.metrics.burn_rate}/min` },
-          { icon: "🔄", label: "活跃请求", value: data.metrics.active_requests },
-          { icon: "✅", label: "成功率", value: `${data.metrics.success_rate}%` },
+        {[{ icon: <PIcon name="bolt" size={20}/>, label: "实时 QPS", value: data.metrics.qps },
+          { icon: <PIcon name="coin" size={20}/>, label: "当前消费速率", value: `¥${data.metrics.burn_rate}/min` },
+          { icon: <PIcon name="refresh" size={20}/>, label: "活跃请求", value: data.metrics.active_requests },
+          { icon: <PIcon name="check" size={20}/>, label: "成功率", value: `${data.metrics.success_rate}%` },
         ].map((s, i) => (
           <div key={i} style={card}>
             <div style={{ fontSize: 24 }}>{s.icon}</div>
@@ -69,11 +70,11 @@ export default function AdminConsumptionStreamPage() {
           <option value="2">OpenAI</option>
           <option value="3">GLM</option>
         </select>
-        <span style={{ fontSize: 12, color: "#888" }}>🔴 自动刷新 (10s)</span>
+        <span style={{ fontSize: 12, color: "#888" }}> 自动刷新 (10s)</span>
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>📊 实时消费流 <HelpIcon text="consumption_stream" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="chart" size={14}/> 实时消费流 <HelpIcon text="consumption_stream" /></div>
         {streamQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>

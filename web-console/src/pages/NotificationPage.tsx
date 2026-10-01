@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../lib/api";
 import {
@@ -7,6 +8,7 @@ import {
   EmptyState,
   useToast,
 } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /**
  * 通知中心 — 门户端通知页面
@@ -24,7 +26,7 @@ interface NotificationItem {
   id: number;
   category: "system" | "security" | "consume" | "ticket";
   category_label: string;
-  icon: string;
+  icon: ReactNode;
   title: string;
   desc: string;
   body_html: string;
@@ -40,7 +42,7 @@ interface NotificationPref {
 }
 
 interface NotificationSettings {
-  types: Record<string, { label: string; icon: string; desc: string }>;
+  types: Record<string, { label: string; icon: ReactNode; desc: string }>;
   prefs: Record<string, NotificationPref>;
 }
 
@@ -54,10 +56,10 @@ interface ListResponse {
 
 const CATEGORY_TABS = [
   { value: "all", label: "全部", icon: null },
-  { value: "system", label: "系统公告", icon: "📢" },
-  { value: "security", label: "安全", icon: "🔒" },
-  { value: "consume", label: "消费", icon: "💰" },
-  { value: "ticket", label: "工单", icon: "🎫" },
+  { value: "system", label: "系统公告", icon: <PIcon name="megaphone" size={20}/> },
+  { value: "security", label: "安全", icon: <PIcon name="lock" size={20}/> },
+  { value: "consume", label: "消费", icon: <PIcon name="coin" size={20}/> },
+  { value: "ticket", label: "工单", icon: <PIcon name="ticket" size={20}/> },
 ] as const;
 
 const ACTION_TARGET_MAP: Record<string, string> = {
@@ -72,17 +74,17 @@ const ACTION_TARGET_MAP: Record<string, string> = {
 /* ---------- styles ---------- */
 
 const card: React.CSSProperties = { background: "#fff", borderRadius: 12, marginBottom: 16, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
-const btnGhost: React.CSSProperties = { padding: "8px 14px", borderRadius: 6, border: "1px solid #d9d9d9", background: "#fff", color: "#333", fontSize: 13, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" };
-const btnPrimary: React.CSSProperties = { padding: "8px 20px", borderRadius: 6, border: "none", background: "#4f6ef7", color: "#fff", fontSize: 13, cursor: "pointer", fontWeight: 500, whiteSpace: "nowrap" };
+const btnGhost: React.CSSProperties = { padding: "8px 14px", borderRadius: 6, border: "1px solid var(--color-border)", background: "#fff", color: "#333", fontSize: 13, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" };
+const btnPrimary: React.CSSProperties = { padding: "8px 20px", borderRadius: 6, border: "none", background: "var(--color-primary)", color: "#fff", fontSize: 13, cursor: "pointer", fontWeight: 500, whiteSpace: "nowrap" };
 
 function getIconStyle(cat: string): React.CSSProperties {
   const colors: Record<string, string> = {
-    system: "#4f6ef7", security: "#ef5350", consume: "#ffa726", ticket: "#66bb6a",
+    system: "var(--color-primary)", security: "#ef5350", consume: "#ffa726", ticket: "#66bb6a",
   };
   return {
     width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center",
     justifyContent: "center", fontSize: 18, flexShrink: 0,
-    background: `${colors[cat] || "#4f6ef7"}20`, color: colors[cat] || "#4f6ef7",
+    background: `${colors[cat] || "var(--color-primary)"}20`, color: colors[cat] || "var(--color-primary)",
   };
 }
 
@@ -168,7 +170,7 @@ export default function NotificationPage() {
             style={{
               padding: "8px 24px", borderRadius: 6, border: "none",
               background: viewTab === t ? "#eef1ff" : "transparent",
-              color: viewTab === t ? "#4f6ef7" : "#666",
+              color: viewTab === t ? "var(--color-primary)" : "#666",
               fontSize: 14, cursor: "pointer", fontWeight: viewTab === t ? 500 : 400,
             }}
           >
@@ -187,8 +189,8 @@ export default function NotificationPage() {
                 key={c.value}
                 onClick={() => { setCatFilter(c.value); setPage(1); }}
                 style={{
-                  padding: "10px 20px", fontSize: 13, color: catFilter === c.value ? "#4f6ef7" : "#666",
-                  cursor: "pointer", borderBottom: catFilter === c.value ? "2px solid #4f6ef7" : "2px solid transparent",
+                  padding: "10px 20px", fontSize: 13, color: catFilter === c.value ? "var(--color-primary)" : "#666",
+                  cursor: "pointer", borderBottom: catFilter === c.value ? "2px solid var(--color-primary)" : "2px solid transparent",
                   fontWeight: catFilter === c.value ? 500 : 400,
                 }}
               >
@@ -218,7 +220,7 @@ export default function NotificationPage() {
           {listQ.isLoading ? (
             <div style={{ padding: 20 }}><SkeletonGroup lines={5} /></div>
           ) : (listQ.data?.list?.length ?? 0) === 0 ? (
-            <EmptyState icon="🔔" title={catFilter === "all" ? "暂无通知" : `暂无${CATEGORY_TABS.find(c => c.value === catFilter)?.label || ""}通知`} description="当有新的通知时会显示在这里" />
+            <EmptyState icon={<PIcon name="bell" size={18}/>} title={catFilter === "all" ? "暂无通知" : `暂无${CATEGORY_TABS.find(c => c.value === catFilter)?.label || ""}通知`} description="当有新的通知时会显示在这里" />
           ) : (
             <div>
               {listQ.data!.list.map((n) => (
@@ -235,9 +237,9 @@ export default function NotificationPage() {
                   }}
                 >
                   {!n.is_read && (
-                    <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", width: 6, height: 6, borderRadius: "50%", background: "#4f6ef7" }} />
+                    <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", width: 6, height: 6, borderRadius: "50%", background: "var(--color-primary)" }} />
                   )}
-                  <div style={{ ...getIconStyle(n.category), marginLeft: 8 }}>{n.icon || "📢"}</div>
+                  <div style={{ ...getIconStyle(n.category), marginLeft: 8 }}>{n.icon || ""}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
                       fontSize: 14, fontWeight: n.is_read ? 400 : 600,
@@ -294,10 +296,10 @@ export default function NotificationPage() {
                       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                         <span style={{ fontSize: 12, color: "#888", minWidth: 50, textAlign: "center" }}>站内信</span>
                         <div style={{ position: "relative", width: 40, height: 22 }}>
-                          <div style={{ position: "absolute", inset: 0, background: "#4f6ef740", borderRadius: 11 }}>
-                            <div style={{ position: "absolute", width: 18, height: 18, left: 20, top: 2, background: "#4f6ef7", borderRadius: "50%", boxShadow: "0 1px 3px rgba(0,0,0,.2)" }} />
+                          <div style={{ position: "absolute", inset: 0, background: "var(--color-primary)40", borderRadius: 11 }}>
+                            <div style={{ position: "absolute", width: 18, height: 18, left: 20, top: 2, background: "var(--color-primary)", borderRadius: "50%", boxShadow: "0 1px 3px rgba(0,0,0,.2)" }} />
                           </div>
-                          <span style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", fontSize: 10, color: "#888", pointerEvents: "none" }}>🔒</span>
+                          <span style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", fontSize: 10, color: "#888", pointerEvents: "none" }}><PIcon name="lock" size={14}/></span>
                         </div>
                       </div>
                     </div>
@@ -319,12 +321,12 @@ export default function NotificationPage() {
                         >
                           <div style={{
                             position: "absolute", inset: 0, borderRadius: 11, transition: "background .2s",
-                            background: pref.email ? "#4f6ef740" : "#d9d9d9",
+                            background: pref.email ? "var(--color-primary)40" : "var(--color-border)",
                           }}>
                             <div style={{
                               position: "absolute", width: 18, height: 18, top: 2, borderRadius: "50%",
                               transition: "transform .2s, background .2s", boxShadow: "0 1px 3px rgba(0,0,0,.2)",
-                              left: pref.email ? 20 : 2, background: pref.email ? "#4f6ef7" : "#fff",
+                              left: pref.email ? 20 : 2, background: pref.email ? "var(--color-primary)" : "#fff",
                             }} />
                           </div>
                         </div>
@@ -334,7 +336,7 @@ export default function NotificationPage() {
                 );
               })
             ) : (
-              <EmptyState icon="⚙️" title="暂无通知设置" description="请稍后再试" />
+              <EmptyState icon={<PIcon name="settings" size={18}/>} title="暂无通知设置" description="请稍后再试" />
             )}
           </div>
         </div>
@@ -359,7 +361,7 @@ export default function NotificationPage() {
             {/* modal header */}
             <div style={{ padding: "16px 20px", borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
-                <span>{detailItem.icon || "📢"}</span>
+                <span>{detailItem.icon || ""}</span>
                 {detailItem.title}
                 <span style={{
                   ...getIconStyle(detailItem.category), width: "auto", height: "auto",
@@ -378,7 +380,7 @@ export default function NotificationPage() {
 
             {/* modal body */}
             <div style={{ padding: 20 }}>
-              <div style={{ fontSize: 12, color: "#888", marginBottom: 16 }}>📅 {formatDate(detailItem.created_at)}</div>
+              <div style={{ fontSize: 12, color: "#888", marginBottom: 16 }}><PIcon name="calendar" size={14}/> {formatDate(detailItem.created_at)}</div>
               <div
                 style={{ fontSize: 14, lineHeight: 1.8, color: "#333" }}
                 dangerouslySetInnerHTML={{ __html: detailItem.body_html }}

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { HelpIcon, SkeletonGroup, Pagination } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 
@@ -58,7 +59,7 @@ export default function AdminOperationDiffPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>🔄 操作差异记录 <HelpIcon text="operation_diff" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="refresh" size={14}/> 操作差异记录 <HelpIcon text="operation_diff" /></div>
         {diffQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>
@@ -73,17 +74,17 @@ export default function AdminOperationDiffPage() {
             <tbody>
               {(diffs ?? []).map((d: DiffRow) => (
                 <tr key={d.id} style={{ borderTop: "1px solid #f0f0f0" }}>
-                  <td style={{ padding: "10px 12px", color: "#888", fontSize: 12 }}>{d.created_at?.slice(0, 19).replace("T", " ")}</td>
+                  <td style={{ padding: "10px 12px", color: "var(--color-text-muted)", fontSize: 12 }}>{d.created_at?.slice(0, 19).replace("T", " ")}</td>
                   <td style={{ padding: "10px 12px" }}>{d.resource}</td>
-                  <td style={{ padding: "10px 12px", color: "#888" }}>{d.resource_id ?? "—"}</td>
+                  <td style={{ padding: "10px 12px", color: "var(--color-text-muted)" }}>{d.resource_id ?? "—"}</td>
                   <td style={{ padding: "10px 12px" }}>{d.field}</td>
-                  <td style={{ padding: "10px 12px", color: "#888" }}>{d.operator ?? "—"}</td>
+                  <td style={{ padding: "10px 12px", color: "var(--color-text-muted)" }}>{d.operator ?? "—"}</td>
                   <td style={{ padding: "10px 12px", color: "#e53935", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={d.old_value}>{d.old_value || "—"}</td>
                   <td style={{ padding: "10px 12px", color: "#22c55e", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={d.new_value}>{d.new_value || "—"}</td>
                 </tr>
               ))}
               {diffs.length === 0 && !diffQ.isLoading && (
-                <tr><td colSpan={7} style={{ padding: 40, textAlign: "center", color: "#888" }}>暂无操作差异记录</td></tr>
+                <tr><td colSpan={7} style={{ padding: 40, textAlign: "center", color: "var(--color-text-muted)" }}>暂无操作差异记录</td></tr>
               )}
             </tbody>
           </table>

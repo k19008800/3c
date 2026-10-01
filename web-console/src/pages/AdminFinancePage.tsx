@@ -13,6 +13,7 @@ import {
   useToast,
 } from "@3cloud/shared-ui";
 import type { ColumnDef, TimeRangeKey } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 interface DashboardData {
   month: {
@@ -55,12 +56,12 @@ function fmtAmount(n: number): string {
 
 /** 快捷入口 → 对应路由 */
 const QUICK_LINKS = [
-  { to: "/admin/finance/manual-topup", label: "✋ 人工上账" },
-  { to: "/admin/finance/orders", label: "🧾 充值订单" },
+  { to: "/admin/finance/manual-topup", label: "人工上账" },
+  { to: "/admin/finance/orders", label: "充值订单" },
   { to: "/admin/finance/refunds", label: "↩️ 退款审核" },
-  { to: "/admin/finance/invoices", label: "📄 发票审核" },
-  { to: "/admin/finance/withdrawals", label: "💳 提现管理" },
-  { to: "/admin/finance/commissions", label: "💸 佣金流水" },
+  { to: "/admin/finance/invoices", label: "发票审核" },
+  { to: "/admin/finance/withdrawals", label: "提现管理" },
+  { to: "/admin/finance/commissions", label: "佣金流水" },
 ];
 
 export default function AdminFinancePage() {
@@ -116,10 +117,10 @@ export default function AdminFinancePage() {
       {/* 待办事项 — 原型 todo-grid */}
       <div className="c3-todo-grid">
         {[
-          { key: "manualTopup", label: "人工上账待审核", icon: "💳", unit: "笔", color: "red", to: "/admin/finance/manual-topup" },
+          { key: "manualTopup", label: "人工上账待审核", icon: <PIcon name="card" size={20}/>, unit: "笔", color: "red", to: "/admin/finance/manual-topup" },
           { key: "refund", label: "退款待审核", icon: "↩️", unit: "笔", color: "orange", to: "/admin/finance/refunds" },
-          { key: "invoice", label: "发票待审核", icon: "📄", unit: "份", color: "blue", to: "/admin/finance/invoices" },
-          { key: "withdrawal", label: "提现待审核", icon: "💳", unit: "笔", color: "purple", to: "/admin/finance/withdrawals" },
+          { key: "invoice", label: "发票待审核", icon: <PIcon name="doc" size={20}/>, unit: "份", color: "blue", to: "/admin/finance/invoices" },
+          { key: "withdrawal", label: "提现待审核", icon: <PIcon name="card" size={20}/>, unit: "笔", color: "purple", to: "/admin/finance/withdrawals" },
         ].map((card) => (
           <div key={card.key} className={`c3-todo-card ${card.color}`} onClick={() => navigate(card.to)}>
             <div className="c3-todo-badge">{todos?.[card.key as keyof typeof todos] ?? 0}</div>
@@ -137,7 +138,7 @@ export default function AdminFinancePage() {
       {/* 本月汇总 — 原型 stat-grid */}
       <div className="c3-stat-grid">
         <div className="c3-stat-card">
-          <span className="c3-stat-card__icon">💰</span>
+          <span className="c3-stat-card__icon"><PIcon name="coin" size={14}/></span>
           <div className="c3-stat-card__label">本月充值总额</div>
           <div className="c3-stat-card__value">{dashQ.isLoading ? "—" : fmtAmount(month?.recharge ?? 0)}</div>
           <div className="c3-stat-card__trend c3-stat-card__trend--up">↑ 本月累计</div>
@@ -149,13 +150,13 @@ export default function AdminFinancePage() {
           <div className="c3-stat-card__trend c3-stat-card__trend--down">↩ 退款统计</div>
         </div>
         <div className="c3-stat-card">
-          <span className="c3-stat-card__icon">💸</span>
+          <span className="c3-stat-card__icon"><PIcon name="banknote" size={14}/></span>
           <div className="c3-stat-card__label">佣金支出</div>
           <div className="c3-stat-card__value">{dashQ.isLoading ? "—" : fmtAmount(month?.commission ?? 0)}</div>
           <div className="c3-stat-card__trend c3-stat-card__trend--up">↑ 已结算佣金</div>
         </div>
         <div className="c3-stat-card">
-          <span className="c3-stat-card__icon">📈</span>
+          <span className="c3-stat-card__icon"><PIcon name="trendUp" size={14}/></span>
           <div className="c3-stat-card__label">毛利润</div>
           <div className="c3-stat-card__value" style={{ color: "var(--color-primary)" }}>
             {dashQ.isLoading ? "—" : fmtAmount(month?.grossProfit ?? 0)}
@@ -165,7 +166,7 @@ export default function AdminFinancePage() {
       </div>
 
       {/* 快捷入口 — 原型面板 */}
-      <Panel title="⚡ 快捷入口" help="快速跳转到财务各功能页。">
+      <Panel title="快捷入口" help="快速跳转到财务各功能页。">
         <div className="c3-btn-group">
           {QUICK_LINKS.map((l) => (
             <button key={l.to} type="button" className="c3-btn c3-btn--default" onClick={() => navigate(l.to)}>
@@ -192,7 +193,7 @@ export default function AdminFinancePage() {
       </div>
 
       {/* 最近交易 — 原型面板表格 */}
-      <Panel title="📋 最近交易" help="近 30 天充值/退款/提现/佣金流水。">
+      <Panel title="最近交易" help="近 30 天充值/退款/提现/佣金流水。">
         {txQ.isLoading ? (
           <SkeletonGroup lines={6} />
         ) : tx.length === 0 ? (

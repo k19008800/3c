@@ -45,6 +45,33 @@ export const metadata: Metadata = {
   alternates: siteAlternates("/"),
 };
 
+/** 品牌母题：节点星座线描 SVG（替代原紫渐变徽章） */
+function BrandMark() {
+  return (
+    <svg className="brand-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <rect x="1.5" y="1.5" width="29" height="29" rx="8" stroke="currentColor" strokeWidth="2" />
+      <circle cx="11" cy="11" r="2.2" fill="currentColor" />
+      <circle cx="21.5" cy="9.5" r="2.2" fill="currentColor" />
+      <circle cx="16" cy="19" r="2.2" fill="currentColor" />
+      <circle cx="23" cy="22" r="2.2" fill="currentColor" />
+      <path
+        d="M12.8 12.3 19.7 10.6M12.5 12.8l2.2 4.3M18 17.6l3.4 3.6"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+    </svg>
+  );
+}
+
+/** 汉堡图标（移动端） */
+function MenuIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path d="M2.5 4.5h13M2.5 9h13M2.5 13.5h13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [config, lang] = await Promise.all([fetchSiteConfig(), getCookieLang()]);
   const dict = await fetchDictionary(lang);
@@ -54,98 +81,118 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const year = new Date().getFullYear();
   const copyright = config.site_copyright ?? `© ${year} ${siteName} · AI Token 聚合平台`;
 
+  const navItems = [
+    { href: "/", label: t("nav.home") },
+    { href: "/models", label: t("nav.models") },
+    { href: "/pricing", label: t("nav.pricing") },
+    { href: "/blog", label: t("nav.blog") },
+    { href: "/about", label: t("nav.about") },
+    { href: "/status", label: t("nav.status") },
+  ];
+
   return (
     <html lang={lang === "en" ? "en" : "zh-CN"}>
       <body>
         {/* ===== Header ===== */}
-        <header
-          style={{
-            borderBottom: "1px solid #e2e8f0",
-            padding: "0 24px",
-            height: 64,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            background: "#fff",
-            position: "sticky",
-            top: 0,
-            zIndex: 100,
-          }}
-        >
-          <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 700, fontSize: 20, color: "#0f172a", textDecoration: "none" }}>
-            {config.site_logo_url ? (
-              <img src={config.site_logo_url} alt={siteName} style={{ height: 32 }} />
-            ) : (
-              <span style={{ background: "linear-gradient(135deg, #2563eb, #7c3aed)", color: "#fff", borderRadius: 6, padding: "4px 12px", fontSize: 16 }}>
-                {siteName}
+        <header className="portal-header">
+          <div className="portal-header-inner">
+            <a href="/" className="brand">
+              {config.site_logo_url ? (
+                <img src={config.site_logo_url} alt={siteName} style={{ height: 32 }} />
+              ) : (
+                <>
+                  <BrandMark />
+                  <span>{siteName}</span>
+                </>
+              )}
+            </a>
+
+            {/* 桌面导航 */}
+            <nav className="portal-nav desktop-nav" aria-label="primary">
+              {navItems.map((item) => (
+                <a key={item.href} href={item.href} className="nav-link">
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+
+            <div className="portal-header-actions">
+              <span className="desktop-nav">
+                <LanguageSwitcher current={lang} />
               </span>
-            )}
-          </a>
-          <nav style={{ display: "flex", gap: 24, alignItems: "center", flexWrap: "wrap" }}>
-            <a href="/" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>{t("nav.home")}</a>
-            <a href="/models" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>{t("nav.models")}</a>
-            <a href="/pricing" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>{t("nav.pricing")}</a>
-            <a href="/blog" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>{t("nav.blog")}</a>
-            <a href="/about" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>{t("nav.about")}</a>
-            <a href="/status" style={{ color: "#475569", textDecoration: "none", fontSize: 14 }}>{t("nav.status")}</a>
-            <LanguageSwitcher current={lang} />
-            <span style={{ display: "inline-flex", alignItems: "center" }}>
-              <a href="/app/login" style={{ background: "#2563eb", color: "#fff", padding: "8px 20px", borderRadius: 6, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>
+              <a href="/app/login" className="btn btn-primary">
                 {t("nav.login")}
               </a>
               <ButtonHelp text="登录 浩寅云 控制台；未注册用户可先注册。" />
-            </span>
-          </nav>
+
+              {/* 移动端汉堡 / 抽屉（原生 details，零 JS） */}
+              <details className="portal-menu-toggle">
+                <summary aria-label="菜单">
+                  <MenuIcon />
+                </summary>
+                <div className="portal-menu-panel">
+                  {navItems.map((item) => (
+                    <a key={item.href} href={item.href} className="nav-link">
+                      {item.label}
+                    </a>
+                  ))}
+                  <div className="portal-menu-lang">
+                    <LanguageSwitcher current={lang} />
+                  </div>
+                </div>
+              </details>
+            </div>
+          </div>
         </header>
 
-        <main style={{ minHeight: "calc(100vh - 64px)" }}>{children}</main>
+        <main>{children}</main>
 
         {/* ===== Footer ===== */}
-        <footer style={{ borderTop: "1px solid #e2e8f0", background: "#f8fafc" }}>
-          <div style={{ maxWidth: 1000, margin: "0 auto", padding: "48px 24px 32px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 32, marginBottom: 32 }}>
+        <footer className="portal-footer">
+          <div className="portal-footer-inner">
+            <div className="portal-footer-grid">
               {/* 产品 */}
               <div>
-                <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "#0f172a" }}>{t("footer.product")}</h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <a href="/models" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>{t("nav.models")}</a>
-                  <a href="/pricing" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>{t("nav.pricing")}</a>
-                  <a href="/status" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>{t("nav.status")}</a>
+                <h4>{t("footer.product")}</h4>
+                <div className="portal-footer-links">
+                  <a href="/models">{t("nav.models")}</a>
+                  <a href="/pricing">{t("nav.pricing")}</a>
+                  <a href="/status">{t("nav.status")}</a>
                 </div>
               </div>
               {/* 资源 */}
               <div>
-                <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "#0f172a" }}>{t("footer.resources")}</h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <a href="/blog" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>{t("nav.blog")}</a>
-                  <a href="/about" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>{t("nav.about")}</a>
-                  <a href="/app/help" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>Help Center</a>
-                  {config.site_company_name && <span style={{ color: "#64748b", fontSize: 13 }}>{config.site_company_name}</span>}
-                  {config.site_contact_email && <span style={{ color: "#64748b", fontSize: 13 }}>{config.site_contact_email}</span>}
-                  {config.site_contact_phone && <span style={{ color: "#64748b", fontSize: 13 }}>{config.site_contact_phone}</span>}
+                <h4>{t("footer.resources")}</h4>
+                <div className="portal-footer-links">
+                  <a href="/blog">{t("nav.blog")}</a>
+                  <a href="/about">{t("nav.about")}</a>
+                  <a href="/app/help">Help Center</a>
+                  {config.site_company_name && <span>{config.site_company_name}</span>}
+                  {config.site_contact_email && <span>{config.site_contact_email}</span>}
+                  {config.site_contact_phone && <span>{config.site_contact_phone}</span>}
                 </div>
               </div>
               {/* 法律 */}
               <div>
-                <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: "#0f172a" }}>{t("footer.legal")}</h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <a href="/privacy" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>Privacy Policy</a>
-                  <a href="/terms" style={{ color: "#64748b", textDecoration: "none", fontSize: 13 }}>Terms of Service</a>
+                <h4>{t("footer.legal")}</h4>
+                <div className="portal-footer-links">
+                  <a href="/privacy">Privacy Policy</a>
+                  <a href="/terms">Terms of Service</a>
                 </div>
               </div>
             </div>
 
             {/* 版权 & 备案 */}
-            <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 24, textAlign: "center", fontSize: 13, color: "#94a3b8", lineHeight: 1.8 }}>
+            <div className="portal-footer-legal">
               {config.site_footer_html ? (
                 <div dangerouslySetInnerHTML={{ __html: config.site_footer_html }} />
               ) : (
                 <>
                   <div>{copyright}</div>
                   {config.site_icp && (
-                    <div style={{ marginTop: 4 }}>
+                    <div>
                       {config.site_icp_link ? (
-                        <a href={config.site_icp_link} target="_blank" rel="noopener noreferrer" style={{ color: "#94a3b8", textDecoration: "none" }}>
+                        <a href={config.site_icp_link} target="_blank" rel="noopener noreferrer">
                           {config.site_icp}
                         </a>
                       ) : (

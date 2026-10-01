@@ -101,7 +101,7 @@ export default function AdminUsersPermissionPage() {
       <h2 style={{ marginBottom: 4 }}>
         用户权限一览
         <HelpIcon text="查看所有用户的角色分配情况。可分配/移除角色（角色合并生效权限），查看用户最终有效权限列表。" level="page" />
-        {demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/users 待接入）</span>}
+        {demo && <span style={{ fontSize: 11, color: "var(--color-warning-text)" }}>️ 演示数据（后端 /admin/users 待接入）</span>}
       </h2>
 
       <div style={{ display: "flex", gap: 16, marginTop: 16 }}>
@@ -120,7 +120,7 @@ export default function AdminUsersPermissionPage() {
             </thead>
             <tbody>
               {users.map(u => (
-                <tr key={u.id} style={{ borderBottom: `1px solid var(--color-border)`, cursor: "pointer", background: selectedUser === u.id ? "#eef2ff" : undefined }} onClick={() => loadUser(u.id)}>
+                <tr key={u.id} style={{ borderBottom: `1px solid var(--color-border)`, cursor: "pointer", background: selectedUser === u.id ? "var(--color-row-selected)" : undefined }} onClick={() => loadUser(u.id)}>
                   <td style={{ padding: "8px 12px" }}>{u.id}</td>
                   <td style={{ padding: "8px 12px" }}>{u.email}</td>
                   <td style={{ padding: "8px 12px" }}>{u.username ?? "-"}</td>
@@ -144,12 +144,12 @@ export default function AdminUsersPermissionPage() {
 
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>当前角色：</div>
-              {userRoles.length === 0 ? <span style={{ fontSize: 12, color: "#94a3b8" }}>未分配角色</span> : (
+              {userRoles.length === 0 ? <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>未分配角色</span> : (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                   {userRoles.map(r => (
-                    <span key={r.id} style={{ padding: "2px 8px", background: "#dbeafe", borderRadius: 4, fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>
+                    <span key={r.id} style={{ padding: "2px 8px", background: "var(--color-info-bg)", borderRadius: 4, fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>
                       {r.label}
-                      <span style={{ cursor: "pointer", color: "var(--color-danger-text)" }} onClick={() => remove(selectedUser, r.id)}>✕</span>
+                      <span style={{ cursor: "pointer", color: "var(--color-danger-text)" }} onClick={() => remove(selectedUser, r.id)}></span>
                     </span>
                   ))}
                 </div>
@@ -175,7 +175,7 @@ export default function AdminUsersPermissionPage() {
               <div style={{ maxHeight: 300, overflowY: "auto", fontSize: 12 }}>
                 {userPerms.tree.filter(g => g.permissions.some(p => p.granted)).map(g => (
                   <div key={g.group} style={{ marginBottom: 6 }}>
-                    <div style={{ fontWeight: 600, color: "#475569" }}>{g.group}</div>
+                    <div style={{ fontWeight: 600, color: "var(--color-text-secondary)" }}>{g.group}</div>
                     <div>{g.permissions.filter(p => p.granted).map(p => p.label).join("、")}</div>
                   </div>
                 ))}

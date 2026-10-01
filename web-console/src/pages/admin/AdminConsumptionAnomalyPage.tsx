@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, extractError } from "../../lib/api";
 import { HelpIcon, StatusBadge, SkeletonGroup, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
@@ -52,14 +53,14 @@ export default function AdminConsumptionAnomalyPage() {
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>消费异常提醒</h2>
         <HelpIcon text="consumption_anomaly" />
-        {data.demo && <span style={{ fontSize: 11, color: "#f59e0b" }}>⚠️ 演示数据（后端 /admin/consumption/anomalies 待接入）</span>}
+        {data.demo && <span style={{ fontSize: 11, color: "#f59e0b" }}><PIcon name="alert" size={14}/> 演示数据（后端 /admin/consumption/anomalies 待接入）</span>}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 20 }}>
-        {[{ icon: "🚨", label: "严重异常", value: data.summary.critical, color: "#e53935" },
-          { icon: "⚠️", label: "警告", value: data.summary.warning, color: "#f59e0b" },
-          { icon: "ℹ️", label: "提醒", value: data.summary.info, color: "#4f6ef7" },
-          { icon: "✅", label: "已处理", value: data.summary.resolved, color: "#22c55e" },
+        {[{ icon: <PIcon name="alert" size={20}/>, label: "严重异常", value: data.summary.critical, color: "#e53935" },
+          { icon: <PIcon name="alert" size={20}/>, label: "警告", value: data.summary.warning, color: "#f59e0b" },
+          { icon: "ℹ️", label: "提醒", value: data.summary.info, color: "var(--color-primary)" },
+          { icon: <PIcon name="check" size={20}/>, label: "已处理", value: data.summary.resolved, color: "#22c55e" },
         ].map((s, i) => (
           <div key={i} style={{ ...card, borderLeft: `4px solid ${s.color}` }}>
             <div style={{ fontSize: 24 }}>{s.icon}</div>
@@ -80,7 +81,7 @@ export default function AdminConsumptionAnomalyPage() {
       </div>
 
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>⚠️ 异常列表 <HelpIcon text="consumption_anomaly" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="alert" size={14}/> 异常列表 <HelpIcon text="consumption_anomaly" /></div>
         {listQ.isLoading ? <SkeletonGroup lines={5} /> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: "#f8f9fa" }}>

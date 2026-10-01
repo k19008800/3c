@@ -15,6 +15,7 @@ import {
   CopyButton,
 } from "@3cloud/shared-ui";
 import type { ColumnDef, FilterDef } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /**
  * UX 组件演示页 — 免登录，展示所有 shared-ui 组件交互效果
@@ -76,9 +77,9 @@ export default function UxDemoPage() {
           <HelpIcon text="操作反馈：成功(绿)、失败(红)、警告(黄)、提示(蓝)。点击下方按钮体验。" />
         </h3>
         <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn btn-primary" onClick={() => toast.success("操作成功！数据已保存")} style={{ padding: "8px 16px", borderRadius: "var(--radius-md)", border: "none", background: "var(--color-primary)", color: "#fff", cursor: "pointer" }}>✅ 成功 Toast</button>
-          <button className="btn" onClick={() => toast.error("操作失败：余额不足")} style={{ padding: "8px 16px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", cursor: "pointer" }}>❌ 错误 Toast</button>
-          <button className="btn" onClick={() => toast.warning("您的 Key 即将过期")} style={{ padding: "8px 16px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", cursor: "pointer" }}>⚠️ 警告 Toast</button>
+          <button className="btn btn-primary" onClick={() => toast.success("操作成功！数据已保存")} style={{ padding: "8px 16px", borderRadius: "var(--radius-md)", border: "none", background: "var(--color-primary)", color: "#fff", cursor: "pointer" }}><PIcon name="check" size={14}/> 成功 Toast</button>
+          <button className="btn" onClick={() => toast.error("操作失败：余额不足")} style={{ padding: "8px 16px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", cursor: "pointer" }}><PIcon name="close" size={14}/> 错误 Toast</button>
+          <button className="btn" onClick={() => toast.warning("您的 Key 即将过期")} style={{ padding: "8px 16px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", cursor: "pointer" }}><PIcon name="alert" size={14}/> 警告 Toast</button>
           <button className="btn" onClick={() => toast.info("新公告已发布")} style={{ padding: "8px 16px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", cursor: "pointer" }}>ℹ️ 提示 Toast</button>
         </div>
       </div>
@@ -102,7 +103,7 @@ export default function UxDemoPage() {
           <ConfirmPopover title="确定要删除「测试Key」吗？" description="此操作不可撤销，Key 将立即失效。"
             onConfirm={() => toast.success("已删除")}
             onCancel={() => {}}>
-            <button style={{ padding: "8px 16px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-danger-text)", color: "var(--color-danger-text)", background: "#fff", cursor: "pointer" }}>🗑 删除（气泡确认）</button>
+            <button style={{ padding: "8px 16px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-danger-text)", color: "var(--color-danger-text)", background: "#fff", cursor: "pointer" }}><PIcon name="trash" size={14}/> 删除（气泡确认）</button>
           </ConfirmPopover>
         </div>
       </div>
@@ -160,7 +161,7 @@ export default function UxDemoPage() {
           </div>
           <div>
             <p style={{ marginBottom: 8, color: "var(--color-text-secondary)" }}>无数据 →</p>
-            <EmptyState icon="📭" title="暂无数据" description="当前没有可显示的记录" actionText="创建第一条" onAction={() => toast.info("点击了创建按钮")} />
+            <EmptyState icon={<PIcon name="box" size={18}/>} title="暂无数据" description="当前没有可显示的记录" actionText="创建第一条" onAction={() => toast.info("点击了创建按钮")} />
           </div>
         </div>
       </div>

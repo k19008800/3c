@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { HelpIcon, SkeletonGroup, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "./_polishIcons";
 
 /**
  * 在线客服 对齐 SPEC-§27.1（用户端）
@@ -181,7 +182,7 @@ export default function UserChatPage() {
                 color: "var(--color-text-secondary)",
               }}
             >
-              <div style={{ fontSize: 40, marginBottom: 12 }}>💬</div>
+              <div style={{ fontSize: 40, marginBottom: 12 }}><PIcon name="chat" size={14}/></div>
               <div>需要帮助？我们通常会在 5 分钟内回复</div>
               <button
                 onClick={connect}
@@ -208,7 +209,7 @@ export default function UserChatPage() {
                 color: "var(--color-warning-text)",
               }}
             >
-              <div style={{ fontSize: 40 }}>⏳</div>
+              <div style={{ fontSize: 40 }}><PIcon name="clock" size={14}/></div>
               <div style={{ marginTop: 8 }}>您前面还有 {queued?.position} 位用户在等待</div>
               <div
                 style={{
@@ -300,7 +301,7 @@ export default function UserChatPage() {
           )}
           {status === "closed" && (
             <div style={{ textAlign: "center", color: "var(--color-text-secondary)", padding: 16 }}>
-              <div>💬 感谢您的咨询，本次会话已结束</div>
+              <div><PIcon name="chat" size={14}/> 感谢您的咨询，本次会话已结束</div>
               <button
                 onClick={() => {
                   setStatus("idle");

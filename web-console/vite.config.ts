@@ -4,6 +4,11 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   base: "/app/",
+  // 根治 dev/build 白屏：i18n.ts 顶层引用 process.env.API_BASE_URL，
+  // 浏览器无 process 全局会抛 ReferenceError。Vite 构建期替换为字面量，运行时不再触达 process。
+  define: {
+    "process.env.API_BASE_URL": JSON.stringify(""),
+  },
   server: {
     port: 5175,
     // 只绑 loopback：5175 是内部 dev 服务，仅由 web-portal(5177) 的 rewrites 同机代理，

@@ -52,12 +52,17 @@
   outline: none;
   background: var(--color-panel);
   box-sizing: border-box;
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast) var(--ease-out),
+    box-shadow var(--transition-fast) var(--ease-out);
+}
+
+.sfc-search-bar__input:hover:not(:focus) {
+  border-color: var(--color-text-disabled);
 }
 
 .sfc-search-bar__input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
 .sfc-search-bar__input::placeholder {
@@ -85,4 +90,14 @@
 .sfc-search-bar__btn:hover {
   background: var(--color-primary-hover);
   border-color: var(--color-primary-hover);
+}
+
+.sfc-search-bar__btn:active {
+  background: var(--color-primary-active);
+  border-color: var(--color-primary-active);
+}
+
+.sfc-search-bar__btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PageHeader, Panel, Tag, Modal, HelpIcon, useToast } from "@3cloud/shared-ui";
 import { api, extractError } from "../lib/api";
+import { PIcon } from "./_polishIcons";
 
 /**
  * 额度管理（限流配额例外）— 对齐原型 admin-credit.html + PRD §3
@@ -328,9 +329,9 @@ export default function AdminCreditPage() {
         const m = models.find((x) => x.name === name);
         if (!m) return;
         if (m.capRpm && rpmRaw != null && rpmRaw > m.capRpm)
-          lines.push(<span key={`${name}-r`}>⚠ RPM {fmtRPM(rpmRaw)} 超过 <b>{name}</b> 全局限流 {fmtRPM(m.capRpm)}，实际生效值将被截断为 {fmtRPM(m.capRpm)}</span>);
+          lines.push(<span key={`${name}-r`}><PIcon name="alert" size={14}/> RPM {fmtRPM(rpmRaw)} 超过 <b>{name}</b> 全局限流 {fmtRPM(m.capRpm)}，实际生效值将被截断为 {fmtRPM(m.capRpm)}</span>);
         if (m.capTpm && tpmRaw != null && tpmRaw > m.capTpm)
-          lines.push(<span key={`${name}-t`}>⚠ TPM {fmtTPM(tpmRaw)} 超过 <b>{name}</b> 全局限流 {fmtTPM(m.capTpm)}，实际生效值将被截断为 {fmtTPM(m.capTpm)}</span>);
+          lines.push(<span key={`${name}-t`}><PIcon name="alert" size={14}/> TPM {fmtTPM(tpmRaw)} 超过 <b>{name}</b> 全局限流 {fmtTPM(m.capTpm)}，实际生效值将被截断为 {fmtTPM(m.capTpm)}</span>);
       });
     }
     return lines;
@@ -394,7 +395,7 @@ export default function AdminCreditPage() {
       {/* 全局默认值摘要（只读） */}
       <Panel>
         <div className="c3-default-strip">
-          <span className="c3-ds-title">🌐 全局限流默认值 <HelpIcon text="企业/个人客户的默认 RPM/TPM 基线，未设例外的客户按此生效；最终受模型全局限流硬顶约束。" level="page" /></span>
+          <span className="c3-ds-title"><PIcon name="globe" size={14}/> 全局限流默认值 <HelpIcon text="企业/个人客户的默认 RPM/TPM 基线，未设例外的客户按此生效；最终受模型全局限流硬顶约束。" level="page" /></span>
           <span className="c3-ds-chip"><b>{fmtRPM(defaults.enterprise.rpm)}</b><span>企业 RPM</span></span>
           <span className="c3-ds-chip"><b>{fmtTPM(defaults.enterprise.tpm)}</b><span>企业 TPM</span></span>
           <span className="c3-ds-chip"><b>{fmtRPM(defaults.personal.rpm)}</b><span>个人 RPM</span></span>
@@ -418,7 +419,7 @@ export default function AdminCreditPage() {
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") doSearch(); }}
             />
-            <button type="button" className="c3-btn c3-btn--primary" onClick={doSearch}>🔍 搜索</button>
+            <button type="button" className="c3-btn c3-btn--primary" onClick={doSearch}><PIcon name="search" size={14}/> 搜索</button>
             <select className="c3-search-type" value={searchType} onChange={(e) => setSearchType(e.target.value)}>
               <option value="">全部类型</option>
               <option value="enterprise">企业</option>
@@ -441,11 +442,11 @@ export default function AdminCreditPage() {
       {/* 已开通限流例外的客户 */}
       <Panel>
         <div className="c3-opened-head">
-          <span className="c3-opened-title">✅ 已开通限流的客户 <HelpIcon text="已经为至少一个模型开通限流例外的客户。点击任意客户直接进入其额度配置；如需查看其他客户，请在上方搜索。" level="page" /></span>
+          <span className="c3-opened-title"><PIcon name="check" size={14}/> 已开通限流的客户 <HelpIcon text="已经为至少一个模型开通限流例外的客户。点击任意客户直接进入其额度配置；如需查看其他客户，请在上方搜索。" level="page" /></span>
           <span className="c3-opened-count">{opened.length > 0 ? `共 ${opened.length} 个客户` : ""}</span>
         </div>
         {openedQ.isLoading ? (
-          <div className="c3-sr-empty" style={{ padding: 16 }}><span className="c3-sr-ico">⏳</span>加载中…</div>
+          <div className="c3-sr-empty" style={{ padding: 16 }}><span className="c3-sr-ico"><PIcon name="clock" size={14}/></span>加载中…</div>
         ) : opened.length === 0 ? (
           <div className="c3-opened-empty">
             暂无已开通限流例外的客户。在上方搜索客户后，点击「设置额度」即可开通。
@@ -480,10 +481,10 @@ export default function AdminCreditPage() {
       <div className={`c3-view-section${view === "results" ? " c3-active" : ""}`}>
         <Panel>
           {customersQ.isLoading ? (
-            <div className="c3-sr-empty"><span className="c3-sr-ico">⏳</span>搜索中…</div>
+            <div className="c3-sr-empty"><span className="c3-sr-ico"><PIcon name="clock" size={14}/></span>搜索中…</div>
           ) : results.length === 0 ? (
             <div className="c3-sr-empty">
-              <span className="c3-sr-ico">🔍</span>
+              <span className="c3-sr-ico"><PIcon name="search" size={14}/></span>
               未找到匹配客户「{keyword}」
               <br />
               <span style={{ fontSize: 12, color: "#bbb" }}>请检查邮箱拼写或更换关键词</span>
@@ -522,7 +523,7 @@ export default function AdminCreditPage() {
         <div className={`c3-view-section${view === "cust" ? " c3-active" : ""}`}>
           <Panel>
             <div className="c3-cust-head">
-              <span className="c3-ch-title">🪙 {currentCust.email}</span>
+              <span className="c3-ch-title"><PIcon name="coin" size={14}/> {currentCust.email}</span>
               <span className="c3-ch-meta">
                 · {currentCust.type === "enterprise" ? "企业" : "个人"} 客户 · 基线 RPM {fmtRPM(defaults[currentCust.type].rpm)} / TPM {fmtTPM(defaults[currentCust.type].tpm)}
               </span>
@@ -618,7 +619,7 @@ export default function AdminCreditPage() {
       {view === "empty" && (
         <Panel>
           <div className="c3-sr-empty">
-            <span className="c3-sr-ico">🔍</span>
+            <span className="c3-sr-ico"><PIcon name="search" size={14}/></span>
             输入客户邮箱搜索，定位后即可查看 / 配置该客户额度
             <br />
             <span style={{ fontSize: 12, color: "#bbb" }}>例外额度仅在选定的客户上生效，不作用于全平台用户</span>

@@ -1,7 +1,9 @@
 import { useState, useRef } from "react";
+import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { HelpIcon, useToast } from "@3cloud/shared-ui";
+import { PIcon } from "../_polishIcons";
 
 const card: React.CSSProperties = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
 const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
@@ -53,11 +55,11 @@ const MOCK: BillMatchData = {
 };
 
 const fmt = (n: number) => n.toLocaleString("zh-CN");
-const STATUS_ICON: Record<MatchStatus, { icon: string; bg: string; label: string; color: string }> = {
-  matched:   { icon: "✅", bg: "#e8f5e9", label: "完全匹配", color: "#22c55e" },
-  partial:   { icon: "⚠️", bg: "#fff3e0", label: "部分匹配", color: "#f59e0b" },
-  unmatched: { icon: "❌", bg: "#ffebee", label: "未匹配",   color: "#e53935" },
-  extra:     { icon: "➕", bg: "#e3f2fd", label: "多出记录", color: "#4f6ef7" },
+const STATUS_ICON: Record<MatchStatus, { icon: ReactNode; bg: string; label: string; color: string }> = {
+  matched:   { icon: <PIcon name="check" size={20}/>, bg: "#e8f5e9", label: "完全匹配", color: "#22c55e" },
+  partial:   { icon: <PIcon name="alert" size={20}/>, bg: "#fff3e0", label: "部分匹配", color: "#f59e0b" },
+  unmatched: { icon: <PIcon name="close" size={20}/>, bg: "#ffebee", label: "未匹配",   color: "#e53935" },
+  extra:     { icon: <PIcon name="plus" size={20}/>, bg: "#e3f2fd", label: "多出记录", color: "var(--color-primary)" },
 };
 
 /* ───────── 页面 ───────── */
@@ -94,34 +96,34 @@ export default function AdminSupplierBillMatchPage() {
 
   return (
     <div>
-      <div style={{ background: "linear-gradient(135deg,#667eea,#764ba2)", color: "#fff", padding: "20px 24px", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ fontSize: 24 }}>🧾</span>
+      <div style={{ background: "var(--color-ink-900)", color: "#fff", padding: "20px 24px", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
+        <span style={{ fontSize: 24 }}><PIcon name="receipt" size={14}/></span>
         <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>供应商账单核对
           <HelpIcon text="核对供应商提供的账单与平台记录的一致性，确保成本数据准确无误。" level="page" />
         </span>
-        {data.demo && <span style={{ fontSize: 11, color: "#ffe9a8" }}>⚠️ 演示数据（后端 /admin/supplier-bill-match 待接入）</span>}
+        {data.demo && <span style={{ fontSize: 11, color: "#ffe9a8" }}><PIcon name="alert" size={14}/> 演示数据（后端 /admin/supplier-bill-match 待接入）</span>}
       </div>
 
       {/* ── 统计卡 ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 20 }}>
         {[
-          { icon: "📋", label: "待核对账单数", value: data.summary.pending, sub: "本月待处理", color: "#4f6ef7" },
-          { icon: "✅", label: "已匹配笔数", value: fmt(data.summary.matched_count), sub: "本月累计 ↑ 5.2%", color: "#22c55e" },
-          { icon: "⚠️", label: "差异笔数", value: data.summary.diff_count, sub: "需要处理 ↑ 3", color: "#f59e0b" },
-          { icon: "📊", label: "匹配率", value: `${data.summary.match_rate}%`, sub: "较上月 ↑ 0.3%", color: "#22c55e" },
+          { icon: <PIcon name="doc" size={20}/>, label: "待核对账单数", value: data.summary.pending, sub: "本月待处理", color: "var(--color-primary)" },
+          { icon: <PIcon name="check" size={20}/>, label: "已匹配笔数", value: fmt(data.summary.matched_count), sub: "本月累计 ↑ 5.2%", color: "#22c55e" },
+          { icon: <PIcon name="alert" size={20}/>, label: "差异笔数", value: data.summary.diff_count, sub: "需要处理 ↑ 3", color: "#f59e0b" },
+          { icon: <PIcon name="chart" size={20}/>, label: "匹配率", value: `${data.summary.match_rate}%`, sub: "较上月 ↑ 0.3%", color: "#22c55e" },
         ].map((s, i) => (
           <div key={i} style={{ ...card, borderLeft: `4px solid ${s.color}` }}>
             <div style={{ fontSize: 24 }}>{s.icon}</div>
-            <div style={{ fontSize: 12, color: "#888", margin: "6px 0" }}>{s.label}</div>
+            <div style={{ fontSize: 12, color: "var(--color-text-muted)", margin: "6px 0" }}>{s.label}</div>
             <div style={{ fontSize: 28, fontWeight: 700, color: s.color }}>{s.value}</div>
-            <div style={{ fontSize: 11, color: "#888", marginTop: 4 }}>{s.sub}</div>
+            <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginTop: 4 }}>{s.sub}</div>
           </div>
         ))}
       </div>
 
       {/* ── 筛选栏 ── */}
       <div style={{ ...card, marginBottom: 20, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-        <span style={{ fontSize: 13, color: "#666" }}>供应商</span>
+        <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>供应商</span>
         <select style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", fontSize: 13 }}
           value={vendor} onChange={e => setVendor(e.target.value)}>
           <option value="">全部供应商</option>
@@ -130,47 +132,47 @@ export default function AdminSupplierBillMatchPage() {
           <option value="anthropic">Anthropic</option>
           <option value="glm">智谱AI</option>
         </select>
-        <span style={{ fontSize: 13, color: "#666" }}>对账周期</span>
+        <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>对账周期</span>
         <input type="month" value={period} onChange={e => setPeriod(e.target.value)}
           style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", fontSize: 13 }} />
-        <span style={{ fontSize: 13, color: "#666" }}>状态</span>
+        <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>状态</span>
         <select style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", fontSize: 13 }}
           value={status} onChange={e => setStatus(e.target.value)}>
           <option value="">全部</option>
-          <option value="matched">✅ 已匹配</option>
-          <option value="partial">⚠️ 部分匹配</option>
-          <option value="unmatched">❌ 未匹配</option>
-          <option value="extra">➕ 多出</option>
+          <option value="matched"><PIcon name="check" size={14}/> 已匹配</option>
+          <option value="partial"><PIcon name="alert" size={14}/> 部分匹配</option>
+          <option value="unmatched"><PIcon name="close" size={14}/> 未匹配</option>
+          <option value="extra"><PIcon name="plus" size={14}/> 多出</option>
         </select>
         <div style={{ flex: 1 }} />
-        <button style={{ ...btnBase, background: "#4f6ef7", color: "#fff", fontSize: 13 }} onClick={() => toast.info("查询演示数据")}>查询</button>
+        <button style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", fontSize: 13 }} onClick={() => toast.info("查询演示数据")}>查询</button>
         <button style={{ ...btnBase, background: "#fff", border: "1px solid var(--color-border)", fontSize: 13 }} onClick={() => toast.info("导出演示")}>导出</button>
       </div>
 
       {/* ── 账单上传 ── */}
       <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>📤 账单上传 <HelpIcon text="支持 CSV / Excel (.xlsx) 格式，单个文件不超过 50MB" /></div>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="upload" size={14}/> 账单上传 <HelpIcon text="支持 CSV / Excel (.xlsx) 格式，单个文件不超过 50MB" /></div>
         <input ref={fileRef} type="file" accept=".csv,.xlsx" style={{ display: "none" }} onChange={onFilePick} />
         <div
           style={{ border: "2px dashed #ccc", borderRadius: 8, padding: 32, textAlign: "center", cursor: "pointer", transition: "all .2s" }}
-          onMouseOver={e => { e.currentTarget.style.borderColor = "#4f6ef7"; e.currentTarget.style.background = "#f0f4ff"; }}
+          onMouseOver={e => { e.currentTarget.style.borderColor = "var(--color-primary)"; e.currentTarget.style.background = "var(--color-primary-light)"; }}
           onMouseOut={e => { e.currentTarget.style.borderColor = "#ccc"; e.currentTarget.style.background = "transparent"; }}
           onClick={() => fileRef.current?.click()}>
-          <div style={{ fontSize: 40, marginBottom: 8 }}>📥</div>
-          <div style={{ color: "#666", fontSize: 14 }}>点击或拖拽文件到此处上传</div>
-          <div style={{ color: "#999", fontSize: 12, marginTop: 4 }}>支持 CSV / Excel (.xlsx) 格式，单个文件不超过 50MB</div>
+          <div style={{ fontSize: 40, marginBottom: 8 }}><PIcon name="download" size={14}/></div>
+          <div style={{ color: "var(--color-text-secondary)", fontSize: 14 }}>点击或拖拽文件到此处上传</div>
+          <div style={{ color: "var(--color-text-muted)", fontSize: 12, marginTop: 4 }}>支持 CSV / Excel (.xlsx) 格式，单个文件不超过 50MB</div>
         </div>
         <div style={{ marginTop: 16 }}>
           {data.files.map(f => (
             <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", border: "1px solid #e0e0e0", borderRadius: 4, marginBottom: 8, fontSize: 13 }}>
-              <span style={{ fontSize: 18 }}>📊</span>
+              <span style={{ fontSize: 18 }}><PIcon name="chart" size={14}/></span>
               <span style={{ flex: 1 }}>{f.name}</span>
-              <span style={{ color: "#999" }}>{f.size}</span>
+              <span style={{ color: "var(--color-text-muted)" }}>{f.size}</span>
               <span style={{ fontSize: 12, color: f.status === "parsed" ? "#22c55e" : "#f59e0b" }}>
-                {f.status === "parsed" ? "✅ 已解析" : "⏳ 解析中"}
+                {f.status === "parsed" ? "已解析" : "解析中"}
               </span>
               {f.status === "parsed" && (
-                <button style={{ ...btnBase, background: "none", fontSize: 12, color: "#4f6ef7", padding: "2px 8px" }}
+                <button style={{ ...btnBase, background: "none", fontSize: 12, color: "var(--color-primary)", padding: "2px 8px" }}
                   onClick={() => toast.success(`${f.name} 开始匹配（演示）`)}>开始匹配</button>
               )}
             </div>
@@ -181,8 +183,8 @@ export default function AdminSupplierBillMatchPage() {
       {/* ── 匹配结果 ── */}
       <div style={{ ...card, marginTop: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <span style={{ fontWeight: 600 }}>🔍 匹配结果 <HelpIcon text="供应商账单行与平台记录行左右对比，可按匹配状态处理差异" /></span>
-          <span style={{ fontSize: 13, color: "#888" }}>DeepSeek 2026年8月 · 共 {data.pairs.length} 条记录</span>
+          <span style={{ fontWeight: 600 }}><PIcon name="search" size={14}/> 匹配结果 <HelpIcon text="供应商账单行与平台记录行左右对比，可按匹配状态处理差异" /></span>
+          <span style={{ fontSize: 13, color: "var(--color-text-muted)" }}>DeepSeek 2026年8月 · 共 {data.pairs.length} 条记录</span>
         </div>
         {data.pairs.map(p => {
           const s = STATUS_ICON[p.status];
@@ -191,13 +193,13 @@ export default function AdminSupplierBillMatchPage() {
             <div key={p.id} style={{ border: "1px solid #e0e0e0", borderRadius: 4, marginBottom: 8, overflow: "hidden" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px" }}>
                 <div style={{ padding: "10px 12px", background: "#f8f9fa" }}>
-                  <div style={{ color: "#888", fontSize: 11 }}>供应商账单</div>
+                  <div style={{ color: "var(--color-text-muted)", fontSize: 11 }}>供应商账单</div>
                   <div style={{ fontSize: 13, marginTop: 2 }}>
                     {p.bill ? `${p.bill.date} | ${p.bill.model} | ${fmt(p.bill.calls)} 次 | ¥${fmt(p.bill.amount)}` : "— 无对应记录 —"}
                   </div>
                 </div>
                 <div style={{ padding: "10px 12px" }}>
-                  <div style={{ color: "#888", fontSize: 11 }}>平台记录</div>
+                  <div style={{ color: "var(--color-text-muted)", fontSize: 11 }}>平台记录</div>
                   <div style={{ fontSize: 13, marginTop: 2 }}>
                     {p.platform ? `${p.platform.date} | ${p.platform.model} | ${fmt(p.platform.calls)} 次 | ¥${fmt(p.platform.amount)}` : "— 无匹配记录 —"}
                   </div>
@@ -208,12 +210,12 @@ export default function AdminSupplierBillMatchPage() {
                 <span style={{ color: s.color }}>{p.note ? `${s.label}：${p.note}` : s.label}</span>
                 <div style={{ display: "flex", gap: 8 }}>
                   {!action && (<>
-                    <button style={{ ...btnBase, background: "none", fontSize: 12, color: "#4f6ef7", padding: "2px 8px" }} onClick={() => handlePairAction(p.id, "confirmed")}>确认</button>
-                    <button style={{ ...btnBase, background: "none", fontSize: 12, color: "#666", padding: "2px 8px" }} onClick={() => handlePairAction(p.id, "flagged")}>标记</button>
-                    <button style={{ ...btnBase, background: "none", fontSize: 12, color: "#999", padding: "2px 8px" }} onClick={() => handlePairAction(p.id, "ignored")}>忽略</button>
+                    <button style={{ ...btnBase, background: "none", fontSize: 12, color: "var(--color-primary)", padding: "2px 8px" }} onClick={() => handlePairAction(p.id, "confirmed")}>确认</button>
+                    <button style={{ ...btnBase, background: "none", fontSize: 12, color: "var(--color-text-secondary)", padding: "2px 8px" }} onClick={() => handlePairAction(p.id, "flagged")}>标记</button>
+                    <button style={{ ...btnBase, background: "none", fontSize: 12, color: "var(--color-text-muted)", padding: "2px 8px" }} onClick={() => handlePairAction(p.id, "ignored")}>忽略</button>
                   </>)}
-                  {action && <span style={{ fontSize: 11, color: "#888" }}>
-                    {({ confirmed: "✅ 已确认", flagged: "📌 已标记", ignored: "— 已忽略" } as Record<string, string>)[action]}
+                  {action && <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+                    {({ confirmed: "已确认", flagged: "已标记", ignored: "— 已忽略" } as Record<string, string>)[action]}
                   </span>}
                 </div>
               </div>
@@ -223,15 +225,15 @@ export default function AdminSupplierBillMatchPage() {
 
         {/* ── 差异汇总 ── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, padding: 16, background: "#f8f9fa", borderRadius: 8, marginTop: 16 }}>
-          <div style={{ textAlign: "center" }}><div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>总账单金额</div><div style={{ fontSize: 20, fontWeight: 600 }}>¥{fmt(data.totals.bill_amount)}</div></div>
-          <div style={{ textAlign: "center" }}><div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>平台记录金额</div><div style={{ fontSize: 20, fontWeight: 600 }}>¥{fmt(data.totals.platform_amount)}</div></div>
-          <div style={{ textAlign: "center" }}><div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>差异金额</div><div style={{ fontSize: 20, fontWeight: 600, color: "#e53935" }}>¥{fmt(data.totals.diff_amount)}</div></div>
-          <div style={{ textAlign: "center" }}><div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>匹配率</div><div style={{ fontSize: 20, fontWeight: 600, color: "#22c55e" }}>{data.totals.match_rate}%</div></div>
+          <div style={{ textAlign: "center" }}><div style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 4 }}>总账单金额</div><div style={{ fontSize: 20, fontWeight: 600 }}>¥{fmt(data.totals.bill_amount)}</div></div>
+          <div style={{ textAlign: "center" }}><div style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 4 }}>平台记录金额</div><div style={{ fontSize: 20, fontWeight: 600 }}>¥{fmt(data.totals.platform_amount)}</div></div>
+          <div style={{ textAlign: "center" }}><div style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 4 }}>差异金额</div><div style={{ fontSize: 20, fontWeight: 600, color: "#e53935" }}>¥{fmt(data.totals.diff_amount)}</div></div>
+          <div style={{ textAlign: "center" }}><div style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 4 }}>匹配率</div><div style={{ fontSize: 20, fontWeight: 600, color: "#22c55e" }}>{data.totals.match_rate}%</div></div>
         </div>
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
-          <button style={{ ...btnBase, background: "#fff", border: "1px solid var(--color-border)", fontSize: 13 }} onClick={() => toast.info("导出差异报告（演示）")}>📥 导出差异报告</button>
-          <button style={{ ...btnBase, background: "#4f6ef7", color: "#fff", fontSize: 13 }} onClick={() => toast.success("对账已提交确认（演示）")}>提交对账确认</button>
+          <button style={{ ...btnBase, background: "#fff", border: "1px solid var(--color-border)", fontSize: 13 }} onClick={() => toast.info("导出差异报告（演示）")}><PIcon name="download" size={14}/> 导出差异报告</button>
+          <button style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", fontSize: 13 }} onClick={() => toast.success("对账已提交确认（演示）")}>提交对账确认</button>
         </div>
       </div>
     </div>

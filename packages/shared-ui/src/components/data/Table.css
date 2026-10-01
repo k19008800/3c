@@ -9,7 +9,7 @@
 .shared-table-wrapper {
   width: 100%;
   font-family: var(--font-family);
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-table);
   color: var(--color-text);
 }
 
@@ -30,22 +30,23 @@
 
 /* ===== 表头 ===== */
 .shared-table__th {
-  padding: 14px 16px;
+  padding: 12px 16px;
   text-align: left;
   font-weight: 600;
-  font-size: var(--font-size-md);
-  color: var(--color-text);
-  background-color: var(--color-table-header-bg); /* #fafafa */
+  font-size: var(--font-size-table);
+  color: var(--color-text-secondary);
+  background-color: var(--color-table-header-bg);
   border-bottom: 1px solid var(--color-border);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   user-select: none;
+  letter-spacing: 0.01em;
 }
 
 .shared-table__th--sortable {
   cursor: pointer;
-  transition: color var(--transition-fast);
+  transition: color var(--transition-fast) var(--ease-out);
 }
 
 .shared-table__th--sortable:hover {
@@ -69,25 +70,32 @@
 
 /* ===== 数据行 ===== */
 .shared-table__tr {
-  transition: background-color var(--transition-fast);
+  transition: background-color var(--transition-fast) var(--ease-out);
 }
 
 .shared-table__tr:hover {
-  background-color: var(--color-row-hover); /* #f8f9ff */
+  background-color: var(--color-row-hover);
 }
 
 .shared-table__tr--clickable {
   cursor: pointer;
 }
 
+/* 选中行（勾选/当前行） */
+.shared-table__tr--selected,
+.shared-table__tr--selected:hover {
+  background-color: var(--color-row-selected);
+}
+
 /* ===== 数据单元格 ===== */
 .shared-table__td {
-  padding: 14px 16px;
+  padding: 13px 16px;
   border-bottom: 1px solid var(--color-divider);
   line-height: 1.5;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ===== 空数据单元格 ===== */
