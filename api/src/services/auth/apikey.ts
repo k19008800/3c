@@ -11,6 +11,14 @@ export interface ApiKeyContext {
   userId: number;
   keyHash: string;
   scopes: string[];
+  // ── Key 细粒度权限（§20.4，随认证一并读出，避免网关二次查库）──
+  allowedModels: string[] | null;
+  blockedModels: string[] | null;
+  allowedIps: string[] | null;
+  allowedReferers: string[] | null;
+  dailyTokenLimit: number | null;
+  rpmLimit: number | null;
+  tpmLimit: number | null;
 }
 
 /**
@@ -44,6 +52,13 @@ export async function verifyApiKey(rawKey: string): Promise<ApiKeyContext | null
       keyHash: schema.apiKeys.keyHash,
       scopes: schema.apiKeys.scopes,
       status: schema.apiKeys.status,
+      allowedModels: schema.apiKeys.allowedModels,
+      blockedModels: schema.apiKeys.blockedModels,
+      allowedIps: schema.apiKeys.allowedIps,
+      allowedReferers: schema.apiKeys.allowedReferers,
+      dailyTokenLimit: schema.apiKeys.dailyTokenLimit,
+      rpmLimit: schema.apiKeys.rpmLimit,
+      tpmLimit: schema.apiKeys.tpmLimit,
     })
     .from(schema.apiKeys)
     .where(eq(schema.apiKeys.keyHash, keyHash))
@@ -59,6 +74,13 @@ export async function verifyApiKey(rawKey: string): Promise<ApiKeyContext | null
     userId: key.userId,
     keyHash: key.keyHash,
     scopes: (key.scopes as string[]) || [],
+    allowedModels: (key.allowedModels as string[] | null) ?? null,
+    blockedModels: (key.blockedModels as string[] | null) ?? null,
+    allowedIps: (key.allowedIps as string[] | null) ?? null,
+    allowedReferers: (key.allowedReferers as string[] | null) ?? null,
+    dailyTokenLimit: key.dailyTokenLimit ?? null,
+    rpmLimit: key.rpmLimit ?? null,
+    tpmLimit: key.tpmLimit ?? null,
   };
 }
 

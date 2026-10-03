@@ -74,6 +74,7 @@ export { knowledgeBaseArticles } from './knowledge-base.js';
 export { chatConversations, chatMessages } from './chat-support.js';
 // 2026-08-18 代理商报备审核补齐（原型有、后端缺失）：代理商客户报备审核队列（migration 0023）
 export { agentApprovals, agentApprovalsRelations } from './agent-approvals.js';
+export { agentNotifPrefs } from './agent-notif-prefs.js';
 // 2026-08-19 营销/争议/合规类补齐（原型有、后端缺失，migration 0024a/0024b/0024c）
 export { campaignParticipants } from './campaign-participants.js';
 export { disputes } from './disputes.js';
@@ -86,3 +87,13 @@ export { loginHistory } from './login-history.js';
 export { dataExportGrants } from './data-export-grants.js';
 // 模型编码化改造（migration 0038）：用户默认模型编码偏好
 export { userModelDefaultCodes } from './user-model-default-codes.js';
+// 用户消费预算熔断（migration 0042）：日/月消费限额 + 告警阈值 + 硬阻断开关
+export { userBudgetSettings } from './user-budget-settings.js';
+// 平台总账（migration 0044，PRD §29.1）：复式记账分录，debit=credit
+export { platformLedger } from './platform-ledger.js';
+// 渠道自助门户（migration 0046，SPEC §25）：渠道登录账号 / 渠道公告 / 自助结算申请
+export { vendorAccounts, vendorNotifications, vendorSettlementRequests } from './vendor-portal.js';
+// CRM 销售漏斗（migration 0047，SPEC-§11.2/§11.4）：线索 / 商机 / 报价单
+export { salesLeads, salesOpportunities, salesQuotes } from './sales-crm.js';
+// 告警中心（migration 0048，PRD §5.4）：告警规则 / 告警事件 / 通知投递留痕
+export { monitoringRules, alerts, alertNotifications } from './alert-rules.js';

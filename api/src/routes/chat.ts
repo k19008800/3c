@@ -23,6 +23,7 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { apiKeyAuth } from '../services/auth/apikey.js';
 import { enforceRateLimitPreHandler } from '../services/rate-limit/index.js';
+import { enforceKeyPermissionsPreHandler } from '../services/security/key-permissions.js';
 import { countTokens } from '../services/billing/token-counter.js';
 import { estimateMultimodalContentTokens } from '../services/billing/multimodal-counter.js';
 import { determineStreamBilling } from '../services/billing/settle-stream.js';
@@ -47,6 +48,7 @@ import {
   IdempotencyConflictError,
   rateLimitStep,
   preConsumeStep,
+  budgetCheckStep,
   routeStep,
   proxyStep,
   UpstreamPassthroughError,
@@ -333,6 +335,9 @@ export async function chatRoutes(app: FastifyInstance) {
 
           return req;
         }),
+
+        // 4.5 budget-check — 用户预算熔断（超硬阻断 429；未设置/异常 fail-open）
+        budgetCheckStep(),
 
         // 5. pre-consume — 阈值旁路 + Redis Lua 冻结（失败 402；后续失败 → 回滚解冻）
         preConsumeStep(),
@@ -664,7 +669,7 @@ export async function chatRoutes(app: FastifyInstance) {
   };
 
   const routeOptions = {
-    preHandler: [apiKeyAuth, enforceRateLimitPreHandler],
+    preHandler: [apiKeyAuth, enforceKeyPermissionsPreHandler, enforceRateLimitPreHandler],
     config: {
       rateLimit: {
         max: 60,

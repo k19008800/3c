@@ -15,6 +15,7 @@ export {
   type IdempotencyStepResult,
 } from './steps/idempotency.js';
 export { preConsumeStep } from './steps/pre-consume.js';
+export { budgetCheckStep } from './steps/budget-check.js';
 export { routeStep } from './steps/route.js';
 export {
   proxyStep,

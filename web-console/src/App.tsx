@@ -63,6 +63,9 @@ import SalesCustomersPage from "./pages/SalesCustomersPage";
 import SalesCustomerDetailPage from "./pages/SalesCustomerDetailPage";
 import SalesRemindersPage from "./pages/SalesRemindersPage";
 import SalesPerformancePage from "./pages/SalesPerformancePage";
+import SalesLeadsPage from "./pages/SalesLeadsPage";
+import SalesOpportunitiesPage from "./pages/SalesOpportunitiesPage";
+import SalesQuotesPage from "./pages/SalesQuotesPage";
 import AdminCustomersPage from "./pages/AdminCustomersPage";
 import AdminGroupsPage from "./pages/AdminGroupsPage";
 import AdminDataRequestPage from "./pages/AdminDataRequestPage";
@@ -343,6 +346,9 @@ export default function App() {
         <Route path="sales/customers/:userId" element={<SalesCustomerDetailPage />} />
         <Route path="sales/reminders" element={<SalesRemindersPage />} />
         <Route path="sales/performance" element={<SalesPerformancePage />} />
+        <Route path="sales/leads" element={<SalesLeadsPage />} />
+        <Route path="sales/opportunities" element={<SalesOpportunitiesPage />} />
+        <Route path="sales/quotes" element={<SalesQuotesPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

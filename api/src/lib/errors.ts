@@ -144,6 +144,32 @@ export class PaymentRequiredError extends AppError {
   }
 }
 
+/**
+ * 用户消费预算超限（429 BUDGET_LIMIT_EXCEEDED）— §20.1 用户预算熔断
+ *
+ * 网关在 pre-consume 之前检查：今日/本月已用 + 本次预估 超过用户自设的
+ * 日/月预算上限且 hard_block=true 时抛出。发生在转发上游之前，不产生消费记录，
+ * 故无需退款（与 PreConsumeFailedError 的 402 语义区分）。
+ *
+ * @see services/billing/budget.ts
+ */
+export class BudgetLimitExceededError extends AppError {
+  constructor(
+    period: 'daily' | 'monthly',
+    usedCents: number,
+    limitCents: number,
+  ) {
+    const periodLabel = period === 'daily' ? '今日' : '本月';
+    super(
+      `${periodLabel}消费已达预算上限（¥${(limitCents / 100).toFixed(2)}），请调整预算或明日/下月再试`,
+      429,
+      'BUDGET_LIMIT_EXCEEDED',
+      { period, usedCents, limitCents },
+    );
+    this.name = 'BudgetLimitExceededError';
+  }
+}
+
 // Circuit breaker errors
 export class CircuitBreakerOpenError extends AppError {
   constructor(channelKey: string) {

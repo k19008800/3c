@@ -61,6 +61,14 @@ function serializeKey(k: any, todayCalls: number) {
     lastUsedAt: k.lastUsedAt,
     todayCalls,
     createdAt: k.createdAt,
+    // Key 细粒度权限（§20.4）：null/空 = 不限制
+    allowedModels: k.allowedModels ?? null,
+    blockedModels: k.blockedModels ?? null,
+    allowedIps: k.allowedIps ?? null,
+    allowedReferers: k.allowedReferers ?? null,
+    dailyTokenLimit: k.dailyTokenLimit ?? null,
+    rpmLimit: k.rpmLimit ?? null,
+    tpmLimit: k.tpmLimit ?? null,
   };
 }
 
@@ -76,6 +84,13 @@ export async function apiKeyRoutes(app: FastifyInstance) {
       expiresAt: schema.apiKeys.expiresAt,
       lastUsedAt: schema.apiKeys.lastUsedAt,
       createdAt: schema.apiKeys.createdAt,
+      allowedModels: schema.apiKeys.allowedModels,
+      blockedModels: schema.apiKeys.blockedModels,
+      allowedIps: schema.apiKeys.allowedIps,
+      allowedReferers: schema.apiKeys.allowedReferers,
+      dailyTokenLimit: schema.apiKeys.dailyTokenLimit,
+      rpmLimit: schema.apiKeys.rpmLimit,
+      tpmLimit: schema.apiKeys.tpmLimit,
     }).from(schema.apiKeys).where(eq(schema.apiKeys.userId, userId))
       .orderBy(sql`${schema.apiKeys.createdAt} DESC`);
 
@@ -114,7 +129,7 @@ export async function apiKeyRoutes(app: FastifyInstance) {
     });
   }
 
-  // ── 更新状态（active / disabled）──────────────────────
+  // ── 更新状态（active / disabled）+ 细粒度权限（§20.4）──────────────
   async function patchKey(request: any, reply: any) {
     const { userId } = (request as any).userContext;
     const params = request.params as { id: string };
@@ -122,10 +137,6 @@ export async function apiKeyRoutes(app: FastifyInstance) {
     if (isNaN(keyId)) throw new ValidationError('Invalid key id');
 
     const body = request.body as Record<string, unknown>;
-    const status = String(body.status || '').trim();
-    if (!['active', 'disabled'].includes(status)) {
-      throw new ValidationError('status must be active or disabled');
-    }
 
     const keys = await db.select({ id: schema.apiKeys.id })
       .from(schema.apiKeys)
@@ -133,11 +144,54 @@ export async function apiKeyRoutes(app: FastifyInstance) {
       .limit(1);
     if (keys.length === 0) throw new NotFoundError('API key', params.id);
 
+    // 收集待更新字段（仅更新 body 中出现的键；null = 清除限制）
+    const patch: Record<string, unknown> = { updatedAt: new Date() };
+
+    // status（可选；未传则不动）
+    if (body.status !== undefined) {
+      const status = String(body.status || '').trim();
+      if (!['active', 'disabled'].includes(status)) {
+        throw new ValidationError('status must be active or disabled');
+      }
+      patch.status = status;
+    }
+
+    // 数组类权限字段：string[] 或 null
+    for (const col of ['allowedModels', 'blockedModels', 'allowedIps', 'allowedReferers'] as const) {
+      if (body[col] === undefined) continue;
+      const v = body[col];
+      if (v === null) {
+        patch[col] = null;
+      } else if (Array.isArray(v) && v.every((x) => typeof x === 'string')) {
+        patch[col] = v as string[];
+      } else {
+        throw new ValidationError(`${col} must be an array of strings or null`);
+      }
+    }
+
+    // 整数类限额字段：非负整数或 null
+    for (const col of ['dailyTokenLimit', 'rpmLimit', 'tpmLimit'] as const) {
+      if (body[col] === undefined) continue;
+      const v = body[col];
+      if (v === null) {
+        patch[col] = null;
+      } else if (typeof v === 'number' && Number.isInteger(v) && v >= 0) {
+        patch[col] = v;
+      } else {
+        throw new ValidationError(`${col} must be a non-negative integer or null`);
+      }
+    }
+
+    if (Object.keys(patch).length === 1) {
+      // 只有 updatedAt，无实际变更
+      return reply.send({ message: 'No changes', id: keyId });
+    }
+
     await db.update(schema.apiKeys)
-      .set({ status: status as any, updatedAt: new Date() })
+      .set(patch as any)
       .where(eq(schema.apiKeys.id, keyId));
 
-    return reply.send({ message: 'API key updated', id: keyId, status });
+    return reply.send({ message: 'API key updated', id: keyId, ...patch });
   }
 
   // ── 删除 / 撤销 ──────────────────────────────────────

@@ -1,0 +1,37 @@
+# PRD §15 组件库与前端设计规范
+
+> 品牌：**浩寅云**　|　代码基线：2026-10-03 工作区
+> 状态图例：✅已实现｜🟡部分实现｜❌未实现（规划中）
+> 权威来源：`web-console/src/components/` 实际目录 + 产品设计红线（`docs/PRODUCT-DESIGN-PRINCIPLES.md`）。
+
+---
+
+## 一、功能清单
+
+| 编号 | 功能点 | 代码现状 | 状态 | 说明 |
+|---|---|---|---|---|
+| 15.1 | 基础组件库（Button/Modal/Table/Input/Select/Pagination…） | 无独立 `ui/` 基础组件目录；各页面内联 Tailwind | ❌ | 未沉淀统一基础组件库，样式/交互重复实现 |
+| 15.2 | 数据展示组件（StatCard/TrendChart/StatusTag/Badge…） | — | ❌ | 看板卡片、趋势图、状态标签均为页面内联实现，无规范组件 |
+| 15.3 | **`[?]` 帮助组件（HelpIcon/HelpPopover）** | `@3cloud/shared-ui` HelpIcon，全 console ~152 个 tsx 引用 | 🟡 | 组件已接入、覆盖广；**逐页「按钮旁 `[?]`」覆盖率需逐页核验**（产品设计红线） |
+| 15.4 | 业务复合组件（现存） | `web-console/src/components/`：ChannelPriceMatrixModal、ConsentBanner、OnboardingWizard、Operation2faModal、OtpInput、SyncResultModal + playground | ✅ | 均为业务专用弹窗/向导，非通用基础组件 |
+| 15.5 | 设计令牌 / 主题色 / 品牌定制 | Tailwind 内联；无 design-token 配置 | ❌ | 后台品牌色/Logo/布局定制端点与组件均无（见 §4.17） |
+| 15.6 | 组件文档 / Storybook-like playground | `components/playground/` 目录存在 | 🟡 | 有 playground 目录，但未形成完整组件文档站 |
+
+---
+
+## 二、关键架构
+
+- **现状 = 业务组件 + 内联样式**：`src/components/` 下是 6 个业务复合组件（模态/向导/输入），通用 UI 原语未抽离，页面直接写 Tailwind。
+- **`[?]` 帮助是已落地的红线组件**：HelpIcon/HelpPopover 来自 shared-ui，被 152 个文件引用——产品设计原则要求「每个页面标题旁 + 每个操作按钮旁都有 `[?]`」，组件层已就绪，缺口在**逐页覆盖率**（§4.18）。
+- **Portal 与 Console 双前端**：web-portal（Next.js）与 web-console（Vite）各自维护样式，无共享基础组件库。
+
+---
+
+## 三、未实现 / 规划中（❌）
+
+1. **15.1 基础组件库**：需抽离 Button/Modal/Table/Form 等通用原语，收敛重复实现。
+2. **15.2 数据展示组件**：StatCard/TrendChart/StatusTag 等看板规范组件未沉淀。
+3. **15.5 设计令牌 / 品牌定制**：无主题色/Logo/布局的配置化能力（关联 §4.17）。
+4. **15.3 逐页 `[?]` 覆盖率核验**：组件在，但需逐页补全页面级 + 按钮级帮助说明。
+
+> 结论：组件库当前为 **🟡 部分实现**——帮助组件与业务复合组件已用，但通用基础组件库尚未沉淀。

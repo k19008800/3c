@@ -223,6 +223,9 @@ const ADMIN_NAV: NavGroup[] = [
 
 const SALES_NAV: NavItem[] = [
   { to: "/sales/customers", label: "nav.salesCustomers", icon: "users" },
+  { to: "/sales/leads", label: "线索管理", icon: "target" },
+  { to: "/sales/opportunities", label: "商机看板", icon: "chart" },
+  { to: "/sales/quotes", label: "报价单", icon: "doc" },
   { to: "/sales/reminders", label: "nav.salesReminders", icon: "clock" },
   { to: "/sales/performance", label: "nav.salesPerformance", icon: "chart" },
 ];

@@ -49,6 +49,7 @@
 
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { apiKeyAuth } from '../services/auth/apikey.js';
+import { enforceKeyPermissionsPreHandler } from '../services/security/key-permissions.js';
 import { selectTaskChannel, type SelectedChannel } from '../services/upstream/routing.js';
 import {
   createTaskRecord,
@@ -324,7 +325,7 @@ function toSelectedChannel(
  */
 export async function taskRelayRoutes(app: FastifyInstance) {
   const routeOptions = {
-    preHandler: [apiKeyAuth],
+    preHandler: [apiKeyAuth, enforceKeyPermissionsPreHandler],
     config: {
       rateLimit: {
         max: 60,

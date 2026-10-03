@@ -17,6 +17,7 @@ import { db, schema } from '../../db/index.js';
 import { eq, sql } from 'drizzle-orm';
 import { AppError, InsufficientBalanceError } from '../../lib/errors.js';
 import { adjustLedgerAvailable, clearNegativeFlag } from './ledger.js';
+import { recordRechargeLedger, recordConsumptionLedger, recordRefundLedger } from '../finance/platform-ledger.js';
 
 /** deductBalance 可选参数 */
 export interface DeductOptions {
@@ -127,6 +128,18 @@ export async function creditBalance(
     description: params.description,
   });
 
+  // d. 平台总账复式分录（副作用，recordRechargeLedger 内部 try/catch 不阻断主流程）。
+  //    充值到账：debit user_balance / credit revenue。调账（adjustment）非收入，此处不挂总账。
+  if (params.type === 'recharge') {
+    await recordRechargeLedger(tx, {
+      userId: params.userId,
+      amountYuan: amountStr,
+      refType: params.referenceType,
+      refId: params.referenceId,
+      description: params.description,
+    });
+  }
+
   return { balanceAfter: row.balanceAfter };
 }
 
@@ -198,6 +211,9 @@ export async function deductBalance(
     referenceId,
   });
 
+  // 平台总账消费分录（副作用，失败仅 log）：debit cost / credit user_balance
+  await recordConsumptionLedger(db, { userId, amountYuan: amount, refType: 'consumption', refId: referenceId, requestId: referenceId });
+
   return { balanceAfter: row.balanceAfter, version: row.version };
 }
 
@@ -253,6 +269,11 @@ export async function addBalance(
     referenceType: referenceType || null,
     referenceId: referenceId || null,
   });
+
+  // 平台总账退款冲销分录（副作用，失败仅 log）：debit refund / credit user_balance
+  if (type === 'refund') {
+    await recordRefundLedger(db, { userId, amountYuan: amount, refType: referenceType || 'refund', refId: referenceId || String(userId) });
+  }
 
   // 退款冲销钩子：客户退款（冲回消费）时，同步冲销该笔消费对应的代理佣金。
   // addBalance 是余额变更唯一咽喉，未来任何退款路径走这里即自动触发冲销。
@@ -359,6 +380,9 @@ export async function settleFrozenBalance(
     referenceType: 'pre_consume',
     referenceId: requestId,
   });
+
+  // 平台总账消费分录（副作用，失败仅 log）：按实际消费 debit cost / credit user_balance
+  await recordConsumptionLedger(db, { userId, amountYuan: actualAmount, refType: 'consumption', refId: requestId, requestId });
 
   return { balanceAfter: row.balanceAfter };
 }

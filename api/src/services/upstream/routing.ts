@@ -214,6 +214,32 @@ export async function validateModelCode(modelCode: string, userId?: number): Pro
 }
 
 /**
+ * 查某 supplier 的全部 active keys（按 priority 降序）
+ *
+ * 抽出为共享查询：selectChannel（选第一个未熔断）与 selectFailoverChannel
+ * （跳过已尝试的 key 选下一个）复用同一候选集与排序口径，避免两处漂移。
+ */
+async function loadSupplierActiveKeys(supplierId: number) {
+  return db
+    .select({
+      id: schema.supplierKeys.id,
+      supplierId: schema.supplierKeys.supplierId,
+      keyValue: schema.supplierKeys.keyValue,
+      name: schema.supplierKeys.name,
+      status: schema.supplierKeys.status,
+      selectMode: schema.supplierKeys.selectMode,
+      priority: schema.supplierKeys.priority,
+      currentBalance: schema.supplierKeys.currentBalance,
+    })
+    .from(schema.supplierKeys)
+    .where(and(
+      eq(schema.supplierKeys.supplierId, supplierId),
+      eq(schema.supplierKeys.status, 'active'),
+    ))
+    .orderBy(desc(schema.supplierKeys.priority));
+}
+
+/**
  * 「模型编码化改造」M-S-04/05：`model` 参数即 model_code，一对一锁定唯一
  * `supplier_models` + supplier；只在该 supplier 的 Key 池内选 Key，不得切换到
  * 其他供应商或其他编码。不再有"按 model_name 自动选第一个供应商"语义。
@@ -247,23 +273,7 @@ export async function selectChannel(
   }
 
   // 3. 查该 supplier 的 active keys，按 priority 选（熔断跳过）
-  const keys = await db
-    .select({
-      id: schema.supplierKeys.id,
-      supplierId: schema.supplierKeys.supplierId,
-      keyValue: schema.supplierKeys.keyValue,
-      name: schema.supplierKeys.name,
-      status: schema.supplierKeys.status,
-      selectMode: schema.supplierKeys.selectMode,
-      priority: schema.supplierKeys.priority,
-      currentBalance: schema.supplierKeys.currentBalance,
-    })
-    .from(schema.supplierKeys)
-    .where(and(
-      eq(schema.supplierKeys.supplierId, supplier.id),
-      eq(schema.supplierKeys.status, 'active'),
-    ))
-    .orderBy(desc(schema.supplierKeys.priority));
+  const keys = await loadSupplierActiveKeys(supplier.id);
 
   // 4. 选第一个未熔断的 key
   let selectedKey: SelectableKey | null = null;
@@ -289,6 +299,64 @@ export async function selectChannel(
       status: row.status,
     },
   };
+}
+
+/**
+ * 请求级故障转移：在同一 supplier 内选下一个「未尝试且未熔断」的 active key
+ *
+ * 模型编码（M-S-04/05）把 model_code 一对一锁定到唯一 supplier，因此故障转移
+ * 不跨供应商，只在该 supplier 的 Key 池内按 priority 降序取下一个 key。
+ *
+ * 与 selectChannel 的差异：
+ *   - 跳过 `triedKeyIds` 中已尝试过的 key（避免同一请求重复打坏 key）；
+ *   - 全部候选耗尽 / 供应商停用 → 返回 null（调用方据此判定「无更多 key 可回退」）。
+ *
+ * 注意：本函数不抛 404/403（模型编码在 route step 已校验通过，此处只读）；
+ * 仅在供应商/映射停用或 Key 池耗尽时返回 null，由 proxy step 透传最后一次上游错误。
+ *
+ * @param modelCode - 用户请求的模型编码（须与 route step 一致）
+ * @param opts - 分组供给选项（同 selectChannel：{ groups } 或 { userId }）
+ * @param triedKeyIds - 本次请求已尝试过的 key id 集合
+ * @returns 下一个可用渠道；无更多候选时返回 null
+ */
+export async function selectFailoverChannel(
+  modelCode: string,
+  opts: SelectChannelOptions | undefined,
+  triedKeyIds: ReadonlySet<number>,
+): Promise<SelectedChannel | null> {
+  // 0. 解析生效分组名列表（口径与 selectChannel 完全一致）
+  let userGroups: string[] | undefined = opts?.groups;
+  if (userGroups === undefined && opts?.userId) {
+    const group = await getUserGroup(opts.userId);
+    userGroups = group ? [group.name] : undefined;
+  }
+
+  // 1. 复用模型编码解析（只读：编码已校验通过，正常不会抛 404/403）
+  const { row, supplier } = await assertModelCodeAvailable(modelCode, userGroups);
+
+  // 2. 供应商/映射停用 → 无更多可回退渠道（不抛错，交由 proxy 透传上游错误）
+  if (supplier.status !== 'active' || row.status !== 'active') return null;
+
+  // 3. 取该 supplier 全部 active keys（priority 降序），跳过已尝试 + 已熔断
+  const keys = await loadSupplierActiveKeys(supplier.id);
+  for (const k of keys) {
+    if (triedKeyIds.has(k.id)) continue;
+    const cbKey = `supplier:${supplier.id}:key:${k.id}`;
+    if (await isCircuitOpen(cbKey)) continue;
+    return {
+      supplier,
+      key: k,
+      modelMapping: {
+        id: row.id,
+        supplierId: row.supplierId,
+        modelName: row.modelName,
+        platformModel: row.platformModel,
+        status: row.status,
+      },
+    };
+  }
+
+  return null;
 }
 
 /**

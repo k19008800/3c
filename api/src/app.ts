@@ -76,12 +76,18 @@ import { adminFinanceStatsRoutes } from './routes/admin-finance-stats.js';
 import { adminFinanceRulesRoutes } from './routes/admin-finance-rules.js';
 import { adminAnnouncementsRoutes } from './routes/admin-announcements.js';
 import { meGapRoutes } from './routes/me-gap.js';
+import { meBudgetRoutes } from './routes/me-budget.js';
+import { adminLedgerRoutes } from './routes/admin-ledger.js';
 import { adminSupportExtraRoutes } from './routes/admin-support-extra.js';
 import { meSalesRoutes } from './routes/me-sales.js';
+import { meCrmRoutes } from './routes/me-crm.js';
+import { meAgentRoutes } from './routes/me-agent.js';
+import { vendorRoutes } from './routes/vendor.js';
 import { meOnboardingRoutes } from './routes/me-onboarding.js';
 import { adminVendorAliasRoutes } from './routes/admin-vendor-alias.js';
 import { adminAffiliateCouponsRoutes } from './routes/admin-affiliate-coupons.js';
 import { adminCompetitiveRoutes } from './routes/admin-competitive.js';
+import { adminAlertsRoutes } from './routes/admin-alerts.js';
 import { startTempCleanupScheduler } from './services/upstream/temp-cleanup.js';
 import { startPriceNotificationScheduler } from './services/price-notification.js';
 import { startCommissionBackfillScheduler } from './services/agent/commission-backfill.js';
@@ -89,6 +95,7 @@ import { startRetentionScheduler } from './services/audit/retention.js';
 import { startModelHealthAggregator } from './services/marketplace/model-health-aggregator.js';
 import { startTaskPollingScheduler } from './services/task/task-poller.js';
 import { startFreezeCleanupScheduler } from './services/billing/pre-consume.js';
+import { startAlertEngine } from './services/monitoring/alert-engine.js';
 import { ensureDefaultGroup } from './services/groups.js';
 import { checkIpBlocked } from './services/security/ip-blacklist.js';
 
@@ -229,6 +236,7 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   await app.register(adminSettingsRoutes);
   await app.register(adminOpsRoutes);
   await app.register(financeDashboardRoutes);
+  await app.register(adminLedgerRoutes);
   await app.register(adminDashboardRoutes);
   await app.register(adminAgentRoutes);
   await app.register(adminPriceChangeRoutes);
@@ -270,12 +278,17 @@ export async function buildApp(opts?: { envOverrides?: Record<string, string> })
   await app.register(adminFinanceRulesRoutes);
   await app.register(adminAnnouncementsRoutes);
   await app.register(meGapRoutes);
+  await app.register(meBudgetRoutes); // 用户消费预算设置（§20.1）
   await app.register(adminSupportExtraRoutes);
   await app.register(meSalesRoutes);
+  await app.register(meCrmRoutes); // CRM 销售漏斗 /me/crm/*（SPEC-§11.2/§11.4 线索/商机/报价）
+  await app.register(meAgentRoutes); // 代理商设置页 /me/agent/*（AgentSettingsPage 补全）
+  await app.register(vendorRoutes); // 渠道自助门户 /api/v1/vendor/*（SPEC §25）
   await app.register(meOnboardingRoutes);
   await app.register(adminVendorAliasRoutes);
   await app.register(adminAffiliateCouponsRoutes);
   await app.register(adminCompetitiveRoutes);
+  await app.register(adminAlertsRoutes); // 告警中心 /admin/alerts/*（§5.4）
 
   return app;
 }
@@ -308,6 +321,8 @@ export async function startApp(opts?: { envOverrides?: Record<string, string> })
   startTaskPollingScheduler(app.log);
   // P0-1 预扣超时清理：扫描过期未结算的 Redis 冻结（TTL 兜底 + PG 镜像自愈），每 60s
   startFreezeCleanupScheduler(60_000);
+  // 告警检测引擎：每 60s 聚合网关 error_rate/P99 延迟，对比 monitoring_rules 阈值
+  startAlertEngine(app.log);
   // 多模态临时资产 TTL 清理：按 media.temp_ttl_hours 删除过期文件 + 超限紧急清理（2026-08-18 补齐）
   startTempCleanupScheduler(app);
 
