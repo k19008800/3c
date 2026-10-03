@@ -84,6 +84,11 @@ vi.mock('../src/services/auth/apikey', () => ({
   extractApiKeyFromHeader: vi.fn(),
   verifyApiKey: vi.fn(),
 }));
+// Key 细粒度权限 preHandler：整体 mock，避免其传递依赖（rate-limit/enforcer→groups）
+// 在本测试的精简 db schema mock 下模块加载即炸（groups.ts 顶层读 schema.userGroups.id）。
+vi.mock('../src/services/security/key-permissions', () => ({
+  enforceKeyPermissionsPreHandler: vi.fn(async () => {}),
+}));
 
 // ============================================================
 // Test helpers

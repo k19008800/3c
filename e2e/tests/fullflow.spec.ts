@@ -143,8 +143,13 @@ test.describe("3cloud 三角色全流程（浏览器）", () => {
     const chat = await request.post("/v1/chat/completions", {
       headers: { Authorization: `Bearer ${rawKey}` },
       data: {
-        // 本地真实验收渠道：wanwu（万物有道 http://47.110.226.233:8072），使用其路由映射模型名。
-        model: "DeepSeek-V4-Flash-0731",
+        // 本地真实验收渠道：wanwu-youdao（万物有道 http://47.110.226.233:8072，supplier id=2633, active）。
+        // 模型编码化改造后，model 必须是全局唯一 model_code：
+        //   SPEC M-S-04「纯编码，无自动兜底」、M-S-05「旧裸模型名一律 MODEL_CODE_NOT_FOUND(404)」；
+        //   默认编码模板 {supplier_code}-{model_name}（M-S-03R）。
+        // 该渠道映射行 supplier_models(id=2317) 回填后的 model_code = deepseekv4fl-wanwu-youdao（status=active），
+        // 即此处唯一合法可路由值；旧值 "DeepSeek-V4-Flash-0731" 是上游 platform_model 裸名，已不可调用。
+        model: "deepseekv4fl-wanwu-youdao",
         messages: [{ role: "user", content: "请用一句话介绍 3cloud" }],
         stream: false,
       },
@@ -159,7 +164,9 @@ test.describe("3cloud 三角色全流程（浏览器）", () => {
     // 消费核对：调用日志出现该次调度
     await page.goto("/app/logs");
     await expect(page.getByRole("heading", { name: "调用日志" })).toBeVisible();
-    await expect(page.getByText("DeepSeek-V4-Flash-0731").first()).toBeVisible();
+    // 消费记账以 model_code 为锚点（M-S-07）：consumption_records.model = 用户传入的编码，
+    // /me/logs 返回 upstream_model = 该编码；故断言日志出现 model_code 而非旧上游裸名。
+    await expect(page.getByText("deepseekv4fl-wanwu-youdao").first()).toBeVisible();
     console.log("[③] 调用日志已出现调度记录");
   });
 

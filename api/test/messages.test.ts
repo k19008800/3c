@@ -443,7 +443,7 @@ describe('POST /v1/messages 正常路径', () => {
     expect(body.type).toBe('message');
     expect(body.role).toBe('assistant');
     expect(body.content[0].type).toBe('text');
-    expect(body.content[0].text).toContain('[3cloud 模拟响应]');
+    expect(body.content[0].text).toContain('[浩寅云 模拟响应]');
     expect(body.usage.output_tokens).toBeGreaterThan(0);
     expect(body.id).toMatch(/^msg_/);
     // 未请求上游

@@ -57,7 +57,7 @@ const mocks = vi.hoisted(() => ({
     canonicalizeBody: vi.fn(),
     scopeIdempotencyKey: vi.fn(),
   },
-  routing: { selectChannel: vi.fn(), validateModelCode: vi.fn().mockResolvedValue(undefined) },
+  routing: { selectChannel: vi.fn(), selectFailoverChannel: vi.fn(), validateModelCode: vi.fn().mockResolvedValue(undefined) },
   circuitBreaker: { recordChannelResult: vi.fn(), isCircuitOpen: vi.fn() },
   balance: { getBalance: vi.fn(), deductBalance: vi.fn(), addBalance: vi.fn(), initBalance: vi.fn() },
   consumption: { recordConsumption: vi.fn(), getUserConsumptionStats: vi.fn() },
@@ -65,6 +65,7 @@ const mocks = vi.hoisted(() => ({
   conversation: { recordConversationContext: vi.fn(), fingerprintKey: vi.fn() },
   apikey: { apiKeyAuth: vi.fn() },
   rateLimit: { enforceRateLimitPreHandler: vi.fn() },
+  keyPermissions: { enforceKeyPermissionsPreHandler: vi.fn() },
   db: { select: vi.fn(), update: vi.fn() },
   schema: {
     vendorPricing: { inputPrice: {}, outputPrice: {}, supplierModelId: {}, cacheDiscountRate: {} },
@@ -102,7 +103,11 @@ vi.mock('../../services/idempotency', () => ({
   buildRequestFingerprint: (input: { userId: number; body: unknown }) =>
     `fp-${input.userId}-${JSON.stringify(input.body)}`,
 }));
-vi.mock('../../services/upstream/routing', () => ({ selectChannel: mocks.routing.selectChannel, validateModelCode: mocks.routing.validateModelCode }));
+vi.mock('../../services/upstream/routing', () => ({
+  selectChannel: mocks.routing.selectChannel,
+  selectFailoverChannel: mocks.routing.selectFailoverChannel,
+  validateModelCode: mocks.routing.validateModelCode,
+}));
 vi.mock('../../services/upstream/circuit-breaker', () => ({
   recordChannelResult: mocks.circuitBreaker.recordChannelResult,
   isCircuitOpen: mocks.circuitBreaker.isCircuitOpen,
@@ -132,6 +137,9 @@ vi.mock('../../services/auth/apikey', () => ({
 }));
 vi.mock('../../services/rate-limit', () => ({
   enforceRateLimitPreHandler: mocks.rateLimit.enforceRateLimitPreHandler,
+}));
+vi.mock('../../services/security/key-permissions', () => ({
+  enforceKeyPermissionsPreHandler: mocks.keyPermissions.enforceKeyPermissionsPreHandler,
 }));
 vi.mock('../../db', () => ({ db: mocks.db, schema: mocks.schema }));
 
@@ -197,6 +205,8 @@ describe('Pipeline 完整链路（steps 集成）', () => {
     mocks.preConsume.preConsume.mockResolvedValue({ mode: 'bypass', amount: 0, requestId: 'req-1' });
     mocks.preConsume.releasePreConsume.mockResolvedValue(undefined);
     mocks.routing.selectChannel.mockResolvedValue(makeChannel());
+    // 默认无下一个 key 可回退：保留既有 5xx 测试「立即透传 502」的预期
+    mocks.routing.selectFailoverChannel.mockResolvedValue(null);
     mocks.circuitBreaker.recordChannelResult.mockResolvedValue({ shouldBan: false });
     mocks.circuitBreaker.isCircuitOpen.mockResolvedValue(false);
     vi.stubGlobal('fetch', mocks.fetch);
@@ -337,6 +347,7 @@ describe('Pipeline 网关集成（chat 路由）', () => {
       request.apiKeyContext = { userId: 1, apiKeyId: 11, keyHash: 'test-hash' };
     });
     mocks.rateLimit.enforceRateLimitPreHandler.mockImplementation(async () => {});
+    mocks.keyPermissions.enforceKeyPermissionsPreHandler.mockImplementation(async () => {});
     mocks.idempotency.resolveIdempotencyKey.mockImplementation((_req: unknown, fallback: string) => fallback);
     mocks.idempotency.acquireIdempotencyLock.mockResolvedValue({ status: 'acquired', token: 't1' });
     mocks.idempotency.releaseIdempotencyLock.mockResolvedValue(undefined);
@@ -355,6 +366,8 @@ describe('Pipeline 网关集成（chat 路由）', () => {
     mocks.preConsume.preConsume.mockResolvedValue({ mode: 'bypass', amount: 0, requestId: 'test' });
     mocks.preConsume.releasePreConsume.mockResolvedValue(undefined);
     mocks.routing.selectChannel.mockResolvedValue(makeChannel());
+    // 默认无下一个 key 可回退：保留既有 5xx 测试「立即透传 502」的预期
+    mocks.routing.selectFailoverChannel.mockResolvedValue(null);
 
     // DB 查询链：定价/阈值查询返回空 → 默认值；更新链 no-op
     mocks.db.select.mockImplementation(() => ({
@@ -492,5 +505,123 @@ describe('Pipeline 网关集成（chat 路由）', () => {
   it('内网资产端点：路径穿越文件名 → 404（不读目录外文件）', async () => {
     const res = await app.inject({ method: 'GET', url: '/internal/assets/..%2F..%2F.env' });
     expect(res.statusCode).toBe(404);
+  });
+});
+
+// ============================================================
+// §20.1.2 预算熔断：budget-check 在 pre-consume 之前执行，超额即拒绝
+// （位置核实：chat.ts 装配顺序 validate → budget-check → pre-consume → route → proxy → settle）
+// ============================================================
+
+describe('预算熔断（PRD-§20.1.2）', () => {
+  let app: FastifyInstance;
+  /** 本 describe 受控：user_budget_settings 查询返回的行（[] = 用户未设置预算） */
+  let budgetRows: unknown[] = [];
+  /** 日硬限额行：日限额 1.00 元（100 分），今日已用聚合 1.50 元（150 分）→ 必然超限 */
+  const hardLimitRow = {
+    id: 1,
+    userId: 1,
+    dailyLimitCents: 100,
+    monthlyLimitCents: null,
+    alertThreshold: 80,
+    hardBlock: true,
+    createdAt: new Date('2026-10-01T00:00:00Z'),
+    updatedAt: new Date('2026-10-03T00:00:00Z'),
+  };
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+
+    mocks.apikey.apiKeyAuth.mockImplementation(async (request: any) => {
+      request.apiKeyContext = { userId: 1, apiKeyId: 11, keyHash: 'test-hash' };
+    });
+    mocks.rateLimit.enforceRateLimitPreHandler.mockImplementation(async () => {});
+    mocks.keyPermissions.enforceKeyPermissionsPreHandler.mockImplementation(async () => {});
+    mocks.idempotency.resolveIdempotencyKey.mockImplementation((_req: unknown, fallback: string) => fallback);
+    mocks.idempotency.acquireIdempotencyLock.mockResolvedValue({ status: 'acquired', token: 't1' });
+    mocks.idempotency.releaseIdempotencyLock.mockResolvedValue(undefined);
+    mocks.idempotency.replayIdempotentRequest.mockResolvedValue('none' as never);
+    mocks.idempotency.cacheIdempotentResponse.mockResolvedValue(undefined);
+    mocks.idempotency.isIdempotencyUniqueViolation.mockReturnValue(false);
+    mocks.idempotency.buildIdempotencySummary.mockImplementation((p: Record<string, unknown>) => ({ ...p }));
+    mocks.balance.getBalance.mockResolvedValue({ totalBalance: '100', availableBalance: '100', frozenBalance: '0', currency: 'CNY' });
+    mocks.balance.deductBalance.mockResolvedValue({ balanceAfter: '99.999', version: 2 });
+    mocks.consumption.recordConsumption.mockResolvedValue({ id: 1 });
+    mocks.commission.generateCommissionForConsumption.mockResolvedValue(null);
+    mocks.circuitBreaker.recordChannelResult.mockResolvedValue({ shouldBan: false });
+    mocks.circuitBreaker.isCircuitOpen.mockResolvedValue(false);
+    mocks.conversation.recordConversationContext.mockResolvedValue(undefined);
+    mocks.conversation.fingerprintKey.mockImplementation((k: string) => `fp-${k}`);
+    mocks.preConsume.preConsume.mockResolvedValue({ mode: 'bypass', amount: 0, requestId: 'test' });
+    mocks.preConsume.releasePreConsume.mockResolvedValue(undefined);
+    mocks.routing.selectChannel.mockResolvedValue(makeChannel());
+    mocks.routing.selectFailoverChannel.mockResolvedValue(null);
+
+    // budget-check 依赖补齐：hoisted mock schema 未含 user_budget_settings（运行时补齐列引用）
+    (mocks.schema as any).userBudgetSettings = { userId: 'user_id' };
+    // 用量聚合（getBudgetUsageCents → db.execute）：今日 1.50 元 = 150 分
+    (mocks.db as any).execute = vi.fn().mockResolvedValue([{ today_cost: '1.50', month_cost: '1.50' }]);
+    // select 链：预算表返回受控行（budgetRows），其余定价查询一律空
+    mocks.db.select.mockImplementation(() => ({
+      from: (table: unknown) => {
+        const rows = table === (mocks.schema as any).userBudgetSettings ? budgetRows : [];
+        const limit = vi.fn().mockResolvedValue(rows);
+        const where = vi.fn().mockReturnValue({ limit });
+        const innerJoin = vi.fn().mockReturnValue({ where });
+        return { innerJoin, where };
+      },
+    }));
+    mocks.db.update.mockReturnValue({
+      set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+    });
+
+    vi.stubGlobal('fetch', mocks.fetch);
+    process.env.MULTIMODAL_TMP_DIR = TEST_TMP_DIR;
+
+    app = Fastify({ bodyLimit: 64 * 1024 * 1024 });
+    await app.register(chatRoutes);
+    await app.ready();
+  });
+
+  afterEach(async () => {
+    await app.close();
+    vi.unstubAllGlobals();
+    process.env.MULTIMODAL_TMP_DIR = undefined;
+    try { await rm(TEST_TMP_DIR, { recursive: true, force: true }); } catch { /* ignore */ }
+  });
+
+  const payload = { model: 'deepseek-v3', messages: [{ role: 'user', content: 'hi' }] };
+
+  it('已达日硬限额 → 429（BUDGET_LIMIT_EXCEEDED），pre-consume 未被调用、无上游、无消费记录', async () => {
+    budgetRows = [hardLimitRow];
+    // estimatedCost > 0（DEFAULT_PRICING）→ projectedToday = 150 + ε > 100 → 硬阻断
+
+    const res = await app.inject({ method: 'POST', url: '/v1/chat/completions', payload });
+    expect(res.statusCode).toBe(429);
+    expect(res.json().error.type).toBe('budget_limit_exceeded');
+
+    // 熔断发生在 pre-consume 之前：绝不进入余额预扣
+    expect(mocks.preConsume.preConsume).not.toHaveBeenCalled();
+    // 绝不转发上游、绝不记账
+    expect(mocks.fetch).not.toHaveBeenCalled();
+    expect(mocks.consumption.recordConsumption).not.toHaveBeenCalled();
+    // rollback：幂等锁释放（允许同键重试）；从未预扣故无解冻
+    expect(mocks.idempotency.releaseIdempotencyLock).toHaveBeenCalled();
+    expect(mocks.preConsume.releasePreConsume).not.toHaveBeenCalled();
+  });
+
+  it('未设置预算的用户（无 user_budget_settings 行）→ 同请求放行（向后兼容，200 + 正常预扣记账）', async () => {
+    budgetRows = [];
+    mocks.fetch.mockResolvedValue(new Response(
+      JSON.stringify({ choices: [{ message: { content: 'hi' }, finish_reason: 'stop' }], usage: { prompt_tokens: 5, completion_tokens: 2, total_tokens: 7 } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    ));
+
+    const res = await app.inject({ method: 'POST', url: '/v1/chat/completions', payload });
+    expect(res.statusCode).toBe(200);
+    // 放通语义：预算检查未阻断主链路，后续 pre-consume → 上游 → 记账正常发生
+    expect(mocks.preConsume.preConsume).toHaveBeenCalled();
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+    expect(mocks.consumption.recordConsumption).toHaveBeenCalled();
   });
 });

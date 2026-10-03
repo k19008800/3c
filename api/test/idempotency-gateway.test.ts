@@ -98,9 +98,12 @@ vi.mock('../src/lib/redis', () => ({
 }));
 // P0-2（并行任务）已在路由 preHandler 接入 enforceRateLimitPreHandler；
 // 本测试聚焦幂等，限流属 P0-2 范围，mock 掉避免拉入其 DB 依赖模块图。
-// ⚠️ 必须返回 resolved promise（async）：Fastify preHandler 若收到 undefined 会挂起（已踩坑）
+// ⚠️ 必须返回 resolved promise（async）：Fastify preHandler 若收到 undefined 会挂起（已踩坑）。
+// key-permissions preHandler 会调 estimateRequestTokens（纯函数）→ 必须一并提供，否则 vitest 报
+// "No estimateRequestTokens export"。无限制 Key 走快路径，返回 0 即可。
 vi.mock('../src/services/rate-limit', () => ({
   enforceRateLimitPreHandler: vi.fn(async () => {}),
+  estimateRequestTokens: vi.fn(() => 0),
 }));
 
 // ============================================================

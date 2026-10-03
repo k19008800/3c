@@ -38,7 +38,14 @@ const PAGES: PageCheck[] = [
   { name: "安全中心", route: "/security", markers: ["安全", "密码", "两步", "登录历史", "设备"] },
   { name: "数据导出", route: "/data-export", markers: ["数据", "导出", "下载"] },
   { name: "用户分组", route: "/user-groups", markers: ["用户分组", "分组"] },
-  { name: "渠道选择", route: "/vendor-selector", markers: ["渠道", "供应商", "价格"] },
+  // [下线留痕] 原「渠道选择 /vendor-selector」条目已移除（2026-10-03 e2e 收口）。
+  // 依据：模型编码化改造刻意下线用户侧供应商/渠道选择入口——
+  //   PRD-模型编码化改造与去除用户供应商选择.md:44「"供应商选择"从用户侧移除，
+  //     管理后台"供应商管理"保留为内部设施」；同文:54「本方案取代…"用户自选渠道"的二维设计」；
+  //   SPEC M-S-01「用户侧删除"供应商/渠道选择"菜单；用户只选"模型"」；
+  //   实现完成报告-模型编码化改造阶段B-2026-09-06.md 三.T4「下线渠道页：App.tsx、
+  //     ConsoleLayout.tsx、VendorSelectorPage.tsx 删路由/入口，页面空壳 deprecated」。
+  // 该路由按模型编码化改造已下线，本条过期测试随之上线/下线同步移除（原 :74 失败即由此而来）。
   { name: "账号注销", route: "/account-deletion", markers: ["注销", "删除"] },
   { name: "通知设置", route: "/settings/notifications", markers: ["通知", "偏好", "设置"] },
   { name: "帮助中心", route: "/help", markers: ["帮助", "FAQ", "知识库"] },

@@ -442,7 +442,7 @@ describe('POST /v1/completions', () => {
     const body = res.json();
     expect(body.mock).toBe(true);
     expect(body.object).toBe('text_completion');
-    expect(body.choices[0].text).toContain('[3cloud 模拟响应]');
+    expect(body.choices[0].text).toContain('[浩寅云 模拟响应]');
     expect(body.usage.completion_tokens).toBeGreaterThan(0);
     expect(mocks.fetch).not.toHaveBeenCalled();
     expect(mocks.consumption.recordConsumption).toHaveBeenCalledWith(expect.objectContaining({

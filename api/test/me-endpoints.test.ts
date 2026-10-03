@@ -817,3 +817,82 @@ describe('POST /api/v1/auth/send-email-code', () => {
     expect(res.statusCode).toBe(400);
   });
 });
+
+// ═══════════════════════════════════════════════════════════
+// §20.4 Key 细粒度权限字段 CRUD 持久化回读（G4）
+// 来源 PRD-§20.4.1–20.4.4：api_keys.allowedModels/allowedIps/allowedReferers/
+// dailyTokenLimit。写入口为 PATCH /me/api-keys/:id（createKey 接收 name/expires_at，
+// 细权限列在 patchKey 写入），读出口为 GET /me/api-keys 列表（serializeKey 回读）。
+// ═══════════════════════════════════════════════════════════
+describe('§20.4 Key 细粒度权限字段持久化（api-keys CRUD）', () => {
+  /** POST 建 Key 后经列表按 keyPrefix 定位其 id */
+  async function createKeyAndGetId(accessToken: string, name: string) {
+    const created = await app.inject({
+      method: 'POST', url: '/api/v1/me/api-keys', headers: auth(accessToken),
+      payload: { name },
+    });
+    expect(created.statusCode).toBe(201);
+    const rawKey = created.json().key as string;
+    const prefix = rawKey.slice(0, 12);
+    const list = await app.inject({ method: 'GET', url: '/api/v1/me/api-keys', headers: auth(accessToken) });
+    expect(list.statusCode).toBe(200);
+    const item = list.json().list.find((k: any) => k.keyPrefix === prefix);
+    expect(item).toBeDefined();
+    return { id: (item as any).id, prefix };
+  }
+
+  it('PATCH 写入 allowedModels/allowedIps/allowedReferers/dailyTokenLimit → GET 列表原样回读', async () => {
+    const u = await registerUser('kp-create');
+    const { id } = await createKeyAndGetId(u.accessToken, 'kp-persist');
+
+    const patch = await app.inject({
+      method: 'PATCH', url: `/api/v1/me/api-keys/${id}`, headers: auth(u.accessToken),
+      payload: {
+        allowedModels: ['gpt-4o', 'gpt-4o-mini'],
+        allowedIps: ['203.0.113.0/24'],
+        allowedReferers: ['https://app.example.com'],
+        dailyTokenLimit: 50000,
+      },
+    });
+    expect(patch.statusCode).toBe(200);
+
+    // 持久化回读（从 DB 经列表接口）
+    const list = await app.inject({ method: 'GET', url: '/api/v1/me/api-keys', headers: auth(u.accessToken) });
+    expect(list.statusCode).toBe(200);
+    const item = (list.json().list as any[]).find((k) => k.id === id);
+    expect(item.allowedModels).toEqual(['gpt-4o', 'gpt-4o-mini']);
+    expect(item.allowedIps).toEqual(['203.0.113.0/24']);
+    expect(item.allowedReferers).toEqual(['https://app.example.com']);
+    expect(item.dailyTokenLimit).toBe(50000);
+  });
+
+  it('二次 PATCH 修改字段 → GET 列表回读为新值（覆盖旧值）', async () => {
+    const u = await registerUser('kp-update');
+    const { id } = await createKeyAndGetId(u.accessToken, 'kp-update');
+
+    // 首次写入一组值
+    await app.inject({
+      method: 'PATCH', url: `/api/v1/me/api-keys/${id}`, headers: auth(u.accessToken),
+      payload: { allowedModels: ['old-model'], dailyTokenLimit: 1000 },
+    });
+    // 二次覆盖
+    const patch2 = await app.inject({
+      method: 'PATCH', url: `/api/v1/me/api-keys/${id}`, headers: auth(u.accessToken),
+      payload: {
+        allowedModels: ['new-model-a', 'new-model-b'],
+        allowedIps: ['198.51.100.0/24'],
+        dailyTokenLimit: 99999,
+      },
+    });
+    expect(patch2.statusCode).toBe(200);
+
+    const list = await app.inject({ method: 'GET', url: '/api/v1/me/api-keys', headers: auth(u.accessToken) });
+    const item = (list.json().list as any[]).find((k) => k.id === id);
+    // 回读为新值
+    expect(item.allowedModels).toEqual(['new-model-a', 'new-model-b']);
+    expect(item.allowedIps).toEqual(['198.51.100.0/24']);
+    expect(item.dailyTokenLimit).toBe(99999);
+    // allowedReferers 从未在 PATCH 中出现 → 保持 null（未传即不动）
+    expect(item.allowedReferers).toBeNull();
+  });
+});
