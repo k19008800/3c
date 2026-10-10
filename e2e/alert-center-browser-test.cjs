@@ -98,7 +98,6 @@ function fail(name, detail = "") { results.push({ status: "FAIL", name, detail }
   await page.goto(`${BASE}/app/admin/alerts`, { waitUntil: "networkidle", timeout: 30000 });
   await page.waitForTimeout(1500);
 
-  const title = await page.title();
   const bodyText = await page.locator("body").innerText();
 
   if (bodyText.includes("告警中心")) ok("页面标题/顶栏", "含「告警中心」");
