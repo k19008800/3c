@@ -294,7 +294,7 @@ export default function TicketsPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <h2 style={{ margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
           工单中心
-          <HelpIcon text="工单中心是您与 浩寅云 技术支持团队沟通的渠道。点击「创建工单」提交问题或建议，在列表中查看详情进入对话，客服回复后可继续追问，问题解决后点击「确认解决」关闭工单。工单一般在 2 小时内得到响应。" level="page" />
+          <HelpIcon text="工单中心是您与 3Cloud 技术支持团队沟通的渠道。点击「创建工单」提交问题或建议，在列表中查看详情进入对话，客服回复后可继续追问，问题解决后点击「确认解决」关闭工单。工单一般在 2 小时内得到响应。" level="page" />
         </h2>
         {view === "list" ? (
           <button style={btnPrimary} onClick={() => setView("create")}>

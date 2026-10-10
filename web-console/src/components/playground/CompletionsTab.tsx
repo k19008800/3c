@@ -35,7 +35,7 @@ export function CompletionsTab(props: PlaygroundTabProps) {
   const { fullKey, model } = props;
   const { toast } = useToast();
 
-  const [prompt, setPrompt] = useState("请写一句 浩寅云 的欢迎语");
+  const [prompt, setPrompt] = useState("请写一句 3Cloud 的欢迎语");
   const [maxTokens, setMaxTokens] = useState(64);
   const [temperature, setTemperature] = useState(0.7);
   const [result, setResult] = useState<ProxyResult | null>(null);

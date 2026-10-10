@@ -30,3 +30,10 @@ api/tmp/exports/
 # Python 缓存（audit/ 审阅工具产生）
 __pycache__/
 *.pyc
+
+# AOCI agent host integration (machine-bound; do not commit)
+.mcp.json
+.mcp.json.backup.*
+.codex/config.toml
+.codex/config.toml.backup.*
+opencode.json

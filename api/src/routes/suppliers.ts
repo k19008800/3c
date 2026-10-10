@@ -322,7 +322,19 @@ export async function supplierRoutes(app: FastifyInstance) {
     if (body.inputPrice !== undefined) setData.inputPrice = String(body.inputPrice);
     if (body.outputPrice !== undefined) setData.outputPrice = String(body.outputPrice);
     if (body.status !== undefined) setData.status = String(body.status);
-    if (body.capabilities !== undefined) setData.capabilities = body.capabilities;
+    if (body.capabilities !== undefined) {
+      // capabilities 是 jsonb 数组列；此前无校验直通，导致对象/字符串等脏值落库，
+      // 读侧 .join()/Array.isArray 判断失效，进而让 /admin/multimodal-models 整页 500
+      // （历史脏数据 supplier_models id=2503/2504 为 `{}`）。写入口此处强制形状校验。
+      if (!Array.isArray(body.capabilities)) {
+        throw new ValidationError('capabilities 必须为字符串数组');
+      }
+      const caps = body.capabilities
+        .map((c) => String(c).trim())
+        .filter((c) => c.length > 0)
+        .slice(0, 32); // 上限防滥用
+      setData.capabilities = caps;
+    }
     if (body.maxTokens !== undefined) setData.maxTokens = Number(body.maxTokens);
     if (body.description !== undefined) setData.description = body.description !== null ? String(body.description) : null;
 

@@ -239,7 +239,7 @@ function buildMockCompletion(model: string, prompt: string | string[], inputToke
   const promptText = typeof prompt === 'string'
     ? prompt.slice(0, 120)
     : (Array.isArray(prompt) && prompt.length > 0 ? prompt[0]!.slice(0, 120) : '（无 prompt）');
-  const content = `[浩寅云 模拟响应] 已收到请求（模型 ${model}）。当前环境未配置可用的供应商 Key，返回占位响应以演示完整计费链路。\n> ${promptText}\n\n配置真实供应商后即可返回模型真实输出。`;
+  const content = `[3Cloud 模拟响应] 已收到请求（模型 ${model}）。当前环境未配置可用的供应商 Key，返回占位响应以演示完整计费链路。\n> ${promptText}\n\n配置真实供应商后即可返回模型真实输出。`;
   const outputTokens = countTokens(content, model);
   return {
     content,

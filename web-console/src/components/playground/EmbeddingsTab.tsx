@@ -36,7 +36,7 @@ export function EmbeddingsTab(props: PlaygroundTabProps) {
   const { toast } = useToast();
 
   const [multi, setMulti] = useState(false);
-  const [inputText, setInputText] = useState("浩寅云 是一个 AI 聚合网关");
+  const [inputText, setInputText] = useState("3Cloud 是一个 AI 聚合网关");
   const [result, setResult] = useState<ProxyResult | null>(null);
   const [sending, setSending] = useState(false);
 

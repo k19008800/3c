@@ -60,7 +60,7 @@ export default function StatusPage() {
         <div className="container">
           <span className="overline">System Status</span>
           <h1>系统状态</h1>
-          <p className="page-subtitle">实时查看 浩寅云 各 API 端点与供应商服务的运行状况</p>
+          <p className="page-subtitle">实时查看 3Cloud 各 API 端点与供应商服务的运行状况</p>
         </div>
       </section>
 
@@ -79,7 +79,7 @@ export default function StatusPage() {
                       ? "无法连接 API 网关"
                       : "部分系统异常"}
                 </div>
-                <div className="so-sub">浩寅云 API 网关</div>
+                <div className="so-sub">3Cloud API 网关</div>
               </div>
             </div>
 

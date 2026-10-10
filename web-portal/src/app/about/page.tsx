@@ -24,19 +24,19 @@ async function fetchSiteConfig(): Promise<SiteConfig> {
 }
 
 export const metadata: Metadata = {
-  // title 不含品牌后缀：根 layout 的 title 模板 "%s — 浩寅云" 会统一追加一次品牌，避免重复
+  // title 不含品牌后缀：根 layout 的 title 模板 "%s — 3Cloud" 会统一追加一次品牌，避免重复
   title: "关于我们",
-  description: "了解 浩寅云 平台，AI API 聚合平台的使命、团队与发展历程",
+  description: "了解 3Cloud 平台，AI API 聚合平台的使命、团队与发展历程",
   openGraph: {
-    title: "关于我们 — 浩寅云",
-    description: "了解 浩寅云 平台，AI API 聚合平台的使命、团队与发展历程",
+    title: "关于我们 — 3Cloud",
+    description: "了解 3Cloud 平台，AI API 聚合平台的使命、团队与发展历程",
     type: "website",
   },
 };
 
 // 默认里程碑（后台未配置时使用）
 const DEFAULT_MILESTONES = [
-  { date: "2025-Q1", title: "项目立项", desc: "浩寅云 平台立项，确定技术架构与产品方向" },
+  { date: "2025-Q1", title: "项目立项", desc: "3Cloud 平台立项，确定技术架构与产品方向" },
   { date: "2025-Q2", title: "核心引擎开发", desc: "完成智能路由、统一计费、多供应商接入等核心模块" },
   { date: "2025-Q3", title: "内测上线", desc: "首批内测用户接入，验证平台稳定性与定价模型" },
   { date: "2025-Q4", title: "公测发布", desc: "开放注册，支持 DeepSeek、Qwen、GLM 等主流模型" },
@@ -74,7 +74,7 @@ const TECH_STACK = [
 
 export default async function AboutPage() {
   const config = await fetchSiteConfig();
-  const siteName = config.site_name ?? "浩寅云";
+  const siteName = config.site_name ?? "3Cloud";
   const companyName = config.site_company_name ?? siteName;
 
   // 解析后台配置的里程碑 JSON（如果有）
@@ -117,7 +117,7 @@ export default async function AboutPage() {
               </p>
               <p>
                 我们的使命是<strong>降低 AI 能力的使用门槛</strong>，让每一位开发者都能以最低的成本、最简单的方式调用最先进的 AI 模型。
-                无论是独立开发者、创业团队还是中大型企业，浩寅云 都提供灵活的计费方案和专业的技术支持。
+                无论是独立开发者、创业团队还是中大型企业，3Cloud 都提供灵活的计费方案和专业的技术支持。
               </p>
               <h3>核心价值</h3>
               <ul>

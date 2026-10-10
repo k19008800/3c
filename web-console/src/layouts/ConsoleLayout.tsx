@@ -185,6 +185,7 @@ const ADMIN_NAV: NavGroup[] = [
     { to: "/admin/account-deletion", label: "账号注销审核", icon: "trash" },
   ]},
   { group: "运维配置", icon: "wrench", items: [
+    { to: "/admin/alerts", label: "告警中心", icon: "alert" },
     // 注：system/monitoring/oauth 原为 AdminSettingsPage 占位（无独立实现），database 为演示假查询，已从菜单摘除，待后端落地后再挂回
     { to: "/admin/config/groups", label: "用户分组", icon: "users" },
     { to: "/admin/config/performance", label: "性能配置", icon: "gauge" },
@@ -365,7 +366,7 @@ export default function ConsoleLayout() {
       {mobileNavOpen && <div className="c3-sidebar-backdrop" onClick={closeMobileNav} />}
       <aside className={`c3-sidebar${mobileNavOpen ? " c3-sidebar--open" : ""}`}>
         <div className="c3-sidebar__logo">
-          <NavIcon name="bolt" size={22} />浩寅云 Admin
+          <NavIcon name="bolt" size={22} />3Cloud Admin
         </div>
         <nav className="c3-sidebar__nav">
           {/* ── Admin ── */}

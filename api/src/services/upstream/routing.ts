@@ -16,8 +16,8 @@
  */
 
 import { db, schema } from '../../db/index.js';
-import { eq, and, asc, desc, sql } from 'drizzle-orm';
-import { selectKey, type SupplierKey as SelectableKey } from './key-selector.js';
+import { eq, and, asc, desc } from 'drizzle-orm';
+import { type SupplierKey as SelectableKey } from './key-selector.js';
 import { isCircuitOpen } from './circuit-breaker.js';
 import { getUserGroup } from '../groups.js';
 import {

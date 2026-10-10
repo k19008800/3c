@@ -199,7 +199,7 @@ function extractText(content: ClaudeMessage['content'] | undefined): string | nu
 function buildMockMessage(model: string, messages: ClaudeMessage[], inputTokens: number, requestId: string) {
   const lastUser = [...messages].reverse().find((m) => m.role === 'user');
   const prompt = extractText(lastUser?.content) ?? '（无用户消息）';
-  const content = `[浩寅云 模拟响应] 已收到请求（模型 ${model}）。当前环境未配置可用的供应商 Key，返回占位响应以演示完整计费链路。\n> ${prompt.slice(0, 120)}\n\n配置真实供应商后即可返回模型真实输出。`;
+  const content = `[3Cloud 模拟响应] 已收到请求（模型 ${model}）。当前环境未配置可用的供应商 Key，返回占位响应以演示完整计费链路。\n> ${prompt.slice(0, 120)}\n\n配置真实供应商后即可返回模型真实输出。`;
   const outputTokens = countTokens(content, model);
 
   return {

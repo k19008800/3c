@@ -360,7 +360,7 @@ function buildEmailHtml(title: string, content: string, alternatives: { model_na
   return `<div style="font-family:system-ui,sans-serif;color:#333">
     <h2>${title}</h2>
     <p>${content}</p>
-    <p style="color:#888;font-size:12px">此邮件由 浩寅云 自动发送，请勿直接回复。</p>
+    <p style="color:#888;font-size:12px">此邮件由 3Cloud 自动发送，请勿直接回复。</p>
     ${altHtml}
   </div>`;
 }

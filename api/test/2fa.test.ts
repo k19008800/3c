@@ -246,13 +246,13 @@ describe('totp service', () => {
     expect(await verifyBackupCode(hashes[0]!, codes[0]!.replace(/-/g, ''))).toBe(true);
   });
 
-  it('otpauthURL 格式包含 otpauth://totp/ 和 secret 和 issuer=浩寅云', () => {
+  it('otpauthURL 格式包含 otpauth://totp/ 和 secret 和 issuer=3Cloud', () => {
     const secret = generateSecret();
     const url = otpauthURL(secret, 'test@example.com');
     expect(url.startsWith('otpauth://totp/')).toBe(true);
     expect(url).toContain(secret);
-    expect(url).toContain('issuer=浩寅云');
-    expect(url).toContain('浩寅云:');
+    expect(url).toContain('issuer=3Cloud');
+    expect(url).toContain('3Cloud:');
   });
 });
 

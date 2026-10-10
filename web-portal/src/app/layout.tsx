@@ -32,12 +32,12 @@ async function fetchSiteConfig(): Promise<SiteConfig> {
 
 export const metadata: Metadata = {
   title: {
-    default: "浩寅云 — 一站式 AI API 聚合平台",
-    template: "%s — 浩寅云",
+    default: "3Cloud — 一站式 AI API 聚合平台",
+    template: "%s — 3Cloud",
   },
   description: "统一接入 DeepSeek、Qwen、GLM、GPT、Claude 等主流模型，智能路由、统一计费、精细运营，一套 API 搞定全部模型",
   openGraph: {
-    title: "浩寅云 — 一站式 AI API 聚合平台",
+    title: "3Cloud — 一站式 AI API 聚合平台",
     description: "统一计费、智能路由、精细运营",
     type: "website",
   },
@@ -77,7 +77,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const dict = await fetchDictionary(lang);
   const t = makeT(dict);
 
-  const siteName = config.site_name ?? "浩寅云";
+  const siteName = config.site_name ?? "3Cloud";
   const year = new Date().getFullYear();
   const copyright = config.site_copyright ?? `© ${year} ${siteName} · AI Token 聚合平台`;
 
@@ -123,7 +123,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <a href="/app/login" className="btn btn-primary">
                 {t("nav.login")}
               </a>
-              <ButtonHelp text="登录 浩寅云 控制台；未注册用户可先注册。" />
+              <ButtonHelp text="登录 3Cloud 控制台；未注册用户可先注册。" />
 
               {/* 移动端汉堡 / 抽屉（原生 details，零 JS） */}
               <details className="portal-menu-toggle">

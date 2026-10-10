@@ -131,10 +131,20 @@ const MULTIMODAL_TYPE_RULES: Array<{ type: string; re: RegExp }> = [
   { type: 'multimodal', re: /(gpt-4o|gpt-4\.1|gpt-4-vision|claude|gemini|qwen-vl|qwen2\.5-vl|llava|internvl|minicpm|glm-4v|moonshot|kimi|omni|multimodal|janus|deepseek-vl)/i },
 ];
 
-/** 判定模型是否多模态并推导类型（结合 model_name + capabilities） */
-function deriveMultimodalType(modelName: string, capabilities: string[] | null | undefined): string | null {
-  const capText = (capabilities ?? []).join(' ').toLowerCase();
-  const haystack = `${modelName} ${capText}`;
+/**
+ * 判定模型是否多模态并推导类型（结合 model_name + capabilities）
+ *
+ * capabilities 是 jsonb，PG 可能返回非数组值（历史脏数据如 `{}`、或字符串）。
+ * 例如 supplier_models id=2503/2504 的 capabilities 为 `{}`，直接 .join() 会抛
+ * TypeError 导致整个 /admin/multimodal-models 返回 500 —— 单条坏数据打挂整页。
+ * 故此处统一做 Array.isArray 归一化，不信任类型声明。
+ */
+function deriveMultimodalType(modelName: string, capabilities: unknown): string | null {
+  const capText = (Array.isArray(capabilities) ? capabilities : [])
+    .map((c) => String(c))
+    .join(' ')
+    .toLowerCase();
+  const haystack = `${modelName ?? ''} ${capText}`;
   for (const rule of MULTIMODAL_TYPE_RULES) {
     if (rule.re.test(haystack)) return rule.type;
   }

@@ -1,5 +1,5 @@
 /**
- * 浩寅云 console · misc 页面整改工具类（2026-10）
+ * 3Cloud console · misc 页面整改工具类（2026-10）
  * 作用范围：代理端 / 销售端 / 供应商端 19 个业务页面。
  * 设计令牌全部引用 packages/shared-ui/tokens.css，不新建色值。
  * 禁止：靛蓝 #4f6ef7 / 紫 #8b5cf6 / 亮天蓝 #0ea5e9 / 翠绿渐变 hero / emoji 图标。

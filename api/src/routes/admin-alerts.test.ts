@@ -22,11 +22,24 @@ import { generateAccessToken } from '../services/auth/jwt.js';
 import { adminAlertsRoutes } from './admin-alerts.js';
 
 /**
- * 测试库引导：monitoring_rules / alerts 在本测试库尚未迁移，而路由硬编码使用全局 db。
- * 本文件在 beforeAll 按 Drizzle schema 等价 DDL 建表（IF NOT EXISTS），afterAll DROP，
- * 对共享测试库净影响为零（无其它测试引用这两张表）。
+ * 测试库引导：monitoring_rules / alerts 在未迁移的旧库上不存在，而路由硬编码使用全局 db。
+ * 本文件在 beforeAll 按 Drizzle schema 等价 DDL 建表（IF NOT EXISTS），afterAll 仅在
+ * 「表确由本测试创建」时 DROP，避免删除 0048_alert_center 迁移建好的真实表
+ * （alert_notifications 有指向 alerts 的外键，直接 DROP 会因依赖失败）。
  */
+
+/** 表在 provision 之前是否不存在（＝应由本测试负责清理）。 */
+let provisionedMonitoringRules = false;
+let provisionedAlerts = false;
+
+/** 探测表是否不存在，不存在则返回 true。 */
+async function tableMissing(table: string): Promise<boolean> {
+  const rows = await db.execute(sql`SELECT to_regclass(${table}) IS NULL AS missing`);
+  return Boolean((rows as unknown as { missing?: boolean }[])?.[0]?.missing);
+}
+
 async function provisionTables(): Promise<void> {
+  provisionedMonitoringRules = await tableMissing('monitoring_rules');
   await db.execute(sql`CREATE TABLE IF NOT EXISTS monitoring_rules (
     id serial PRIMARY KEY,
     name varchar(100) NOT NULL,
@@ -38,6 +51,7 @@ async function provisionTables(): Promise<void> {
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
   )`);
+  provisionedAlerts = await tableMissing('alerts');
   await db.execute(sql`CREATE TABLE IF NOT EXISTS alerts (
     id serial PRIMARY KEY,
     rule_id integer NOT NULL REFERENCES monitoring_rules(id),
@@ -53,8 +67,9 @@ async function provisionTables(): Promise<void> {
 }
 
 async function deprovisionTables(): Promise<void> {
-  await db.execute(sql`DROP TABLE IF EXISTS alerts`);
-  await db.execute(sql`DROP TABLE IF EXISTS monitoring_rules`);
+  // 只清理本测试亲手创建的表；若表来自 0048 迁移则保留（alert_notifications 依赖它）。
+  if (provisionedAlerts) await db.execute(sql`DROP TABLE IF EXISTS alerts`);
+  if (provisionedMonitoringRules) await db.execute(sql`DROP TABLE IF EXISTS monitoring_rules`);
 }
 
 process.env.JWT_SECRET = 'test-admin-alerts-secret';

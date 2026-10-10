@@ -39,7 +39,7 @@ export function MessagesTab(props: PlaygroundTabProps) {
 
   const [system, setSystem] = useState("You are a helpful assistant.");
   const [messages, setMessages] = useState<MessageItem[]>([
-    { role: "user", content: "请用一句话介绍什么是 浩寅云" },
+    { role: "user", content: "请用一句话介绍什么是 3Cloud" },
   ]);
   const [maxTokens, setMaxTokens] = useState(128);
   const [result, setResult] = useState<ProxyResult | null>(null);

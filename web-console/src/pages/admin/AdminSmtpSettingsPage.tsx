@@ -134,7 +134,7 @@ export default function AdminSmtpSettingsPage() {
 
             <div style={{ marginBottom: 20 }}>
               <label style={label}>发件人地址</label>
-              <input value={from} onChange={(e) => setFrom(e.target.value)} placeholder="浩寅云 <no-reply@example.com>" style={inp} />
+              <input value={from} onChange={(e) => setFrom(e.target.value)} placeholder="3Cloud <no-reply@example.com>" style={inp} />
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end" }}>

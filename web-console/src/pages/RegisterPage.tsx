@@ -126,7 +126,7 @@ export default function RegisterPage() {
         {/* Brand */}
         <div className="auth-brand">
           <BrandMark />
-          <div className="auth-brand__name">浩寅云</div>
+          <div className="auth-brand__name">3Cloud</div>
           <div className="auth-brand__tag">AI Token 聚合分发平台</div>
         </div>
 

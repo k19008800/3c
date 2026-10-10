@@ -1,5 +1,5 @@
 // 开发者文档 — 快速开始 / 认证方式 / 兼容协议 / 常用端点 / 错误码
-// 品牌：浩寅云。base_url 优先读取后台「系统设置 → API 服务」配置，失败时回退默认域名。
+// 品牌：3Cloud。base_url 优先读取后台「系统设置 → API 服务」配置，失败时回退默认域名。
 // [?] 页面级帮助：对齐 docs/PRODUCT-DESIGN-PRINCIPLES.md P1
 import type { Metadata } from "next";
 import { PageHelp } from "../../components/Help";
@@ -36,21 +36,21 @@ async function fetchApiConfig(): Promise<ApiConfig> {
 
 /** 页面级 [?] 帮助文案 */
 const PAGE_HELP =
-  "开发者文档：面向接入 浩寅云 的开发者。本文说明如何获取 API Key、配置 base_url、发出第一个请求，以及平台兼容的协议、常用端点与错误码处理。排查调用问题时先对照错误码表，再到控制台查看实时调用日志；上游故障时平台会自动故障转移，无需手动切换 Key。";
+  "开发者文档：面向接入 3Cloud 的开发者。本文说明如何获取 API Key、配置 base_url、发出第一个请求，以及平台兼容的协议、常用端点与错误码处理。排查调用问题时先对照错误码表，再到控制台查看实时调用日志；上游故障时平台会自动故障转移，无需手动切换 Key。";
 
 export const metadata: Metadata = {
   title: "开发者文档",
   description:
-    "浩寅云 开发者文档：快速开始、Bearer Token 认证、OpenAI / Anthropic 兼容协议、常用端点与错误码说明",
+    "3Cloud 开发者文档：快速开始、Bearer Token 认证、OpenAI / Anthropic 兼容协议、常用端点与错误码说明",
   openGraph: {
-    title: "开发者文档 — 浩寅云",
+    title: "开发者文档 — 3Cloud",
     description: "一套 API Key 接入全部主流 AI 模型",
     type: "website",
   },
 };
 
 const QUICKSTART_STEPS = [
-  { step: "01", title: "获取 API Key", desc: "登录浩寅云控制台，在「API 密钥」页面创建新密钥并妥善保管。" },
+  { step: "01", title: "获取 API Key", desc: "登录3Cloud控制台，在「API 密钥」页面创建新密钥并妥善保管。" },
   { step: "02", title: "配置 base_url", desc: "将 SDK 的 base_url 指向平台网关地址（见下方示例），无需逐一对接各家供应商。" },
   { step: "03", title: "发送第一个请求", desc: "使用 OpenAI 兼容协议发起一次对话补全，即可得到模型返回结果。" },
 ];

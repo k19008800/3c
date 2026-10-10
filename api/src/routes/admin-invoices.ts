@@ -244,11 +244,11 @@ export async function adminInvoiceRoutes(app: FastifyInstance) {
           <tr><td style="padding:6px 0;color:#6b7280">价税合计</td><td style="padding:6px 0;font-weight:700;color:#4f6ef7">¥${total.toFixed(2)}</td></tr>
           <tr><td style="padding:6px 0;color:#6b7280">抬头</td><td style="padding:6px 0">${inv.title ?? '-'}</td></tr>
         </table>
-        <p style="color:#6b7280;font-size:13px;margin-top:16px">本邮件由 浩寅云 平台财务开具，发票文件可在控制台「我的发票」中下载。</p>
+        <p style="color:#6b7280;font-size:13px;margin-top:16px">本邮件由 3Cloud 平台财务开具，发票文件可在控制台「我的发票」中下载。</p>
       </div>
     `;
 
-    const result = await sendMail({ to, subject: `【浩寅云】发票开具通知 ${inv.invoiceNo ?? ''}`, html, templateName: 'invoice_issued' });
+    const result = await sendMail({ to, subject: `【3Cloud】发票开具通知 ${inv.invoiceNo ?? ''}`, html, templateName: 'invoice_issued' });
 
     // 更新发票发送状态（skipped/failed 也记录，供后台确认是否需补发）
     await db.update(schema.invoices)

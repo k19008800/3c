@@ -25,6 +25,7 @@ import AgentSettlementPage from "./pages/AgentSettlementPage";
 import AgentWithdrawPage from "./pages/AgentWithdrawPage";
 import AdminAffiliatePage from "./pages/AdminAffiliatePage";
 import AdminAgentsPage from "./pages/AdminAgentsPage";
+import AdminAlertCenterPage from "./pages/AdminAlertCenterPage";
 import AdminWithdrawalsPage from "./pages/AdminWithdrawalsPage";
 import AdminI18nPage from "./pages/AdminI18nPage";
 import AdminModelsPage from "./pages/AdminModelsPage";
@@ -257,6 +258,8 @@ export default function App() {
         <Route path="admin/agents/commission-config" element={<AdminAgentsPage />} />
         <Route path="admin/agents/approvals" element={<AdminAgentApprovalsPage />} />
         <Route path="admin/agents/withdrawals" element={<AdminWithdrawalsPage />} />
+        {/* ── 告警中心（PRD §5.4）── */}
+        <Route path="admin/alerts" element={<AdminAlertCenterPage />} />
         {/* ── 模型管理 ── */}
         <Route path="admin/models" element={<AdminModelsPage />} />
         <Route path="admin/models/marketplace" element={<AdminMarketplaceHealthPage />} />

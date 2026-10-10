@@ -461,8 +461,8 @@ export default function AdminRealNamePage() {
     const userEmail = detail.kind === "account" ? detail.email : detail.account?.email ?? "";
     const userName = detail.kind === "account" ? detail.name : detail.realName;
     const watermark = detail.kind === "record"
-      ? `${detail.reviewer ?? "浩寅云 审核"} · ${fmtDay(detail.reviewedAt) || "审核中"} · 浩寅云 内部审核`
-      : "浩寅云 内部审核";
+      ? `${detail.reviewer ?? "3Cloud 审核"} · ${fmtDay(detail.reviewedAt) || "审核中"} · 3Cloud 内部审核`
+      : "3Cloud 内部审核";
 
     return (
       <>

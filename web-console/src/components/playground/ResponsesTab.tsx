@@ -71,7 +71,7 @@ export function ResponsesTab(props: PlaygroundTabProps) {
   const { toast } = useToast();
 
   const [inputMode, setInputMode] = useState<"string" | "items">("string");
-  const [inputText, setInputText] = useState("你好，请用一句话介绍什么是 浩寅云。");
+  const [inputText, setInputText] = useState("你好，请用一句话介绍什么是 3Cloud。");
   const [instructions, setInstructions] = useState("");
   const [maxOutputTokens, setMaxOutputTokens] = useState("");
   const [stream, setStream] = useState(false);

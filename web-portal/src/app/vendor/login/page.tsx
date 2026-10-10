@@ -45,7 +45,7 @@ export default function VendorLoginPage() {
         渠道登录
         <PageHelp text="渠道方（供应商）自助门户登录。使用平台分配的邮箱与密码登录，登录后可查看本渠道的结算单、申请自助结算、接收平台公告并查看接入模型。\n\n· 账号由平台开通，忘记密码请联系平台运营\n· 本门户与用户账号体系相互独立" />
       </h1>
-      <p style={{ color: "var(--color-text-muted)", marginBottom: 24 }}>浩寅云 · 渠道自助门户</p>
+      <p style={{ color: "var(--color-text-muted)", marginBottom: 24 }}>3Cloud · 渠道自助门户</p>
 
       <form onSubmit={submit} style={{ display: "grid", gap: 14 }}>
         <label style={{ display: "grid", gap: 6, fontSize: 14 }}>

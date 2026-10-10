@@ -1,18 +1,18 @@
 // 服务条款 — 合规必备页面（占位结构文案，后续由法务填充最终版本）
-// 品牌：浩寅云。[?] 页面级帮助：对齐 docs/PRODUCT-DESIGN-PRINCIPLES.md P1
+// 品牌：3Cloud。[?] 页面级帮助：对齐 docs/PRODUCT-DESIGN-PRINCIPLES.md P1
 import type { Metadata } from "next";
 import { PageHelp } from "../../components/Help";
 
 /** 页面级 [?] 帮助文案 */
 const PAGE_HELP =
-  "服务条款：规定您使用 浩寅云 AI API 服务时的权利与义务，包括账户责任、禁止行为、服务可用性、费用计费与终止条件。注册并使用本平台即视为您已阅读并同意本条款，使用前请完整阅读。";
+  "服务条款：规定您使用 3Cloud AI API 服务时的权利与义务，包括账户责任、禁止行为、服务可用性、费用计费与终止条件。注册并使用本平台即视为您已阅读并同意本条款，使用前请完整阅读。";
 
 export const metadata: Metadata = {
   title: "服务条款",
-  description: "浩寅云 服务条款：服务说明、账户责任、禁止行为、可用性与终止条件",
+  description: "3Cloud 服务条款：服务说明、账户责任、禁止行为、可用性与终止条件",
   openGraph: {
-    title: "服务条款 — 浩寅云",
-    description: "使用 浩寅云 AI API 服务前请阅读本条款",
+    title: "服务条款 — 3Cloud",
+    description: "使用 3Cloud AI API 服务前请阅读本条款",
     type: "website",
   },
 };
@@ -29,7 +29,7 @@ export default function TermsPage() {
             服务条款
             <PageHelp text={PAGE_HELP} />
           </h1>
-          <p className="page-subtitle">使用 浩寅云 服务前请仔细阅读</p>
+          <p className="page-subtitle">使用 3Cloud 服务前请仔细阅读</p>
           <p className="page-note">最近更新：{UPDATED_AT}。本页面为合规占位版本，最终条款以法务审核发布为准。</p>
         </div>
       </section>
@@ -38,7 +38,7 @@ export default function TermsPage() {
         <div className="prose">
           <h3>一、服务说明</h3>
           <p>
-            浩寅云 是 AI API 聚合平台，向开发者与企业用户提供统一的模型接入、智能路由与计费服务。
+            3Cloud 是 AI API 聚合平台，向开发者与企业用户提供统一的模型接入、智能路由与计费服务。
             您通过本平台调用的模型能力由上游供应商提供，本平台负责统一接入、鉴权、计量与运营保障。
           </p>
 

@@ -1,18 +1,18 @@
 // 隐私政策 — 合规必备页面（占位结构文案，后续由法务填充最终版本）
-// 品牌：浩寅云。[?] 页面级帮助：对齐 docs/PRODUCT-DESIGN-PRINCIPLES.md P1
+// 品牌：3Cloud。[?] 页面级帮助：对齐 docs/PRODUCT-DESIGN-PRINCIPLES.md P1
 import type { Metadata } from "next";
 import { PageHelp } from "../../components/Help";
 
 /** 页面级 [?] 帮助文案 */
 const PAGE_HELP =
-  "隐私政策：说明 浩寅云 如何收集、使用、存储与删除用户信息，以及 Cookie 的使用规则。本页为平台合规文件，涉及账户数据、账单信息与调用日志的处理方式。如对隐私处理有疑问，可通过页脚或文末邮箱联系我们。";
+  "隐私政策：说明 3Cloud 如何收集、使用、存储与删除用户信息，以及 Cookie 的使用规则。本页为平台合规文件，涉及账户数据、账单信息与调用日志的处理方式。如对隐私处理有疑问，可通过页脚或文末邮箱联系我们。";
 
 export const metadata: Metadata = {
   title: "隐私政策",
-  description: "浩寅云 隐私政策：我们如何收集、使用、存储与删除您的信息",
+  description: "3Cloud 隐私政策：我们如何收集、使用、存储与删除您的信息",
   openGraph: {
-    title: "隐私政策 — 浩寅云",
-    description: "了解 浩寅云 如何保护您的隐私与数据安全",
+    title: "隐私政策 — 3Cloud",
+    description: "了解 3Cloud 如何保护您的隐私与数据安全",
     type: "website",
   },
 };

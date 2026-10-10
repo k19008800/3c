@@ -28,7 +28,8 @@ const MIGRATIONS = [
   '0041_schema_drift_more.sql', '0042_user_budget_settings.sql',
   '0043_api_key_permissions.sql', '0044_platform_ledger.sql',
   '0045_agent_notif_prefs.sql', '0046_vendor_portal.sql',
-  '0047_sales_crm.sql',
+  '0047_sales_crm.sql', '0048_alert_center.sql',
+  '0049_supplier_models_capabilities_shape.sql',
 ];
 
 function safeError(error) {

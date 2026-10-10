@@ -493,7 +493,7 @@ describe('relayWebSocket — selectChannel 返回 null → mock 回退', () => {
 
     // 客户端收到占位 completion 帧
     const frames = socket.send.mock.calls.map((c: any[]) => c[0]);
-    const completionFrame = frames.find((f: string) => f.includes('[浩寅云 模拟响应]'));
+    const completionFrame = frames.find((f: string) => f.includes('[3Cloud 模拟响应]'));
     expect(completionFrame).toBeDefined();
     expect(JSON.parse(completionFrame).mock).toBe(true);
     expect(frames).toContain('data: [DONE]\n\n');

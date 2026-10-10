@@ -68,11 +68,11 @@ const PAGE_HELP =
   "模型目录：每个条目 = 一条模型编码。同一逻辑模型来自不同供应商时会显示为多个条目（显示名 = 模型名（供应商名）），选择/调用不同条目即选择不同供应商。模型编码由平台按规则生成，默认「厂商+模型」={supplier_code}-{model_name}，规则可在后台配置。";
 
 export const metadata = {
-  title: "浩寅云 模型目录",
-  description: "浩寅云 接入的 AI 模型一览（按模型编码展示）",
+  title: "3Cloud 模型目录",
+  description: "3Cloud 接入的 AI 模型一览（按模型编码展示）",
   openGraph: {
-    title: "浩寅云 模型目录",
-    description: "浩寅云 接入的 AI 模型一览（按模型编码展示）",
+    title: "3Cloud 模型目录",
+    description: "3Cloud 接入的 AI 模型一览（按模型编码展示）",
     type: "website",
   },
 };

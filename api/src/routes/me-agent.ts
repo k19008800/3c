@@ -18,7 +18,7 @@
  */
 import type { FastifyInstance } from 'fastify';
 import { db, schema } from '../db/index.js';
-import { eq, and, or, sql, desc, gte, inArray } from 'drizzle-orm';
+import { eq, and, sql, desc, gte, inArray } from 'drizzle-orm';
 import { verifyToken } from '../services/auth/jwt.js';
 import {
   UnauthorizedError,

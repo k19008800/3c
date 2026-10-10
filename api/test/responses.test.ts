@@ -607,7 +607,7 @@ describe('POST /v1/responses 正常路径', () => {
     expect(body.status).toBe('completed');
     expect(body.output[0].type).toBe('message');
     expect(body.output[0].content[0].type).toBe('output_text');
-    expect(body.output[0].content[0].text).toContain('[浩寅云 模拟响应]');
+    expect(body.output[0].content[0].text).toContain('[3Cloud 模拟响应]');
     expect(body.usage.output_tokens).toBeGreaterThan(0);
     expect(body.usage.input_tokens).toBeGreaterThan(0);
     // 未请求上游

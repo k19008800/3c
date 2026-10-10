@@ -1,5 +1,5 @@
 /* ==========================================================================
- * 浩寅云 web-portal 全局样式（设计基础层）
+ * 3Cloud web-portal 全局样式（设计基础层）
  * 设计令牌 :root 块 —— 数值与 packages/shared-ui/src/tokens.css 同步
  * （规范 §2 冻结表；portal 侧以 var(--xx) 引用，禁止页面散落 hex）
  * 设计语言：精密云基础设施（precision / trust / frontier）

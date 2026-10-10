@@ -130,7 +130,7 @@ export default function ForgotPasswordPage() {
         <div className="auth-card">
           <div className="auth-brand">
             <BrandMark />
-            <div className="auth-brand__name">浩寅云</div>
+            <div className="auth-brand__name">3Cloud</div>
           </div>
           <div className="auth-title">
             重置密码
@@ -187,7 +187,7 @@ export default function ForgotPasswordPage() {
       <div className="auth-card">
         <div className="auth-brand">
           <BrandMark />
-          <div className="auth-brand__name">浩寅云</div>
+          <div className="auth-brand__name">3Cloud</div>
         </div>
         <div className="auth-title">
           忘记密码

@@ -158,7 +158,7 @@ export function proxyStep(opts: ProxyStepOptions) {
       let upstreamResp: Response;
       try {
         upstreamResp = await fetch(url, { method: 'POST', headers, body });
-      } catch (networkErr) {
+      } catch {
         await recordUpstreamFailure(ctx, currentChannel, 0, opts);
         lastRetryable = { status: 502, body: '' };
         const next = await advanceFailover(ctx, triedKeyIds, attempt);

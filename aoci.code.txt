@@ -1,0 +1,31 @@
+#AOCI-CODE-VOLUME: 1
+
+===C:/Users/ZH/.openclaw/workspace/3cloud/===
+.deploy-gate-approved[OV7T]: F:记录部署门禁批准状态、P0测试基线与生产预检结果 | R:code:deploy/deployment-runbook.md | A:无程序接口，人工审批标记文件 | S:内容为经BOSS确认的人工审批记录不可由代码推断；部署执行仍需BOSS最终放行
+.gitattributes[FC4T]: F:强制文本文件以LF行尾检出，确保各平台检出字节与AOCI基线一致 | R:code:aoci.txt | A:git属性配置无程序接口 | S:覆盖Windows autocrlf默认改写；二进制文件自动检测不受影响
+.gitignore[XV5T]: F:声明Git忽略规则(依赖、构建产物、环境文件、Claude会话与主机MCP配置) | R:code:.mcp.json,code:.codex/config.toml,code:opencode.json | A:git忽略规则无程序接口 | S:主机集成配置含机器绑定绝对路径必须忽略，提交会在其他机器失效
+.prettierrc[FC5T]: F:声明Prettier格式规则(分号、双引号、尾逗号、行宽100、缩进2) | R:- | A:格式化配置无程序接口 | S:全仓代码格式基准，与eslint配置须一致，改动影响全仓格式
+AGENTS.md[SG6S]: F:定义AOCI仓库认知接入纪律(运行合同、认知建立与恢复、任务收尾与维护原则) | R:code:aoci.txt,code:aoci.meta.txt | A:供编码代理读取的托管规则块 | S:aoci:begin/end区块由init写入勿手动改写；专项流程以Guide与工具返回为准
+PHASE0-INIT.md[SG4S]: F:记录3cloud重构Phase 0底座初始化的可执行清单、技术选型与验收标准 | R:code:kb/decisions/2026-07-31-refactor-tech-roadmap.md | A:无程序接口，工程文档 | S:决策依据为BOSS 2026-07-31确认的技术路线；含monorepo/分区表/BullMQ等历史设计决策
+
+===C:/Users/ZH/.openclaw/workspace/3cloud/.github/workflows/===
+ci.yml[XV6S]: F:定义main分支push与PR的CI流水线(安装依赖、迁移、类型检查、lint、单测、构建与Playwright E2E) | R:code:api/package.json,code:e2e | A:GitHub Actions push/pull_request触发 | S:paths-ignore排除docs/kb/md改动；E2E阶段需先本地启动api与web-console
+
+===C:/Users/ZH/.openclaw/workspace/3cloud/api/===
+check-bcrypt.ts[TI3T]: F:验证bcrypt密码哈希校验与生成，打印verify结果与新hash | R:code:api/package.json | A:无导出，CLI直接运行 | S:含硬编码测试哈希与口令，仅本地调试用不得用于生产
+check-db.ts[TD3T]: F:查询admin@3cloud.dev用户密码哈希并打印，用于验证用户记录 | R:code:api/src/db | A:无导出，CLI直接运行后退出 | S:依赖数据库已连接且存在该用户，否则仅输出空值
+create-db.cjs[OD3T]: F:检查threecloud_v3数据库是否存在，不存在则创建 | R:code:api/reset-db.cjs | A:无导出，CLI直接运行 | S:连接postgres默认库执行CREATE DATABASE，需有创建库权限
+drizzle.config.ts[XC6T]: F:定义drizzle-kit配置(schema入口、迁移输出目录与PostgreSQL方言) | R:code:api/src/db/schema,code:api/src/db/migrations | A:schema/out/dialect配置对象 | S:连接串取DATABASE_URL环境变量，缺失即失败；迁移产物须提交
+package.json[XV6T]: F:声明api包脚本与依赖(dev/build/typecheck/数据库迁移/测试/lint) | R:code:api/src/index.ts,code:api/src/db | A:pnpm scripts与包依赖契约 | S:db:migrate仅走drizzle journal；0017+手写迁移须用node run-manual-migrations.cjs
+reset-db.cjs[OD3T]: F:终止threecloud_v3全部连接后DROP并重建该库 | R:code:api/create-db.cjs | A:无导出，CLI直接运行 | S:破坏性操作会清空库内全部数据，仅本地开发环境使用
+run-manual-migrations.cjs[OD7T]: F:顺序执行0017-0047手写SQL迁移(checksum防篡改、advisory lock防并发、失败即停) | R:code:api/src/db/migrations,code:api/lib/manual-migrations-runner.cjs | A:MIGRATIONS/ensureMetadataTable/runMigration/postCheck | S:迁移失败只记录状态并停止，不自动执行未验证回滚；所有环境共用同一advisory lock
+run-migration-0031.cjs[OD6T]: F:手工执行0031缓存定价与缓存计量迁移，校验缓存相关列与分区父表 | R:code:api/src/db/migrations/0031_cache_pricing_explicit.sql | A:无导出，CLI直接运行 | S:幂等可重跑；0031不登记journal，必须由本执行器覆盖
+run-migration-0032.cjs[OD5T]: F:手工执行0032用户语言偏好迁移并校验users.language列及默认值 | R:code:api/src/db/migrations/0032_user_language_i18n.sql | A:无导出，CLI直接运行 | S:幂等可重跑；users.language非空默认zh-CN
+run-migration.cjs[OD3T]: F:执行drizzle初始迁移0000_uneven_red_ghost.sql并列出建表结果 | R:code:api/src/db/migrations | A:无导出，CLI直接运行 | S:仅用于初始迁移；后续手写迁移走run-manual-migrations.cjs
+run-migrations-0017-0022.cjs[OD4T]: F:按序执行手写迁移0017-0024c并列出public表清单 | R:code:api/src/db/migrations | A:无导出，CLI直接运行 | S:幂等重跑容忍已存在对象；这些迁移不登记drizzle journal
+
+===C:/Users/ZH/.openclaw/workspace/3cloud/api/lib/===
+manual-migrations-runner.cjs[OD6T]: F:提供手写迁移纯逻辑(SHA-256 checksum、迁移状态判定与连接串日志脱敏) | R:code:api/run-manual-migrations.cjs | A:checksum/migrationAction/redactDatabaseUrl/safeErrorMessage | S:不连接数据库供runner与单测共享；脱敏防止连接串密码进入日志
+
+===C:/Users/ZH/.openclaw/workspace/3cloud/api/scripts/===
+apply-allowed-groups-migration.mjs[OD3T]: F:一次性为suppliers表添加allowed_groups列(jsonb默认[])并打印现有列 | R:code:api/src/db | A:无导出，CLI直接运行 | S:仅针对本地threecloud_v3的一次性工具，幂等

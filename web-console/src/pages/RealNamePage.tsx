@@ -453,7 +453,7 @@ export default function RealNamePage() {
       <Modal open={showHelpModal} onClose={() => setShowHelpModal(false)} title="实名认证帮助">
         <div style={{ fontSize: 13, lineHeight: 1.8 }}>
           <p><strong>什么是实名认证？</strong></p>
-          <p>实名认证是 浩寅云 平台为确保账户安全、合规运营而设立的身份验证机制。完成认证后可解锁全部平台功能。</p>
+          <p>实名认证是 3Cloud 平台为确保账户安全、合规运营而设立的身份验证机制。完成认证后可解锁全部平台功能。</p>
           <p><strong>认证类型：</strong></p>
           <p>• 个人认证 — 适用于个人开发者，需提供身份证信息</p>
           <p>• 企业认证 — 适用于企业用户，需提供营业执照及法人信息</p>

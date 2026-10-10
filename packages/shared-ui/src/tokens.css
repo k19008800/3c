@@ -1,5 +1,5 @@
 /**
- * 浩寅云 设计令牌（shared-ui 主实现，console 侧）
+ * 3Cloud 设计令牌（shared-ui 主实现，console 侧）
  * 冻结模式：docs/design-system/DESIGN-GUIDE-2026-10.md §2
  * 兼容性铁律：已有变量名不得删除/改名，只改数值并新增；页面与组件大量 var(--xx) 引用。
  * 设计语言：精密云基础设施 —— 信号蓝 #1896FF + 墨蓝 ink 阶 + 中性灰阶，禁止靛蓝/紫。

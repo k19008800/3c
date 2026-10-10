@@ -178,7 +178,7 @@ export const EN_DEFAULTS: Record<string, string> = {
   "auth.loginHelp": "Sign in to your account to manage API keys and view usage records.",
   "auth.emailHelp": "Enter the email address you registered with.",
   "auth.passwordHelp": "Enter your login password.",
-  "auth.registerHelp": "Register to start using the 浩寅云 API Token service.",
+  "auth.registerHelp": "Register to start using the 3Cloud API Token service.",
   "auth.emailPlaceholder": "your@email.com",
   "auth.passwordPlaceholder": "Enter your password",
   "auth.captchaPlaceholder": "Enter captcha",

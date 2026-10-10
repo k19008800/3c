@@ -26,11 +26,11 @@ export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(false);
 
   // Site settings
-  const [siteName, setSiteName] = useState("浩寅云");
+  const [siteName, setSiteName] = useState("3Cloud");
   const [siteDesc, setSiteDesc] = useState("AI模型聚合平台");
   const [logoUrl, setLogoUrl] = useState("");
   const [faviconUrl, setFaviconUrl] = useState("");
-  const [companyName, setCompanyName] = useState("浩寅云");
+  const [companyName, setCompanyName] = useState("3Cloud");
   const [icpNo, setIcpNo] = useState("");
   const [icpLink, setIcpLink] = useState("");
   const [policeIcp, setPoliceIcp] = useState("");
@@ -76,11 +76,11 @@ export default function AdminSettingsPage() {
     setLoading(true);
     api.get("/admin/settings").then(r => {
       const d = r.data?.data ?? {};
-      setSiteName(d.site_name ?? "浩寅云");
+      setSiteName(d.site_name ?? "3Cloud");
       setSiteDesc(d.site_desc ?? "");
       setLogoUrl(d.site_logo_url ?? "");
       setFaviconUrl(d.site_favicon_url ?? "");
-      setCompanyName(d.site_company_name ?? "浩寅云");
+      setCompanyName(d.site_company_name ?? "3Cloud");
       setIcpNo(d.site_icp ?? "");
       setIcpLink(d.site_icp_link ?? "");
       setPoliceIcp(d.site_police_icp ?? "");
@@ -181,7 +181,7 @@ export default function AdminSettingsPage() {
           <div style={cfgRow}><span style={cfgLabel}>联系邮箱</span><input style={cfgInput} value={contactEmail} onChange={e => setContactEmail(e.target.value)} /></div>
           <div style={cfgRow}><span style={cfgLabel}>联系电话</span><input style={cfgInput} value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="如 400-xxx-xxxx" /></div>
           <div style={cfgRow}><span style={cfgLabel}>公众号二维码 URL</span><input style={{...cfgInput, width: 300}} value={wechatQrUrl} onChange={e => setWechatQrUrl(e.target.value)} placeholder="https://..." /></div>
-          <div style={cfgRow}><span style={cfgLabel}>版权信息</span><input style={{...cfgInput, width: 300}} value={copyright} onChange={e => setCopyright(e.target.value)} placeholder="如 © 2026 浩寅云" /></div>
+          <div style={cfgRow}><span style={cfgLabel}>版权信息</span><input style={{...cfgInput, width: 300}} value={copyright} onChange={e => setCopyright(e.target.value)} placeholder="如 © 2026 3Cloud" /></div>
           <div style={cfgRow}>
             <span style={cfgLabel}>自定义 Footer HTML</span>
             <textarea style={{ ...cfgInput, width: 400, height: 60 }} value={footerHtml} onChange={e => setFooterHtml(e.target.value)} placeholder="留空则使用默认版权+备案渲染" />

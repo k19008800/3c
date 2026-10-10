@@ -40,11 +40,11 @@ async function adminAuth(request: any, _reply: any) {
 /** 全部设置键的默认值与类型。GET 时按类型解析返回。 */
 const SETTING_DEFAULTS: Record<string, { value: string; type: 'string' | 'number' | 'bool' }> = {
   // site — 键名与 portal public.ts 白名单 site_* 对齐（后台维护 → 门户展示）
-  site_name: { value: '浩寅云', type: 'string' },
+  site_name: { value: '3Cloud', type: 'string' },
   site_desc: { value: 'AI 模型聚合平台', type: 'string' },
   site_logo_url: { value: '', type: 'string' },
   site_favicon_url: { value: '', type: 'string' },
-  site_company_name: { value: '浩寅云', type: 'string' },
+  site_company_name: { value: '3Cloud', type: 'string' },
   site_icp: { value: '', type: 'string' },
   site_icp_link: { value: '', type: 'string' },
   site_police_icp: { value: '', type: 'string' },
@@ -310,8 +310,8 @@ export async function adminSettingsRoutes(app: FastifyInstance) {
     }
     const r = await sendMail({
       to,
-      subject: '浩寅云 邮件服务测试',
-      html: '<p>这是一封来自 浩寅云 的测试邮件。</p><p>如果你收到这封邮件，说明 SMTP 配置正确 ✅</p>',
+      subject: '3Cloud 邮件服务测试',
+      html: '<p>这是一封来自 3Cloud 的测试邮件。</p><p>如果你收到这封邮件，说明 SMTP 配置正确 ✅</p>',
       templateName: 'smtp_test',
     });
     if (!r.ok) return reply.send({ data: { ok: false }, message: `发送失败：${r.error ?? '未知错误'}` });
