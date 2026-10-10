@@ -1,3 +1,66 @@
+## 开发与测试纪律（人工维护，勿纳入 AOCI 自动区块）
+
+### 1. api 单测与 dev 栈不可并行
+
+`pnpm dev` 会起 api(3000)，与 vitest **共用同一个 PostgreSQL 与 Redis**。并行运行会导致：
+单测用例大面积假红（如 `pre.mode` 期望 `frozen` 实得 `bypass`），且耗时从~130s 劣化到 ~1000s。
+
+**跑单测前先停 dev 栈**；跑完再起。
+
+### 2. 后端响应体是 camelCase，请求体多为 snake_case
+
+这是最容易踩的坑。Fastify 路由里 `db.select()` 的结果**原样返回**（Drizzle schema 是 camelCase），
+而 `parseXxxBody()` 校验的入参通常是 snake_case（如 `window_sec` / `channel_ids` / `rule_id`）。
+
+写前端时：
+- **读侧**（解析响应）→ 用 camelCase：`windowSec`、`ruleId`、`firedAt`、`metricValue`
+- **写侧**（构造请求体）→ 用 snake_case：`window_sec`、`channel_ids`
+
+搞反的症状：字段显示 `undefined`、表格列空白、表单校验恒失败。
+实例见 `test-reports/REGRESSION-2026-10-10.md` 的 FIX-7。
+
+### 3. jsonb 列的形状校验要三层防护
+
+只做一次性数据清理会复发。必须同时具备：
+1. **读侧防御** —— `Array.isArray(x) ? x : []` 归一化（注意防御必须在使用之前）
+2. **写入口校验** —— Fastify 路由里 `Array.isArray` 校验 + 归一化 + 长度上限
+3. **DB CHECK 约束** —— `CHECK (col IS NULL OR jsonb_typeof(col) = 'array')`
+
+实例：`supplier_models.capabilities`（FIX-5 → FIX-9）。
+
+### 4. 浏览器测试用真实 Chrome（CDP），不用 API 代替
+
+`agent-browser` CLI 在本机不可用。可行方案：
+```bash
+chrome.exe --headless=new --remote-debugging-port=9222 --user-data-dir="$TEMP/xxx" about:blank
+# 再用 playwright-core 的 connectOverCDP('http://127.0.0.1:9222') 驱动
+```
+
+脚本自身也可能骗人。已知两类误判：
+- **URL 拼接漏斜杠** —— 曾把健康率误报成 6.3%（`${BASE}/app${route}` 中 route 无前导 `/`）
+- **参数化路由当字面量请求** —— `/admin/suppliers/:id` 必然 400，曾把健康率误报成 98.0%
+
+发现扫描结果与历史结论矛盾时，**先怀疑脚本**，交叉验证后再判定是项目故障。
+
+### 5. shared-ui 组件不要凭直觉用 prop
+
+用前先查真实签名（`packages/shared-ui/src/components/**`）。常见：
+- `Tag` 用 `type` 不是 `color`；`PageHeader` 用 `help` 不是 `description`
+- `Pagination` 用 `current`/`total`/`onChange(page, size)` 不是 `page`
+- Tab 用 `c3-sub-tabs` / `c3-sub-tab`，**没有** `c3-tabs` / `c3-tab`
+- 表格 `table-layout: fixed` + `nowrap`，长文本列需显式 `whiteSpace: normal` 否则被省略号截断
+
+### 6. 端口与启动
+
+`pnpm dev` 只起 **api(3000) + web-portal(5177)**。**web-console(5175) 需单独启动**：
+```bash
+cd web-console && npx vite --port 5175 --strictPort
+```
+
+### 7. Playwright 输出目录避开仓库
+
+`test-results/` 会被 WorkBuddy 安全删除拦截，用 `--output "$TEMP/pw-xxx"` 绕开。
+
 <!-- aoci:begin -->
 ## AOCI 仓库认知
 
