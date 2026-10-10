@@ -18,7 +18,7 @@
 const { chromium } = require("playwright-core");
 const fs = require("fs");
 
-const BASE = "http://localhost:5177";
+const BASE = process.env.SCAN_BASE || "http://localhost:5177";
 const CDP = "http://127.0.0.1:9222";
 const ROUTES_FILE = process.argv[2] || "/tmp/routes.txt";
 const OUT = process.env.SCAN_OUT || process.env.TEMP + "/3cloud-scan.json";
@@ -27,13 +27,21 @@ const TOKEN = process.env.SCAN_TOKEN;
 const STATIC_NOISE = /favicon|\.ico|\.map|manifest\.json|\/static\/|blob:|data:/i;
 
 (async () => {
-  const routes = fs
+  const rawRoutes = fs
     .readFileSync(ROUTES_FILE, "utf8")
     .split(/\r?\n/)
     .map((s) => s.trim())
     .filter(Boolean)
     // App.tsx 中 path 多数不带前导斜杠（如 admin/agents），统一补齐后再拼 URL。
     .map((s) => (s.startsWith("/") ? s : `/${s}`));
+
+  // 参数化路由（/admin/suppliers/:id）不能把 :id 当字面量请求 ——
+  // 否则后端必然 400，扫描结果会被误判为页面故障。
+  // 用 SCAN_PARAM_VALUE（默认 1）替换为真实存在的 ID。
+  const PARAM_VALUE = process.env.SCAN_PARAM_VALUE || "1";
+  const routes = rawRoutes.map((r) => r.replace(/:[A-Za-z_][A-Za-z0-9_]*/g, PARAM_VALUE));
+  const templated = rawRoutes.filter((r) => r !== routes[rawRoutes.indexOf(r)]).length;
+  if (templated > 0) console.log(`（已把${templated} 条参数化路由的 :param 替换为 ${PARAM_VALUE}）`);
 
   const browser = await chromium.connectOverCDP(CDP);
   const ctx = browser.contexts()[0];

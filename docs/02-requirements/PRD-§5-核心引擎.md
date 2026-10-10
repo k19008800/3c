@@ -73,6 +73,8 @@ auth(preHandler apiKeyAuth) → idempotency → rate-limit → validate
 | 5.4.1 | 模型健康度聚合（p50/p99 直方图） | `services/marketplace/model-health-aggregator` + `/public/models/health` | ✅已实现 | 用于 Marketplace 展示，非告警 |
 | 5.4.2 | 站内通知 / 邮件 / WS 推送通道 | `services/notify.ts`、`mailer.ts`、`ws.ts` | ✅已实现 | 基础设施在 |
 | 5.4.3 | 用户余额告警 | `admin-consumption.ts` `/admin/balance-alerts*` | 🟡部分实现 | 用户级催缴，非平台运维告警 |
+| 5.4.4 | 平台运维告警检测引擎 | `services/monitoring/alert-engine.ts` + `/admin/alerts*` | ✅已实现 | 7 项指标（error_rate/qps/response_latency/cost_spike/balance_low/vendor_health/cache_hit_rate）；每 60s tick；状态机 firing→acknowledged→resolved。**注**：原长期报 `monitoring_rules 不存在`，因手工迁移器漏挂 0048，已修 |
+| 5.4.5 | 告警规则后台配置 | `web-console/src/pages/AdminAlertCenterPage.tsx` `/app/admin/alerts` | ✅已实现 | 事件/规则双Tab；规则 CRUD + 启停；告警确认；写操作限 super_admin（后端 `superAdminOnly` 兜底） |
 
 ## 关键架构说明
 
@@ -88,7 +90,8 @@ auth(preHandler apiKeyAuth) → idempotency → rate-limit → validate
 | 手动强制指定渠道（force_channel） | ❌未实现（规划中） | 无路由覆盖 |
 | 路由推荐（基于历史价格/延迟/成功率） | ❌未实现（规划中） | |
 | 决策树可视化后台 | ❌未实现（规划中） | 无链路决策数据接口 |
-| 7 项平台运维告警检测引擎（失败率/可用率/P95/余额/磁盘/CPU…） | ❌未实现（规划中） | monitoring_rules/alerts 四表零落地（migration 0048 已建表，检测引擎未接） |
-| 告警规则后台配置 / 历史趋势看板 | ❌未实现（规划中） | |
+| ~~7 项平台运维告警检测引擎（失败率/可用率/P95/余额/磁盘/CPU…）~~ | ✅已实现（见 5.4.4） | 原状态"未实现"已过期：表由0048 落地、引擎已接；另修复了迁移器漏挂 0048 导致引擎从未真正启动的问题 |
+| ~~告警规则后台配置~~ | ✅已实现（见 5.4.5） | 原状态"未实现"已过期：`/app/admin/alerts` 告警中心页已交付 |
+| 告警历史趋势看板（时间序列图） | ❌未实现（规划中） | 当前仅列表+分页，无图表 |
 | 智能定价建议 | ❌未实现（规划中） | |
 | 限流可视化看板（命中率 Top） | ❌未实现（规划中） | |
