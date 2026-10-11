@@ -17,6 +17,7 @@ import { db, schema } from '../db/index.js';
 import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
 import { verifyToken } from '../services/auth/jwt.js';
 import { UnauthorizedError, ForbiddenError, NotFoundError, ValidationError } from '../lib/errors.js';
+import { startOfDayWallClock, startOfMonthWallClock } from '../lib/month-range.js';
 import { evaluateLog, renotifyPriceChange, computeSubstitutability } from '../services/price-notification.js';
 
 /* ───────── helpers ───────── */
@@ -124,8 +125,8 @@ export async function adminPriceChangeRoutes(app: FastifyInstance) {
 
   /** GET /api/v1/admin/price-changes/stats — 统计卡 */
   app.get('/api/v1/admin/price-changes/stats', { preHandler: [adminAuth] }, async (_request, reply) => {
-    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
-    const startOfMonth = new Date(startOfDay.getFullYear(), startOfDay.getMonth(), 1);
+    const startOfDay = startOfDayWallClock();
+    const startOfMonth = startOfMonthWallClock(startOfDay);
 
     const [todayCount, pendingCount, monthUsers, monthA] = await Promise.all([
       db.select({ v: sql<number>`count(*)` }).from(schema.priceChangeLogs)

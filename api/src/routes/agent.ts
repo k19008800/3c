@@ -24,6 +24,7 @@ import { db, schema } from '../db/index.js';
 import { eq, and, sql, desc, gte, lte } from 'drizzle-orm';
 import { verifyToken } from '../services/auth/jwt.js';
 import { UnauthorizedError, NotFoundError, ValidationError, AppError } from '../lib/errors.js';
+import { monthRangeOfDate } from '../lib/month-range.js';
 import {
   listAgentSettlements,
   getAgentSettlementDetail,
@@ -60,9 +61,9 @@ async function requireAgent(request: any) {
 
 const yuanToCents = (v: unknown): number => Math.round(Number(v ?? 0) * 100);
 
+/** 本月区间。⚠️ 统一走 lib/month-range（FIX-14：本地时区构造会让窗口前移 8 小时，导致可提现余额错账） */
 function monthRange(): { start: Date; end: Date } {
-  const now = new Date();
-  return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: new Date(now.getFullYear(), now.getMonth() + 1, 1) };
+  return monthRangeOfDate();
 }
 
 /** 代理商可提现余额（元）= Σ settled 佣金 − Σ 未拒绝提现 */

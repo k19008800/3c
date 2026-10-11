@@ -27,6 +27,7 @@ import {
   getSettlementDetail,
   getSettlementCsv,
   matchSupplierBill,
+  listSupplierBillMatches,
   confirmSettlement,
   markSettlementPaid,
   markSettlementDispute,
@@ -55,6 +56,22 @@ async function adminAuth(request: any, reply: any) {
 
 const PERIOD_RE = /^\d{4}-\d{2}$/;
 
+/**
+ * 校验 period 为真实存在的月份。
+ * ⚠️ 仅靠 PERIOD_RE 只能挡格式，挡不住 `2026-13` / `2026-00` 这类语义非法值——
+ * 它们会一路走到 SQL 的 monthRangeOf，new Date(2026, 12, 1) 悄悄滚到 2027-01，
+ * 结果是「查不到数据」被误读成「该月无消费」。这里提前拒绝。
+ */
+function assertPeriod(period: string): void {
+  if (!PERIOD_RE.test(period)) {
+    throw new ValidationError('period 必须为 YYYY-MM 格式');
+  }
+  const month = Number(period.slice(5, 7));
+  if (month < 1 || month > 12) {
+    throw new ValidationError(`period 的月份必须为 01-12，收到 ${period}`);
+  }
+}
+
 function currentMonth(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -71,9 +88,7 @@ export async function adminVendorSettlementsRoutes(app: FastifyInstance) {
   app.post('/api/v1/admin/vendor-settlements/generate', { preHandler: [adminAuth] }, async (request, reply) => {
     const body = (request.body ?? {}) as { period?: string };
     const period = (body.period ?? '').trim() || currentMonth();
-    if (!PERIOD_RE.test(period)) {
-      throw new ValidationError('period 必须为 YYYY-MM 格式');
-    }
+    assertPeriod(period);
     const operatorId = (request as any).userContext?.userId ?? 0;
     const data = await generateSettlements(period, operatorId);
     return reply.send({ data });
@@ -94,9 +109,7 @@ export async function adminVendorSettlementsRoutes(app: FastifyInstance) {
     if (supplierId !== undefined && (!Number.isInteger(supplierId) || supplierId <= 0)) {
       throw new ValidationError('supplier_id 必须为正整数');
     }
-    if (period !== undefined && !PERIOD_RE.test(period)) {
-      throw new ValidationError('period 必须为 YYYY-MM 格式');
-    }
+    if (period !== undefined) assertPeriod(period);
     const data = await listSettlements({ period, supplierId, page, pageSize });
     return reply.send({ data });
   });
@@ -162,7 +175,7 @@ export async function adminVendorSettlementsRoutes(app: FastifyInstance) {
     const supplierId = Number(q.supplier_id);
     const billAmount = Number(q.bill_amount);
 
-    if (!PERIOD_RE.test(period)) throw new ValidationError('period 必须为 YYYY-MM 格式');
+    assertPeriod(period);
     if (!Number.isInteger(supplierId) || supplierId <= 0) {
       throw new ValidationError('supplier_id 必须为正整数');
     }
@@ -172,5 +185,38 @@ export async function adminVendorSettlementsRoutes(app: FastifyInstance) {
 
     const data = await matchSupplierBill({ period, supplierId, billAmount });
     return reply.send({ data });
+  });
+
+  /**
+   * GET /api/v1/admin/supplier-bill-match/list — 批量账单匹配概览（只读）
+   *
+   * query: period(必填 YYYY-MM) / supplier_id(可选)
+   *
+   * 与上面单数端点的分工：
+   *   - `/supplier-bill-match`         单供应商核对：财务已拿到供应商账单金额，传入后算差异
+   *   - `/supplier-bill-match/list`   全量概览：一次列出当月所有供应商的平台应付金额与调用次数，
+   *                                  前端在该列表上让财务逐行填入账单金额再调单数端点核对
+   *
+   * 只读，不落库；返回行的 bill_amount 恒为 0、status 恒为 'pending'（尚未核对）。
+   *
+   * ⚠️ unattributed 必须透出给前端：mock 回退路径产生的消费记录没有供应商归属
+   * （settle.ts 写入 supplierId = channel?.supplier.id，channel 为 null 时为 NULL）。
+   * 实测 2026-10 有 99.9% 成本属此类，若只返回 items，运营会把「可归因部分」
+   * 误当作「该月全部应付」而少付供应商。
+   */
+  app.get('/api/v1/admin/supplier-bill-match/list', { preHandler: [adminAuth] }, async (request, reply) => {
+    const q = (request.query ?? {}) as { period?: string; supplier_id?: string };
+    const period = (q.period ?? '').trim();
+    assertPeriod(period);
+
+    let supplierId: number | undefined;
+    if (q.supplier_id !== undefined && q.supplier_id !== '') {
+      const n = Number(q.supplier_id);
+      if (!Number.isInteger(n) || n <= 0) throw new ValidationError('supplier_id 必须为正整数');
+      supplierId = n;
+    }
+
+    const { items, unattributed } = await listSupplierBillMatches({ period, supplierId });
+    return reply.send({ data: { period, items, unattributed } });
   });
 }

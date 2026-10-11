@@ -18,6 +18,7 @@ import { db, schema } from '../../db/index.js';
 import { eq, and, gte, lt, sql, inArray, desc } from 'drizzle-orm';
 import type { NewVendorSettlement, NewVendorSettlementItem } from '../../db/schema/vendor-settlements.js';
 import { AppError } from '../../lib/errors.js';
+import { monthRangeOf } from '../../lib/month-range.js';
 
 /* ───────── types ───────── */
 
@@ -49,13 +50,14 @@ export interface BillMatchResult {
   status: 'matched' | 'diff' | 'missing';
 }
 
+/**
+ * 批量列表行的状态：在 BillMatchResult 三态基础上增加 'pending'（尚未录入账单金额）。
+ * 单供应商核对端点不会返回 'pending'——它必然已完成比对。
+ */
+export type SupplierBillMatchStatus = BillMatchResult['status'] | 'pending';
+
 /* ───────── helpers ───────── */
 
-/** 由 "YYYY-MM" 解析出该月的起止时间（本地时区月初） */
-function monthRangeOf(period: string): { start: Date; end: Date } {
-  const [y = 1970, m = 1] = period.split('-').map(Number);
-  return { start: new Date(y, m - 1, 1), end: new Date(y, m, 1) };
-}
 
 /** numeric 列（postgres-js 返回 string）→ number */
 function toNum(v: unknown): number {
@@ -429,6 +431,107 @@ export async function matchSupplierBill(params: {
   }
 
   return { platform_amount: platformAmount, bill_amount: billAmount, diff, diff_percent: diffPercent, status };
+}
+
+/** 批量账单匹配的一行（管理端「供应商账单核对」列表用） */
+export interface SupplierBillMatchRow extends Omit<BillMatchResult, 'status'> {
+  supplier_id: number;
+  supplier_name: string;
+  /** 平台侧聚合到的调用次数（来自 consumption_records） */
+  call_count: number;
+  /** 列表初始态为 'pending'；完成单供应商核对后由前端并入后端返回的三态 */
+  status: SupplierBillMatchStatus;
+}
+
+/**
+ * 按月批量对账：一次返回所有供应商的平台应付金额（+ 调用次数、供应商名）。
+ *
+ * 与 matchSupplierBill 的区别：
+ *   - matchSupplierBill 是**单供应商 + 必须外部传入账单金额**的核对（用于给定账单后的差异计算）
+ *   - 本函数是**只读概览**：不接收任何外部账单金额，仅列出平台侧应付，
+ *     bill_amount 恒为 0、diff = -platform_amount、status 恒为 'missing'/'diff'。
+ *     前端拿到后再让财务填入供应商实际账单金额，逐行调用 matchSupplierBill 得到差异。
+ *
+ * 这样管理端页面可以在一个列表里看到全部供应商的平台成本，而不必为每个供应商发一次请求。
+ *
+ * @param period 结算月份 YYYY-MM
+ * @param supplierId 可选：只看某个供应商
+ */
+export async function listSupplierBillMatches(params: {
+  period: string;
+  supplierId?: number;
+}): Promise<{
+  items: SupplierBillMatchRow[];
+  /**
+   * 无法归因到供应商的成本（mock 回退 / 历史脏数据）。
+   * ⚠️ 必须随列表一起返回：否则对账页只展示可归因部分，运营会误以为
+   * 「平台应付合计」= 该月全部成本。实测 2026-10 有 99.9% 成本属此类。
+   */
+  unattributed: { amount: number; callCount: number };
+}> {
+  const { period, supplierId } = params;
+  const { start, end } = monthRangeOf(period);
+
+  // 归因口径与下面列表完全一致：consumption_records.supplier_id 优先，
+  // 否则回退 supplier_models.supplier_id；两者皆空即视为无法归因。
+  const whereBase = and(
+    gte(schema.consumptionRecords.createdAt, start),
+    lt(schema.consumptionRecords.createdAt, end),
+  );
+
+  const [unattributedRow] = await db
+    .select({
+      totalAmount: sql<string>`round(coalesce(sum(${schema.consumptionRecords.cost}), 0)::numeric, 4)`,
+      callCount: sql<number>`count(*)::int`,
+    })
+    .from(schema.consumptionRecords)
+    .leftJoin(schema.supplierModels, eq(schema.consumptionRecords.supplierModelId, schema.supplierModels.id))
+    .where(and(whereBase, sql`${supplierExpr} is null`));
+
+  const rows = await db
+    .select({
+      supplierId: supplierExpr,
+      supplierName: sql<string>`coalesce(${schema.suppliers.name}, '供应商#' || ${supplierExpr}::text)`,
+      totalAmount: sql<string>`round(coalesce(sum(${schema.consumptionRecords.cost}), 0)::numeric, 4)`,
+      callCount: sql<number>`count(*)::int`,
+    })
+    .from(schema.consumptionRecords)
+    .leftJoin(schema.supplierModels, eq(schema.consumptionRecords.supplierModelId, schema.supplierModels.id))
+    .leftJoin(schema.suppliers, eq(supplierExpr, schema.suppliers.id))
+    .where(and(
+      gte(schema.consumptionRecords.createdAt, start),
+      lt(schema.consumptionRecords.createdAt, end),
+      sql`${supplierExpr} is not null`,
+      // supplierId 有值时只取该供应商；无值时取全部
+      ...(supplierId ? [eq(supplierExpr, supplierId)] : []),
+    ))
+    .groupBy(supplierExpr, schema.suppliers.name)
+    .orderBy(sql`sum(${schema.consumptionRecords.cost}) desc`);
+
+  const items: SupplierBillMatchRow[] = rows.map((r) => {
+    const platformAmount = toNum(r.totalAmount);
+    return {
+      supplier_id: r.supplierId,
+      supplier_name: r.supplierName,
+      platform_amount: platformAmount,
+      bill_amount: 0,
+      diff: Math.round(-platformAmount * 10000) / 10000,
+      diff_percent: null,
+      // 列表初始态一律 'pending'（尚未录入账单金额）。
+      // ⚠️ 早期版本此处按 platformAmount 判成 'diff'/'matched'，运营会把
+      // 「还没核对」误读成「已核对且有差异」，与实际核对动作脱节。
+      status: 'pending',
+      call_count: r.callCount,
+    };
+  });
+
+  return {
+    items,
+    unattributed: {
+      amount: toNum(unattributedRow?.totalAmount ?? 0),
+      callCount: unattributedRow?.callCount ?? 0,
+    },
+  };
 }
 
 /**

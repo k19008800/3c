@@ -8,6 +8,7 @@ import type { FastifyInstance } from 'fastify';
 import { db, schema } from '../db/index.js';
 import { eq, and, sql, inArray, gte, lte } from 'drizzle-orm';
 import { verifyToken } from '../services/auth/jwt.js';
+import { monthRangeOfDate } from '../lib/month-range.js';
 import {
   UnauthorizedError,
   ForbiddenError,
@@ -37,13 +38,9 @@ function toNum(v: unknown): number {
   return Number(v ?? 0);
 }
 
-/** 本月区间 */
+/** 本月区间。⚠️ 统一走 lib/month-range（FIX-14：本地时区构造会让窗口前移 8 小时，导致佣金统计错账） */
 function monthRange(): { start: Date; end: Date } {
-  const now = new Date();
-  return {
-    start: new Date(now.getFullYear(), now.getMonth(), 1),
-    end: new Date(now.getFullYear(), now.getMonth() + 1, 1),
-  };
+  return monthRangeOfDate();
 }
 
 /** 代理商等级 → 中文文案 */

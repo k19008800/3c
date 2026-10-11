@@ -10,6 +10,7 @@ import { db, schema } from '../db/index.js';
 import { eq, and, gte, lte, sql, desc, inArray } from 'drizzle-orm';
 import { verifyToken } from '../services/auth/jwt.js';
 import { requireOperation2fa } from '../middleware/require-operation-2fa.js';
+import { monthRangeOf, monthRangeOfDate } from '../lib/month-range.js';
 import {
   UnauthorizedError,
   ForbiddenError,
@@ -43,16 +44,7 @@ async function superAdminAuth(request: any, reply: any) {
 }
 
 function monthRange(reference?: Date): { start: Date; end: Date } {
-  const now = reference ?? new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  return { start, end };
-}
-
-/** 由 "YYYY-MM" 解析出该月的起止时间 */
-function monthRangeOf(period: string): { start: Date; end: Date } {
-  const [y = 1970, m = 1] = period.split('-').map(Number);
-  return { start: new Date(y, m - 1, 1), end: new Date(y, m, 1) };
+  return monthRangeOfDate(reference);
 }
 
 /** 佣金工作台的周期筛选 → 起始时间（无上限，一律截至“现在”） */

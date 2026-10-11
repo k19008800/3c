@@ -1,241 +1,498 @@
-import { useState, useRef } from "react";
-import type { ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "../../lib/api";
-import { HelpIcon, useToast } from "@3cloud/shared-ui";
-import { PIcon } from "../_polishIcons";
+import { useMemo, useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import {
+  PageHeader,
+  Panel,
+  Tag,
+  Table,
+  SkeletonGroup,
+  EmptyState,
+  useToast,
+} from "@3cloud/shared-ui";
+import type { ColumnDef } from "@3cloud/shared-ui";
+import { api, extractError } from "../../lib/api";
 
-const card: React.CSSProperties = { background: "var(--color-panel)", padding: 20, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.06)" };
-const btnBase: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 };
+/**
+ * 供应商账单核对 — PRD §9.6.3/ §25.1.8
+ *
+ * 后端契约（api/src/routes/admin-vendor-settlements.ts）：
+ *   GET /admin/supplier-bill-match/list?period&supplier_id
+ *        → { data: { period, items: [{ supplier_id, supplier_name,
+ *                                    platform_amount, bill_amount,
+ *                                    diff, diff_percent, status, call_count }] } }
+ *        只读概览：列出当月各供应商的平台应付金额（bill_amount 恒为 0，未录入账单）
+ *   GET /admin/supplier-bill-match?period&supplier_id&bill_amount
+ *        → { data: BillMatchResult } 单供应商核对：财务填入供应商实际账单金额后调此端点
+ *
+ * 工作流：选周期 → 看全量平台应付 → 逐行填入供应商账单金额 → 点「核对」得差异 → 标记处理。
+ *
+ * 注意：后端响应字段是 **snake_case**（本端点返回对象字面量，非 Drizzle camelCase），
+ * 与 /admin/alerts 那类直接返回 drizzle 行的端点不同。
+ */
 
-/* ───────── 类型与演示数据（对齐原型 admin-supplier-bill-match.html） ───────── */
-
-type MatchStatus = "matched" | "partial" | "unmatched" | "extra";
-type RowAction = "confirmed" | "flagged" | "ignored" | null;
+/** pending = 尚未录入账单金额（列表初始态）；其余三态来自单供应商核对端点 */
+type MatchStatus = "matched" | "diff" | "missing" | "pending";
 
 interface MatchRow {
-  date: string;
-  model: string;
-  calls: number;
-  amount: number;
-}
-interface MatchPair {
-  id: number;
+  supplier_id: number;
+  supplier_name: string;
+  platform_amount: number;
+  bill_amount: number;
+  diff: number;
+  diff_percent: number | null;
   status: MatchStatus;
-  bill: MatchRow | null;      // 供应商账单
-  platform: MatchRow | null;  // 平台记录
-  note: string;
-}
-interface UploadFile { id: number; name: string; size: string; status: "parsed" | "parsing"; }
-interface BillMatchData {
-  summary: { pending: number; matched_count: number; diff_count: number; match_rate: number };
-  files: UploadFile[];
-  pairs: MatchPair[];
-  totals: { bill_amount: number; platform_amount: number; diff_amount: number; match_rate: number };
-  demo?: boolean;
+  call_count: number;
 }
 
-const MOCK: BillMatchData = {
-  summary: { pending: 8, matched_count: 1256, diff_count: 23, match_rate: 98.2 },
-  files: [
-    { id: 1, name: "DeepSeek_2026-08-账单.xlsx", size: "2.3 MB", status: "parsed" },
-    { id: 2, name: "OpenAI_2026-08-账单.csv", size: "1.8 MB", status: "parsed" },
-    { id: 3, name: "Anthropic_2026-08-账单.xlsx", size: "3.1 MB", status: "parsing" },
-  ],
-  pairs: [
-    { id: 1, status: "matched", bill: { date: "2026-08-01", model: "DeepSeek-V4", calls: 256000, amount: 14328 }, platform: { date: "2026-08-01", model: "DeepSeek-V4", calls: 256000, amount: 14328 }, note: "" },
-    { id: 2, status: "partial", bill: { date: "2026-08-02", model: "GPT-4o", calls: 85200, amount: 9856 }, platform: { date: "2026-08-02", model: "GPT-4o", calls: 84980, amount: 9832 }, note: "调用量差异 220 次，金额差异 ¥24" },
-    { id: 3, status: "matched", bill: { date: "2026-08-03", model: "Claude-3.5", calls: 42000, amount: 5680 }, platform: { date: "2026-08-03", model: "Claude-3.5", calls: 42000, amount: 5680 }, note: "" },
-    { id: 4, status: "unmatched", bill: { date: "2026-08-04", model: "GLM-5.2", calls: 128500, amount: 4520 }, platform: null, note: "平台无对应日期记录，可能存在数据丢失" },
-    { id: 5, status: "extra", bill: null, platform: { date: "2026-08-05", model: "Qwen3-72B", calls: 68000, amount: 3420 }, note: "平台有记录但供应商账单中无对应" },
-    { id: 6, status: "matched", bill: { date: "2026-08-06", model: "DeepSeek-V4", calls: 215000, amount: 12050 }, platform: { date: "2026-08-06", model: "DeepSeek-V4", calls: 215000, amount: 12050 }, note: "" },
-  ],
-  totals: { bill_amount: 46234, platform_amount: 45310, diff_amount: 924, match_rate: 98.0 },
-  demo: true,
+/** 无法归因到供应商的成本（mock 回退 / 历史脏数据） */
+interface Unattributed {
+  amount: number;
+  callCount: number;
+}
+
+/** 前端本地维护的对账结论（不落库，与结算单的确认/争议流程分离） */
+type RowAction = "confirmed" | "flagged" | "ignored" | null;
+
+/* ───────── 展示辅助 ───────── */
+
+const fmt = (n: number) => n.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtInt = (n: number) => n.toLocaleString("zh-CN");
+
+const STATUS_META: Record<MatchStatus, { label: string; type: "green" | "orange" | "red" | "gray" }> = {
+  pending: { label: "待核对", type: "gray" },
+  matched: { label: "完全匹配", type: "green" },
+  diff: { label: "存在差异", type: "orange" },
+  missing: { label: "平台无记录", type: "red" },
 };
 
-const fmt = (n: number) => n.toLocaleString("zh-CN");
-const STATUS_ICON: Record<MatchStatus, { icon: ReactNode; bg: string; label: string; color: string }> = {
-  matched:   { icon: <PIcon name="check" size={20}/>, bg: "#e8f5e9", label: "完全匹配", color: "#22c55e" },
-  partial:   { icon: <PIcon name="alert" size={20}/>, bg: "#fff3e0", label: "部分匹配", color: "#f59e0b" },
-  unmatched: { icon: <PIcon name="close" size={20}/>, bg: "#ffebee", label: "未匹配",   color: "#e53935" },
-  extra:     { icon: <PIcon name="plus" size={20}/>, bg: "#e3f2fd", label: "多出记录", color: "var(--color-primary)" },
-};
+/** 当前月份 YYYY-MM（时区无关，避免 toISOString 的 UTC 偏移问题） */
+function currentMonth(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** 上一个月 YYYY-MM */
+function prevMonth(period: string): string {
+  const parts = period.split("-");
+  const y = Number(parts[0]);
+  const m = Number(parts[1]);
+  if (!Number.isInteger(y) || !Number.isInteger(m)) return currentMonth();
+  const d = new Date(y, m - 2, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
 
 /* ───────── 页面 ───────── */
 
 export default function AdminSupplierBillMatchPage() {
   const { toast } = useToast();
-  const [vendor, setVendor] = useState("");
-  const [period, setPeriod] = useState("2026-08");
-  const [status, setStatus] = useState("");
-  const [actions, setActions] = useState<Record<number, RowAction>>({});
-  const fileRef = useRef<HTMLInputElement>(null);
 
-  const q = useQuery({
-    queryKey: ["admin-supplier-bill-match", vendor, period, status],
-    queryFn: async () =>
-      (await api.get(`/admin/supplier-bill-match?vendor=${vendor}&period=${period}&status=${status}`)).data.data as BillMatchData,
-    // 后端未实现时立即回退演示数据，避免 404 反复重试导致页面卡加载
-    retry: 0,
+  const [period, setPeriod] = useState(currentMonth());
+  const [supplierId, setSupplierId] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | MatchStatus>("");
+  /** 财务已录入的账单金额：supplier_id → 金额字符串（保留用户原始输入，未核对前不解析） */
+  const [billInputs, setBillInputs] = useState<Record<number, string>>({});
+  /** 已核对结果：supplier_id → 单供应商核对端点返回 */
+  const [checked, setChecked] = useState<Record<number, MatchRow>>({});
+  const [actions, setActions] = useState<Record<number, RowAction>>({});
+
+  /* ---- 概览列表 ---- */
+  const listQ = useQuery({
+    queryKey: ["supplier-bill-match-list", period, supplierId],
+    queryFn: async () => {
+      const p = new URLSearchParams({ period });
+      if (supplierId) p.set("supplier_id", supplierId);
+      return (
+        await api.get<{
+          data: { period: string; items: MatchRow[]; unattributed: Unattributed };
+        }>(`/admin/supplier-bill-match/list?${p}`)
+      ).data.data;
+    },
   });
 
-  // 后端未实现时回退到演示数据（未来接入真实端点后此兜底自动失效）
-  const data: BillMatchData = q.data?.summary != null ? q.data : MOCK;
+  /* ---- 单供应商核对（填入账单金额后调用） ---- */
+  const checkMut = useMutation({
+    mutationFn: async (v: { supplierId: number; billAmount: number }) =>
+      (
+        await api.get<{ data: MatchRow }>(
+          `/admin/supplier-bill-match?period=${period}&supplier_id=${v.supplierId}&bill_amount=${v.billAmount}`,
+        )
+      ).data.data,
+    onSuccess: (res, v) => {
+      // 用核对结果覆盖该行的金额字段；供应商名/调用次数保留概览列表的值（后端单查不返回它们）
+      setChecked((prev) => ({
+        ...prev,
+        [v.supplierId]: {
+          ...res,
+          supplier_id: v.supplierId,
+          supplier_name: prev[v.supplierId]?.supplier_name ?? "",
+          call_count: prev[v.supplierId]?.call_count ?? 0,
+        },
+      }));
+      toast.success("核对完成");
+    },
+    onError: (e) => toast.error(extractError(e)),
+  });
 
-  function handlePairAction(id: number, action: Exclude<RowAction, null>) {
-    setActions(prev => ({ ...prev, [id]: action }));
-    toast.success({ confirmed: "已确认（演示数据）", flagged: "已标记（演示数据）", ignored: "已忽略（演示数据）" }[action]);
+  const rows = listQ.data?.items ?? [];
+  const unattributed = listQ.data?.unattributed ?? { amount: 0, callCount: 0 };
+
+  /** 可归因成本占该月总成本的比例（%），用于覆盖率告警 */
+  const coverage = useMemo(() => {
+    const attributed = rows.reduce((s, r) => s + r.platform_amount, 0);
+    const total = attributed + unattributed.amount;
+    if (total <= 0) return null;
+    return { attributed, total, percent: (attributed / total) * 100 };
+  }, [rows, unattributed]);
+
+  /** 合并概览行与已核对结果，并按状态筛选 */
+  const displayRows = useMemo(() => {
+    const merged = rows.map((r) => {
+      const c = checked[r.supplier_id];
+      return c ? { ...r, ...c, supplier_name: r.supplier_name, call_count: r.call_count } : r;
+    });
+    return statusFilter ? merged.filter((r) => r.status === statusFilter) : merged;
+  }, [rows, checked, statusFilter]);
+
+  /* ---- 汇总（以已核对结果为准，未核对行的 bill 按 0 计） ---- */
+  const summary = useMemo(() => {
+    const platformTotal = displayRows.reduce((s, r) => s + r.platform_amount, 0);
+    const billTotal = displayRows.reduce((s, r) => s + r.bill_amount, 0);
+    const diffTotal = Math.round((billTotal - platformTotal) * 10000) / 10000;
+    const checkedCount = displayRows.filter((r) => r.bill_amount > 0 || r.status !== "diff").length;
+    const diffCount = displayRows.filter((r) => r.status !== "matched").length;
+    return {
+      platformTotal,
+      billTotal,
+      diffTotal,
+      checkedCount,
+      diffCount,
+      matchRate: platformTotal > 0 ? Math.round((1 - Math.abs(diffTotal) / platformTotal) * 10000) / 100 : null,
+      supplierCount: displayRows.length,
+      callTotal: displayRows.reduce((s, r) => s + r.call_count, 0),
+    };
+  }, [displayRows]);
+
+  /* ---- 行操作 ---- */
+  function setBill(supplierId: number, val: string) {
+    setBillInputs((prev) => ({ ...prev, [supplierId]: val }));
   }
 
-  function onFilePick(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (f) toast.success(`已上传 ${f.name}，等待解析`);
-    e.target.value = "";
+  function doCheck(row: MatchRow) {
+    const raw = billInputs[row.supplier_id];
+    if (raw === undefined || raw.trim() === "") {
+      toast.error("请先填入该供应商的账单金额");
+      return;
+    }
+    const amt = Number(raw);
+    if (!Number.isFinite(amt) || amt < 0) {
+      toast.error("账单金额须为非负数字");
+      return;
+    }
+    checkMut.mutate({ supplierId: row.supplier_id, billAmount: amt });
   }
+
+  function handleAction(id: number, action: Exclude<RowAction, null>) {
+    setActions((prev) => ({ ...prev, [id]: action }));
+    toast.success({ confirmed: "已确认", flagged: "已标记差异", ignored: "已忽略" }[action]);
+  }
+
+  function resetInputs() {
+    setBillInputs({});
+    setChecked({});
+    toast.info("已清空本轮录入");
+  }
+
+  /* ---- 列定义 ---- */
+  const cols: ColumnDef<MatchRow>[] = [
+    {
+      key: "supplier_name",
+      title: "供应商",
+      dataIndex: "supplier_name",
+      render: (v, r) => (
+        <div style={{ whiteSpace: "normal", overflow: "visible", textOverflow: "clip" }}>
+          <div style={{ fontWeight: 500 }}>{String(v ?? `供应商#${r.supplier_id}`)}</div>
+          <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 2 }}>
+            ID {r.supplier_id} · 平台调用 {fmtInt(r.call_count)} 次
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "platform_amount",
+      title: "平台应付",
+      dataIndex: "platform_amount",
+      width: "150px",
+      render: (v) => <strong>¥{fmt(Number(v ?? 0))}</strong>,
+    },
+    {
+      key: "bill_amount",
+      title: "供应商账单金额",
+      width: "180px",
+      render: (_v, r) => {
+        const c = checked[r.supplier_id];
+        const inputVal = billInputs[r.supplier_id] ?? (c ? String(c.bill_amount) : "");
+        return (
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="填入账单金额"
+            value={inputVal}
+            onChange={(e) => setBill(r.supplier_id, e.target.value)}
+            style={{
+              width: "100%",
+              padding: "6px 10px",
+              borderRadius: 6,
+              border: "1px solid var(--color-border)",
+              fontSize: 13,
+            }}
+          />
+        );
+      },
+    },
+    {
+      key: "diff",
+      title: "差异",
+      width: "160px",
+      render: (_v, r) => {
+        const c = checked[r.supplier_id];
+        if (c) {
+          const diff = c.diff;
+          return (
+            <span>
+              <strong style={{ color: Math.abs(diff) <= 0.0001 ? "var(--color-success-text)" : "var(--color-danger-text)" }}>
+                {diff >= 0 ? "+" : ""}
+                {fmt(diff)}
+              </strong>
+              {c.diff_percent !== null && (
+                <span style={{ color: "var(--color-text-muted)", fontSize: 12, marginLeft: 6 }}>
+                  {c.diff_percent > 0 ? "+" : ""}
+                  {c.diff_percent}%
+                </span>
+              )}
+            </span>
+          );
+        }
+        return <span style={{ color: "var(--color-text-muted)" }}>未核对</span>;
+      },
+    },
+    {
+      key: "status",
+      title: "状态",
+      dataIndex: "status",
+      width: "110px",
+      render: (v, r) => {
+        // 未核对时状态无意义（后端恒返回 diff），显示为「待核对」
+        if (!checked[r.supplier_id]) return <Tag type="gray">待核对</Tag>;
+        const meta = STATUS_META[v as MatchStatus];
+        return <Tag type={meta.type}>{meta.label}</Tag>;
+      },
+    },
+    {
+      key: "ops",
+      title: "操作",
+      width: "300px",
+      render: (_v, r) => {
+        const action = actions[r.supplier_id];
+        if (action) {
+          return (
+            <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+              {({ confirmed: "已确认", flagged: "已标记", ignored: "已忽略" } as Record<string, string>)[action]}
+            </span>
+          );
+        }
+        const isChecked = !!checked[r.supplier_id];
+        return (
+          <div style={{ display: "flex", gap: 8, flexWrap: "nowrap" }}>
+            <button
+              type="button"
+              className="c3-btn c3-btn--primary c3-btn--sm"
+              disabled={checkMut.isPending}
+              onClick={() => doCheck(r)}
+            >
+              核对
+            </button>
+            {/* 未核对前不允许标记处理：避免在无差异数据上做结论 */}
+            <button
+              type="button"
+              className="c3-btn c3-btn--default c3-btn--sm"
+              disabled={!isChecked}
+              title={isChecked ? undefined : "请先核对"}
+              onClick={() => handleAction(r.supplier_id, "confirmed")}
+            >
+              确认
+            </button>
+            <button
+              type="button"
+              className="c3-btn c3-btn--default c3-btn--sm"
+              disabled={!isChecked}
+              title={isChecked ? undefined : "请先核对"}
+              onClick={() => handleAction(r.supplier_id, "flagged")}
+            >
+              标记
+            </button>
+            <button
+              type="button"
+              className="c3-btn c3-btn--default c3-btn--sm"
+              disabled={!isChecked}
+              title={isChecked ? undefined : "请先核对"}
+              onClick={() => handleAction(r.supplier_id, "ignored")}
+            >
+              忽略
+            </button>
+          </div>
+        );
+      },
+    },
+  ];
 
   return (
     <div>
-      <div style={{ background: "var(--color-ink-900)", color: "#fff", padding: "20px 24px", borderRadius: 12, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ fontSize: 24 }}><PIcon name="receipt" size={14}/></span>
-        <span style={{ flex: 1, fontSize: 18, fontWeight: 700 }}>供应商账单核对
-          <HelpIcon text="核对供应商提供的账单与平台记录的一致性，确保成本数据准确无误。" level="page" />
-        </span>
-        {data.demo && <span style={{ fontSize: 11, color: "#ffe9a8" }}><PIcon name="alert" size={14}/> 演示数据（后端 /admin/supplier-bill-match 待接入）</span>}
-      </div>
+      <PageHeader
+        title="供应商账单核对"
+        help="按月对比各供应商的平台应付金额与其提供的账单金额，定位成本差异。账单金额需人工录入平台，系统只做差异计算，不落库。"
+      />
 
-      {/* ── 统计卡 ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 20 }}>
-        {[
-          { icon: <PIcon name="doc" size={20}/>, label: "待核对账单数", value: data.summary.pending, sub: "本月待处理", color: "var(--color-primary)" },
-          { icon: <PIcon name="check" size={20}/>, label: "已匹配笔数", value: fmt(data.summary.matched_count), sub: "本月累计 ↑ 5.2%", color: "#22c55e" },
-          { icon: <PIcon name="alert" size={20}/>, label: "差异笔数", value: data.summary.diff_count, sub: "需要处理 ↑ 3", color: "#f59e0b" },
-          { icon: <PIcon name="chart" size={20}/>, label: "匹配率", value: `${data.summary.match_rate}%`, sub: "较上月 ↑ 0.3%", color: "#22c55e" },
-        ].map((s, i) => (
-          <div key={i} style={{ ...card, borderLeft: `4px solid ${s.color}` }}>
-            <div style={{ fontSize: 24 }}>{s.icon}</div>
-            <div style={{ fontSize: 12, color: "var(--color-text-muted)", margin: "6px 0" }}>{s.label}</div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: s.color }}>{s.value}</div>
-            <div style={{ fontSize: 11, color: "var(--color-text-muted)", marginTop: 4 }}>{s.sub}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── 筛选栏 ── */}
-      <div style={{ ...card, marginBottom: 20, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-        <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>供应商</span>
-        <select style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", fontSize: 13 }}
-          value={vendor} onChange={e => setVendor(e.target.value)}>
-          <option value="">全部供应商</option>
-          <option value="deepseek">DeepSeek</option>
-          <option value="openai">OpenAI</option>
-          <option value="anthropic">Anthropic</option>
-          <option value="glm">智谱AI</option>
-        </select>
-        <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>对账周期</span>
-        <input type="month" value={period} onChange={e => setPeriod(e.target.value)}
-          style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", fontSize: 13 }} />
-        <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>状态</span>
-        <select style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--color-border)", fontSize: 13 }}
-          value={status} onChange={e => setStatus(e.target.value)}>
-          <option value="">全部</option>
-          <option value="matched"><PIcon name="check" size={14}/> 已匹配</option>
-          <option value="partial"><PIcon name="alert" size={14}/> 部分匹配</option>
-          <option value="unmatched"><PIcon name="close" size={14}/> 未匹配</option>
-          <option value="extra"><PIcon name="plus" size={14}/> 多出</option>
-        </select>
-        <div style={{ flex: 1 }} />
-        <button style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", fontSize: 13 }} onClick={() => toast.info("查询演示数据")}>查询</button>
-        <button style={{ ...btnBase, background: "#fff", border: "1px solid var(--color-border)", fontSize: 13 }} onClick={() => toast.info("导出演示")}>导出</button>
-      </div>
-
-      {/* ── 账单上传 ── */}
-      <div style={card}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}><PIcon name="upload" size={14}/> 账单上传 <HelpIcon text="支持 CSV / Excel (.xlsx) 格式，单个文件不超过 50MB" /></div>
-        <input ref={fileRef} type="file" accept=".csv,.xlsx" style={{ display: "none" }} onChange={onFilePick} />
+      {/*
+       * 成本归属覆盖率告警。
+       * mock 回退路径（settle.ts 中 channel 为 null）写入的消费记录没有供应商归属，
+       * 这部分成本不进入任何供应商行。若不显式提示，运营会把下方「平台应付合计」
+       * 误读成该月全部成本，导致少付供应商。
+       */}
+      {coverage && coverage.percent < 99.9 && (
         <div
-          style={{ border: "2px dashed #ccc", borderRadius: 8, padding: 32, textAlign: "center", cursor: "pointer", transition: "all .2s" }}
-          onMouseOver={e => { e.currentTarget.style.borderColor = "var(--color-primary)"; e.currentTarget.style.background = "var(--color-primary-light)"; }}
-          onMouseOut={e => { e.currentTarget.style.borderColor = "#ccc"; e.currentTarget.style.background = "transparent"; }}
-          onClick={() => fileRef.current?.click()}>
-          <div style={{ fontSize: 40, marginBottom: 8 }}><PIcon name="download" size={14}/></div>
-          <div style={{ color: "var(--color-text-secondary)", fontSize: 14 }}>点击或拖拽文件到此处上传</div>
-          <div style={{ color: "var(--color-text-muted)", fontSize: 12, marginTop: 4 }}>支持 CSV / Excel (.xlsx) 格式，单个文件不超过 50MB</div>
+          style={{
+            marginBottom: 16,
+            padding: "12px 16px",
+            borderRadius: 4,
+            border: "1px solid var(--color-warning-border, #f0a020)",
+            background: "var(--color-warning-bg, #fff8e6)",
+            color: "var(--color-text, #1f2329)",
+            fontSize: 13,
+            lineHeight: 1.6,
+          }}
+        >
+          <strong style={{ color: "var(--color-warning-text, #b7791f)" }}>成本归属覆盖 {coverage.percent.toFixed(1)}%</strong>
+          <div style={{ marginTop: 4 }}>
+            {period} 共 ¥{fmt(coverage.total)} 成本，其中{" "}
+            <strong>¥{fmt(unattributed.amount)}</strong>（{fmtInt(unattributed.callCount)} 次调用）无法归因到任何供应商，
+            不计入下方任何一行。下方「平台应付合计 ¥{fmt(coverage.attributed)}」仅为可归因部分，
+            <strong>不能直接作为付款依据</strong>。
+          </div>
+          <div style={{ marginTop: 4, color: "var(--color-text-secondary, #646a73)" }}>
+            成因：调用走mock 回退渠道时未绑定供应商（见 api/src/services/billing/settle.ts）。
+            需先修复归属链路或人工确认这部分成本归属，再进行付款。
+          </div>
         </div>
-        <div style={{ marginTop: 16 }}>
-          {data.files.map(f => (
-            <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", border: "1px solid #e0e0e0", borderRadius: 4, marginBottom: 8, fontSize: 13 }}>
-              <span style={{ fontSize: 18 }}><PIcon name="chart" size={14}/></span>
-              <span style={{ flex: 1 }}>{f.name}</span>
-              <span style={{ color: "var(--color-text-muted)" }}>{f.size}</span>
-              <span style={{ fontSize: 12, color: f.status === "parsed" ? "#22c55e" : "#f59e0b" }}>
-                {f.status === "parsed" ? "已解析" : "解析中"}
-              </span>
-              {f.status === "parsed" && (
-                <button style={{ ...btnBase, background: "none", fontSize: 12, color: "var(--color-primary)", padding: "2px 8px" }}
-                  onClick={() => toast.success(`${f.name} 开始匹配（演示）`)}>开始匹配</button>
-              )}
-            </div>
-          ))}
+      )}
+
+      {/* 概览 */}
+      <div className="c3-stat-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+        <div className="c3-stat-card">
+          <div className="c3-stat-card__label">平台应付合计</div>
+          <div className="c3-stat-card__value">
+            {listQ.isLoading ? "—" : `¥${fmt(summary.platformTotal)}`}
+          </div>
+          <div className="c3-stat-card__sub">
+            {period} · {summary.supplierCount} 家供应商 · {fmtInt(summary.callTotal)} 次调用
+            {coverage && coverage.percent < 99.9 ? "（仅可归因部分）" : ""}
+          </div>
+        </div>
+        <div className="c3-stat-card">
+          <div className="c3-stat-card__label">已录入账单合计</div>
+          <div className="c3-stat-card__value">
+            {listQ.isLoading ? "—" : `¥${fmt(summary.billTotal)}`}
+          </div>
+          <div className="c3-stat-card__sub">已核对 {summary.checkedCount} / {summary.supplierCount} 家</div>
+        </div>
+        <div className="c3-stat-card">
+          <div className="c3-stat-card__label">差异金额</div>
+          <div
+            className="c3-stat-card__value"
+            style={{ color: Math.abs(summary.diffTotal) <= 0.0001 ? "var(--color-success-text)" : "var(--color-danger-text)" }}
+          >
+            {listQ.isLoading ? "—" : `${summary.diffTotal >= 0 ? "+" : ""}¥${fmt(summary.diffTotal)}`}
+          </div>
+          <div className="c3-stat-card__sub">账单金额 − 平台应付</div>
+        </div>
+        <div className="c3-stat-card">
+          <div className="c3-stat-card__label">差异供应商数</div>
+          <div className="c3-stat-card__value">{listQ.isLoading ? "—" : summary.diffCount}</div>
+          <div className="c3-stat-card__sub">
+            {summary.matchRate !== null ? `金额匹配率 ${summary.matchRate}%` : "暂无平台数据"}
+          </div>
         </div>
       </div>
 
-      {/* ── 匹配结果 ── */}
-      <div style={{ ...card, marginTop: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <span style={{ fontWeight: 600 }}><PIcon name="search" size={14}/> 匹配结果 <HelpIcon text="供应商账单行与平台记录行左右对比，可按匹配状态处理差异" /></span>
-          <span style={{ fontSize: 13, color: "var(--color-text-muted)" }}>DeepSeek 2026年8月 · 共 {data.pairs.length} 条记录</span>
-        </div>
-        {data.pairs.map(p => {
-          const s = STATUS_ICON[p.status];
-          const action = actions[p.id];
-          return (
-            <div key={p.id} style={{ border: "1px solid #e0e0e0", borderRadius: 4, marginBottom: 8, overflow: "hidden" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px" }}>
-                <div style={{ padding: "10px 12px", background: "#f8f9fa" }}>
-                  <div style={{ color: "var(--color-text-muted)", fontSize: 11 }}>供应商账单</div>
-                  <div style={{ fontSize: 13, marginTop: 2 }}>
-                    {p.bill ? `${p.bill.date} | ${p.bill.model} | ${fmt(p.bill.calls)} 次 | ¥${fmt(p.bill.amount)}` : "— 无对应记录 —"}
-                  </div>
-                </div>
-                <div style={{ padding: "10px 12px" }}>
-                  <div style={{ color: "var(--color-text-muted)", fontSize: 11 }}>平台记录</div>
-                  <div style={{ fontSize: 13, marginTop: 2 }}>
-                    {p.platform ? `${p.platform.date} | ${p.platform.model} | ${fmt(p.platform.calls)} 次 | ¥${fmt(p.platform.amount)}` : "— 无匹配记录 —"}
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, background: s.bg }}>{s.icon}</div>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 12px", gap: 8, borderTop: "1px solid #f0f0f0", fontSize: 12 }}>
-                <span style={{ color: s.color }}>{p.note ? `${s.label}：${p.note}` : s.label}</span>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {!action && (<>
-                    <button style={{ ...btnBase, background: "none", fontSize: 12, color: "var(--color-primary)", padding: "2px 8px" }} onClick={() => handlePairAction(p.id, "confirmed")}>确认</button>
-                    <button style={{ ...btnBase, background: "none", fontSize: 12, color: "var(--color-text-secondary)", padding: "2px 8px" }} onClick={() => handlePairAction(p.id, "flagged")}>标记</button>
-                    <button style={{ ...btnBase, background: "none", fontSize: 12, color: "var(--color-text-muted)", padding: "2px 8px" }} onClick={() => handlePairAction(p.id, "ignored")}>忽略</button>
-                  </>)}
-                  {action && <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
-                    {({ confirmed: "已确认", flagged: "已标记", ignored: "— 已忽略" } as Record<string, string>)[action]}
-                  </span>}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        {/* ── 差异汇总 ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, padding: 16, background: "#f8f9fa", borderRadius: 8, marginTop: 16 }}>
-          <div style={{ textAlign: "center" }}><div style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 4 }}>总账单金额</div><div style={{ fontSize: 20, fontWeight: 600 }}>¥{fmt(data.totals.bill_amount)}</div></div>
-          <div style={{ textAlign: "center" }}><div style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 4 }}>平台记录金额</div><div style={{ fontSize: 20, fontWeight: 600 }}>¥{fmt(data.totals.platform_amount)}</div></div>
-          <div style={{ textAlign: "center" }}><div style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 4 }}>差异金额</div><div style={{ fontSize: 20, fontWeight: 600, color: "#e53935" }}>¥{fmt(data.totals.diff_amount)}</div></div>
-          <div style={{ textAlign: "center" }}><div style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 4 }}>匹配率</div><div style={{ fontSize: 20, fontWeight: 600, color: "#22c55e" }}>{data.totals.match_rate}%</div></div>
-        </div>
-
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
-          <button style={{ ...btnBase, background: "#fff", border: "1px solid var(--color-border)", fontSize: 13 }} onClick={() => toast.info("导出差异报告（演示）")}><PIcon name="download" size={14}/> 导出差异报告</button>
-          <button style={{ ...btnBase, background: "var(--color-primary)", color: "#fff", fontSize: 13 }} onClick={() => toast.success("对账已提交确认（演示）")}>提交对账确认</button>
-        </div>
-      </div>
+      {/* 筛选栏 */}
+      <Panel
+        title="对账单"
+        help="切换周期查看当月各供应商的平台成本；「供应商账单金额」需人工填写供应商提供的账单总额，填完点「核对」计算差异。"
+        extra={
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <select
+              className="c3-select c3-select--sm"
+              value={period}
+              onChange={(e) => {
+                setPeriod(e.target.value);
+                setBillInputs({});
+                setChecked({});
+              }}
+            >
+              <option value={currentMonth()}>{currentMonth()}</option>
+              <option value={prevMonth(currentMonth())}>{prevMonth(currentMonth())}</option>
+            </select>
+            <select
+              className="c3-select c3-select--sm"
+              value={supplierId}
+              onChange={(e) => {
+                setSupplierId(e.target.value);
+                setBillInputs({});
+                setChecked({});
+              }}
+            >
+              <option value="">全部供应商</option>
+              {rows.map((r) => (
+                <option key={r.supplier_id} value={r.supplier_id}>
+                  {r.supplier_name}（#{r.supplier_id}）
+                </option>
+              ))}
+            </select>
+            <select
+              className="c3-select c3-select--sm"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as "" | MatchStatus)}
+            >
+              <option value="">全部状态</option>
+              <option value="pending">待核对</option>
+              <option value="matched">完全匹配</option>
+              <option value="diff">存在差异</option>
+              <option value="missing">平台无记录</option>
+            </select>
+            <button
+              type="button"
+              className="c3-btn c3-btn--default c3-btn--sm"
+              onClick={resetInputs}
+              disabled={Object.keys(billInputs).length === 0 && Object.keys(checked).length === 0}
+            >
+              清空录入
+            </button>
+          </div>
+        }
+      >
+        {listQ.isLoading ? (
+          <SkeletonGroup lines={8} />
+        ) : listQ.isError ? (
+          <EmptyState title="加载失败" description={extractError(listQ.error)} />
+        ) : displayRows.length === 0 ? (
+          <EmptyState
+            title="该周期无消费数据"
+            description={`${period} 没有归属到供应商的消费记录，无法对账。可尝试切换到其他周期。`}
+          />
+        ) : (
+          <Table columns={cols} dataSource={displayRows} rowKey="supplier_id" emptyText="暂无对账数据" />
+        )}
+      </Panel>
     </div>
   );
 }
