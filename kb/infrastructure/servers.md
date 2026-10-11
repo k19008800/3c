@@ -1,11 +1,52 @@
 # 服务器清单
 
 > ⚠️ 敏感信息，请勿在公共上下文暴露
-> 最后更新：2026-07-06
+> 最后更新：2026-10-11
+
+---
+
+## 生产演示数据（2026-10-11 已灌入）
+
+- **100 万条** `consumption_records`，`request_id` 前缀 `seed-`，可一键清理
+- **60 个隔离演示用户** `seed-user0001~0060@demo.3cloud.local` + 专用密钥 `sk-seed0001~0060`
+  （与真实账号 `demo-ent@3cloud.dev` 等完全隔离，清理时删用户即可 CASCADE 带走记录）
+- 覆盖 2026-04-15~ 2026-10-11 共 7 个月，每月 8~17 万条均匀分布
+- 3 家供应商全覆盖（DeepSeek/OpenAI/Anthropic），**缺归属 0 条、未归因成本 ¥0**
+- 总成本 ¥11,544.47；消费表 350MB，库体积 350MB（造数前 18MB）
+- 补齐 `consumption_records` 的 2026_04~2026_09 六个月度分区（原分区只到 2027_01，
+  不补的话 180 天窗口内约 6/10 数据会落进 default 分区）
+- 验证：对账端点 `supplier_id=1&period=2026-09` 返回 `status=matched`、`diff=0`；
+  `/list` 端点 16.7 万条/月汇总 169ms 返回，接口合计与 SQL `sum(cost)` 逐位一致
+
+**相关脚本**（本地 `scripts/`，生产 `/opt/3cloud-seed/`）：
+
+| 脚本 | 用途 |
+|------|------|
+| `prepare-partitions.sql` | 补齐月度分区（造数前置，必须先跑） |
+| `seed-demo-users.sql` | 建 60 演示用户 + 密钥 + 余额（幂等） |
+| `seed-demo-data.sql` | 生成消费记录，参数化分批 `-v total= -v batch= -v offset=` |
+| `cleanup-seed.sql` | 配对清理，只删 `request_id LIKE 'seed-%'` |
+
+**踩坑记录（3 个，都不报错但结果不对）**：
+1. **分批 offset 切分**必须无重叠覆盖 `[0,total)`。若写 `0/10000/260000/510000/760000`，
+   最后溢出成 101 万条——不报错，只是数字不对。
+2. **幂等保护不能查全表**，只查本批区间。否则第 2 批会被上一批存量误拦，
+   分批流程根本跑不下去。
+3. **时间轴必须夹逼到当下**。`(random() * interval '1 day')` 的抖动会让末尾约
+   1% 的记录溢出到未来（实测 10,608 条），导致"本月至今"趋势图失真。
 
 ---
 
 ## 生产服务器 1 (3cloud 生产服)
+
+**最新部署状态 (2026-10-11，覆盖式部署)**: 代码 `8b4f485`（对外品牌 3Cloud），PM2 `3cloud-api`(:3000) + `3cloud-portal`(:3100) 双进程 online；PostgreSQL `threecloud_v3` 已重建并迁移至 0049 + seed（admin@3cloud.dev / Admin@2024!）；对外域名 unmisa.com / api.unmisa.com，HTTPS 证书有效，nginx 代理缓存已清理；健康检查 `{"status":"ok","db":"up","redis":"up"}`；站点配置 `site_name=3Cloud`。⚠️ 待办：SMTP 未配置（注册邮件验证不可用）。
+
+**基础数据（2026-10-11 已补齐，脚本 /root/seed-base-data/init-base-data.cjs，幂等可重跑）**:
+- 管理员：`admin@3cloud.dev` / `Admin@2024!`
+- 测试用户（密码 `Demo@1234`）：`demo-ent@3cloud.dev`（企业/合同/已实名，¥10000，2 个 Key，3 条消费流水）、`demo-dev@3cloud.dev`（个人/已实名，¥200，1 个 Key，1 条消费流水）
+- 代理商：`agent@3cloud.dev` / `Demo@1234`（partner、佣金 12%、邀请码 `3C-AGENT001`、关联客户 2、佣金记录 2）
+- 供应商 3 家（DeepSeek/OpenAI/Anthropic）+ 6 模型（deepseek-chat/reasoner、gpt-4o/mini、claude-sonnet/opus-4.5）+ 模拟密钥（sk-mock-*）+ 6 条对外定价（¥/1K）+ 门户账号 `vendor-deepseek@3cloud.dev` 等（密码 `Vendor@2024!`）
+- 说明：供应商密钥为模拟值（`sk-mock-*`），真实调用需在后台替换为真实上游 Key；定价为参考市场价演示值，可后台调整。
 
 | 项目 | 值 |
 |------|-----|
@@ -23,11 +64,23 @@
 | **Uptime** | 25 天 |
 | **UFW** | 22/80/443/8888/465/993/995 已放行，密钥认证 |
 
-**当前运行状态 (2026-07-09)**:
-- PM2: `3cloud-api` (id 0, cluster 模式, 端口 3030, 已运行 9 天, 60MB)
+**当前运行状态 (2026-10-11 更新)**:
+- 代码目录：`/root/3cloud`（git 仓库，pnpm monorepo，与本地同源 `git@github.com-3cloud:k19008800/3c.git`）
+- 部署方式：`bash deploy/deploy.sh main`（受 `.deploy-gate-approved` 闸门约束；自动备份 → 拉代码 → 构建 → 跑迁移 → PM2 reload → 健康检查）
+- 数据库备份：`/var/backups/3cloud/pre-<commit>-<timestamp>.dump`（pg_dump -Fc）
+- PM2: `3cloud-api` (id 0, fork, 端口 3000) + `3cloud-portal` (id 1, fork, 端口 3100)，均 online
 - Nginx: 代理 unmisa.com (前端 SPA) + api.unmisa.com (API/Token)
+- PostgreSQL: `threecloud_v3`（owner postgres）、Redis: 有密码保护
+- 健康检查：`curl localhost:3000/health` → `{"status":"ok","db":"up","redis":"up"}`
+- 错误日志：`/var/log/3cloud/api-error.log`
+
+> ⚠️ **生产环境仍在使用开发默认凭据** `admin@3cloud.dev` / `Admin@2024!`（2026-10-11 部署时核实）。
+> 该账号为 `super_admin`，等于生产后台对任何人开放——**待处理，优先级高**。
+> 代理商 `agent@3cloud.dev` / `Demo@1234`、供应商门户 `Vendor@2024!` 等演示凭据同属此类。
+
+**历史状态记录 (2026-07-09，已过时)**:
+- PM2: `3cloud-api` (id 0, cluster 模式, 端口 3030, 已运行 9 天, 60MB)
 - PostgreSQL: `cloud3` (owner: cloud3)、`zh` 库
-- Redis: 6.0.16, 有密码保护
 - 代码: `/3cloud/api/` (API 后端) + `/3cloud/web/` (前端 4 子项目: admin/landing/user/shared)
 - 前端构建: `/www/wwwroot/3c/web/dist/` **尚未构建**
 - SSL: ❌ 无 HTTPS 证书 (无 certbot)
